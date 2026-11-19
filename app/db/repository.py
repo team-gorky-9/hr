@@ -24,7 +24,9 @@ from app.db.enums import (
     DocumentKind,
     FeedbackOutcome,
     FileFormat,
+    RequirementStatus,
     ReserveStatus,
+    UserRole,
 )
 from app.db.models import (
     Application,
@@ -36,16 +38,20 @@ from app.db.models import (
     CandidateSkill,
     CandidateText,
     Competency,
+    CompetencyIndicator,
     CompetencyScore,
     DepartmentFeedback,
     FormalCheck,
     FormalRequirement,
+    Position,
+    ProfileSource,
     RejectionReason,
     RequirementProfile,
     ReserveEntry,
     SelectionStage,
     SourceDocument,
     StageEvent,
+    User,
     Vacancy,
 )
 from app.db.seed import INITIAL_STAGE
@@ -53,6 +59,7 @@ from app.schemas.assessment import CompetencyScoreIn, FormalCheckIn
 from app.schemas.card import CandidateCard as CardSchema
 from app.schemas.card import Evidence, evidence_matches
 from app.schemas.pii import PiiData
+from app.schemas.requirements import CompetencyIn, FormalRequirementIn, ProfileSourceIn
 
 
 class RepositoryError(Exception):
@@ -480,6 +487,130 @@ def reserve_for_position(session: Session, position_id: uuid.UUID, *, today: dat
     )
 
 
+# --- Требования к должности ------------------------------------------------
+
+def create_requirement_profile(
+    session: Session,
+    *,
+    position_id: uuid.UUID,
+    created_by: str,
+    formal_requirements: Sequence[FormalRequirementIn],
+    competencies: Sequence[CompetencyIn],
+    sources: Sequence[ProfileSourceIn] = (),
+    version: int | None = None,
+    is_synthetic: bool = False,
+    note: str | None = None,
+) -> RequirementProfile:
+    """Создать черновик профиля требований в едином формате.
+
+    Порядок строк сохраняется в sort_order. Документ строки должен быть среди
+    источников профиля: так у версии профиля полный и неизменный список документов.
+    Без version берётся следующий номер для должности; повтор номера → IntegrityError.
+    """
+    position = _get(session, Position, position_id, "должность")
+    source_ids = [s.source_document_id for s in sources]
+    if len(set(source_ids)) != len(source_ids):
+        raise RepositoryError("документ указан в источниках профиля дважды")
+    for document_id in source_ids:
+        _get(session, SourceDocument, document_id, "исходный документ")
+
+    rows = [*formal_requirements, *competencies, *(i for c in competencies for i in c.indicators)]
+    for row in rows:
+        for ref in row.source_refs:
+            if ref.source_document_id not in source_ids:
+                raise RepositoryError(
+                    f"строка {row.key} ссылается на документ {ref.source_document_id}, которого нет в источниках профиля"
+                )
+    keys = [row.key for row in rows]
+    duplicates = sorted({key for key in keys if keys.count(key) > 1})
+    if duplicates:
+        raise RepositoryError(f"повторяются ключи строк: {', '.join(duplicates)}")
+    codes = [c.code for c in competencies]
+    duplicates = sorted({code for code in codes if codes.count(code) > 1})
+    if duplicates:
+        raise RepositoryError(f"повторяются коды компетенций: {', '.join(duplicates)}")
+
+    if version is None:
+        version = _next_version(session, RequirementProfile.version, RequirementProfile.position_id == position.id)
+    profile = RequirementProfile(
+        position_id=position.id,
+        version=version,
+        status=RequirementStatus.DRAFT,
+        is_synthetic=is_synthetic,
+        created_by=created_by,
+        note=note,
+    )
+    profile.sources = [ProfileSource(**s.model_dump()) for s in sources]
+    profile.formal_requirements = [
+        FormalRequirement(**_row_fields(r), sort_order=order) for order, r in enumerate(formal_requirements, start=1)
+    ]
+    profile.competencies = [
+        Competency(
+            **_row_fields(c, exclude={"indicators"}),
+            sort_order=order,
+            indicators=[
+                CompetencyIndicator(**_row_fields(i), sort_order=i_order)
+                for i_order, i in enumerate(c.indicators, start=1)
+            ],
+        )
+        for order, c in enumerate(competencies, start=1)
+    ]
+    session.add(profile)
+    session.flush()
+    return profile
+
+
+def _row_fields(row, exclude: set[str] | None = None) -> dict[str, Any]:
+    """Поля строки профиля для модели: JSONB-поля — в JSON-виде (UUID строкой), без пустых критериев."""
+    fields = row.model_dump(exclude=exclude)
+    fields["source_refs"] = [ref.model_dump(mode="json") for ref in row.source_refs]
+    if "acceptance" in fields:
+        fields["acceptance"] = row.acceptance.model_dump(exclude_none=True)
+    return fields
+
+
+def approve_requirement_profile(
+    session: Session,
+    profile_id: uuid.UUID,
+    *,
+    approved_by_user_id: uuid.UUID,
+    approval_basis: str,
+) -> RequirementProfile:
+    """Утвердить черновик. Прежняя утверждённая версия той же должности уходит в архив.
+
+    Утверждает активный пользователь с ролью hr или admin; основание обязательно.
+    Учебный профиль утвердить нельзя.
+    """
+    profile = _get(session, RequirementProfile, profile_id, "профиль требований")
+    user = _get(session, User, approved_by_user_id, "пользователь")
+    if profile.status != RequirementStatus.DRAFT:
+        raise RepositoryError(f"утвердить можно только черновик, а профиль в статусе «{profile.status.value}»")
+    if profile.is_synthetic:
+        raise RepositoryError("учебный профиль нельзя утвердить")
+    if not user.is_active or user.role not in (UserRole.HR, UserRole.ADMIN):
+        raise RepositoryError("утверждает активный кадровик или администратор")
+    if not approval_basis.strip():
+        raise RepositoryError("не указано основание утверждения")
+
+    # Сначала архив, затем утверждение: иначе сработает индекс «одна утверждённая на должность».
+    session.execute(
+        update(RequirementProfile)
+        .where(
+            RequirementProfile.position_id == profile.position_id,
+            RequirementProfile.status == RequirementStatus.APPROVED,
+        )
+        .values(status=RequirementStatus.ARCHIVED)
+    )
+    session.flush()
+    profile.status = RequirementStatus.APPROVED
+    profile.approved_by_user_id = user.id
+    profile.approved_at = func.now()
+    profile.approval_basis = approval_basis.strip()
+    session.flush()
+    session.refresh(profile)
+    return profile
+
+
 # --- Оценка ------------------------------------------------------------------
 
 def save_assessment(
@@ -503,6 +634,8 @@ def save_assessment(
     """
     candidate = _get(session, Candidate, candidate_id, "кандидат")
     profile = _get(session, RequirementProfile, profile_id, "профиль требований")
+    if profile.status == RequirementStatus.ARCHIVED:
+        raise RepositoryError("профиль в архиве: оценивать нужно по действующей версии требований")
     card = _get(session, CandidateCard, card_id, "карточка")
     if card.candidate_id != candidate.id:
         raise RepositoryError("карточка принадлежит другому кандидату")

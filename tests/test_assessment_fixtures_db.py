@@ -19,22 +19,17 @@ from app.db import repository as repo
 from app.db.enums import (
     Channel,
     CheckResult,
-    CompetencyRank,
     DocumentKind,
     FileFormat,
     FormalRequirementKind,
-    RequirementStatus,
+    RowOrigin,
+    VerificationMethod,
 )
-from app.db.models import (
-    Competency,
-    CompetencyIndicator,
-    FormalRequirement,
-    Position,
-    RequirementProfile,
-)
+from app.db.models import Position
 from app.db.repository import EvidenceError
 from app.schemas.assessment import CompetencyScoreIn, FormalCheckIn
 from app.schemas.card import CandidateCard
+from app.schemas.requirements import CompetencyIn, FormalRequirementIn, IndicatorIn
 
 FIXTURE = load(FIXTURES_DIR / "py-9001.json")
 DB_CASES = [c for c in FIXTURE["cases"] if c["expect"]["db_v1"]["save_assessment"] != "not_called"]
@@ -71,28 +66,40 @@ def _load_texts(session, case) -> dict[str, uuid.UUID]:
     return ids | {"candidate": candidates[case["candidate"]]}
 
 
-def _load_profile(session, status: str) -> tuple[uuid.UUID, dict[str, uuid.UUID]]:
-    """Учебный профиль из набора. Вернуть (id профиля, {uuid в наборе: uuid в базе})."""
+def _load_profile(session) -> tuple[uuid.UUID, dict[str, uuid.UUID]]:
+    """Учебный профиль из набора через repo.create_requirement_profile (контракт БД v1.1).
+
+    Профиль синтетический, поэтому в БД он всегда черновик: утвердить учебный профиль
+    нельзя (approve_requirement_profile). save_assessment статус профиля не проверяет —
+    это и фиксирует случай N7. Вернуть (id профиля, {uuid в наборе: uuid в базе}).
+    """
     spec = FIXTURE["profile"]
     position = session.scalar(select(Position).where(Position.code == spec["position_code"]))
-    profile = RequirementProfile(position_id=position.id, version=900, created_by="fixture",
-                                 status=RequirementStatus(status), note=spec["synthetic_role"])
-    mapping: dict[str, FormalRequirement | Competency] = {}
-    for order, item in enumerate(spec["formal_requirements"]):
-        requirement = FormalRequirement(kind=FormalRequirementKind(item["kind"]), description=item["description"],
-                                        params=item["params"], is_mandatory=item["is_mandatory"], sort_order=order)
-        profile.formal_requirements.append(requirement)
-        mapping[item["id"]] = requirement
-    for order, item in enumerate(spec["competencies"]):
-        competency = Competency(rank=CompetencyRank(item["rank"]), code=item["code"], name=item["name"],
-                                target_level_min=item["target_level_min"], target_level_max=item["target_level_max"],
-                                sort_order=order)
-        competency.indicators = [CompetencyIndicator(text=i["text"], sort_order=n) for n, i in enumerate(item["indicators"])]
-        profile.competencies.append(competency)
-        mapping[item["id"]] = competency
-    session.add(profile)
-    session.flush()
-    return profile.id, {key: row.id for key, row in mapping.items()}
+    note = spec["synthetic_role"]
+    requirements = [
+        FormalRequirementIn(key=item["key"], origin=RowOrigin.TEAM, note=note,
+                            kind=FormalRequirementKind(item["kind"]), description=item["description"],
+                            params=item["params"], is_mandatory=item["is_mandatory"],
+                            verification=VerificationMethod(item["verification"]))
+        for item in spec["formal_requirements"]
+    ]
+    competencies = [
+        CompetencyIn(key=item["key"], origin=RowOrigin.TEAM, note=note, code=item["code"], name=item["name"],
+                     rank=item["rank"], target_level_min=item["target_level_min"],
+                     target_level_max=item["target_level_max"],
+                     indicators=[IndicatorIn(key=i["key"], origin=RowOrigin.TEAM, note=note, text=i["text"],
+                                             verification=VerificationMethod(i["verification"]))
+                                 for i in item["indicators"]])
+        for item in spec["competencies"]
+    ]
+    profile = repo.create_requirement_profile(
+        session, position_id=position.id, created_by="fixture", is_synthetic=True, note=note,
+        formal_requirements=requirements, competencies=competencies,
+    )
+    by_key = {r.key: r.id for r in profile.formal_requirements} | {c.key: c.id for c in profile.competencies}
+    ids = {item["id"]: by_key[item["key"]] for item in spec["formal_requirements"]}
+    ids |= {item["id"]: by_key[item["key"]] for item in spec["competencies"]}
+    return profile.id, ids
 
 
 def _remap(obj: dict, ids: dict[str, uuid.UUID]) -> dict:
@@ -109,7 +116,7 @@ def _remap(obj: dict, ids: dict[str, uuid.UUID]) -> dict:
 def test_case_against_database_v1(session, case):
     expected = case["expect"]["db_v1"]
     ids = _load_texts(session, case)
-    profile_id, profile_ids = _load_profile(session, case["profile_status"])
+    profile_id, profile_ids = _load_profile(session)
     ids |= profile_ids
 
     assessed_text_id = ids[FIXTURE["texts"][case["assessed_text"]]["id"]]

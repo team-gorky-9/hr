@@ -63,7 +63,7 @@
     "key": "py-train/profile/v1",
     "id": "6809073b-3ae3-58d8-960b-4028546a62e3",
     "position_code": "python-dev",
-    "synthetic_role": "Учебный профиль для технической проверки. Порог 24 мес. есть только здесь, в реальной ДИ Python минимума стажа нет.",
+    "synthetic_role": "Учебный профиль для технической проверки. Порог 24 мес. есть только здесь, в реальной ДИ Python минимума стажа нет. Ранг и эталонный уровень компетенции не заданы: в источнике их нет.",
     "formal_requirements": [
       {
         "key": "py-train/requirement/experience-commercial-24m",
@@ -77,24 +77,25 @@
           "minimum_defined": true,
           "min_months": 24
         },
-        "params_status": "предложение Давида (hq/work/2026-11-19-requirement-profiles/source-review.md), контрактом не утверждено"
+        "params_status": "предложение Давида (hq/work/2026-11-19-requirement-profiles/source-review.md), контрактом не утверждено",
+        "verification": "resume"
       }
     ],
     "competencies": [
       {
         "key": "py-train/competency/api-testing",
         "id": "1c27d6a3-2569-55b2-bf71-555a1475e949",
-        "rank": "basic",
+        "rank": null,
         "code": "API-TEST",
         "name": "Автоматизированное тестирование API",
-        "target_level_min": 0,
-        "target_level_max": 100,
-        "target_note": "Синтетика: БД v1.0 требует границы, учебный профиль их не задаёт. В оценке не используются.",
+        "target_level_min": null,
+        "target_level_max": null,
         "indicators": [
           {
             "key": "py-train/competency/api-testing/indicator/1",
             "id": "49d148b8-895a-57b0-ac47-4f81b1b2b99d",
-            "text": "Писал автоматизированные API-тесты"
+            "text": "Писал автоматизированные API-тесты",
+            "verification": "resume"
           }
         ]
       }

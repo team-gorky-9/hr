@@ -19,7 +19,7 @@
 
 ## Что уже обеспечивает БД v1.0, а что нет
 
-Сверено тестом `tests/test_assessment_fixtures_db.py` на контрольном наборе.
+Сверено тестом `tests/test_assessment_fixtures_db.py` на контрольном наборе. Профиль в тесте создаётся через `create_requirement_profile` (контракт БД v1.1).
 
 | Проверка | БД v1.0 (`save_assessment`) | Модуль оценки |
 |---|---|---|
