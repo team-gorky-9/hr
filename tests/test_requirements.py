@@ -22,7 +22,13 @@ from app.db.enums import (
     VerificationMethod,
 )
 from app.db.models import User
-from app.schemas.requirements import CompetencyIn, FormalRequirementIn, IndicatorIn, ProfileSourceIn
+from app.schemas.requirements import (
+    CompetencyIn,
+    FormalRequirementIn,
+    IndicatorIn,
+    ProfileSourceIn,
+    SourceRefIn,
+)
 from tests.factories import add_card, make_candidate, make_profile, position
 
 HR_EDUCATION = (
@@ -44,8 +50,9 @@ def document(session, kind: DocumentKind, path: str, raw_text: str):
     return doc
 
 
-def quoted(doc, ref: str, quote: str) -> dict:
-    return {"origin": RowOrigin.SOURCE, "source_document_id": doc.id, "source_ref": ref, "source_quote": quote}
+def quoted(doc, address: str, quote: str, *more: SourceRefIn) -> dict:
+    refs = [SourceRefIn(source_document_id=doc.id, address=address, quote=quote), *more]
+    return {"origin": RowOrigin.SOURCE, "source_refs": refs}
 
 
 def user(session, role: UserRole = UserRole.HR, login: str = "hr-1", active: bool = True) -> User:
@@ -67,13 +74,14 @@ def consultant_profile(session, **kwargs):
             ProfileSourceIn(source_document_id=matrix.id, role=SourceRole.COMPETENCY_MATRIX),
         ],
         formal_requirements=[
-            FormalRequirementIn(kind=FormalRequirementKind.EDUCATION_FIELD, description="Юриспруденция или ГМУ",
+            FormalRequirementIn(key="hr.education.field", kind=FormalRequirementKind.EDUCATION_FIELD,
+                                description="Юриспруденция или ГМУ",
                                 verification=VerificationMethod.DOCUMENTS, **quoted(di, "п. 2.2.1", HR_EDUCATION)),
         ],
         competencies=[
-            CompetencyIn(rank=CompetencyRank.KEY, code="ИТК", name="Информационно-техническая компетенция",
+            CompetencyIn(key="hr.ITK", rank=CompetencyRank.KEY, code="ИТК", name="Информационно-техническая компетенция",
                          target_level_min=90, target_level_max=100, **quoted(matrix, "ИТК", "90-100 процентов"),
-                         indicators=[IndicatorIn(text=ITK_INDICATOR, verification=VerificationMethod.RESUME,
+                         indicators=[IndicatorIn(key="hr.ITK.02", text=ITK_INDICATOR, verification=VerificationMethod.RESUME,
                                                  **quoted(matrix, "ИТК, инд. 2", ITK_INDICATOR))]),
         ],
         **kwargs,
@@ -95,20 +103,21 @@ def python_profile(session):
             ProfileSourceIn(source_document_id=posting.id, role=SourceRole.VACANCY_POSTING),
         ],
         formal_requirements=[
-            FormalRequirementIn(kind=FormalRequirementKind.EDUCATION_LEVEL, description=PY_EDUCATION,
+            FormalRequirementIn(key="py.education", kind=FormalRequirementKind.EDUCATION_LEVEL,
+                                description=PY_EDUCATION,
                                 params={"alternatives": [{"level": "высшее", "field_group": "техническое"},
                                                          {"enrollment_status": "старшие курсы"}]},
                                 verification=VerificationMethod.RESUME,
                                 **quoted(di, "разд. 7, стр. 1", PY_EDUCATION)),
         ],
         competencies=[
-            CompetencyIn(code="PY-DB", name="Базы данных", **TEAM, indicators=[
-                IndicatorIn(text="Навыки работы с ClickHouse", is_mandatory=False,
+            CompetencyIn(key="py.DB", code="PY-DB", name="Базы данных", **TEAM, indicators=[
+                IndicatorIn(key="py.posting.11", text="Навыки работы с ClickHouse", is_mandatory=False,
                             verification=VerificationMethod.RESUME,
                             **quoted(posting, "Требования, стр. 5", PY_CLICKHOUSE)),
             ]),
-            CompetencyIn(code="PY-PERSONAL", name="Личные качества", **TEAM, indicators=[
-                IndicatorIn(text="Пунктуальность", verification=VerificationMethod.INTERVIEW,
+            CompetencyIn(key="py.WORK_PRACTICE", code="PY-PERSONAL", name="Личные качества", **TEAM, indicators=[
+                IndicatorIn(key="py.di.punctual", text="Пунктуальность", verification=VerificationMethod.INTERVIEW,
                             **quoted(di, "разд. 7, стр. 4", PY_PUNCTUAL)),
             ]),
         ],
@@ -126,7 +135,10 @@ def test_profile_with_matrix_keeps_rank_and_target(session):
     assert (itk.rank, itk.target_level_min, itk.target_level_max) == (CompetencyRank.KEY, 90, 100)
     indicator = itk.indicators[0]
     assert indicator.is_mandatory and indicator.verification == VerificationMethod.RESUME
-    assert (indicator.source_ref, indicator.source_quote) == ("ИТК, инд. 2", ITK_INDICATOR)
+    assert indicator.key == "hr.ITK.02"
+    assert indicator.source_refs == [
+        {"source_document_id": str(matrix.id), "address": "ИТК, инд. 2", "quote": ITK_INDICATOR}
+    ]
 
 
 def test_profile_without_matrix_has_no_rank_and_target(session):
@@ -160,45 +172,78 @@ def test_row_document_must_be_among_profile_sources(session):
         repo.create_requirement_profile(
             session, position_id=position(session).id, created_by="test", competencies=[],
             formal_requirements=[FormalRequirementIn(
-                kind=FormalRequirementKind.EDUCATION_FIELD, description="ГМУ",
+                key="x.education", kind=FormalRequirementKind.EDUCATION_FIELD, description="ГМУ",
                 verification=VerificationMethod.DOCUMENTS, **quoted(stray, "п. 2.2.1", HR_EDUCATION))],
         )
 
 
 def test_duplicate_competency_codes_are_rejected(session):
-    competency = CompetencyIn(code="ИТК", name="ИТК", **TEAM, indicators=[
-        IndicatorIn(text="умеет", verification=VerificationMethod.RESUME, **TEAM)])
+    def competency(key: str) -> CompetencyIn:
+        return CompetencyIn(key=key, code="ИТК", name="ИТК", **TEAM, indicators=[
+            IndicatorIn(key=f"{key}.01", text="умеет", verification=VerificationMethod.RESUME, **TEAM)])
     with pytest.raises(repo.RepositoryError, match="повторяются коды"):
         repo.create_requirement_profile(session, position_id=position(session).id, created_by="test",
-                                        formal_requirements=[], competencies=[competency, competency])
+                                        formal_requirements=[], competencies=[competency("x.A"), competency("x.B")])
 
 
 @pytest.mark.parametrize(
     ("fields", "message"),
     [
-        ({"origin": RowOrigin.SOURCE, "source_ref": "п. 2.1.1"}, "source_document_id, source_quote"),
+        ({"origin": RowOrigin.SOURCE}, "хотя бы одну ссылку"),
         ({"origin": RowOrigin.TEAM}, "обоснование"),
     ],
 )
 def test_row_origin_rules(fields, message):
     with pytest.raises(ValidationError, match=message):
-        IndicatorIn(text="умеет", verification=VerificationMethod.RESUME, **fields)
+        IndicatorIn(key="x.01", text="умеет", verification=VerificationMethod.RESUME, **fields)
 
 
 def test_target_level_is_both_or_none():
     with pytest.raises(ValidationError, match="двумя числами"):
-        CompetencyIn(code="X", name="X", target_level_min=90, **TEAM,
-                     indicators=[IndicatorIn(text="умеет", verification=VerificationMethod.RESUME, **TEAM)])
+        CompetencyIn(key="x", code="X", name="X", target_level_min=90, **TEAM,
+                     indicators=[IndicatorIn(key="x.01", text="умеет", verification=VerificationMethod.RESUME, **TEAM)])
 
 
-def test_database_rejects_source_row_without_quote(session):
+def test_database_rejects_source_row_without_refs(session):
     """Правило происхождения держит и сама база, а не только функция доступа."""
     profile = make_profile(session)
     with pytest.raises(IntegrityError, match="ck_competency_indicators_row_source"):
         session.execute(
-            text("INSERT INTO competency_indicators (competency_id, text, verification, origin)"
-                 " VALUES (:c, 'умеет', 'resume', 'source')"),
+            text("INSERT INTO competency_indicators (competency_id, key, text, verification, origin)"
+                 " VALUES (:c, 'x.01', 'умеет', 'resume', 'source')"),
             {"c": profile.competencies[0].id},
+        )
+
+
+def test_row_may_cite_matrix_and_job_description(session):
+    """Строка матрицы и соответствующий пункт ДИ — две ссылки одной строки (как в пакете stage-0b-01)."""
+    di = document(session, DocumentKind.JOB_DESCRIPTION, "Положения/ДИ.docx", HR_EDUCATION)
+    matrix = document(session, DocumentKind.COMPETENCY_MATRIX, "матрица.docx", ITK_INDICATOR)
+    profile = repo.create_requirement_profile(
+        session, position_id=position(session).id, created_by="test", formal_requirements=[],
+        sources=[ProfileSourceIn(source_document_id=di.id, role=SourceRole.JOB_DESCRIPTION),
+                 ProfileSourceIn(source_document_id=matrix.id, role=SourceRole.COMPETENCY_MATRIX)],
+        competencies=[CompetencyIn(key="hr.DK", code="ДК", name="Должностная компетенция", **TEAM, indicators=[
+            IndicatorIn(key="hr.DK.19", text="знакомиться с документами", verification=VerificationMethod.INTERVIEW,
+                        excluded_from_scoring=True,
+                        acceptance={"met": "явное описание", "unknown": "нет сведений"},
+                        **quoted(matrix, "ДК, инд. 19", ITK_INDICATOR,
+                                 SourceRefIn(source_document_id=di.id, address="п. 2.2.1", quote=HR_EDUCATION))),
+        ])],
+    )
+    indicator = profile.competencies[0].indicators[0]
+    assert [ref["address"] for ref in indicator.source_refs] == ["ДК, инд. 19", "п. 2.2.1"]
+    assert indicator.excluded_from_scoring
+    assert indicator.acceptance == {"met": "явное описание", "unknown": "нет сведений"}
+
+
+def test_duplicate_row_keys_are_rejected(session):
+    indicator = IndicatorIn(key="x.01", text="умеет", verification=VerificationMethod.RESUME, **TEAM)
+    with pytest.raises(repo.RepositoryError, match="повторяются ключи строк: x.01"):
+        repo.create_requirement_profile(
+            session, position_id=position(session).id, created_by="test", formal_requirements=[],
+            competencies=[CompetencyIn(key="x.A", code="A", name="A", **TEAM, indicators=[indicator]),
+                          CompetencyIn(key="x.B", code="B", name="B", **TEAM, indicators=[indicator])],
         )
 
 

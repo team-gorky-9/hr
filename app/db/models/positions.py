@@ -170,26 +170,24 @@ class ProfileSource(Base):
 
 
 class _RowSource:
-    """Происхождение строки профиля: документ, адрес в нём и дословная цитата —
-    или обоснование, если строку сформулировала команда."""
+    """Устойчивый ключ строки и её происхождение: ссылки на документы с адресом и
+    дословной цитатой — или обоснование, если строку сформулировала команда."""
 
+    # Ключ строки в пакете профиля: «hr.education.level», «py.di.P106». Не меняется между версиями,
+    # по нему сверяют таблицу источников, JSON-пакет и контрольные примеры.
+    key: Mapped[str] = mapped_column(String(64))
     origin: Mapped[RowOrigin] = mapped_column(str_enum(RowOrigin, "origin"))
-    source_document_id: Mapped[uuid.UUID | None] = mapped_column(
-        ForeignKey("source_documents.id", ondelete="RESTRICT")
-    )
-    # Адрес в документе: «п. 2.2.1», «разд. 7, стр. 2», «ИТК, инд. 2».
-    source_ref: Mapped[str | None] = mapped_column(String(64))
-    # Дословная цитата из документа.
-    source_quote: Mapped[str | None] = mapped_column(Text)
+    # Список SourceRef (п. 3.6 контракта): документ из источников профиля, адрес, цитата.
+    # Строка может опираться на несколько документов (строка матрицы + пункт ДИ).
+    source_refs: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list, server_default="[]")
     # Обоснование строки команды или замечание к строке из документа.
     note: Mapped[str | None] = mapped_column(Text)
 
 
 def _row_source_check() -> CheckConstraint:
-    """Строка из документа обязана указать документ, адрес и цитату; строка команды — обоснование."""
+    """Строка из документа обязана сослаться хотя бы на один документ; строка команды — иметь обоснование."""
     return CheckConstraint(
-        "(origin = 'source' AND source_document_id IS NOT NULL AND source_ref IS NOT NULL"
-        " AND source_quote IS NOT NULL)"
+        "(origin = 'source' AND jsonb_array_length(source_refs) > 0)"
         " OR (origin = 'team' AND note IS NOT NULL)",
         name="row_source",
     )
@@ -212,11 +210,16 @@ class FormalRequirement(_RowSource, Base):
     # Обязательно по источнику (false — «будет преимуществом»). Входит в итог formal_result.
     is_mandatory: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     verification: Mapped[VerificationMethod] = mapped_column(str_enum(VerificationMethod, "verification"))
+    # Что считать выполнением, невыполнением и нехваткой сведений: {"met": …, "not_met": …, "unknown": …, "limit": …}.
+    acceptance: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
     sort_order: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
 
     profile: Mapped[RequirementProfile] = relationship(back_populates="formal_requirements")
 
-    __table_args__ = (_row_source_check(),)
+    __table_args__ = (
+        UniqueConstraint("profile_id", "key", name="uq_formal_requirements_profile_key"),
+        _row_source_check(),
+    )
 
 
 class Competency(_RowSource, Base):
@@ -249,6 +252,7 @@ class Competency(_RowSource, Base):
 
     __table_args__ = (
         UniqueConstraint("profile_id", "code", name="uq_competencies_profile_code"),
+        UniqueConstraint("profile_id", "key", name="uq_competencies_profile_key"),
         CheckConstraint(
             "(target_level_min IS NULL AND target_level_max IS NULL)"
             " OR (target_level_min >= 0 AND target_level_min <= target_level_max AND target_level_max <= 100)",
@@ -270,8 +274,14 @@ class CompetencyIndicator(_RowSource, Base):
     # Обязательно или желательно («будет преимуществом» в вакансии).
     is_mandatory: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     verification: Mapped[VerificationMethod] = mapped_column(str_enum(VerificationMethod, "verification"))
+    acceptance: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
+    # Строка сохранена ради прослеживаемости, но в оценку не входит (например, право, а не компетенция).
+    excluded_from_scoring: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     sort_order: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
 
     competency: Mapped[Competency] = relationship(back_populates="indicators")
 
-    __table_args__ = (_row_source_check(),)
+    __table_args__ = (
+        UniqueConstraint("competency_id", "key", name="uq_competency_indicators_competency_key"),
+        _row_source_check(),
+    )

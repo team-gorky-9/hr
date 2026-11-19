@@ -516,10 +516,15 @@ def create_requirement_profile(
 
     rows = [*formal_requirements, *competencies, *(i for c in competencies for i in c.indicators)]
     for row in rows:
-        if row.source_document_id is not None and row.source_document_id not in source_ids:
-            raise RepositoryError(
-                f"строка ссылается на документ {row.source_document_id}, которого нет в источниках профиля"
-            )
+        for ref in row.source_refs:
+            if ref.source_document_id not in source_ids:
+                raise RepositoryError(
+                    f"строка {row.key} ссылается на документ {ref.source_document_id}, которого нет в источниках профиля"
+                )
+    keys = [row.key for row in rows]
+    duplicates = sorted({key for key in keys if keys.count(key) > 1})
+    if duplicates:
+        raise RepositoryError(f"повторяются ключи строк: {', '.join(duplicates)}")
     codes = [c.code for c in competencies]
     duplicates = sorted({code for code in codes if codes.count(code) > 1})
     if duplicates:
@@ -537,14 +542,14 @@ def create_requirement_profile(
     )
     profile.sources = [ProfileSource(**s.model_dump()) for s in sources]
     profile.formal_requirements = [
-        FormalRequirement(**r.model_dump(), sort_order=order) for order, r in enumerate(formal_requirements, start=1)
+        FormalRequirement(**_row_fields(r), sort_order=order) for order, r in enumerate(formal_requirements, start=1)
     ]
     profile.competencies = [
         Competency(
-            **c.model_dump(exclude={"indicators"}),
+            **_row_fields(c, exclude={"indicators"}),
             sort_order=order,
             indicators=[
-                CompetencyIndicator(**i.model_dump(), sort_order=i_order)
+                CompetencyIndicator(**_row_fields(i), sort_order=i_order)
                 for i_order, i in enumerate(c.indicators, start=1)
             ],
         )
@@ -553,6 +558,15 @@ def create_requirement_profile(
     session.add(profile)
     session.flush()
     return profile
+
+
+def _row_fields(row, exclude: set[str] | None = None) -> dict[str, Any]:
+    """Поля строки профиля для модели: JSONB-поля — в JSON-виде (UUID строкой), без пустых критериев."""
+    fields = row.model_dump(exclude=exclude)
+    fields["source_refs"] = [ref.model_dump(mode="json") for ref in row.source_refs]
+    if "acceptance" in fields:
+        fields["acceptance"] = row.acceptance.model_dump(exclude_none=True)
+    return fields
 
 
 def approve_requirement_profile(

@@ -111,11 +111,13 @@
 
 Один формат для всех должностей: условия допуска + компетенции с индикаторами. Схемы — `app/schemas/requirements.py`.
 
-- Происхождение строки (общие поля `FormalRequirementIn`, `CompetencyIn`, `IndicatorIn`): `origin` — `source` | `team`; `source_document_id` (uuid), `source_ref` (до 64 символов: `п. 2.2.1`, `разд. 7, стр. 2`, `ИТК, инд. 2`), `source_quote` (дословно), `note`. Правило: при `source` обязательны документ, адрес и цитата; при `team` — обоснование в `note`.
+- Ключ и происхождение строки (общие поля `FormalRequirementIn`, `CompetencyIn`, `IndicatorIn`): `key` — устойчивый ключ строки в пакете (до 64 символов без пробелов: `hr.education.level`, `py.di.P106`), уникален в профиле и не меняется между версиями; `origin` — `source` | `team`; `source_refs` — список `SourceRefIn`; `note`. Правило: при `source` нужна хотя бы одна ссылка; при `team` — обоснование в `note`.
+- `SourceRefIn`: `source_document_id` (uuid, документ из `sources` профиля), `address` (до 256 символов: `п. 2.2.1`, `разд. 7, второй критерий; OOXML P201`, `ИТК, инд. 2`), `quote` (дословно). Строка может ссылаться на несколько документов: строка матрицы и пункт ДИ.
+- `AcceptanceIn` (поле `acceptance` условия и индикатора): `met`, `not_met`, `unknown`, `limit` — строки или null: что считать выполнением, явным невыполнением, нехваткой сведений и чем ограничен вывод.
 - `ProfileSourceIn`: `source_document_id`, `role` (`job_description` | `competency_matrix` | `vacancy_posting` | `regulation` | `other`), `observed_revision` (строка или null: `1.2 от 01.02.2024`), `is_primary` (bool).
-- `FormalRequirementIn`: `kind`, `description`, `params` (объект, по умолчанию `{}`), `is_mandatory` (по умолчанию true), `verification`.
+- `FormalRequirementIn`: `kind`, `description`, `params` (объект, по умолчанию `{}`), `is_mandatory` (по умолчанию true), `verification`, `acceptance`.
 - `CompetencyIn`: `code` (до 32), `name`, `rank` (или null), `target_level_min`, `target_level_max` (оба null или оба 0–100, min ≤ max), `indicators` — не пустой список `IndicatorIn`.
-- `IndicatorIn`: `text`, `is_mandatory` (по умолчанию true; false — «будет преимуществом»), `verification`.
+- `IndicatorIn`: `text`, `is_mandatory` (по умолчанию true; false — «будет преимуществом»), `verification`, `acceptance`, `excluded_from_scoring` (по умолчанию false: строка хранится ради прослеживаемости, но в оценку не входит).
 
 `verification` — где подтверждается требование: `resume`, `documents` (диплом, трудовая книжка), `interview` (личные качества, знание законов), `test` (практическое задание).
 
@@ -206,13 +208,13 @@
 
 **`requirement_profile_sources`** — документы версии профиля: `profile_id` → (CASCADE); `source_document_id` → `source_documents` (RESTRICT); `role` (`job_description` | `competency_matrix` | `vacancy_posting` | `regulation` | `other`); `observed_revision` varchar(128) null — редакция, видная в документе; `is_primary` bool. Пара (`profile_id`, `source_document_id`) уникальна.
 
-**Происхождение строки** — одинаковые столбцы у `formal_requirements`, `competencies`, `competency_indicators`: `origin` `source` | `team`; `source_document_id` → `source_documents` (RESTRICT) null; `source_ref` varchar(64) null; `source_quote` text null; `note` text null. CHECK `row_source`: при `source` заполнены документ, адрес и цитата, при `team` — `note`. Документ строки должен быть среди `requirement_profile_sources` профиля (проверяет `create_requirement_profile`).
+**Ключ и происхождение строки** — одинаковые столбцы у `formal_requirements`, `competencies`, `competency_indicators`: `key` varchar(64) — unique в профиле (у индикаторов — в компетенции; уникальность по всему профилю проверяет `create_requirement_profile`); `origin` `source` | `team`; `source_refs` jsonb, по умолчанию `[]` — список `{source_document_id, address, quote}`; `note` text null. CHECK `row_source`: при `source` список не пуст, при `team` заполнен `note`. Документы ссылок должны быть среди `requirement_profile_sources` профиля (проверяет `create_requirement_profile`). По `key` пакет сопоставляется с UUID строк базы.
 
-**`formal_requirements`** — условие допуска: `profile_id` → `requirement_profiles` (CASCADE); `kind` `FormalRequirementKind`; `description` text; `params` jsonb (п. 3.5); `is_mandatory` bool, по умолчанию true; `verification` `VerificationMethod`; происхождение; `sort_order` smallint.
+**`formal_requirements`** — условие допуска: `profile_id` → `requirement_profiles` (CASCADE); `kind` `FormalRequirementKind`; `description` text; `params` jsonb (п. 3.5); `is_mandatory` bool, по умолчанию true; `verification` `VerificationMethod`; `acceptance` jsonb `{}` (`AcceptanceIn`); ключ и происхождение; `sort_order` smallint. Столбец `source_quote` v1.0 заменён на `source_refs`.
 
 **`competencies`** — группа индикаторов: `profile_id` → (CASCADE); `code` varchar(32), unique в профиле (`ПАК`, `ИТК`, `PY-DB`); `name`; `rank` `key` | `basic` | `special` **или null**; `target_level_min`, `target_level_max` smallint **или оба null**, иначе `0 <= min <= max <= 100` («90–100 процентов» → 90 и 100); происхождение; `sort_order`.
 
-**`competency_indicators`** — проверяемое требование: `competency_id` → (CASCADE); `text`; `is_mandatory` bool, по умолчанию true; `verification` `VerificationMethod`; происхождение; `sort_order`.
+**`competency_indicators`** — проверяемое требование: `competency_id` → (CASCADE); `text`; `is_mandatory` bool, по умолчанию true; `verification` `VerificationMethod`; `acceptance` jsonb `{}`; `excluded_from_scoring` bool, по умолчанию false; ключ и происхождение; `sort_order`.
 
 ### 4.4. Оценка [Д]
 
@@ -341,7 +343,7 @@
 | `add_candidate_card(candidate_id, card, extractor, prompt_version=None, candidate_text_id=None)` | новая текущая версия карточки; навыки из `card.skills` нормализованы и без дублей | нет текста, или текст другого кандидата → `RepositoryError` |
 | `get_current_card(candidate_id)` | текущая карточка или `None` | — |
 | `find_candidates_by_skills(skills, match_all=True) → [Candidate]` | по текущим карточкам: все навыки или хотя бы один; сортировка по `code` | — |
-| `create_requirement_profile(position_id, created_by, formal_requirements, competencies, sources=(), version=None, is_synthetic=False, note=None) → RequirementProfile` [v1.1] | черновик профиля (п. 3.6); порядок строк → `sort_order`; без `version` — следующий номер для должности | нет должности или документа, документ строки не в `sources`, документ в `sources` дважды, повтор кода компетенции → `RepositoryError`; повтор (`position_id`, `version`) → `IntegrityError` |
+| `create_requirement_profile(position_id, created_by, formal_requirements, competencies, sources=(), version=None, is_synthetic=False, note=None) → RequirementProfile` [v1.1] | черновик профиля (п. 3.6); порядок строк → `sort_order`; без `version` — следующий номер для должности | нет должности или документа, документ ссылки не в `sources`, документ в `sources` дважды, повтор ключа строки или кода компетенции → `RepositoryError`; повтор (`position_id`, `version`) → `IntegrityError` |
 | `approve_requirement_profile(profile_id, approved_by_user_id, approval_basis) → RequirementProfile` [v1.1] | черновик → `approved`; прежняя утверждённая версия должности → `archived`; `approved_at` = время транзакции | не черновик, учебный профиль, пользователь не активный `hr`/`admin`, пустое основание → `RepositoryError` |
 | `save_assessment(candidate_id, profile_id, card_id, model, formal_checks, competency_scores, overall_score=None, summary=None, prompt_version=None)` | новая текущая версия оценки; `formal_result` считает код (п. 2.6) | профиль в архиве [v1.1], карточка чужая, требование или компетенция из другого профиля → `RepositoryError`; цитата не на месте или из чужого текста → `EvidenceError` |
 | `create_application(candidate_id, source, vacancy_id=None, external_position_title=None, applied_at=None, actor_user_id=None)` | этап `new` и первое событие журнала | нет ни вакансии, ни внешней должности → `RepositoryError`; повтор на ту же вакансию → `IntegrityError` |
@@ -424,7 +426,7 @@
 | карточка с полем `"salary": 100000` | ошибка проверки `CandidateCard`: лишнее поле |
 | `Experience(start="2025-05", end="2024-05")` | ошибка проверки: конец раньше начала |
 
-Проверено запуском: тесты ветки `feature/db-skeleton` (40 шт.) и `scripts/smoke_real_candidate.py` на этом отклике. v1.1: тесты ветки `feature/requirement-profiles` (57 шт.) и тот же скрипт.
+Проверено запуском: тесты ветки `feature/db-skeleton` (40 шт.) и `scripts/smoke_real_candidate.py` на этом отклике. v1.1: тесты ветки `feature/requirement-profiles` (59 шт.) и тот же скрипт.
 
 ## 9. Как менять контракт
 
@@ -457,7 +459,9 @@
 | Изменение | Совместимость |
 |---|---|
 | `competencies.rank`, `target_level_min/max` допускают null (оба уровня вместе) | ослабление ограничения, старые данные валидны |
-| Происхождение строки (`origin`, `source_document_id`, `source_ref`, `source_quote`, `note`) у трёх таблиц + CHECK | новые столбцы; старые строки → `origin = team`, `note` = «создано до миграции 0002…» |
+| Ключ и происхождение строки (`key`, `origin`, `source_refs`, `note`) у трёх таблиц + CHECK и уникальность ключа | новые столбцы; старые строки → `key = legacy.<начало id>`, `origin = team`, `note` = «создано до миграции 0002…» |
+| `formal_requirements.source_quote` → `source_refs` | **несовместимо**: столбец удалён, прежняя цитата переносится в `note`. Потребителей у столбца не было (только тесты и smoke-скрипт) |
+| `acceptance` у условий и индикаторов, `competency_indicators.excluded_from_scoring` | новые столбцы |
 | `competency_indicators.is_mandatory`, `verification`; `formal_requirements.verification` | новые столбцы; старые строки → `verification = resume` |
 | `requirement_profiles.is_synthetic`, `approval_basis`; таблица `requirement_profile_sources` | новые |
 | Функции `create_requirement_profile`, `approve_requirement_profile` | закрывают пробел: запись только через функции (п. 11.3), а функций для профилей не было |
@@ -467,4 +471,6 @@
 
 **Не входит и требует решения Ильи:** результат по отдельному индикатору («есть / нет / неизвестно» с цитатой). Сейчас оценка хранится по компетенции (`competency_scores`). Если скорингу нужен вывод по индикатору — отдельная таблица `indicator_checks` следующей миграцией.
 
-**Как проверено:** миграция `0002` применена к базе с профилем, созданным до неё (строки получили `origin = team`), откат `0002 → 0001` и повторное применение; `alembic check` — модели совпадают с миграциями; 57 тестов на PostgreSQL; `scripts/smoke_real_candidate.py` на `Python-разработчик/отклик 5.txt`.
+**Загрузка пакета.** `scripts/load_requirement_profiles.py` загружает файловый пакет stage-0b-01 (`requirement-profile-review/0.2`): документы манифеста — в `source_documents` со сверкой SHA-256, профили — через `create_requirement_profile`. Без `--commit` транзакция откатывается. Поля пакета, которые остаются только в пакете (для ревью): `check_stage`, `evidence_channels`, `mandatory_basis`, `interpretation_status`, `grouping_status`, `collection`, `issues`, `context_note`, `aggregation_method`, `exclude_duplicate_weight`, `duplicates_keys`, `related_indicators`, `split_candidates`, `verification_note`, `acceptance` групп. Повторная загрузка той же версии отклоняется: изменения — новой версией.
+
+**Как проверено:** миграция `0002` применена к базе с профилем, созданным до неё (строки получили ключ `legacy.*`, `origin = team`, цитата перенесена в `note`), откат `0002 → 0001` и повторное применение; `alembic check` — модели совпадают с миграциями; 59 тестов на PostgreSQL; `scripts/smoke_real_candidate.py` на `Python-разработчик/отклик 5.txt`; загрузка пакета Давида (ветка `docs/stage-0b-01-requirement-profiles`, `3926099`) в тестовую базу: 4 документа со сверкой SHA-256, `hr-consultant` v2 — 2 условия, 5 компетенций, 54 индикатора; `python-dev` v2 — 2 условия, 8 компетенций, 53 индикатора.

@@ -55,16 +55,16 @@ def make_profile(session: Session, position_code: str = "hr-consultant", version
         version=version,
         created_by="test",
         formal_requirements=[
-            FormalRequirementIn(kind=FormalRequirementKind.EDUCATION_LEVEL, description="Высшее образование",
+            FormalRequirementIn(kind=FormalRequirementKind.EDUCATION_LEVEL, key="t.education.level", description="Высшее образование",
                                 params={"min_level": "высшее"}, verification=VerificationMethod.RESUME, **team),
-            FormalRequirementIn(kind=FormalRequirementKind.EDUCATION_FIELD,
+            FormalRequirementIn(kind=FormalRequirementKind.EDUCATION_FIELD, key="t.education.field",
                                 description="Юриспруденция или ГМУ либо переподготовка", is_mandatory=False,
                                 verification=VerificationMethod.DOCUMENTS, **team),
         ],
         competencies=[
-            CompetencyIn(rank=CompetencyRank.KEY, code="ИТК", name="Информационно-техническая компетенция",
+            CompetencyIn(key="t.ITK", rank=CompetencyRank.KEY, code="ИТК", name="Информационно-техническая компетенция",
                          target_level_min=90, target_level_max=100, **team,
-                         indicators=[IndicatorIn(text="умеет работать с базами данных",
+                         indicators=[IndicatorIn(key="t.ITK.01", text="умеет работать с базами данных",
                                                  verification=VerificationMethod.RESUME, **team)]),
         ],
     )

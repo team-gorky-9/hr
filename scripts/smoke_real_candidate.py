@@ -115,11 +115,11 @@ def main(root: Path) -> None:
         profile = repo.create_requirement_profile(
             session, position_id=position.id, created_by="manual-smoke", is_synthetic=True,
             formal_requirements=[FormalRequirementIn(
-                kind=FormalRequirementKind.EDUCATION_LEVEL, description="Высшее образование",
-                verification=VerificationMethod.RESUME, **team)],
+                key="smoke.education", kind=FormalRequirementKind.EDUCATION_LEVEL,
+                description="Высшее образование", verification=VerificationMethod.RESUME, **team)],
             competencies=[CompetencyIn(
-                code="BACKEND", name="Разработка backend на Python", **team,
-                indicators=[IndicatorIn(text="разрабатывал REST API и писал автотесты",
+                key="smoke.BACKEND", code="BACKEND", name="Разработка backend на Python", **team,
+                indicators=[IndicatorIn(key="smoke.BACKEND.01", text="разрабатывал REST API и писал автотесты",
                                         verification=VerificationMethod.RESUME, **team)])],
         )
         assessment = repo.save_assessment(

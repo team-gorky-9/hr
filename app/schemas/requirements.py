@@ -30,23 +30,34 @@ class ProfileSourceIn(_Strict):
     is_primary: bool = False
 
 
+class SourceRefIn(_Strict):
+    """Ссылка строки на документ: адрес в документе и дословная цитата."""
+    source_document_id: uuid.UUID
+    # «п. 2.2.1», «разд. 7, второй критерий; OOXML P201», «ИТК, инд. 2».
+    address: str = Field(min_length=1, max_length=256)
+    quote: str = Field(min_length=1)
+
+
+class AcceptanceIn(_Strict):
+    """Что считать выполнением, явным невыполнением и нехваткой сведений."""
+    met: str | None = None
+    not_met: str | None = None
+    unknown: str | None = None
+    limit: str | None = None  # ограничение вывода: «без численного балла до согласования рубрики»
+
+
 class RowSourceIn(_Strict):
-    """Происхождение строки: из документа (документ, адрес, цитата) или от команды (обоснование)."""
+    """Ключ и происхождение строки: из документов (ссылки) или от команды (обоснование)."""
+    key: str = Field(min_length=1, max_length=64, pattern=r"^\S+$")
     origin: RowOrigin
-    source_document_id: uuid.UUID | None = None
-    source_ref: str | None = Field(default=None, min_length=1, max_length=64)
-    source_quote: str | None = Field(default=None, min_length=1)
+    source_refs: list[SourceRefIn] = Field(default_factory=list)
     note: str | None = Field(default=None, min_length=1)
 
     @model_validator(mode="after")
     def _check_origin(self) -> Self:
-        if self.origin == RowOrigin.SOURCE:
-            missing = [
-                name for name in ("source_document_id", "source_ref", "source_quote") if getattr(self, name) is None
-            ]
-            if missing:
-                raise ValueError(f"строка из документа должна указать {', '.join(missing)}")
-        elif self.note is None:
+        if self.origin == RowOrigin.SOURCE and not self.source_refs:
+            raise ValueError("строка из документа должна иметь хотя бы одну ссылку source_refs")
+        if self.origin == RowOrigin.TEAM and self.note is None:
             raise ValueError("строка команды должна иметь обоснование в note")
         return self
 
@@ -57,12 +68,15 @@ class FormalRequirementIn(RowSourceIn):
     params: dict[str, Any] = Field(default_factory=dict)
     is_mandatory: bool = True
     verification: VerificationMethod
+    acceptance: AcceptanceIn = Field(default_factory=AcceptanceIn)
 
 
 class IndicatorIn(RowSourceIn):
     text: str = Field(min_length=1)
     is_mandatory: bool = True
     verification: VerificationMethod
+    acceptance: AcceptanceIn = Field(default_factory=AcceptanceIn)
+    excluded_from_scoring: bool = False
 
 
 class CompetencyIn(RowSourceIn):
