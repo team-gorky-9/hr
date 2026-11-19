@@ -1,0 +1,1258 @@
+{
+  "format_version": 1,
+  "synthetic": true,
+  "description": "Контрольный набор для карточки и объяснимой оценки: отклик py-9001 на «Python-разработчика». Все тексты синтетические, учебный профиль не основан на ДИ.",
+  "task": "hackaton/hq/tasks/stage-0b-02-assessment-fixtures.md",
+  "uuid_namespace": "d0137233-a161-59f2-876e-34ec1c1142a6",
+  "uuid_rule": "id = uuid5(uuid_namespace, key)",
+  "candidates": {
+    "py-9001": {
+      "id": "234d32a9-b4ec-5a6e-a890-88563a6b517b",
+      "position_code": "python-dev"
+    },
+    "py-9002": {
+      "id": "82e9e738-259e-578e-a980-c4a18600cb29",
+      "position_code": "python-dev"
+    }
+  },
+  "texts": {
+    "py-9001/text/base": {
+      "id": "fc616e86-f66f-5cc1-a707-f350b734a9da",
+      "candidate": "py-9001",
+      "version": 1,
+      "text": "Написал API-тесты для сервиса заявок."
+    },
+    "py-9001/text/met-3y": {
+      "id": "d8335dd5-c045-5634-87f2-903fc5fdb7dc",
+      "candidate": "py-9001",
+      "version": 1,
+      "text": "Написал API-тесты для сервиса заявок.\nОбщий коммерческий опыт — 3 года."
+    },
+    "py-9001/text/not-met-1y": {
+      "id": "b1ec3bc8-cc64-5884-8388-99f551f2f5ae",
+      "candidate": "py-9001",
+      "version": 1,
+      "text": "Написал API-тесты для сервиса заявок.\nОбщий коммерческий опыт — 1 год."
+    },
+    "py-9001/text/non-bmp": {
+      "id": "b91f6449-d678-5bfd-a215-194f299f1872",
+      "candidate": "py-9001",
+      "version": 1,
+      "text": "🙂 Написал API-тесты для сервиса заявок."
+    },
+    "py-9001/text/stale-v1": {
+      "id": "0dee02ff-e771-5099-abd9-d5cf3df23590",
+      "candidate": "py-9001",
+      "version": 1,
+      "text": "Написал API-тесты для сервиса заявок."
+    },
+    "py-9001/text/stale-v2": {
+      "id": "ed73a8db-a720-5037-8855-32e84e26b566",
+      "candidate": "py-9001",
+      "version": 2,
+      "text": "Написал API-тесты для сервиса заявок.\nОбщий коммерческий опыт — 3 года."
+    },
+    "py-9002/text/base": {
+      "id": "09b6beac-8ac0-5c0d-bf18-fbd7280a8602",
+      "candidate": "py-9002",
+      "version": 1,
+      "text": "Написал API-тесты для сервиса заявок."
+    }
+  },
+  "profile": {
+    "key": "py-train/profile/v1",
+    "id": "6809073b-3ae3-58d8-960b-4028546a62e3",
+    "position_code": "python-dev",
+    "synthetic_role": "Учебный профиль для технической проверки. Порог 24 мес. есть только здесь, в реальной ДИ Python минимума стажа нет. Ранг и эталонный уровень компетенции не заданы: в источнике их нет.",
+    "formal_requirements": [
+      {
+        "key": "py-train/requirement/experience-commercial-24m",
+        "id": "a3f9224e-1415-5d81-b759-cb773b1d949f",
+        "kind": "experience",
+        "description": "Подтверждённый общий коммерческий опыт не менее двух лет",
+        "is_mandatory": true,
+        "params": {
+          "schema_version": "0.1",
+          "scope": "total_commercial",
+          "minimum_defined": true,
+          "min_months": 24
+        },
+        "params_status": "предложение Давида (hq/work/2026-11-19-requirement-profiles/source-review.md), контрактом не утверждено",
+        "verification": "resume"
+      }
+    ],
+    "competencies": [
+      {
+        "key": "py-train/competency/api-testing",
+        "id": "1c27d6a3-2569-55b2-bf71-555a1475e949",
+        "rank": null,
+        "code": "API-TEST",
+        "name": "Автоматизированное тестирование API",
+        "target_level_min": null,
+        "target_level_max": null,
+        "indicators": [
+          {
+            "key": "py-train/competency/api-testing/indicator/1",
+            "id": "49d148b8-895a-57b0-ac47-4f81b1b2b99d",
+            "text": "Писал автоматизированные API-тесты",
+            "verification": "resume"
+          }
+        ]
+      }
+    ]
+  },
+  "missing_vocabulary": [
+    "длительность коммерческого опыта"
+  ],
+  "cases": [
+    {
+      "id": "C1-unknown",
+      "title": "Базовый текст: стаж неизвестен, тесты подтверждены цитатой",
+      "enforced_by": "db_v1",
+      "candidate": "py-9001",
+      "texts": [
+        "py-9001/text/base"
+      ],
+      "assessed_text": "py-9001/text/base",
+      "profile_status": "approved",
+      "model_available": true,
+      "card": {
+        "experience_years": null,
+        "experience": [
+          {
+            "duties": [
+              "Написал API-тесты для сервиса заявок."
+            ]
+          }
+        ],
+        "missing": [
+          "длительность коммерческого опыта"
+        ]
+      },
+      "assessment": {
+        "formal_checks": [
+          {
+            "requirement": "py-train/requirement/experience-commercial-24m",
+            "gap": "длительность коммерческого опыта",
+            "check": {
+              "requirement_id": "a3f9224e-1415-5d81-b759-cb773b1d949f",
+              "result": "unknown",
+              "explanation": "В тексте нет сведений о длительности коммерческого опыта.",
+              "evidence": []
+            }
+          }
+        ],
+        "competency_scores": [
+          {
+            "competency": "py-train/competency/api-testing",
+            "indicators": [
+              "py-train/competency/api-testing/indicator/1"
+            ],
+            "score": {
+              "competency_id": "1c27d6a3-2569-55b2-bf71-555a1475e949",
+              "level": null,
+              "explanation": "Индикатор «Писал автоматизированные API-тесты»: есть свидетельство в резюме.",
+              "evidence": [
+                {
+                  "candidate_text_id": "fc616e86-f66f-5cc1-a707-f350b734a9da",
+                  "quote": "Написал API-тесты для сервиса заявок.",
+                  "start": 0,
+                  "end": 37
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "refusal": null,
+        "formal_result": "unknown",
+        "formal_checks": [
+          {
+            "verdicts": [],
+            "effective": "unknown",
+            "issue": null
+          }
+        ],
+        "competency_scores": [
+          {
+            "verdicts": [
+              "ok"
+            ],
+            "issue": null
+          }
+        ],
+        "db_v1": {
+          "save_assessment": "accepted",
+          "formal_result": "unknown",
+          "error": null
+        }
+      },
+      "ui": {
+        "formal": {
+          "requirement": "Общий коммерческий опыт не менее 2 лет (учебное требование)",
+          "status": "Нужно уточнить",
+          "basis": "В отклике нет длительности коммерческого опыта.",
+          "action": "Уточнить у кандидата длительность и характер коммерческого опыта"
+        },
+        "evidence": [
+          {
+            "indicator": "Писал автоматизированные API-тесты",
+            "text": "py-9001/text/base",
+            "quote": "Написал API-тесты для сервиса заявок.",
+            "start": 0,
+            "end": 37,
+            "utf16_start": 0,
+            "utf16_end": 37
+          }
+        ]
+      }
+    },
+    {
+      "id": "C2-met",
+      "title": "Добавлен стаж 3 года: учебное требование выполнено",
+      "enforced_by": "db_v1",
+      "candidate": "py-9001",
+      "texts": [
+        "py-9001/text/met-3y"
+      ],
+      "assessed_text": "py-9001/text/met-3y",
+      "profile_status": "approved",
+      "model_available": true,
+      "card": {
+        "experience_years": 3.0,
+        "experience": [
+          {
+            "duties": [
+              "Написал API-тесты для сервиса заявок."
+            ]
+          }
+        ],
+        "missing": []
+      },
+      "assessment": {
+        "formal_checks": [
+          {
+            "requirement": "py-train/requirement/experience-commercial-24m",
+            "gap": null,
+            "check": {
+              "requirement_id": "a3f9224e-1415-5d81-b759-cb773b1d949f",
+              "result": "met",
+              "explanation": "Кандидат указал общий коммерческий опыт 3 года (36 мес.) при пороге 24 мес. Сведения по резюме.",
+              "evidence": [
+                {
+                  "candidate_text_id": "d8335dd5-c045-5634-87f2-903fc5fdb7dc",
+                  "quote": "Общий коммерческий опыт — 3 года.",
+                  "start": 38,
+                  "end": 71
+                }
+              ]
+            }
+          }
+        ],
+        "competency_scores": [
+          {
+            "competency": "py-train/competency/api-testing",
+            "indicators": [
+              "py-train/competency/api-testing/indicator/1"
+            ],
+            "score": {
+              "competency_id": "1c27d6a3-2569-55b2-bf71-555a1475e949",
+              "level": null,
+              "explanation": "Индикатор «Писал автоматизированные API-тесты»: есть свидетельство в резюме.",
+              "evidence": [
+                {
+                  "candidate_text_id": "d8335dd5-c045-5634-87f2-903fc5fdb7dc",
+                  "quote": "Написал API-тесты для сервиса заявок.",
+                  "start": 0,
+                  "end": 37
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "refusal": null,
+        "formal_result": "met",
+        "formal_checks": [
+          {
+            "verdicts": [
+              "ok"
+            ],
+            "effective": "met",
+            "issue": null
+          }
+        ],
+        "competency_scores": [
+          {
+            "verdicts": [
+              "ok"
+            ],
+            "issue": null
+          }
+        ],
+        "db_v1": {
+          "save_assessment": "accepted",
+          "formal_result": "met",
+          "error": null
+        }
+      },
+      "ui": {
+        "formal": {
+          "requirement": "Общий коммерческий опыт не менее 2 лет (учебное требование)",
+          "status": "Выполнено (по резюме)",
+          "basis": "Указан общий коммерческий опыт 3 года при пороге 2 года.",
+          "action": "Перейти к следующему этапу на усмотрение кадровика"
+        },
+        "evidence": [
+          {
+            "indicator": "Писал автоматизированные API-тесты",
+            "text": "py-9001/text/met-3y",
+            "quote": "Написал API-тесты для сервиса заявок.",
+            "start": 0,
+            "end": 37,
+            "utf16_start": 0,
+            "utf16_end": 37
+          },
+          {
+            "indicator": "Писал автоматизированные API-тесты",
+            "text": "py-9001/text/met-3y",
+            "quote": "Общий коммерческий опыт — 3 года.",
+            "start": 38,
+            "end": 71,
+            "utf16_start": 38,
+            "utf16_end": 71
+          }
+        ]
+      }
+    },
+    {
+      "id": "C3-not-met",
+      "title": "Добавлен стаж 1 год: явное невыполнение, тесты остаются свидетельством",
+      "enforced_by": "db_v1",
+      "candidate": "py-9001",
+      "texts": [
+        "py-9001/text/not-met-1y"
+      ],
+      "assessed_text": "py-9001/text/not-met-1y",
+      "profile_status": "approved",
+      "model_available": true,
+      "card": {
+        "experience_years": 1.0,
+        "experience": [
+          {
+            "duties": [
+              "Написал API-тесты для сервиса заявок."
+            ]
+          }
+        ],
+        "missing": []
+      },
+      "assessment": {
+        "formal_checks": [
+          {
+            "requirement": "py-train/requirement/experience-commercial-24m",
+            "gap": null,
+            "check": {
+              "requirement_id": "a3f9224e-1415-5d81-b759-cb773b1d949f",
+              "result": "not_met",
+              "explanation": "Кандидат указал общий коммерческий опыт 1 год (12 мес.) при пороге 24 мес. Сведения по резюме.",
+              "evidence": [
+                {
+                  "candidate_text_id": "b1ec3bc8-cc64-5884-8388-99f551f2f5ae",
+                  "quote": "Общий коммерческий опыт — 1 год.",
+                  "start": 38,
+                  "end": 70
+                }
+              ]
+            }
+          }
+        ],
+        "competency_scores": [
+          {
+            "competency": "py-train/competency/api-testing",
+            "indicators": [
+              "py-train/competency/api-testing/indicator/1"
+            ],
+            "score": {
+              "competency_id": "1c27d6a3-2569-55b2-bf71-555a1475e949",
+              "level": null,
+              "explanation": "Индикатор «Писал автоматизированные API-тесты»: есть свидетельство в резюме.",
+              "evidence": [
+                {
+                  "candidate_text_id": "b1ec3bc8-cc64-5884-8388-99f551f2f5ae",
+                  "quote": "Написал API-тесты для сервиса заявок.",
+                  "start": 0,
+                  "end": 37
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "refusal": null,
+        "formal_result": "not_met",
+        "formal_checks": [
+          {
+            "verdicts": [
+              "ok"
+            ],
+            "effective": "not_met",
+            "issue": null
+          }
+        ],
+        "competency_scores": [
+          {
+            "verdicts": [
+              "ok"
+            ],
+            "issue": null
+          }
+        ],
+        "db_v1": {
+          "save_assessment": "accepted",
+          "formal_result": "not_met",
+          "error": null
+        }
+      },
+      "ui": {
+        "formal": {
+          "requirement": "Общий коммерческий опыт не менее 2 лет (учебное требование)",
+          "status": "Не выполнено (по резюме)",
+          "basis": "Указан общий коммерческий опыт 1 год при пороге 2 года.",
+          "action": "Решение за кадровиком: отказ по вакансии или рассмотрение на другие должности"
+        },
+        "evidence": [
+          {
+            "indicator": "Писал автоматизированные API-тесты",
+            "text": "py-9001/text/not-met-1y",
+            "quote": "Написал API-тесты для сервиса заявок.",
+            "start": 0,
+            "end": 37,
+            "utf16_start": 0,
+            "utf16_end": 37
+          },
+          {
+            "indicator": "Писал автоматизированные API-тесты",
+            "text": "py-9001/text/not-met-1y",
+            "quote": "Общий коммерческий опыт — 1 год.",
+            "start": 38,
+            "end": 70,
+            "utf16_start": 38,
+            "utf16_end": 70
+          }
+        ]
+      }
+    },
+    {
+      "id": "C4-not-met-strong-competency",
+      "title": "Как C3, но с высоким уровнем компетенции: формальный итог не меняется",
+      "enforced_by": "db_v1",
+      "candidate": "py-9001",
+      "texts": [
+        "py-9001/text/not-met-1y"
+      ],
+      "assessed_text": "py-9001/text/not-met-1y",
+      "profile_status": "approved",
+      "model_available": true,
+      "card": {
+        "experience_years": 1.0,
+        "experience": [
+          {
+            "duties": [
+              "Написал API-тесты для сервиса заявок."
+            ]
+          }
+        ],
+        "missing": []
+      },
+      "assessment": {
+        "formal_checks": [
+          {
+            "requirement": "py-train/requirement/experience-commercial-24m",
+            "gap": null,
+            "check": {
+              "requirement_id": "a3f9224e-1415-5d81-b759-cb773b1d949f",
+              "result": "not_met",
+              "explanation": "Кандидат указал общий коммерческий опыт 1 год (12 мес.) при пороге 24 мес. Сведения по резюме.",
+              "evidence": [
+                {
+                  "candidate_text_id": "b1ec3bc8-cc64-5884-8388-99f551f2f5ae",
+                  "quote": "Общий коммерческий опыт — 1 год.",
+                  "start": 38,
+                  "end": 70
+                }
+              ]
+            }
+          }
+        ],
+        "competency_scores": [
+          {
+            "competency": "py-train/competency/api-testing",
+            "indicators": [
+              "py-train/competency/api-testing/indicator/1"
+            ],
+            "score": {
+              "competency_id": "1c27d6a3-2569-55b2-bf71-555a1475e949",
+              "level": 100,
+              "explanation": "Синтетический уровень 100 только для проверки некомпенсируемости; шкала level не согласована.",
+              "evidence": [
+                {
+                  "candidate_text_id": "b1ec3bc8-cc64-5884-8388-99f551f2f5ae",
+                  "quote": "Написал API-тесты для сервиса заявок.",
+                  "start": 0,
+                  "end": 37
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "refusal": null,
+        "formal_result": "not_met",
+        "formal_checks": [
+          {
+            "verdicts": [
+              "ok"
+            ],
+            "effective": "not_met",
+            "issue": null
+          }
+        ],
+        "competency_scores": [
+          {
+            "verdicts": [
+              "ok"
+            ],
+            "issue": null
+          }
+        ],
+        "db_v1": {
+          "save_assessment": "accepted",
+          "formal_result": "not_met",
+          "error": null
+        }
+      },
+      "ui": {
+        "formal": {
+          "requirement": "Общий коммерческий опыт не менее 2 лет (учебное требование)",
+          "status": "Не выполнено (по резюме)",
+          "basis": "Указан общий коммерческий опыт 1 год при пороге 2 года.",
+          "action": "Высокий уровень компетенции показан отдельно и не отменяет невыполненное обязательное требование"
+        },
+        "evidence": [
+          {
+            "indicator": "Писал автоматизированные API-тесты",
+            "text": "py-9001/text/not-met-1y",
+            "quote": "Написал API-тесты для сервиса заявок.",
+            "start": 0,
+            "end": 37,
+            "utf16_start": 0,
+            "utf16_end": 37
+          }
+        ],
+        "competency_level": 100,
+        "note": "Уровень 100 синтетический: шкала competency_scores.level не согласована."
+      }
+    },
+    {
+      "id": "C5-non-bmp",
+      "title": "Эмодзи перед цитатой: границы в кодовых точках и в UTF-16 различаются",
+      "enforced_by": "schema",
+      "candidate": "py-9001",
+      "texts": [
+        "py-9001/text/non-bmp"
+      ],
+      "assessed_text": "py-9001/text/non-bmp",
+      "profile_status": "approved",
+      "model_available": true,
+      "card": {
+        "experience_years": null,
+        "experience": [
+          {
+            "duties": [
+              "Написал API-тесты для сервиса заявок."
+            ]
+          }
+        ],
+        "missing": [
+          "длительность коммерческого опыта"
+        ]
+      },
+      "assessment": {
+        "formal_checks": [
+          {
+            "requirement": "py-train/requirement/experience-commercial-24m",
+            "gap": "длительность коммерческого опыта",
+            "check": {
+              "requirement_id": "a3f9224e-1415-5d81-b759-cb773b1d949f",
+              "result": "unknown",
+              "explanation": "В тексте нет сведений о длительности коммерческого опыта.",
+              "evidence": []
+            }
+          }
+        ],
+        "competency_scores": [
+          {
+            "competency": "py-train/competency/api-testing",
+            "indicators": [
+              "py-train/competency/api-testing/indicator/1"
+            ],
+            "score": {
+              "competency_id": "1c27d6a3-2569-55b2-bf71-555a1475e949",
+              "level": null,
+              "explanation": "Индикатор «Писал автоматизированные API-тесты»: есть свидетельство в резюме.",
+              "evidence": [
+                {
+                  "candidate_text_id": "b91f6449-d678-5bfd-a215-194f299f1872",
+                  "quote": "Написал API-тесты для сервиса заявок.",
+                  "start": 2,
+                  "end": 39
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "refusal": null,
+        "formal_result": "unknown",
+        "formal_checks": [
+          {
+            "verdicts": [],
+            "effective": "unknown",
+            "issue": null
+          }
+        ],
+        "competency_scores": [
+          {
+            "verdicts": [
+              "ok"
+            ],
+            "issue": null
+          }
+        ],
+        "db_v1": {
+          "save_assessment": "accepted",
+          "formal_result": "unknown",
+          "error": null
+        }
+      },
+      "ui": {
+        "formal": {
+          "requirement": "Общий коммерческий опыт не менее 2 лет (учебное требование)",
+          "status": "Нужно уточнить",
+          "basis": "В отклике нет длительности коммерческого опыта.",
+          "action": "Уточнить у кандидата длительность и характер коммерческого опыта"
+        },
+        "evidence": [
+          {
+            "indicator": "Писал автоматизированные API-тесты",
+            "text": "py-9001/text/non-bmp",
+            "quote": "Написал API-тесты для сервиса заявок.",
+            "start": 2,
+            "end": 39,
+            "utf16_start": 3,
+            "utf16_end": 40
+          }
+        ],
+        "note": "JavaScript: text.slice(utf16_start, utf16_end) === quote; text.slice(start, end) — нет."
+      }
+    },
+    {
+      "id": "N1-quote-not-at-offsets",
+      "title": "Цитата верная, но сдвинута на один символ",
+      "enforced_by": "db_v1",
+      "candidate": "py-9001",
+      "texts": [
+        "py-9001/text/base"
+      ],
+      "assessed_text": "py-9001/text/base",
+      "profile_status": "approved",
+      "model_available": true,
+      "card": {
+        "experience_years": null,
+        "experience": [
+          {
+            "duties": [
+              "Написал API-тесты для сервиса заявок."
+            ]
+          }
+        ],
+        "missing": [
+          "длительность коммерческого опыта"
+        ]
+      },
+      "assessment": {
+        "formal_checks": [
+          {
+            "requirement": "py-train/requirement/experience-commercial-24m",
+            "gap": "длительность коммерческого опыта",
+            "check": {
+              "requirement_id": "a3f9224e-1415-5d81-b759-cb773b1d949f",
+              "result": "unknown",
+              "explanation": "В тексте нет сведений о длительности коммерческого опыта.",
+              "evidence": []
+            }
+          }
+        ],
+        "competency_scores": [
+          {
+            "competency": "py-train/competency/api-testing",
+            "indicators": [
+              "py-train/competency/api-testing/indicator/1"
+            ],
+            "score": {
+              "competency_id": "1c27d6a3-2569-55b2-bf71-555a1475e949",
+              "level": null,
+              "explanation": "Индикатор «Писал автоматизированные API-тесты»: есть свидетельство в резюме.",
+              "evidence": [
+                {
+                  "candidate_text_id": "fc616e86-f66f-5cc1-a707-f350b734a9da",
+                  "quote": "Написал API-тесты для сервиса заявок.",
+                  "start": 1,
+                  "end": 38
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "refusal": null,
+        "formal_result": "unknown",
+        "formal_checks": [
+          {
+            "verdicts": [],
+            "effective": "unknown",
+            "issue": null
+          }
+        ],
+        "competency_scores": [
+          {
+            "verdicts": [
+              "quote_not_at_offsets"
+            ],
+            "issue": "invalid_evidence"
+          }
+        ],
+        "db_v1": {
+          "save_assessment": "rejected",
+          "formal_result": null,
+          "error": "EvidenceError"
+        }
+      },
+      "ui": {
+        "formal": {
+          "requirement": "Общий коммерческий опыт не менее 2 лет (учебное требование)",
+          "status": "Нужно уточнить",
+          "basis": "В отклике нет длительности коммерческого опыта.",
+          "action": "Уточнить у кандидата длительность и характер коммерческого опыта"
+        },
+        "evidence": [],
+        "note": "Свидетельство о тестах не показывается как подтверждённое: цитата недоступна."
+      }
+    },
+    {
+      "id": "N2-bounds-length-mismatch",
+      "title": "Длина цитаты не совпадает с границами",
+      "enforced_by": "schema",
+      "candidate": "py-9001",
+      "texts": [
+        "py-9001/text/base"
+      ],
+      "assessed_text": "py-9001/text/base",
+      "profile_status": "approved",
+      "model_available": true,
+      "card": {
+        "experience_years": null,
+        "experience": [
+          {
+            "duties": [
+              "Написал API-тесты для сервиса заявок."
+            ]
+          }
+        ],
+        "missing": [
+          "длительность коммерческого опыта"
+        ]
+      },
+      "assessment": {
+        "formal_checks": [
+          {
+            "requirement": "py-train/requirement/experience-commercial-24m",
+            "gap": "длительность коммерческого опыта",
+            "check": {
+              "requirement_id": "a3f9224e-1415-5d81-b759-cb773b1d949f",
+              "result": "unknown",
+              "explanation": "В тексте нет сведений о длительности коммерческого опыта.",
+              "evidence": []
+            }
+          }
+        ],
+        "competency_scores": [
+          {
+            "competency": "py-train/competency/api-testing",
+            "indicators": [
+              "py-train/competency/api-testing/indicator/1"
+            ],
+            "score": {
+              "competency_id": "1c27d6a3-2569-55b2-bf71-555a1475e949",
+              "level": null,
+              "explanation": "Индикатор «Писал автоматизированные API-тесты»: есть свидетельство в резюме.",
+              "evidence": [
+                {
+                  "candidate_text_id": "fc616e86-f66f-5cc1-a707-f350b734a9da",
+                  "quote": "Написал API-тесты для сервиса заявок.",
+                  "start": 0,
+                  "end": 36
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "refusal": null,
+        "formal_result": null,
+        "schema_error": "competency_scores[0].score",
+        "db_v1": {
+          "save_assessment": "not_called",
+          "formal_result": null,
+          "error": null
+        }
+      },
+      "ui": {
+        "formal": {
+          "requirement": "Общий коммерческий опыт не менее 2 лет (учебное требование)",
+          "status": "Сбой расчёта",
+          "basis": "Ответ модели не прошёл проверку формата.",
+          "action": "Повторить расчёт"
+        },
+        "evidence": []
+      }
+    },
+    {
+      "id": "N3-stale-text-version",
+      "title": "Цитата из прошлой версии текста того же кандидата совпадает побуквенно, но версия не та",
+      "enforced_by": "stage_1",
+      "candidate": "py-9001",
+      "texts": [
+        "py-9001/text/stale-v1",
+        "py-9001/text/stale-v2"
+      ],
+      "assessed_text": "py-9001/text/stale-v2",
+      "profile_status": "approved",
+      "model_available": true,
+      "card": {
+        "experience_years": 3.0,
+        "experience": [
+          {
+            "duties": [
+              "Написал API-тесты для сервиса заявок."
+            ]
+          }
+        ],
+        "missing": []
+      },
+      "assessment": {
+        "formal_checks": [
+          {
+            "requirement": "py-train/requirement/experience-commercial-24m",
+            "gap": null,
+            "check": {
+              "requirement_id": "a3f9224e-1415-5d81-b759-cb773b1d949f",
+              "result": "met",
+              "explanation": "Кандидат указал общий коммерческий опыт 3 года (36 мес.) при пороге 24 мес. Сведения по резюме.",
+              "evidence": [
+                {
+                  "candidate_text_id": "ed73a8db-a720-5037-8855-32e84e26b566",
+                  "quote": "Общий коммерческий опыт — 3 года.",
+                  "start": 38,
+                  "end": 71
+                }
+              ]
+            }
+          }
+        ],
+        "competency_scores": [
+          {
+            "competency": "py-train/competency/api-testing",
+            "indicators": [
+              "py-train/competency/api-testing/indicator/1"
+            ],
+            "score": {
+              "competency_id": "1c27d6a3-2569-55b2-bf71-555a1475e949",
+              "level": null,
+              "explanation": "Индикатор «Писал автоматизированные API-тесты»: есть свидетельство в резюме.",
+              "evidence": [
+                {
+                  "candidate_text_id": "0dee02ff-e771-5099-abd9-d5cf3df23590",
+                  "quote": "Написал API-тесты для сервиса заявок.",
+                  "start": 0,
+                  "end": 37
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "refusal": null,
+        "formal_result": "met",
+        "formal_checks": [
+          {
+            "verdicts": [
+              "ok"
+            ],
+            "effective": "met",
+            "issue": null
+          }
+        ],
+        "competency_scores": [
+          {
+            "verdicts": [
+              "stale_text_version"
+            ],
+            "issue": "invalid_evidence"
+          }
+        ],
+        "db_v1": {
+          "save_assessment": "accepted",
+          "formal_result": "met",
+          "error": null
+        }
+      },
+      "ui": {
+        "formal": {
+          "requirement": "Общий коммерческий опыт не менее 2 лет (учебное требование)",
+          "status": "Выполнено (по резюме)",
+          "basis": "Указан общий коммерческий опыт 3 года при пороге 2 года.",
+          "action": "Перейти к следующему этапу на усмотрение кадровика"
+        },
+        "evidence": [
+          {
+            "indicator": "Писал автоматизированные API-тесты",
+            "text": "py-9001/text/stale-v2",
+            "quote": "Общий коммерческий опыт — 3 года.",
+            "start": 38,
+            "end": 71,
+            "utf16_start": 38,
+            "utf16_end": 71
+          }
+        ],
+        "note": "Свидетельство о тестах ссылается на устаревшую версию текста и не показывается как подтверждённое."
+      }
+    },
+    {
+      "id": "N4-foreign-text",
+      "title": "Цитата из текста другого кандидата, побуквенно совпадает",
+      "enforced_by": "db_v1",
+      "candidate": "py-9001",
+      "texts": [
+        "py-9001/text/base",
+        "py-9002/text/base"
+      ],
+      "assessed_text": "py-9001/text/base",
+      "profile_status": "approved",
+      "model_available": true,
+      "card": {
+        "experience_years": null,
+        "experience": [
+          {
+            "duties": [
+              "Написал API-тесты для сервиса заявок."
+            ]
+          }
+        ],
+        "missing": [
+          "длительность коммерческого опыта"
+        ]
+      },
+      "assessment": {
+        "formal_checks": [
+          {
+            "requirement": "py-train/requirement/experience-commercial-24m",
+            "gap": "длительность коммерческого опыта",
+            "check": {
+              "requirement_id": "a3f9224e-1415-5d81-b759-cb773b1d949f",
+              "result": "unknown",
+              "explanation": "В тексте нет сведений о длительности коммерческого опыта.",
+              "evidence": []
+            }
+          }
+        ],
+        "competency_scores": [
+          {
+            "competency": "py-train/competency/api-testing",
+            "indicators": [
+              "py-train/competency/api-testing/indicator/1"
+            ],
+            "score": {
+              "competency_id": "1c27d6a3-2569-55b2-bf71-555a1475e949",
+              "level": null,
+              "explanation": "Индикатор «Писал автоматизированные API-тесты»: есть свидетельство в резюме.",
+              "evidence": [
+                {
+                  "candidate_text_id": "09b6beac-8ac0-5c0d-bf18-fbd7280a8602",
+                  "quote": "Написал API-тесты для сервиса заявок.",
+                  "start": 0,
+                  "end": 37
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "refusal": null,
+        "formal_result": "unknown",
+        "formal_checks": [
+          {
+            "verdicts": [],
+            "effective": "unknown",
+            "issue": null
+          }
+        ],
+        "competency_scores": [
+          {
+            "verdicts": [
+              "foreign_text"
+            ],
+            "issue": "invalid_evidence"
+          }
+        ],
+        "db_v1": {
+          "save_assessment": "rejected",
+          "formal_result": null,
+          "error": "EvidenceError"
+        }
+      },
+      "ui": {
+        "formal": {
+          "requirement": "Общий коммерческий опыт не менее 2 лет (учебное требование)",
+          "status": "Нужно уточнить",
+          "basis": "В отклике нет длительности коммерческого опыта.",
+          "action": "Уточнить у кандидата длительность и характер коммерческого опыта"
+        },
+        "evidence": []
+      }
+    },
+    {
+      "id": "N5-missing-evidence",
+      "title": "Модель утверждает «выполнено» без цитаты",
+      "enforced_by": "stage_1",
+      "candidate": "py-9001",
+      "texts": [
+        "py-9001/text/base"
+      ],
+      "assessed_text": "py-9001/text/base",
+      "profile_status": "approved",
+      "model_available": true,
+      "card": {
+        "experience_years": null,
+        "experience": [
+          {
+            "duties": [
+              "Написал API-тесты для сервиса заявок."
+            ]
+          }
+        ],
+        "missing": [
+          "длительность коммерческого опыта"
+        ]
+      },
+      "assessment": {
+        "formal_checks": [
+          {
+            "requirement": "py-train/requirement/experience-commercial-24m",
+            "gap": null,
+            "check": {
+              "requirement_id": "a3f9224e-1415-5d81-b759-cb773b1d949f",
+              "result": "met",
+              "explanation": "Опыт достаточный.",
+              "evidence": []
+            }
+          }
+        ],
+        "competency_scores": [
+          {
+            "competency": "py-train/competency/api-testing",
+            "indicators": [
+              "py-train/competency/api-testing/indicator/1"
+            ],
+            "score": {
+              "competency_id": "1c27d6a3-2569-55b2-bf71-555a1475e949",
+              "level": null,
+              "explanation": "Индикатор «Писал автоматизированные API-тесты»: есть свидетельство в резюме.",
+              "evidence": [
+                {
+                  "candidate_text_id": "fc616e86-f66f-5cc1-a707-f350b734a9da",
+                  "quote": "Написал API-тесты для сервиса заявок.",
+                  "start": 0,
+                  "end": 37
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "refusal": null,
+        "formal_result": "unknown",
+        "formal_checks": [
+          {
+            "verdicts": [],
+            "effective": "unknown",
+            "issue": "missing_evidence"
+          }
+        ],
+        "competency_scores": [
+          {
+            "verdicts": [
+              "ok"
+            ],
+            "issue": null
+          }
+        ],
+        "db_v1": {
+          "save_assessment": "accepted",
+          "formal_result": "met",
+          "error": null
+        }
+      },
+      "ui": {
+        "formal": {
+          "requirement": "Общий коммерческий опыт не менее 2 лет (учебное требование)",
+          "status": "Нужно уточнить",
+          "basis": "Вывод модели «выполнено» не подтверждён цитатой и не учитывается.",
+          "action": "Уточнить у кандидата длительность и характер коммерческого опыта"
+        },
+        "evidence": [
+          {
+            "indicator": "Писал автоматизированные API-тесты",
+            "text": "py-9001/text/base",
+            "quote": "Написал API-тесты для сервиса заявок.",
+            "start": 0,
+            "end": 37,
+            "utf16_start": 0,
+            "utf16_end": 37
+          }
+        ]
+      }
+    },
+    {
+      "id": "N6-model-unavailable",
+      "title": "Модель недоступна: карточки и оценки нет",
+      "enforced_by": "stage_1",
+      "candidate": "py-9001",
+      "texts": [
+        "py-9001/text/base"
+      ],
+      "assessed_text": "py-9001/text/base",
+      "profile_status": "approved",
+      "model_available": false,
+      "card": null,
+      "assessment": null,
+      "expect": {
+        "refusal": "model_unavailable",
+        "formal_result": null,
+        "db_v1": {
+          "save_assessment": "not_called",
+          "formal_result": null,
+          "error": null
+        }
+      },
+      "ui": {
+        "formal": {
+          "requirement": "Общий коммерческий опыт не менее 2 лет (учебное требование)",
+          "status": "Расчёт не выполнен",
+          "basis": "Сервис модели недоступен. Это не «нужно уточнить»: проверки не было.",
+          "action": "Повторить расчёт позже"
+        },
+        "evidence": []
+      }
+    },
+    {
+      "id": "N7-draft-profile",
+      "title": "Профиль требований в статусе черновика",
+      "enforced_by": "stage_1",
+      "candidate": "py-9001",
+      "texts": [
+        "py-9001/text/base"
+      ],
+      "assessed_text": "py-9001/text/base",
+      "profile_status": "draft",
+      "model_available": true,
+      "card": {
+        "experience_years": null,
+        "experience": [
+          {
+            "duties": [
+              "Написал API-тесты для сервиса заявок."
+            ]
+          }
+        ],
+        "missing": [
+          "длительность коммерческого опыта"
+        ]
+      },
+      "assessment": {
+        "formal_checks": [
+          {
+            "requirement": "py-train/requirement/experience-commercial-24m",
+            "gap": "длительность коммерческого опыта",
+            "check": {
+              "requirement_id": "a3f9224e-1415-5d81-b759-cb773b1d949f",
+              "result": "unknown",
+              "explanation": "В тексте нет сведений о длительности коммерческого опыта.",
+              "evidence": []
+            }
+          }
+        ],
+        "competency_scores": [
+          {
+            "competency": "py-train/competency/api-testing",
+            "indicators": [
+              "py-train/competency/api-testing/indicator/1"
+            ],
+            "score": {
+              "competency_id": "1c27d6a3-2569-55b2-bf71-555a1475e949",
+              "level": null,
+              "explanation": "Индикатор «Писал автоматизированные API-тесты»: есть свидетельство в резюме.",
+              "evidence": [
+                {
+                  "candidate_text_id": "fc616e86-f66f-5cc1-a707-f350b734a9da",
+                  "quote": "Написал API-тесты для сервиса заявок.",
+                  "start": 0,
+                  "end": 37
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "expect": {
+        "refusal": "profile_not_approved",
+        "formal_result": null,
+        "db_v1": {
+          "save_assessment": "accepted",
+          "formal_result": "unknown",
+          "error": null
+        }
+      },
+      "ui": {
+        "formal": {
+          "requirement": "Общий коммерческий опыт не менее 2 лет (учебное требование)",
+          "status": "Оценка недоступна",
+          "basis": "Профиль требований не утверждён.",
+          "action": "Утвердить профиль требований"
+        },
+        "evidence": []
+      }
+    }
+  ]
+}

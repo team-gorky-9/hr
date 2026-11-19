@@ -39,6 +39,14 @@ uv run python -m app.ingest --input fixtures/stage_0a --mapping fixtures/stage_0
 
 Команда загружает синтетический контрольный пакет и печатает JSON-отчёт. Ожидаемые счётчики на чистой базе: `imported=2, excluded_non_resume=1, quarantined=1`. Повторный запуск дублей не создаёт. Как подключить реальный архив, переименовать папки через словарь `folders` в `mapping.json` и проверить таблицы, описано в [docs/modules/ingest.md](docs/modules/ingest.md).
 
+## Контрольный набор оценки
+
+```bash
+uv run python -m scripts.check_assessment_fixtures
+```
+
+Синтетический отклик `py-9001` с ожидаемой карточкой, проверками, цитатами и итогом для 12 случаев, включая отрицательные. Описание — [fixtures/assessment/README.md](fixtures/assessment/README.md), устройство модуля — [docs/modules/assessment.md](docs/modules/assessment.md).
+
 ## Проверка на реальном резюме
 
 ```bash
