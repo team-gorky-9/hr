@@ -29,6 +29,14 @@ uv run pytest
 
 Адрес задаётся в `TEST_DATABASE_URL`. Без него тесты базы пропускаются, тесты схемы карточки выполняются.
 
+## Контрольный набор оценки
+
+```bash
+uv run python -m scripts.check_assessment_fixtures
+```
+
+Синтетический отклик `py-9001` с ожидаемой карточкой, проверками, цитатами и итогом для 12 случаев, включая отрицательные. Описание — [fixtures/assessment/README.md](fixtures/assessment/README.md), устройство модуля — [docs/modules/assessment.md](docs/modules/assessment.md).
+
 ## Проверка на реальном резюме
 
 ```bash
