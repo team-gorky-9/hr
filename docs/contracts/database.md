@@ -1,9 +1,9 @@
 # Контракт: база данных
 
-**Версия:** 0.1 · **Дата:** 2026-11-19 · **Статус:** предложено, на согласовании с Родионом
+**Версия:** 1.0 · **Дата:** 2026-11-19 · **Статус:** утверждено (Родион, 19.11.2026)
 **Автор:** Денис (бэкенд и база) · **Реализация:** ветка `feature/db-skeleton`, PR team-gorky-9/hr#1 · **Миграция:** `0001`
 
-Контракт описывает, как платформа хранит данные и как другие модули их пишут и читают. По правилам команды схема базы входит в контракт и меняется только по согласованию с Родионом. Пока статус «предложено», модули могут на него опираться, но после ревью возможны правки. Каждая правка вносится этим же файлом вместе с миграцией.
+Контракт описывает, как платформа хранит данные и как другие модули их пишут и читают. По правилам команды схема базы входит в контракт и меняется только по согласованию с Родионом. Контракт утверждён, модули опираются на него. Каждая правка вносится этим же файлом вместе с миграцией (раздел 9).
 
 **Происхождение пунктов:** **[Д]** — решение Дениса (обсуждение 19.11); **[Ч]** — из черновика контракта в `docs/project-context.md` штаба; **[А]** — предложение агента, выбор делегирован Денисом. Пометка стоит у решений, а не у очевидных полей.
 
@@ -42,7 +42,7 @@
 
 **2.8. Транзакции [А].** Функции доступа не делают `commit`. Транзакцией управляет вызывающий (скрипт импорта, обработчик запроса), поэтому несколько шагов сохраняются вместе или не сохраняются вовсе.
 
-**2.9. Идентификаторы [Д].** Первичный ключ — UUID v4. Его ставит приложение, а при вставке через SQL — база (`gen_random_uuid()`). У кандидата есть читаемый `code`, уникальный, до 32 символов. Предлагаемый формат: `<префикс должности>-<номер отклика из 4 цифр>`, например `py-0005` (см. п. 11, вопрос 2).
+**2.9. Идентификаторы [Д].** Первичный ключ — UUID v4. Его ставит приложение, а при вставке через SQL — база (`gen_random_uuid()`). У кандидата есть читаемый `code`, уникальный, до 32 символов. Формат: `<префикс должности>-<номер отклика из 4 цифр>`, например `py-0005` (п. 11.2).
 
 **2.10. Даты и время.** Момент времени — `timestamptz`, в JSON ISO 8601 со смещением: `2026-11-19T15:03:24+03:00`. Дата — `date`, `2026-08-25`. Месяц в карточке — строка `2024-05`.
 
@@ -308,22 +308,22 @@
 
 ## 7. Функции доступа (`app/db/repository.py`)
 
-Все функции первым аргументом принимают `Session` и не коммитят (п. 2.8). Нарушение правил вызывает исключение `RepositoryError` или его наследников `StageTransitionError` и `EvidenceError`. Нарушение ограничения базы вызывает `sqlalchemy.exc.IntegrityError`, после него транзакцию нужно откатить.
+Все функции первым аргументом принимают `Session` и не коммитят (п. 2.8). Остальные ссылки на записи передаются как UUID (`candidate_id`, `application_id` и т. д.), а не как ORM-объекты: модулям не нужно импортировать модели базы (п. 11.1). Возвращаемые объекты читают по атрибутам (`.id`, `.code`) и обратно в функции не передают. Нарушение правил вызывает исключение `RepositoryError` или его наследников `StageTransitionError` и `EvidenceError`. Нарушение ограничения базы вызывает `sqlalchemy.exc.IntegrityError`, после него транзакцию нужно откатить.
 
 | Функция | Что гарантирует | Ошибки |
 |---|---|---|
 | `add_source_document(kind, channel, file_format, original_path, raw_text, content=None, import_batch=None) → (документ, создан)` | повтор с тем же SHA-256 (`content`, иначе текста) возвращает существующий документ и `False`; путь приводится к NFC | — |
-| `create_candidate(code, source_document, redacted_text, redaction_method, headline=None, pii=None) → Candidate` | кандидат, ПДн (если переданы), текст версии 1 | документ не `resume` → `RepositoryError`; повтор `code` или документа → `IntegrityError` |
-| `add_candidate_text(candidate, text, redaction_method)` / `get_current_text(candidate_id)` | новая текущая версия текста / текущий текст или `None` | — |
-| `add_candidate_card(candidate, card, extractor, prompt_version=None, candidate_text=None)` | новая текущая версия карточки; навыки из `card.skills` нормализованы и без дублей | нет текста, или текст другого кандидата → `RepositoryError` |
+| `create_candidate(code, source_document_id, redacted_text, redaction_method, headline=None, pii=None) → Candidate` | кандидат, ПДн (если переданы), текст версии 1 | документ не `resume` → `RepositoryError`; повтор `code` или документа → `IntegrityError` |
+| `add_candidate_text(candidate_id, text, redaction_method)` / `get_current_text(candidate_id)` | новая текущая версия текста / текущий текст или `None` | — |
+| `add_candidate_card(candidate_id, card, extractor, prompt_version=None, candidate_text_id=None)` | новая текущая версия карточки; навыки из `card.skills` нормализованы и без дублей | нет текста, или текст другого кандидата → `RepositoryError` |
 | `get_current_card(candidate_id)` | текущая карточка или `None` | — |
 | `find_candidates_by_skills(skills, match_all=True) → [Candidate]` | по текущим карточкам: все навыки или хотя бы один; сортировка по `code` | — |
-| `save_assessment(candidate, profile, card, model, formal_checks, competency_scores, overall_score=None, summary=None, prompt_version=None)` | новая текущая версия оценки; `formal_result` считает код (п. 2.6) | карточка чужая, требование или компетенция из другого профиля → `RepositoryError`; цитата не на месте или из чужого текста → `EvidenceError` |
-| `create_application(candidate, source, vacancy=None, external_position_title=None, applied_at=None, actor_user_id=None)` | этап `new` и первое событие журнала | нет ни вакансии, ни внешней должности → `RepositoryError`; повтор на ту же вакансию → `IntegrityError` |
-| `move_application(application, to_stage_code, actor_user_id=None, comment=None, rejection_reason_code=None) → StageEvent` | блокирует строку отклика (`SELECT … FOR UPDATE`), меняет этап и пишет событие | нет такого этапа, тот же этап, отклик уже в финальном этапе, причина отказа не при `rejected`/`withdrawn`, неизвестная причина → `StageTransitionError` |
+| `save_assessment(candidate_id, profile_id, card_id, model, formal_checks, competency_scores, overall_score=None, summary=None, prompt_version=None)` | новая текущая версия оценки; `formal_result` считает код (п. 2.6) | карточка чужая, требование или компетенция из другого профиля → `RepositoryError`; цитата не на месте или из чужого текста → `EvidenceError` |
+| `create_application(candidate_id, source, vacancy_id=None, external_position_title=None, applied_at=None, actor_user_id=None)` | этап `new` и первое событие журнала | нет ни вакансии, ни внешней должности → `RepositoryError`; повтор на ту же вакансию → `IntegrityError` |
+| `move_application(application_id, to_stage_code, actor_user_id=None, comment=None, rejection_reason_code=None) → StageEvent` | блокирует строку отклика (`SELECT … FOR UPDATE`), меняет этап и пишет событие | нет такого этапа, тот же этап, отклик уже в финальном этапе, причина отказа не при `rejected`/`withdrawn`, неизвестная причина → `StageTransitionError` |
 | `stage_history(application_id) → [StageEvent]` | события по `seq` | — |
-| `record_department_feedback(application, outcome, …)` | сохраняет обратную связь, этап не меняет | неизвестная причина отказа → `RepositoryError` |
-| `add_to_reserve(candidate, position_id=None, competency_area=None, source_application=None, reason=None, added_by_user_id=None, valid_until=None)` | при активной записи на ту же должность или направление возвращает её, дубль не создаётся | нет ни должности, ни направления → `RepositoryError` |
+| `record_department_feedback(application_id, outcome, …)` | сохраняет обратную связь, этап не меняет | неизвестная причина отказа → `RepositoryError` |
+| `add_to_reserve(candidate_id, position_id=None, competency_area=None, source_application_id=None, reason=None, added_by_user_id=None, valid_until=None)` | при активной записи на ту же должность или направление возвращает её, дубль не создаётся | нет ни должности, ни направления → `RepositoryError` |
 | `reserve_for_position(position_id, today=None) → [ReserveEntry]` | активные записи на должность с неистёкшим сроком; резерв «по направлению» сюда не входит | — |
 | `get_candidate_pii(candidate_id, user_id, purpose)` | пишет `view_pii` в журнал, затем возвращает ПДн или `None` | — |
 | `write_audit(action, entity_type, entity_id=None, user_id=None, details=None)` | запись журнала | — |
@@ -335,7 +335,7 @@
 
 **1. Импорт.** `add_source_document(kind="resume", channel="hh_ru", file_format="hh_txt", original_path="Python-разработчик/отклик 5.txt", …)` возвращает документ и `True`. Повторный вызов с тем же файлом возвращает тот же документ и `False`.
 `create_candidate(code="py-0005", headline="Python Backend Developer (FastAPI, PostgreSQL)", pii=PiiData(links=[4 ссылки на GitHub]), redacted_text=<3982 символа>, redaction_method="…")` создаёт кандидата, ПДн и текст версии 1 (`id = 11111111-1111-4111-8111-111111111111`).
-`create_application(source="response", vacancy=<python-dev, hh_ru>)` создаёт отклик на этапе `new`.
+`create_application(candidate_id=<id кандидата>, source="response", vacancy_id=<python-dev, hh_ru>)` создаёт отклик на этапе `new`.
 
 **2. Карточка** (`add_candidate_card`, `extractor="yandexgpt-lite/latest"`):
 
@@ -415,12 +415,12 @@
 | — | `headline`, `courses`, `about`, `cover_letter`; `institution`, `faculty` в `education` | есть в резюме hh.ru и docx, нужны для оценки и интерфейса |
 | схема базы не описана | разделы 4–6 | |
 
-## 11. Открытые вопросы к согласованию
+## 11. Решения по открытым вопросам (19.11.2026)
 
-1. **Функции доступа принимают ORM-объекты** (`Candidate`, `Vacancy`, `Application`). Правило команды требует, чтобы модули не импортировали чужие внутренние реализации, в том числе ORM-модели. Варианты: (а) оставить, считая модели частью контракта базы; (б) перевести аргументы на UUID и коды. Решает Родион.
-2. **Формат `code` кандидата.** Предложение [А]: префиксы `jpy`, `py`, `qa`, `fe`, `ux`, `hr` и номер файла из 4 цифр. Нужно согласие участника, который делает импорт.
-3. **Читают ли модули таблицы напрямую** (поиск, API) или только через функции. Сейчас прямое чтение разрешено, кроме `candidate_pii`.
-4. **Модель эмбеддингов и её размерность** — решение модуля поиска. Индекс `embeddings` добавляется вместе с этим решением.
-5. **Входят ли сотрудники департаментов в систему.** `users.role = department` это допускает.
-6. **Можно ли хранить на стенде даты рождения** из резюме консультанта — вопрос к организаторам.
-7. **Очистка ПДн — зона импорта.** В IT-откликах ПДн остались: ссылки на GitHub с именем и глаголы женского рода (`Python-разработчик/отклик 5.txt`). Требование к `candidate_texts.text`: не содержит ФИО, контактов, ссылок на профили, даты рождения и возраста. Заменять ли грамматический род — открыто.
+1. **Функции доступа принимают UUID, а не ORM-объекты** [Д]. Модули не импортируют модели базы. Сигнатуры — раздел 7. Реализация в team-gorky-9/hr#1 приводится к этому.
+2. **Формат `code` кандидата** [А, принято]: префиксы `jpy`, `py`, `qa`, `fe`, `ux`, `hr` и номер файла из 4 цифр (`py-0005`).
+3. **Прямое чтение таблиц разрешено** [А, принято] всем модулям, кроме `candidate_pii` (только через `get_candidate_pii`). Запись — только через функции раздела 7.
+4. **Эмбеддинги хранятся в pgvector** (тип `vector`). Модель, размерность и индекс выбирает модуль поиска; Родион допишет их в этот контракт вместе с миграцией.
+5. **Роль `department` остаётся** в `users`. Заводить ли учётки сотрудникам департаментов, решим позже; схема от этого не меняется.
+6. **Даты рождения хранятся в `candidate_pii`**, как и прочие ПДн. Допустимость хранения на стенде уточняем у организаторов.
+7. **Очистка ПДн — зона импорта.** В `candidate_texts.text` не должно быть ФИО, контактов, ссылок на профили (в т. ч. GitHub с именем), даты рождения и возраста. Грамматический род («работала») не заменяем: замена портит текст и сдвигает позиции цитат.
