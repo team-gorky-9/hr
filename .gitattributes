@@ -1,0 +1,4 @@
+# Контрольные пакеты импорта хранятся побайтно: от байтов зависят SHA-256 и чтение PDF/DOCX.
+fixtures/** -text
+*.pdf binary
+*.docx binary

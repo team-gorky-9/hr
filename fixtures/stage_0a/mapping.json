@@ -1,0 +1,24 @@
+{
+  "folders": {
+    "Python-разработчик": "python-dev",
+    "консультанта сектора подбора кадров": "hr-consultant"
+  },
+  "entries": [
+    {
+      "source_path": "Python-разработчик/py-9001.txt",
+      "candidate_code": "py-9001",
+      "position_code": "python-dev",
+      "channel": "hh_ru",
+      "document_kind": "resume",
+      "file_format": "hh_txt"
+    },
+    {
+      "source_path": "консультанта сектора подбора кадров/hr-9001.docx",
+      "candidate_code": "hr-9001",
+      "position_code": "hr-consultant",
+      "channel": "hh_ru",
+      "document_kind": "resume",
+      "file_format": "hh_docx"
+    }
+  ]
+}
