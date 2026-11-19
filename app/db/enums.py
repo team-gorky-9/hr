@@ -57,10 +57,33 @@ class RequirementStatus(StrEnum):
 
 
 class CompetencyRank(StrEnum):
-    """Ранги из матрицы заказчика: КР, БР, СР."""
+    """Ранги из матрицы заказчика: КР, БР, СР. Справочно: есть только там, где есть матрица."""
     KEY = "key"
     BASIC = "basic"
     SPECIAL = "special"
+
+
+class VerificationMethod(StrEnum):
+    """Где можно подтвердить требование. Единый формат профиля для всех должностей."""
+    RESUME = "resume"        # по тексту резюме
+    DOCUMENTS = "documents"  # по документам: диплом, трудовая книжка
+    INTERVIEW = "interview"  # только на интервью: личные качества, знание законов
+    TEST = "test"            # практическое задание
+
+
+class RowOrigin(StrEnum):
+    """Откуда строка профиля требований."""
+    SOURCE = "source"  # перенесена из документа: есть документ, адрес и цитата
+    TEAM = "team"      # сформулирована командой (группировка, интерпретация): есть обоснование
+
+
+class SourceRole(StrEnum):
+    """Роль документа в профиле требований."""
+    JOB_DESCRIPTION = "job_description"
+    COMPETENCY_MATRIX = "competency_matrix"
+    VACANCY_POSTING = "vacancy_posting"
+    REGULATION = "regulation"
+    OTHER = "other"
 
 
 class FormalRequirementKind(StrEnum):

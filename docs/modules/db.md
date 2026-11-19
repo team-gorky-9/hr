@@ -13,6 +13,7 @@
 5. **Доказательство = цитата + позиция в очищенном тексте.** `save_assessment` отклоняет цитату, которой нет в тексте этого кандидата ровно на указанном месте.
 6. **Формальные требования отдельно от компетенций.** Итог по обязательным требованиям считает код (`not_met` > `unknown` > `met`), модель его не задаёт.
 7. **Решение принимает человек.** Оценка ИИ (`assessments`) не меняет этап отбора. Этап меняет только `move_application`, с автором и комментарием.
+8. **Один формат профиля требований для всех должностей.** Условия допуска и компетенции с индикаторами; у каждой строки — устойчивый ключ, обязательно ли, где подтверждать (`resume` / `documents` / `interview` / `test`) и откуда она (ссылки на документы с адресом и цитатой или обоснование команды). Ранг и процент из матрицы заказчика — справочно, только где матрица есть.
 
 ## Таблицы
 
@@ -22,7 +23,7 @@
 | Кандидат | `candidates`, `candidate_pii`, `candidate_texts` | импорт |
 | | `candidate_cards`, `candidate_skills` | извлечение карточки (ИИ) |
 | Должности | `positions`, `vacancies` | справочник (`app/db/seed.py`), кадровик |
-| Требования | `requirement_profiles` → `formal_requirements`, `competencies` → `competency_indicators` | модуль матриц компетенций, утверждает кадровик |
+| Требования | `requirement_profiles` → `requirement_profile_sources`, `formal_requirements`, `competencies` → `competency_indicators` | модуль матриц компетенций через `create_requirement_profile`, утверждает кадровик (`approve_requirement_profile`) |
 | Оценка | `assessments` → `formal_checks`, `competency_scores` | ИИ-скоринг через `save_assessment` |
 | Отбор | `applications`, `stage_events` (журнал), `selection_stages`, `rejection_reasons` (справочники) | импорт создаёт отклик, кадровик двигает этапы |
 | | `interviews`, `interview_questions`, `department_feedback` | кадровик, департамент, генерация вопросов |
@@ -37,7 +38,8 @@ source_documents 1─1 candidates 1─1 candidate_pii
                      candidates 1─N candidate_texts 1─N candidate_cards 1─N candidate_skills
                                                    └─N embeddings
 positions 1─N vacancies
-positions 1─N requirement_profiles 1─N formal_requirements
+positions 1─N requirement_profiles 1─N requirement_profile_sources N─1 source_documents
+                                   1─N formal_requirements
                                    1─N competencies 1─N competency_indicators
 candidates × requirement_profiles → assessments 1─N formal_checks, competency_scores
 candidates × vacancies → applications 1─N stage_events, interviews, department_feedback
@@ -64,7 +66,9 @@ candidates 1─N reserve_entries (на должность или направл�
 | `add_candidate_text`, `get_current_text` | импорт | новая версия очищенного текста |
 | `create_application` | импорт, API | отклик на вакансию или внешнюю должность, этап «Новый отклик» в журнале |
 | `add_candidate_card`, `get_current_card` | ИИ | версия карточки + навыки |
-| `save_assessment` | ИИ | версия оценки; проверка цитат и принадлежности требований профилю |
+| `create_requirement_profile` | матрицы компетенций | черновик профиля в едином формате; ключи строк уникальны в профиле, документы ссылок — среди источников профиля. Файловый пакет stage-0b-01 загружает `scripts/load_requirement_profiles.py` |
+| `approve_requirement_profile` | API | утверждение с основанием; прежняя утверждённая версия — в архив |
+| `save_assessment` | ИИ | версия оценки; проверка цитат и принадлежности требований профилю; профиль в архиве отклоняется |
 | `find_candidates_by_skills` | поиск, API | по навыкам текущих карточек (все / любой) |
 | `move_application`, `stage_history` | API | переход этапа с блокировкой строки; запрет переходов из финального этапа |
 | `record_department_feedback` | API | обратная связь департамента; этап не меняет |

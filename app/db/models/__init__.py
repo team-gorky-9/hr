@@ -7,6 +7,7 @@ from app.db.models.positions import (
     CompetencyIndicator,
     FormalRequirement,
     Position,
+    ProfileSource,
     RequirementProfile,
     Vacancy,
 )
@@ -43,6 +44,7 @@ __all__ = [
     "Interview",
     "InterviewQuestion",
     "Position",
+    "ProfileSource",
     "RejectionReason",
     "RequirementProfile",
     "ReserveEntry",
