@@ -1,29 +1,70 @@
 {
-  "schema_version": "requirement-profile-review/0.1",
+  "schema_version": "requirement-profile-review/0.2",
   "status": "expected_only_not_executed",
   "synthetic_profile": {
-    "key": "synthetic.py.experience",
+    "key": "synthetic.python-dev.v2.draft",
     "position_code": "python-dev",
+    "title": "Учебный профиль Python",
+    "version": 2,
     "status": "draft",
-    "synthetic": true,
+    "is_synthetic": true,
     "operational_use_allowed": false,
+    "approved_by_user_id": null,
+    "approved_at": null,
+    "content_approver": null,
     "description": "Учебный общий коммерческий стаж не менее двух лет; не требование реальной ДИ.",
-    "params": {
-      "schema_version": "0.1",
-      "scope": "total_commercial",
-      "minimum_defined": true,
-      "min_months": 24
-    },
-    "professional_indicator": {
-      "key": "synthetic.api-tests",
-      "text": "Писал автоматизированные API-тесты",
-      "score": null
-    }
+    "sources": [],
+    "source_notes": [],
+    "formal_requirements": [
+      {
+        "key": "synthetic.py.experience",
+        "text": "Учебный общий коммерческий стаж не менее двух лет; не требование реальной ДИ.",
+        "kind": "experience",
+        "params": {
+          "schema_version": "0.1",
+          "scope": "total_commercial",
+          "minimum_defined": true,
+          "min_months": 24
+        },
+        "is_mandatory": true,
+        "verification": "resume",
+        "check_stage": "screening",
+        "origin": "team",
+        "rationale": "Учебное условие из постановки stage-0b-01; порог 24 месяца не переносится в реальный профиль.",
+        "source_refs": []
+      }
+    ],
+    "competencies": [
+      {
+        "key": "synthetic.testing",
+        "text": "Автоматизация тестирования",
+        "code": "SYNTHETIC_TESTING",
+        "rank": null,
+        "target_level_min": null,
+        "target_level_max": null,
+        "aggregation_method": null,
+        "origin": "team",
+        "rationale": "Учебная группа для проверки разделения свидетельства о навыке и длительности стажа.",
+        "source_refs": [],
+        "indicators": [
+          {
+            "key": "synthetic.api-tests",
+            "text": "Писал автоматизированные API-тесты",
+            "score": null,
+            "is_mandatory": true,
+            "verification": "resume",
+            "check_stage": "screening",
+            "origin": "team",
+            "rationale": "Отдельный учебный индикатор из постановки; цитата об API-тестах не подтверждает длительность стажа.",
+            "source_refs": []
+          }
+        ]
+      }
+    ]
   },
   "cases": [
     {
       "id": "experience-absent",
-      "synthetic": true,
       "rule_key": "synthetic.py.experience",
       "candidate_code": "py-9001",
       "candidate_text_id": "052f03d7-bc94-5d71-8f5b-cb3de3431c31",
@@ -53,11 +94,11 @@
         "indicator_evidence_indexes": [
           0
         ]
-      }
+      },
+      "is_synthetic": true
     },
     {
       "id": "experience-three-years",
-      "synthetic": true,
       "rule_key": "synthetic.py.experience",
       "candidate_code": "py-9001",
       "candidate_text_id": "348fc3a4-433b-5daa-b960-0ec50619221f",
@@ -93,11 +134,11 @@
         "indicator_evidence_indexes": [
           0
         ]
-      }
+      },
+      "is_synthetic": true
     },
     {
       "id": "experience-one-year",
-      "synthetic": true,
       "rule_key": "synthetic.py.experience",
       "candidate_code": "py-9001",
       "candidate_text_id": "1f08a29f-f30a-5b75-963d-80bbf6a5626a",
@@ -133,11 +174,11 @@
         "indicator_evidence_indexes": [
           0
         ]
-      }
+      },
+      "is_synthetic": true
     },
     {
       "id": "experience-placeholder",
-      "synthetic": true,
       "rule_key": "synthetic.py.experience",
       "candidate_code": "py-9001",
       "candidate_text_id": "7d8938b7-0e54-50f6-a4f2-185ee327e9ba",
@@ -167,11 +208,11 @@
         "indicator_evidence_indexes": [
           0
         ]
-      }
+      },
+      "is_synthetic": true
     },
     {
       "id": "experience-overlap",
-      "synthetic": true,
       "rule_key": "synthetic.py.experience",
       "candidate_code": "py-9001",
       "candidate_text_id": "060e9681-e8a3-5705-8ca9-61c6e29c1f58",
@@ -222,11 +263,11 @@
         "pending": [
           "Q-MONTHS"
         ]
-      }
+      },
+      "is_synthetic": true
     },
     {
       "id": "experience-conflict",
-      "synthetic": true,
       "rule_key": "synthetic.py.experience",
       "candidate_code": "py-9001",
       "candidate_text_id": "96266d0e-0252-5d63-a060-12a280a47f71",
@@ -265,11 +306,11 @@
         "basis": "resume",
         "numeric_competency_score": null,
         "manual_review": true
-      }
+      },
+      "is_synthetic": true
     },
     {
       "id": "experience-undated",
-      "synthetic": true,
       "rule_key": "synthetic.py.experience",
       "candidate_code": "py-9001",
       "candidate_text_id": "58ee1faf-1ede-5040-90cc-cd39205167a5",
@@ -299,11 +340,11 @@
         "write_formal_check": true,
         "basis": "resume",
         "numeric_competency_score": null
-      }
+      },
+      "is_synthetic": true
     },
     {
       "id": "hr-level-met",
-      "synthetic": true,
       "rule_key": "hr.education.level",
       "candidate_code": "fx-0008",
       "candidate_text_id": "8175a8b6-4ca2-54e5-b5ef-c766aadfe9ff",
@@ -332,11 +373,11 @@
         "basis": "resume",
         "numeric_competency_score": null,
         "document_confirmation_required": true
-      }
+      },
+      "is_synthetic": true
     },
     {
       "id": "hr-level-no",
-      "synthetic": true,
       "rule_key": "hr.education.level",
       "candidate_code": "fx-0009",
       "candidate_text_id": "a40e8152-f844-5403-bc0b-e366840e2bbd",
@@ -358,11 +399,11 @@
         "write_formal_check": true,
         "basis": "resume",
         "numeric_competency_score": null
-      }
+      },
+      "is_synthetic": true
     },
     {
       "id": "hr-level-unknown",
-      "synthetic": true,
       "rule_key": "hr.education.level",
       "candidate_code": "fx-0010",
       "candidate_text_id": "faec2eda-678f-5505-b7b3-cf5936b8ed39",
@@ -377,11 +418,11 @@
         "write_formal_check": true,
         "basis": "resume",
         "numeric_competency_score": null
-      }
+      },
+      "is_synthetic": true
     },
     {
       "id": "hr-field-direct",
-      "synthetic": true,
       "rule_key": "hr.education.field",
       "candidate_code": "fx-0011",
       "candidate_text_id": "ac01d657-1ee7-50c2-8f83-8a821f4c43d8",
@@ -414,11 +455,11 @@
           "hr.education.field.alt2": "unknown"
         },
         "document_confirmation_required": true
-      }
+      },
+      "is_synthetic": true
     },
     {
       "id": "hr-field-retraining",
-      "synthetic": true,
       "rule_key": "hr.education.field",
       "candidate_code": "fx-0012",
       "candidate_text_id": "09aa7c38-3a66-5d6d-b295-bb6b2512da17",
@@ -462,11 +503,11 @@
           "hr.education.field.alt2": "met"
         },
         "document_confirmation_required": true
-      }
+      },
+      "is_synthetic": true
     },
     {
       "id": "hr-field-no",
-      "synthetic": true,
       "rule_key": "hr.education.field",
       "candidate_code": "fx-0013",
       "candidate_text_id": "dcee46ca-1c35-554a-99fd-747429d337e2",
@@ -498,11 +539,11 @@
           "hr.education.field.alt1": "not_met",
           "hr.education.field.alt2": "not_met"
         }
-      }
+      },
+      "is_synthetic": true
     },
     {
       "id": "hr-field-unknown",
-      "synthetic": true,
       "rule_key": "hr.education.field",
       "candidate_code": "fx-0014",
       "candidate_text_id": "3acbd1b6-d771-5a16-b299-434ada52c38a",
@@ -528,11 +569,11 @@
           "hr.education.field.alt1": "not_met",
           "hr.education.field.alt2": "unknown"
         }
-      }
+      },
+      "is_synthetic": true
     },
     {
       "id": "py-education-met",
-      "synthetic": true,
       "rule_key": "py.education",
       "candidate_code": "fx-0015",
       "candidate_text_id": "aab7eea3-4478-536f-b892-39745b737545",
@@ -564,11 +605,11 @@
           "Q-LEVEL"
         ],
         "document_confirmation_required": true
-      }
+      },
+      "is_synthetic": true
     },
     {
       "id": "py-education-student",
-      "synthetic": true,
       "rule_key": "py.education",
       "candidate_code": "fx-0016",
       "candidate_text_id": "c43b79e5-a436-5189-8fbc-d48d2690696e",
@@ -594,11 +635,11 @@
           "Q-STUDENT"
         ],
         "document_confirmation_required": true
-      }
+      },
+      "is_synthetic": true
     },
     {
       "id": "py-education-no",
-      "synthetic": true,
       "rule_key": "py.education",
       "candidate_code": "fx-0017",
       "candidate_text_id": "f7f7931e-6f40-58ba-a27d-67e4c44a4ec8",
@@ -620,11 +661,11 @@
         "write_formal_check": true,
         "basis": "resume",
         "numeric_competency_score": null
-      }
+      },
+      "is_synthetic": true
     },
     {
       "id": "py-education-unknown",
-      "synthetic": true,
       "rule_key": "py.education",
       "candidate_code": "fx-0018",
       "candidate_text_id": "7564f8ea-2d28-590a-82ea-b4af205acecc",
@@ -649,11 +690,11 @@
         "pending": [
           "Q-STUDENT"
         ]
-      }
+      },
+      "is_synthetic": true
     },
     {
       "id": "py-education-borderline",
-      "synthetic": true,
       "rule_key": "py.education",
       "candidate_code": "fx-0019",
       "candidate_text_id": "1957fb08-4ed4-541c-9b96-9d4ed72de93d",
@@ -678,11 +719,11 @@
         "pending": [
           "Q-TECHNICAL"
         ]
-      }
+      },
+      "is_synthetic": true
     },
     {
       "id": "py-relevant-met",
-      "synthetic": true,
       "rule_key": "py.experience",
       "candidate_code": "fx-0020",
       "candidate_text_id": "9cd87d3d-324b-5200-9e92-251b7cd41917",
@@ -707,11 +748,11 @@
         "pending": [
           "Q-RELEVANCE"
         ]
-      }
+      },
+      "is_synthetic": true
     },
     {
       "id": "py-relevant-no",
-      "synthetic": true,
       "rule_key": "py.experience",
       "candidate_code": "fx-0021",
       "candidate_text_id": "17e84beb-9add-5c2f-9f0c-beeff1221e24",
@@ -736,11 +777,11 @@
         "pending": [
           "Q-RELEVANCE"
         ]
-      }
+      },
+      "is_synthetic": true
     },
     {
       "id": "py-relevant-unknown",
-      "synthetic": true,
       "rule_key": "py.experience",
       "candidate_code": "fx-0022",
       "candidate_text_id": "c959d602-acc9-5211-a476-c99cb42b8b48",
@@ -755,11 +796,11 @@
         "write_formal_check": true,
         "basis": "resume",
         "numeric_competency_score": null
-      }
+      },
+      "is_synthetic": true
     },
     {
       "id": "rule-unknown-key",
-      "synthetic": true,
       "rule_key": "synthetic.py.experience",
       "candidate_code": "fx-0023",
       "candidate_text_id": "42291d07-ccdb-552c-87ef-d392b06cd373",
@@ -781,11 +822,11 @@
           "min_months": 24,
           "unsupported_key": true
         }
-      }
+      },
+      "is_synthetic": true
     },
     {
       "id": "rule-unknown-version",
-      "synthetic": true,
       "rule_key": "synthetic.py.experience",
       "candidate_code": "fx-0024",
       "candidate_text_id": "86e573bc-7ce2-5ee5-b19e-52bd09ed5e27",
@@ -806,13 +847,14 @@
           "minimum_defined": true,
           "min_months": 24
         }
-      }
+      },
+      "is_synthetic": true
     }
   ],
   "notes": [
     "Ожидания Ильи на синтетике не означают запуск или качество модели.",
     "Все met по образованию здесь предварительные по резюме; документ не проверялся.",
     "Поля наблюдений о курсе/специальности не добавлены в CandidateCard. Цитаты требуют интерпретации по согласованному контракту.",
-    "knowledge interview_required представлено индикаторами, не формальными воротами; баллы компетенций не рассчитаны."
+    "Знания с verification=interview представлено индикаторами, не формальными воротами; баллы компетенций не рассчитаны."
   ]
 }

@@ -16,6 +16,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1] / "fixtures" / "requirement_profiles"
 W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
+PACKAGE_SCHEMA = "requirement-profile-review/0.2"
 
 
 def require(condition, message):
@@ -65,7 +66,44 @@ def all_rows(profile):
         yield from competency["indicators"]
 
 
+def check_profile_format(profile, sources):
+    """Shared file format for real and synthetic profiles; not a DB contract."""
+    require(type(profile.get("is_synthetic")) is bool and "synthetic" not in profile,
+            "Missing is_synthetic or legacy synthetic flag")
+    require(profile["status"] == "draft" and profile["operational_use_allowed"] is False,
+            "Draft enabled for decisions")
+    require(profile["approved_by_user_id"] is None and profile["approved_at"] is None,
+            "Draft has approval metadata")
+    declared = {s["source_id"] for s in profile["sources"]}
+    used = {ref["source_id"] for row in all_rows(profile) for ref in row["source_refs"]}
+    require(len(declared) == len(profile["sources"]) and declared == used,
+            "Profile source list does not match row citations")
+    for source in profile["sources"]:
+        require(source["source_id"] in sources, "Unknown profile source")
+        original = sources[source["source_id"]]
+        require(source["revision"] == original["revision"], "Source revision mismatch")
+        require(source["role"] == original["kind"], "Source role mismatch")
+    for row in all_rows(profile):
+        key = row["key"]
+        require(row.get("origin") in {"source", "team"}, f"Invalid origin: {key}")
+        require(bool(row.get("rationale", "").strip()), f"Missing origin rationale: {key}")
+        require(not {"obligation", "verification_method", "verification_channels"} & row.keys(),
+                f"Legacy metadata: {key}")
+        require(row["origin"] != "source" or bool(row["source_refs"]), f"Missing source: {key}")
+        for ref in row["source_refs"]:
+            check_ref(ref, sources)
+    leaves = profile["formal_requirements"] + [r for c in profile["competencies"] for r in c["indicators"]]
+    for row in leaves:
+        require(type(row.get("is_mandatory")) is bool, f"is_mandatory must be boolean: {row['key']}")
+        require(row.get("verification") in {"resume", "documents", "interview", "test"},
+                f"Invalid verification: {row['key']}")
+        require(row["check_stage"] in {"screening", "interview"}, row["key"])
+        if row["verification"] == "interview":
+            require(row["check_stage"] == "interview", "Interview check cannot run at screening")
+
+
 def check_package(package, source_manifest):
+    require(package["package_schema"] == PACKAGE_SCHEMA, "Unsupported package schema")
     require(package["contract_status"] == "proposal", "Unapproved package marked as contract")
     require(package["compatible_with_db_v1"] is False, "DB v1 incompatibility must remain explicit")
     sources = {s["id"]: s for s in source_manifest["documents"]}
@@ -80,30 +118,21 @@ def check_package(package, source_manifest):
     keys = set()
     row_count = 0
     for profile in package["profiles"]:
-        require(profile["status"] == "draft" and profile["synthetic"] is False, "Real profile status")
-        require(profile["approved_by_user_id"] is None and profile["approved_at"] is None,
-                "Draft has approval metadata")
-        require(profile["operational_use_allowed"] is False, "Draft enabled for decisions")
+        check_profile_format(profile, sources)
+        require(profile["is_synthetic"] is False, "Real profile status")
         for row in all_rows(profile):
             key = row["key"]
             require(key not in keys, f"Duplicate row key {key}")
             keys.add(key)
             row_count += 1
-            require(row["obligation"] in {"mandatory", "desirable", "unspecified", "not_applicable"}, key)
-            require(row["check_stage"] in {"screening", "interview", "not_applicable"}, key)
-            require(row["verification_method"] in {"resume_ok", "interview_required", "document_required", "not_applicable"}, key)
-            require(row["origin"]["status"] in {"transcribed", "proposed"}, key)
-            require(bool(row["obligation_basis"]) and bool(row["origin"]["rationale"]), key)
+            require(row["interpretation_status"] in {"transcribed", "proposed"}, key)
             require(bool(row["source_refs"]), f"Missing source: {key}")
-            for ref in row["source_refs"]:
-                check_ref(ref, sources)
             require(set(row["issues"]) <= issue_ids, f"Unknown issue: {key}")
             for outcome in ("met", "not_met", "unknown"):
                 require(bool(row["acceptance"][outcome]), f"Missing expectation {key}: {outcome}")
         for rule in profile["formal_requirements"]:
             require(rule["kind"] in {"education_level", "education_field", "experience", "knowledge", "other"}, rule["key"])
             require(rule["check_stage"] == "screening", "Interview knowledge is not a formal gate")
-            require(rule["is_mandatory"] == (rule["obligation"] == "mandatory"), rule["key"])
             params = rule["params"]
             require(params["schema_version"] == "0.1", rule["key"])
             alts = params.get("alternatives", [])
@@ -124,6 +153,8 @@ def check_package(package, source_manifest):
     for c in hr["competencies"]:
         require((c["rank"], c["target_level_min"], c["target_level_max"]) == expected[c["code"]], c["key"])
         for row in c["indicators"]:
+            require(row["is_mandatory"] is True and row["mandatory_basis"]["origin"] == "team",
+                    "Consultant mandatory flag must follow the team decision")
             if row["collection"] == "matrix_transcription":
                 row_paragraphs = {p for ref in row["source_refs"] if ref["source_id"] == "hr-matrix"
                                   for p in ref["paragraph_ids"]}
@@ -140,19 +171,29 @@ def check_package(package, source_manifest):
     for c in py["competencies"]:
         require(c["rank"] is None and c["target_level_min"] is None and c["target_level_max"] is None,
                 "Invented IT ranks/percentages")
-        require(c["origin"]["status"] == "proposed", "IT grouping falsely marked approved")
+        require(c["origin"] == "team" and c["interpretation_status"] == "proposed",
+                "IT grouping falsely marked approved")
+        for row in c["indicators"]:
+            require(bool(row["mandatory_basis"]["rationale"]), "Missing mandatory basis")
+            if c["code"] == "ENGLISH" or row["key"] == "py.di.P209":
+                require(row["verification"] == "interview", "English/privacy requires interview")
+            if row["key"] in {"py.posting.11", "py.posting.datalens"}:
+                require(row["is_mandatory"] is False, "Posting advantage cannot be mandatory")
     return row_count, keys
 
 
 def check_fixtures(fixtures, profile_keys):
+    require(fixtures["schema_version"] == PACKAGE_SCHEMA, "Unsupported fixture schema")
     synthetic = fixtures["synthetic_profile"]
-    require(synthetic["synthetic"] is True and synthetic["status"] == "draft", "Synthetic profile not isolated")
-    require(synthetic["params"]["min_months"] == 24, "Synthetic threshold changed")
+    check_profile_format(synthetic, {})
+    require(synthetic["is_synthetic"] is True, "Synthetic profile not isolated")
+    require(synthetic["formal_requirements"][0]["params"]["min_months"] == 24, "Synthetic threshold changed")
+    synthetic_keys = {r["key"] for r in all_rows(synthetic)}
     cases = fixtures["cases"]
     require(len({c["id"] for c in cases}) == len(cases), "Duplicate fixture id")
     for case in cases:
-        require(case["synthetic"] is True, "Fixture is not marked synthetic")
-        require(case["rule_key"] in profile_keys | {synthetic["key"]}, "Fixture references absent rule")
+        require(case["is_synthetic"] is True and "synthetic" not in case, "Fixture is not marked synthetic")
+        require(case["rule_key"] in profile_keys | synthetic_keys, "Fixture references absent rule")
         require(case["expected"]["result"] in {"met", "not_met", "unknown", "processing_error"}, case["id"])
         if case["expected"]["result"] == "processing_error":
             require(case["expected"]["write_formal_check"] is False, "Processing error persisted as check")

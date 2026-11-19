@@ -19,6 +19,39 @@ class RequirementProfileIntegrityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Quote does not match"):
             check_package(changed, self.sources)
 
+    def test_mandatory_must_be_boolean_not_truthy_text(self):
+        changed = deepcopy(self.package)
+        changed["profiles"][1]["competencies"][0]["indicators"][0]["is_mandatory"] = "false"
+        with self.assertRaisesRegex(ValueError, "is_mandatory must be boolean"):
+            check_package(changed, self.sources)
+
+    def test_legacy_verification_value_is_rejected(self):
+        changed = deepcopy(self.package)
+        changed["profiles"][0]["formal_requirements"][0]["verification"] = "document_required"
+        with self.assertRaisesRegex(ValueError, "Invalid verification"):
+            check_package(changed, self.sources)
+
+    def test_team_group_requires_rationale(self):
+        changed = deepcopy(self.package)
+        changed["profiles"][1]["competencies"][0]["rationale"] = ""
+        with self.assertRaisesRegex(ValueError, "Missing origin rationale"):
+            check_package(changed, self.sources)
+
+    def test_profile_must_declare_its_sources(self):
+        changed = deepcopy(self.package)
+        changed["profiles"][1]["sources"] = []
+        with self.assertRaisesRegex(ValueError, "Profile source list"):
+            check_package(changed, self.sources)
+
+    def test_source_revision_cannot_be_invented(self):
+        changed = deepcopy(self.package)
+        changed["profiles"][1]["sources"] = [
+            {"source_id": "py-di", "role": "job_description", "revision": "9.9"},
+            {"source_id": "py-posting", "role": "vacancy_posting", "revision": None},
+        ]
+        with self.assertRaisesRegex(ValueError, "Source revision mismatch"):
+            check_package(changed, self.sources)
+
     def test_missing_matrix_indicator_is_rejected(self):
         changed = deepcopy(self.package)
         changed["profiles"][0]["competencies"][0]["indicators"].pop(0)
