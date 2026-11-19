@@ -15,6 +15,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    false,
     text as sa_text,
 )
 from sqlalchemy.dialects.postgresql import JSONB
@@ -26,7 +27,10 @@ from app.db.enums import (
     CompetencyRank,
     FormalRequirementKind,
     RequirementStatus,
+    RowOrigin,
+    SourceRole,
     VacancyStatus,
+    VerificationMethod,
 )
 
 
@@ -68,8 +72,19 @@ class Vacancy(Base):
     position: Mapped[Position] = relationship()
 
 
+
+
+# --- Требования к должности ---------------------------------------------------
+#
+# Единый формат для всех должностей (контракт БД v1.1, п. 4.3): профиль состоит из
+# формальных требований (допуск) и компетенций, компетенция — из индикаторов.
+# У каждой строки указано, обязательна ли она, где её можно подтвердить и из какого
+# документа она взята. Ранг и процент из матрицы заказчика хранятся справочно и
+# заполняются только там, где они есть в документе.
+
+
 class RequirementProfile(Base):
-    """Версия требований к должности: формальные требования + матрица компетенций.
+    """Версия требований к должности: формальные требования + компетенции.
 
     Модель или человек создаёт черновик, кадровик утверждает. Утверждённой
     может быть только одна версия на должность; оценки ссылаются на конкретную версию.
@@ -84,15 +99,24 @@ class RequirementProfile(Base):
         default=RequirementStatus.DRAFT,
         server_default="draft",
     )
+    # Учебный профиль с выдуманными данными: его нельзя утвердить.
+    is_synthetic: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     # Кто составил: логин человека или имя модели.
     created_by: Mapped[str] = mapped_column(String(128))
     approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # На каком основании утверждено: «распоряжение № …», «согласовано с начальником отдела».
+    approval_basis: Mapped[str | None] = mapped_column(Text)
     note: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = created_at_column()
 
+    sources: Mapped[list["ProfileSource"]] = relationship(
+        back_populates="profile",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
     formal_requirements: Mapped[list["FormalRequirement"]] = relationship(
         back_populates="profile",
         cascade="all, delete-orphan",
@@ -117,8 +141,62 @@ class RequirementProfile(Base):
     )
 
 
-class FormalRequirement(Base):
-    """Юридически значимое требование (образование, направление, стаж).
+class ProfileSource(Base):
+    """Документ, из которого собрана версия профиля: ДИ, матрица, текст вакансии.
+
+    Связь с конкретным файлом (по SHA-256 в source_documents) не меняется вместе
+    с должностью: старая версия профиля продолжает указывать на свою редакцию ДИ.
+    """
+    __tablename__ = "requirement_profile_sources"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    profile_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("requirement_profiles.id", ondelete="CASCADE")
+    )
+    source_document_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("source_documents.id", ondelete="RESTRICT")
+    )
+    role: Mapped[SourceRole] = mapped_column(str_enum(SourceRole, "role"))
+    # Редакция, которую видно в самом документе: «1.2 от 01.02.2024». У ДИ без номера редакции пусто.
+    observed_revision: Mapped[str | None] = mapped_column(String(128))
+    # Основной документ профиля (ДИ); вакансия и положения — дополнительные.
+    is_primary: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+
+    profile: Mapped[RequirementProfile] = relationship(back_populates="sources")
+
+    __table_args__ = (
+        UniqueConstraint("profile_id", "source_document_id", name="uq_requirement_profile_sources_document"),
+    )
+
+
+class _RowSource:
+    """Происхождение строки профиля: документ, адрес в нём и дословная цитата —
+    или обоснование, если строку сформулировала команда."""
+
+    origin: Mapped[RowOrigin] = mapped_column(str_enum(RowOrigin, "origin"))
+    source_document_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("source_documents.id", ondelete="RESTRICT")
+    )
+    # Адрес в документе: «п. 2.2.1», «разд. 7, стр. 2», «ИТК, инд. 2».
+    source_ref: Mapped[str | None] = mapped_column(String(64))
+    # Дословная цитата из документа.
+    source_quote: Mapped[str | None] = mapped_column(Text)
+    # Обоснование строки команды или замечание к строке из документа.
+    note: Mapped[str | None] = mapped_column(Text)
+
+
+def _row_source_check() -> CheckConstraint:
+    """Строка из документа обязана указать документ, адрес и цитату; строка команды — обоснование."""
+    return CheckConstraint(
+        "(origin = 'source' AND source_document_id IS NOT NULL AND source_ref IS NOT NULL"
+        " AND source_quote IS NOT NULL)"
+        " OR (origin = 'team' AND note IS NOT NULL)",
+        name="row_source",
+    )
+
+
+class FormalRequirement(_RowSource, Base):
+    """Условие допуска (образование, направление, стаж): выполнено или нет.
     Проверяется отдельно от компетенций и не «добирается» баллами."""
     __tablename__ = "formal_requirements"
 
@@ -131,28 +209,34 @@ class FormalRequirement(Base):
     # Машиночитаемые условия, например
     # {"min_level": "высшее", "fields": ["Юриспруденция", "ГМУ"], "retraining_allowed": true}.
     params: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
+    # Обязательно по источнику (false — «будет преимуществом»). Входит в итог formal_result.
     is_mandatory: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
-    # Дословная цитата из должностной инструкции.
-    source_quote: Mapped[str | None] = mapped_column(Text)
+    verification: Mapped[VerificationMethod] = mapped_column(str_enum(VerificationMethod, "verification"))
     sort_order: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
 
     profile: Mapped[RequirementProfile] = relationship(back_populates="formal_requirements")
 
+    __table_args__ = (_row_source_check(),)
 
-class Competency(Base):
-    """Компетенция из матрицы по образцу заказчика: ранг, код, эталонный уровень."""
+
+class Competency(_RowSource, Base):
+    """Компетенция — группа индикаторов на одну тему.
+
+    Ранг и эталонный уровень заполняются только из матрицы заказчика (сейчас она есть
+    у одной должности) и хранятся справочно; для других должностей они пусты.
+    """
     __tablename__ = "competencies"
 
     id: Mapped[uuid.UUID] = uuid_pk()
     profile_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("requirement_profiles.id", ondelete="CASCADE")
     )
-    rank: Mapped[CompetencyRank] = mapped_column(str_enum(CompetencyRank, "rank"))
-    code: Mapped[str] = mapped_column(String(32))  # «ПАК», «ИТК», «РК», «ОИК», «ДК»
+    rank: Mapped[CompetencyRank | None] = mapped_column(str_enum(CompetencyRank, "rank"))
+    code: Mapped[str] = mapped_column(String(32))  # «ПАК», «ИТК», «PY-DB»
     name: Mapped[str] = mapped_column(String(512))
-    # Эталонный уровень развития в процентах: «90–100 процентов» → 90 и 100.
-    target_level_min: Mapped[int] = mapped_column(SmallInteger)
-    target_level_max: Mapped[int] = mapped_column(SmallInteger)
+    # Эталонный уровень из матрицы: «90–100 процентов» → 90 и 100. Оба пусты, если в источнике нет.
+    target_level_min: Mapped[int | None] = mapped_column(SmallInteger)
+    target_level_max: Mapped[int | None] = mapped_column(SmallInteger)
     sort_order: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
 
     profile: Mapped[RequirementProfile] = relationship(back_populates="competencies")
@@ -166,14 +250,16 @@ class Competency(Base):
     __table_args__ = (
         UniqueConstraint("profile_id", "code", name="uq_competencies_profile_code"),
         CheckConstraint(
-            "target_level_min >= 0 AND target_level_min <= target_level_max AND target_level_max <= 100",
+            "(target_level_min IS NULL AND target_level_max IS NULL)"
+            " OR (target_level_min >= 0 AND target_level_min <= target_level_max AND target_level_max <= 100)",
             name="target_level_range",
         ),
+        _row_source_check(),
     )
 
 
-class CompetencyIndicator(Base):
-    """Поведенческий индикатор компетенции: «умеет работать с базами данных…»."""
+class CompetencyIndicator(_RowSource, Base):
+    """Конкретное проверяемое требование: «умеет работать с базами данных…»."""
     __tablename__ = "competency_indicators"
 
     id: Mapped[uuid.UUID] = uuid_pk()
@@ -181,6 +267,11 @@ class CompetencyIndicator(Base):
         ForeignKey("competencies.id", ondelete="CASCADE")
     )
     text: Mapped[str] = mapped_column(Text)
+    # Обязательно или желательно («будет преимуществом» в вакансии).
+    is_mandatory: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    verification: Mapped[VerificationMethod] = mapped_column(str_enum(VerificationMethod, "verification"))
     sort_order: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
 
     competency: Mapped[Competency] = relationship(back_populates="indicators")
+
+    __table_args__ = (_row_source_check(),)

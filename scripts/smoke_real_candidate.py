@@ -22,18 +22,16 @@ from app.db.enums import (
     ApplicationSource,
     Channel,
     CheckResult,
-    CompetencyRank,
     DocumentKind,
     FeedbackOutcome,
     FileFormat,
     FormalRequirementKind,
+    RowOrigin,
+    VerificationMethod,
 )
 from app.db.models import (
     AuditLog,
-    Competency,
-    FormalRequirement,
     Position,
-    RequirementProfile,
     StageEvent,
     Vacancy,
 )
@@ -41,6 +39,7 @@ from app.db.session import SessionLocal
 from app.schemas.assessment import CompetencyScoreIn, FormalCheckIn
 from app.schemas.card import CandidateCard, Evidence, Experience, Skill
 from app.schemas.pii import PiiData
+from app.schemas.requirements import CompetencyIn, FormalRequirementIn, IndicatorIn
 
 RESUME = ("Python-разработчик", "отклик 5.txt")
 
@@ -112,16 +111,17 @@ def main(root: Path) -> None:
         )
 
         # 3. Требования должности (черновик, вручную) и оценка с цитатами из настоящего текста.
-        profile = RequirementProfile(position_id=position.id, version=1, created_by="manual-smoke")
-        profile.formal_requirements = [
-            FormalRequirement(kind=FormalRequirementKind.EDUCATION_LEVEL, description="Высшее образование")
-        ]
-        profile.competencies = [
-            Competency(rank=CompetencyRank.SPECIAL, code="BACKEND", name="Разработка backend на Python",
-                       target_level_min=70, target_level_max=100)
-        ]
-        session.add(profile)
-        session.flush()
+        team = {"origin": RowOrigin.TEAM, "note": "проверочный профиль smoke-скрипта"}
+        profile = repo.create_requirement_profile(
+            session, position_id=position.id, created_by="manual-smoke", is_synthetic=True,
+            formal_requirements=[FormalRequirementIn(
+                kind=FormalRequirementKind.EDUCATION_LEVEL, description="Высшее образование",
+                verification=VerificationMethod.RESUME, **team)],
+            competencies=[CompetencyIn(
+                code="BACKEND", name="Разработка backend на Python", **team,
+                indicators=[IndicatorIn(text="разрабатывал REST API и писал автотесты",
+                                        verification=VerificationMethod.RESUME, **team)])],
+        )
         assessment = repo.save_assessment(
             session, candidate_id=candidate.id, profile_id=profile.id, card_id=card.id, model="manual-smoke",
             formal_checks=[FormalCheckIn(requirement_id=profile.formal_requirements[0].id, result=CheckResult.MET,

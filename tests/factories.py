@@ -4,9 +4,18 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import repository as repo
-from app.db.enums import Channel, CompetencyRank, DocumentKind, FileFormat, FormalRequirementKind
-from app.db.models import Candidate, Competency, FormalRequirement, Position, RequirementProfile, Vacancy
+from app.db.enums import (
+    Channel,
+    CompetencyRank,
+    DocumentKind,
+    FileFormat,
+    FormalRequirementKind,
+    RowOrigin,
+    VerificationMethod,
+)
+from app.db.models import Candidate, Position, RequirementProfile, Vacancy
 from app.schemas.card import CandidateCard, Skill
+from app.schemas.requirements import CompetencyIn, FormalRequirementIn, IndicatorIn
 
 
 def make_candidate(session: Session, code: str, text: str = "Опыт: Python, FastAPI. Писал тесты на Pytest.") -> Candidate:
@@ -37,28 +46,25 @@ def vacancy(session: Session, code: str = "python-dev") -> Vacancy:
 
 
 def make_profile(session: Session, position_code: str = "hr-consultant", version: int = 1) -> RequirementProfile:
-    """Профиль по мотивам ДИ и матрицы консультанта (сокращённо)."""
-    profile = RequirementProfile(
-        position_id=position(session, position_code).id, version=version, created_by="test"
+    """Профиль по мотивам ДИ и матрицы консультанта (сокращённо). Строки без документа:
+    помечены как строки команды, чтобы тесты не зависели от загрузки ДИ."""
+    team = {"origin": RowOrigin.TEAM, "note": "тестовые данные"}
+    return repo.create_requirement_profile(
+        session,
+        position_id=position(session, position_code).id,
+        version=version,
+        created_by="test",
+        formal_requirements=[
+            FormalRequirementIn(kind=FormalRequirementKind.EDUCATION_LEVEL, description="Высшее образование",
+                                params={"min_level": "высшее"}, verification=VerificationMethod.RESUME, **team),
+            FormalRequirementIn(kind=FormalRequirementKind.EDUCATION_FIELD,
+                                description="Юриспруденция или ГМУ либо переподготовка", is_mandatory=False,
+                                verification=VerificationMethod.DOCUMENTS, **team),
+        ],
+        competencies=[
+            CompetencyIn(rank=CompetencyRank.KEY, code="ИТК", name="Информационно-техническая компетенция",
+                         target_level_min=90, target_level_max=100, **team,
+                         indicators=[IndicatorIn(text="умеет работать с базами данных",
+                                                 verification=VerificationMethod.RESUME, **team)]),
+        ],
     )
-    profile.formal_requirements = [
-        FormalRequirement(
-            kind=FormalRequirementKind.EDUCATION_LEVEL,
-            description="Высшее образование",
-            params={"min_level": "высшее"},
-            sort_order=1,
-        ),
-        FormalRequirement(
-            kind=FormalRequirementKind.EDUCATION_FIELD,
-            description="Юриспруденция или ГМУ либо переподготовка",
-            is_mandatory=False,
-            sort_order=2,
-        ),
-    ]
-    profile.competencies = [
-        Competency(rank=CompetencyRank.KEY, code="ИТК", name="Информационно-техническая компетенция",
-                   target_level_min=90, target_level_max=100, sort_order=1),
-    ]
-    session.add(profile)
-    session.flush()
-    return profile
