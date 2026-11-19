@@ -67,6 +67,14 @@ class EvidenceError(RepositoryError):
     pass
 
 
+def _get(session: Session, model, row_id: uuid.UUID, label: str):
+    """Найти запись по UUID или сообщить понятной ошибкой."""
+    row = session.get(model, row_id)
+    if row is None:
+        raise RepositoryError(f"нет записи «{label}» с id {row_id}")
+    return row
+
+
 # --- Источники ---------------------------------------------------------------
 
 def add_source_document(
@@ -113,13 +121,14 @@ def create_candidate(
     session: Session,
     *,
     code: str,
-    source_document: SourceDocument,
+    source_document_id: uuid.UUID,
     redacted_text: str,
     redaction_method: str,
     headline: str | None = None,
     pii: PiiData | None = None,
 ) -> Candidate:
     """Создать кандидата из резюме: запись кандидата, его ПДн и первую версию очищенного текста."""
+    source_document = _get(session, SourceDocument, source_document_id, "исходный документ")
     if source_document.kind != DocumentKind.RESUME:
         raise RepositoryError(f"документ {source_document.original_path} не резюме: {source_document.kind}")
 
@@ -148,9 +157,10 @@ def get_current_text(session: Session, candidate_id: uuid.UUID) -> CandidateText
 
 
 def add_candidate_text(
-    session: Session, candidate: Candidate, *, text: str, redaction_method: str
+    session: Session, candidate_id: uuid.UUID, *, text: str, redaction_method: str
 ) -> CandidateText:
     """Новая версия очищенного текста (например, улучшили очистку). Старая перестаёт быть текущей."""
+    candidate = _get(session, Candidate, candidate_id, "кандидат")
     version = _next_version(session, CandidateText.version, CandidateText.candidate_id == candidate.id)
     _clear_current(session, CandidateText, CandidateText.candidate_id == candidate.id)
     row = CandidateText(
@@ -167,15 +177,19 @@ def add_candidate_text(
 
 def add_candidate_card(
     session: Session,
-    candidate: Candidate,
+    candidate_id: uuid.UUID,
     card: CardSchema,
     *,
     extractor: str,
     prompt_version: str | None = None,
-    candidate_text: CandidateText | None = None,
+    candidate_text_id: uuid.UUID | None = None,
 ) -> CandidateCard:
     """Сохранить новую версию карточки и навыки из неё. Предыдущая версия остаётся в истории."""
-    text_row = candidate_text or get_current_text(session, candidate.id)
+    candidate = _get(session, Candidate, candidate_id, "кандидат")
+    if candidate_text_id is not None:
+        text_row = _get(session, CandidateText, candidate_text_id, "очищенный текст")
+    else:
+        text_row = get_current_text(session, candidate.id)
     if text_row is None:
         raise RepositoryError(f"у кандидата {candidate.code} нет очищенного текста")
     if text_row.candidate_id != candidate.id:
@@ -283,20 +297,23 @@ def write_audit(
 def create_application(
     session: Session,
     *,
-    candidate: Candidate,
+    candidate_id: uuid.UUID,
     source: ApplicationSource,
-    vacancy: Vacancy | None = None,
+    vacancy_id: uuid.UUID | None = None,
     external_position_title: str | None = None,
     applied_at: date | None = None,
     actor_user_id: uuid.UUID | None = None,
 ) -> Application:
     """Начать отбор кандидата на вакансию. Первый этап — «Новый отклик», он же пишется в журнал."""
-    if vacancy is None and not external_position_title:
+    if vacancy_id is None and not external_position_title:
         raise RepositoryError("нужна вакансия или название внешней должности")
+    candidate = _get(session, Candidate, candidate_id, "кандидат")
+    if vacancy_id is not None:
+        _get(session, Vacancy, vacancy_id, "вакансия")
 
     application = Application(
         candidate_id=candidate.id,
-        vacancy_id=vacancy.id if vacancy else None,
+        vacancy_id=vacancy_id,
         external_position_title=external_position_title,
         source=source,
         applied_at=applied_at,
@@ -314,7 +331,7 @@ def create_application(
 
 def move_application(
     session: Session,
-    application: Application,
+    application_id: uuid.UUID,
     to_stage_code: str,
     *,
     actor_user_id: uuid.UUID | None = None,
@@ -327,7 +344,9 @@ def move_application(
     причина отказа указывается только при переходе в «Отказ» или «Кандидат отказался».
     """
     # Блокируем строку отклика: два кадровика не переведут его одновременно в разные этапы.
-    session.refresh(application, with_for_update=True)
+    application = session.get(Application, application_id, with_for_update=True)
+    if application is None:
+        raise StageTransitionError(f"нет отклика с id {application_id}")
     current = session.get(SelectionStage, application.current_stage_code)
     target = session.get(SelectionStage, to_stage_code)
     if target is None:
@@ -366,7 +385,7 @@ def stage_history(session: Session, application_id: uuid.UUID) -> list[StageEven
 
 def record_department_feedback(
     session: Session,
-    application: Application,
+    application_id: uuid.UUID,
     *,
     outcome: FeedbackOutcome,
     interview_held: bool | None = None,
@@ -379,6 +398,7 @@ def record_department_feedback(
 ) -> DepartmentFeedback:
     """Сохранить обратную связь департамента. Этап отклика не меняется сам:
     решение о следующем шаге принимает кадровик (move_application)."""
+    application = _get(session, Application, application_id, "отклик")
     if rejection_reason_code is not None and session.get(RejectionReason, rejection_reason_code) is None:
         raise RepositoryError(f"нет причины отказа «{rejection_reason_code}»")
     feedback = DepartmentFeedback(
@@ -402,10 +422,10 @@ def record_department_feedback(
 def add_to_reserve(
     session: Session,
     *,
-    candidate: Candidate,
+    candidate_id: uuid.UUID,
     position_id: uuid.UUID | None = None,
     competency_area: str | None = None,
-    source_application: Application | None = None,
+    source_application_id: uuid.UUID | None = None,
     reason: str | None = None,
     added_by_user_id: uuid.UUID | None = None,
     valid_until: date | None = None,
@@ -414,6 +434,9 @@ def add_to_reserve(
     или направление — вернуть существующую запись, а не создавать дубль."""
     if position_id is None and not competency_area:
         raise RepositoryError("резерв нужен на должность или на направление")
+    candidate = _get(session, Candidate, candidate_id, "кандидат")
+    if source_application_id is not None:
+        _get(session, Application, source_application_id, "отклик")
     existing = session.scalar(
         select(ReserveEntry).where(
             ReserveEntry.candidate_id == candidate.id,
@@ -430,7 +453,7 @@ def add_to_reserve(
         candidate_id=candidate.id,
         position_id=position_id,
         competency_area=competency_area,
-        source_application_id=source_application.id if source_application else None,
+        source_application_id=source_application_id,
         reason=reason,
         added_by_user_id=added_by_user_id,
         valid_until=valid_until,
@@ -462,9 +485,9 @@ def reserve_for_position(session: Session, position_id: uuid.UUID, *, today: dat
 def save_assessment(
     session: Session,
     *,
-    candidate: Candidate,
-    profile: RequirementProfile,
-    card: CandidateCard,
+    candidate_id: uuid.UUID,
+    profile_id: uuid.UUID,
+    card_id: uuid.UUID,
     model: str,
     formal_checks: Sequence[FormalCheckIn],
     competency_scores: Sequence[CompetencyScoreIn],
@@ -478,6 +501,9 @@ def save_assessment(
     в очищенном тексте этого кандидата ровно на указанном месте. Итог по формальным
     требованиям считает код, а не модель: не выполнено обязательное → not_met.
     """
+    candidate = _get(session, Candidate, candidate_id, "кандидат")
+    profile = _get(session, RequirementProfile, profile_id, "профиль требований")
+    card = _get(session, CandidateCard, card_id, "карточка")
     if card.candidate_id != candidate.id:
         raise RepositoryError("карточка принадлежит другому кандидату")
 

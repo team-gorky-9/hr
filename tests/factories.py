@@ -19,13 +19,13 @@ def make_candidate(session: Session, code: str, text: str = "Опыт: Python, F
         raw_text=f"{code}\n{text}",
     )
     return repo.create_candidate(
-        session, code=code, source_document=document, redacted_text=text, redaction_method="test"
+        session, code=code, source_document_id=document.id, redacted_text=text, redaction_method="test"
     )
 
 
 def add_card(session: Session, candidate: Candidate, skills: list[str], **fields):
     card = CandidateCard(skills=[Skill(name=s) for s in skills], **fields)
-    return repo.add_candidate_card(session, candidate, card, extractor="test")
+    return repo.add_candidate_card(session, candidate.id, card, extractor="test")
 
 
 def position(session: Session, code: str = "python-dev") -> Position:

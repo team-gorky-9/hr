@@ -81,18 +81,18 @@ def main(root: Path) -> None:
             original_path="/".join(RESUME), raw_text=raw_text, content=content,
         )
         candidate = repo.create_candidate(
-            session, code="py-0005", source_document=document, redacted_text=redacted,
+            session, code="py-0005", source_document_id=document.id, redacted_text=redacted,
             redaction_method="manual-smoke", headline="Python Backend Developer (FastAPI, PostgreSQL)",
             pii=PiiData(links=links),
         )
         application = repo.create_application(
-            session, candidate=candidate, vacancy=vacancy, source=ApplicationSource.RESPONSE
+            session, candidate_id=candidate.id, vacancy_id=vacancy.id, source=ApplicationSource.RESPONSE
         )
         text_row = repo.get_current_text(session, candidate.id)
 
         # 2. Карточка (вручную по тексту резюме).
         card = repo.add_candidate_card(
-            session, candidate,
+            session, candidate.id,
             CandidateCard(
                 headline=candidate.headline,
                 applied_to=["Python-разработчик"],
@@ -123,7 +123,7 @@ def main(root: Path) -> None:
         session.add(profile)
         session.flush()
         assessment = repo.save_assessment(
-            session, candidate=candidate, profile=profile, card=card, model="manual-smoke",
+            session, candidate_id=candidate.id, profile_id=profile.id, card_id=card.id, model="manual-smoke",
             formal_checks=[FormalCheckIn(requirement_id=profile.formal_requirements[0].id, result=CheckResult.MET,
                                          evidence=[quote(text_row, "Высшее образование")])],
             competency_scores=[CompetencyScoreIn(
@@ -134,7 +134,7 @@ def main(root: Path) -> None:
         )
         try:
             repo.save_assessment(
-                session, candidate=candidate, profile=profile, card=card, model="manual-smoke", formal_checks=[],
+                session, candidate_id=candidate.id, profile_id=profile.id, card_id=card.id, model="manual-smoke", formal_checks=[],
                 competency_scores=[CompetencyScoreIn(
                     competency_id=profile.competencies[0].id, level=90,
                     evidence=[Evidence(candidate_text_id=text_row.id, quote="Руководила командой", start=0, end=19)],
@@ -146,13 +146,13 @@ def main(root: Path) -> None:
 
         # 4. Отбор: звонок, департамент, отказ, резерв; поиск по навыкам и резерву.
         for stage in ["screening", "phone_interview", "sent_to_department"]:
-            repo.move_application(session, application, stage)
+            repo.move_application(session, application.id, stage)
         repo.record_department_feedback(
-            session, application, outcome=FeedbackOutcome.NOT_FIT, interview_held=True,
+            session, application.id, outcome=FeedbackOutcome.NOT_FIT, interview_held=True,
             gaps="мало коммерческого опыта в разработке", rejection_reason_code="experience", keep_in_reserve=True,
         )
-        repo.move_application(session, application, "rejected", rejection_reason_code="experience")
-        repo.add_to_reserve(session, candidate=candidate, position_id=position.id, source_application=application,
+        repo.move_application(session, application.id, "rejected", rejection_reason_code="experience")
+        repo.add_to_reserve(session, candidate_id=candidate.id, position_id=position.id, source_application_id=application.id,
                             reason="подойдёт на следующую вакансию Python")
         repo.get_candidate_pii(session, candidate.id, user_id=None, purpose="smoke")
 

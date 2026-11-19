@@ -28,7 +28,7 @@ def test_assessment_with_verified_quotes(session):
     itk = profile.competencies[0]
 
     assessment = repo.save_assessment(
-        session, candidate=candidate, profile=profile, card=card, model="test-model",
+        session, candidate_id=candidate.id, profile_id=profile.id, card_id=card.id, model="test-model",
         formal_checks=[
             FormalCheckIn(requirement_id=level_req.id, result=CheckResult.MET,
                           evidence=[quote(text_row, "Высшее образование")]),
@@ -50,7 +50,7 @@ def test_quote_not_in_text_is_rejected(session):
     fake = Evidence(candidate_text_id=text_row.id, quote="Опыт управления проектами", start=0, end=25)
     with pytest.raises(repo.EvidenceError):
         repo.save_assessment(
-            session, candidate=candidate, profile=profile, card=card, model="m", formal_checks=[],
+            session, candidate_id=candidate.id, profile_id=profile.id, card_id=card.id, model="m", formal_checks=[],
             competency_scores=[CompetencyScoreIn(competency_id=profile.competencies[0].id, level=90, evidence=[fake])],
         )
 
@@ -61,7 +61,7 @@ def test_quote_from_another_candidate_is_rejected(session):
     other_text = repo.get_current_text(session, other.id)
     with pytest.raises(repo.EvidenceError):
         repo.save_assessment(
-            session, candidate=candidate, profile=profile, card=card, model="m",
+            session, candidate_id=candidate.id, profile_id=profile.id, card_id=card.id, model="m",
             formal_checks=[FormalCheckIn(requirement_id=profile.formal_requirements[0].id, result=CheckResult.MET,
                                          evidence=[quote(other_text, "Высшее образование")])],
             competency_scores=[],
@@ -80,14 +80,14 @@ def test_formal_result_is_computed_by_code(session, level_result, expected):
     # Необязательное требование (направление) не влияет на итог.
     checks.append(FormalCheckIn(requirement_id=profile.formal_requirements[1].id, result=CheckResult.NOT_MET))
     assessment = repo.save_assessment(
-        session, candidate=candidate, profile=profile, card=card, model="m", formal_checks=checks, competency_scores=[]
+        session, candidate_id=candidate.id, profile_id=profile.id, card_id=card.id, model="m", formal_checks=checks, competency_scores=[]
     )
     assert assessment.formal_result == expected
 
 
 def test_new_assessment_version_replaces_current(session):
     candidate, card, profile, _ = setup(session)
-    kwargs = dict(candidate=candidate, profile=profile, card=card, model="m", formal_checks=[], competency_scores=[])
+    kwargs = dict(candidate_id=candidate.id, profile_id=profile.id, card_id=card.id, model="m", formal_checks=[], competency_scores=[])
     first = repo.save_assessment(session, **kwargs)
     second = repo.save_assessment(session, **kwargs, prompt_version="v2")
     session.refresh(first)
@@ -99,7 +99,7 @@ def test_competency_from_other_profile_is_rejected(session):
     other_profile = make_profile(session, "python-dev")
     with pytest.raises(repo.RepositoryError):
         repo.save_assessment(
-            session, candidate=candidate, profile=profile, card=card, model="m", formal_checks=[],
+            session, candidate_id=candidate.id, profile_id=profile.id, card_id=card.id, model="m", formal_checks=[],
             competency_scores=[CompetencyScoreIn(competency_id=other_profile.competencies[0].id, level=50)],
         )
 

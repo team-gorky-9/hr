@@ -37,7 +37,7 @@ def test_candidate_keeps_pii_separately(session):
         original_path="консультант/Резюме 10.docx", raw_text="ФИО 10, Мужчина, 28 лет …",
     )
     candidate = repo.create_candidate(
-        session, code="hr-0010", source_document=document,
+        session, code="hr-0010", source_document_id=document.id,
         redacted_text="[скрыто] Опыт работы — 5 лет 9 месяцев", redaction_method="test",
         pii=PiiData(full_name="ФИО 10", gender="Мужчина", age=28),
     )
@@ -52,7 +52,7 @@ def test_resume_only_documents_become_candidates(session):
         original_path="ДИ.docx", raw_text="ДОЛЖНОСТНАЯ ИНСТРУКЦИЯ",
     )
     with pytest.raises(repo.RepositoryError):
-        repo.create_candidate(session, code="x-1", source_document=document, redacted_text="", redaction_method="t")
+        repo.create_candidate(session, code="x-1", source_document_id=document.id, redacted_text="", redaction_method="t")
 
 
 def test_candidate_code_is_unique(session):
@@ -80,8 +80,8 @@ def test_card_without_text_is_rejected(session):
     other = make_candidate(session, "py-0004", text="Другой кандидат")
     with pytest.raises(repo.RepositoryError):
         repo.add_candidate_card(
-            session, candidate, CandidateCard(), extractor="t",
-            candidate_text=repo.get_current_text(session, other.id),
+            session, candidate.id, CandidateCard(), extractor="t",
+            candidate_text_id=repo.get_current_text(session, other.id).id,
         )
 
 
