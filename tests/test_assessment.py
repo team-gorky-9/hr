@@ -135,3 +135,51 @@ def test_same_competency_twice_is_rejected(session):
             competency_scores=[CompetencyScoreIn(competency_id=competency_id, level=40),
                                CompetencyScoreIn(competency_id=competency_id, level=90)],
         )
+
+
+def test_met_on_requirement_checked_by_documents_is_stored_as_unknown(session):
+    """Направление подготовки подтверждается дипломом: по резюме его не закрываем."""
+    candidate, card, profile, text_row = setup(session)
+    level_req, field_req = profile.formal_requirements
+    field_req.is_mandatory = True
+    session.flush()
+    assessment = repo.save_assessment(
+        session, candidate_id=candidate.id, profile_id=profile.id, card_id=card.id, model="m",
+        formal_checks=[
+            FormalCheckIn(requirement_id=level_req.id, result=CheckResult.MET,
+                          evidence=[quote(text_row, "Высшее образование")]),
+            FormalCheckIn(requirement_id=field_req.id, result=CheckResult.MET,
+                          evidence=[quote(text_row, "Юриспруденция")]),
+        ],
+        competency_scores=[],
+    )
+    stored = {c.requirement_id: c.result for c in assessment.formal_checks}
+    assert stored == {level_req.id: CheckResult.MET, field_req.id: CheckResult.UNKNOWN}
+    assert assessment.formal_result == CheckResult.UNKNOWN
+    assert assessment.formal_checks[1].evidence  # цитата сохраняется как основание для проверки
+
+
+def test_not_met_on_requirement_checked_by_documents_stays(session):
+    candidate, card, profile, _ = setup(session)
+    field_req = profile.formal_requirements[1]
+    field_req.is_mandatory = True
+    session.flush()
+    assessment = repo.save_assessment(
+        session, candidate_id=candidate.id, profile_id=profile.id, card_id=card.id, model="m",
+        formal_checks=[FormalCheckIn(requirement_id=field_req.id, result=CheckResult.NOT_MET)], competency_scores=[],
+    )
+    assert assessment.formal_result == CheckResult.NOT_MET
+
+
+def test_quote_from_other_text_version_than_card_is_rejected(session):
+    candidate, card, profile, old_text = setup(session)
+    repo.add_candidate_text(session, candidate.id, text=TEXT + " Новая версия.", redaction_method="test-v2")
+    new_text = repo.get_current_text(session, candidate.id)
+    with pytest.raises(repo.EvidenceError, match="карточка"):
+        repo.save_assessment(
+            session, candidate_id=candidate.id, profile_id=profile.id, card_id=card.id, model="m",
+            formal_checks=[FormalCheckIn(requirement_id=profile.formal_requirements[0].id, result=CheckResult.MET,
+                                         evidence=[quote(new_text, "Высшее образование")])],
+            competency_scores=[],
+        )
+    assert card.candidate_text_id == old_text.id

@@ -27,6 +27,7 @@ from app.db.enums import (
     RequirementStatus,
     ReserveStatus,
     UserRole,
+    VerificationMethod,
 )
 from app.db.models import (
     Application,
@@ -344,11 +345,15 @@ def move_application(
     actor_user_id: uuid.UUID | None = None,
     comment: str | None = None,
     rejection_reason_code: str | None = None,
+    confirm_skip: bool = False,
 ) -> StageEvent:
     """Перевести отклик на другой этап. Меняет текущий этап и пишет событие в журнал одним шагом.
 
     Правила: из финального этапа (принят, отказ, кандидат отказался) переходов нет;
     причина отказа указывается только при переходе в «Отказ» или «Кандидат отказался».
+    Обычный шаг — на следующий этап по порядку, в «Отказ» или «Кандидат отказался» в любой
+    момент, в «Принят» — с последнего этапа. Остальное (перескок вперёд, возврат назад)
+    — только с подтверждением человека: confirm_skip=True, actor_user_id и comment.
     """
     # Блокируем строку отклика: два кадровика не переведут его одновременно в разные этапы.
     application = session.get(Application, application_id, with_for_update=True)
@@ -362,8 +367,14 @@ def move_application(
         raise StageTransitionError(f"отбор уже завершён на этапе «{current.title}»")
     if target.code == current.code:
         raise StageTransitionError(f"отклик уже на этапе «{current.title}»")
+    if not _is_regular_step(session, current, target):
+        if not (confirm_skip and actor_user_id is not None and comment and comment.strip()):
+            raise StageTransitionError(
+                f"переход «{current.title}» → «{target.title}» идёт не по порядку этапов: "
+                "нужно подтверждение человека (confirm_skip, actor_user_id и comment с причиной)"
+            )
     if rejection_reason_code is not None:
-        if target.code not in ("rejected", "withdrawn"):
+        if target.code not in EXIT_STAGES:
             raise StageTransitionError("причина отказа указывается только при отказе")
         if session.get(RejectionReason, rejection_reason_code) is None:
             raise StageTransitionError(f"нет причины отказа «{rejection_reason_code}»")
@@ -380,6 +391,23 @@ def move_application(
     session.add(event)
     session.flush()
     return event
+
+
+EXIT_STAGES = ("rejected", "withdrawn")
+
+
+def _is_regular_step(session: Session, current: SelectionStage, target: SelectionStage) -> bool:
+    """Шаг по порядку: следующий нефинальный этап, выход из отбора или финал с последнего этапа."""
+    if target.code in EXIT_STAGES:
+        return True
+    following = session.scalars(
+        select(SelectionStage)
+        .where(SelectionStage.sort_order > current.sort_order, SelectionStage.is_final.is_(False))
+        .order_by(SelectionStage.sort_order)
+    ).first()
+    if target.is_final:
+        return following is None
+    return following is not None and following.code == target.code
 
 
 def stage_history(session: Session, application_id: uuid.UUID) -> list[StageEvent]:
@@ -629,8 +657,9 @@ def save_assessment(
     """Сохранить новую версию оценки кандидата по версии требований.
 
     Проверяется: требования и компетенции из этого же профиля; каждая цитата стоит
-    в очищенном тексте этого кандидата ровно на указанном месте. Итог по формальным
-    требованиям считает код, а не модель: не выполнено обязательное → not_met.
+    ровно на указанном месте в том очищенном тексте, из которого извлечена карточка.
+    Требование, которое подтверждается не резюме, по резюме не закрывается (met → unknown).
+    Итог по формальным требованиям считает код, а не модель: не выполнено обязательное → not_met.
     """
     candidate = _get(session, Candidate, candidate_id, "кандидат")
     profile = _get(session, RequirementProfile, profile_id, "профиль требований")
@@ -656,7 +685,8 @@ def save_assessment(
             raise RepositoryError(f"компетенция {score.competency_id} не из профиля {profile.id}")
 
     all_evidence = [e for item in [*formal_checks, *competency_scores] for e in item.evidence]
-    _verify_evidence(session, candidate.id, all_evidence)
+    _verify_evidence(session, candidate.id, card.candidate_text_id, all_evidence)
+    results = {c.requirement_id: _stored_result(c, requirements[c.requirement_id]) for c in formal_checks}
 
     version = _next_version(
         session,
@@ -674,7 +704,7 @@ def save_assessment(
         is_current=True,
         model=model,
         prompt_version=prompt_version,
-        formal_result=_formal_result(formal_checks, requirements),
+        formal_result=_formal_result(results, requirements),
         overall_score=overall_score,
         summary=summary,
     )
@@ -685,7 +715,7 @@ def save_assessment(
             FormalCheck(
                 assessment_id=assessment.id,
                 requirement_id=check.requirement_id,
-                result=check.result,
+                result=results[check.requirement_id],
                 explanation=check.explanation,
                 evidence=[e.model_dump(mode="json") for e in check.evidence],
             )
@@ -710,12 +740,20 @@ def _reject_repeats(ids: Sequence[uuid.UUID], label: str) -> None:
         raise RepositoryError(f"{label} оценено в одной оценке дважды: {', '.join(repeated)}")
 
 
+def _stored_result(check: FormalCheckIn, requirement: FormalRequirement) -> CheckResult:
+    """Требование, которое подтверждается не резюме (документы, интервью, тест), по резюме
+    не закрывается: `met` сохраняется как `unknown` — подтвердит кадровик. `not_met` остаётся:
+    явное несоответствие в резюме документ не исправит."""
+    if requirement.verification != VerificationMethod.RESUME and check.result == CheckResult.MET:
+        return CheckResult.UNKNOWN
+    return check.result
+
+
 def _formal_result(
-    checks: Sequence[FormalCheckIn], requirements: dict[uuid.UUID, FormalRequirement]
+    results: dict[uuid.UUID, CheckResult], requirements: dict[uuid.UUID, FormalRequirement]
 ) -> CheckResult:
     """Итог по обязательным требованиям: хоть одно не выполнено → not_met;
     хоть одно без сведений или не проверено → unknown; иначе met."""
-    results = {c.requirement_id: c.result for c in checks}
     mandatory = [r.id for r in requirements.values() if r.is_mandatory]
     if any(results.get(r) == CheckResult.NOT_MET for r in mandatory):
         return CheckResult.NOT_MET
@@ -724,7 +762,10 @@ def _formal_result(
     return CheckResult.MET
 
 
-def _verify_evidence(session: Session, candidate_id: uuid.UUID, evidence: Sequence[Evidence]) -> None:
+def _verify_evidence(
+    session: Session, candidate_id: uuid.UUID, card_text_id: uuid.UUID, evidence: Sequence[Evidence]
+) -> None:
+    """Цитата стоит на месте в тексте этого кандидата, из которого извлечена карточка оценки."""
     text_ids = {e.candidate_text_id for e in evidence}
     texts = {
         t.id: t for t in session.scalars(select(CandidateText).where(CandidateText.id.in_(text_ids)))
@@ -733,6 +774,8 @@ def _verify_evidence(session: Session, candidate_id: uuid.UUID, evidence: Sequen
         text_row = texts.get(item.candidate_text_id)
         if text_row is None or text_row.candidate_id != candidate_id:
             raise EvidenceError(f"цитата ссылается на чужой или несуществующий текст: «{item.quote[:60]}»")
+        if item.candidate_text_id != card_text_id:
+            raise EvidenceError(f"цитата не из того текста, по которому извлечена карточка: «{item.quote[:60]}»")
         if not evidence_matches(text_row.text, item):
             raise EvidenceError(f"цитаты нет в тексте резюме на указанном месте: «{item.quote[:60]}»")
 
