@@ -1,0 +1,54 @@
+"""Все модели базы. Импорт этого пакета регистрирует таблицы в Base.metadata
+(его использует Alembic для автогенерации миграций)."""
+from app.db.models.assessments import Assessment, CompetencyScore, FormalCheck
+from app.db.models.candidates import Candidate, CandidateCard, CandidatePii, CandidateSkill, CandidateText
+from app.db.models.positions import (
+    Competency,
+    CompetencyIndicator,
+    FormalRequirement,
+    Position,
+    RequirementProfile,
+    Vacancy,
+)
+from app.db.models.search import Embedding
+from app.db.models.selection import (
+    Application,
+    DepartmentFeedback,
+    Interview,
+    InterviewQuestion,
+    RejectionReason,
+    ReserveEntry,
+    SelectionStage,
+    StageEvent,
+)
+from app.db.models.sources import SourceDocument
+from app.db.models.users import AuditLog, User
+
+__all__ = [
+    "Application",
+    "Assessment",
+    "AuditLog",
+    "Candidate",
+    "CandidateCard",
+    "CandidatePii",
+    "CandidateSkill",
+    "CandidateText",
+    "Competency",
+    "CompetencyIndicator",
+    "CompetencyScore",
+    "DepartmentFeedback",
+    "Embedding",
+    "FormalCheck",
+    "FormalRequirement",
+    "Interview",
+    "InterviewQuestion",
+    "Position",
+    "RejectionReason",
+    "RequirementProfile",
+    "ReserveEntry",
+    "SelectionStage",
+    "SourceDocument",
+    "StageEvent",
+    "User",
+    "Vacancy",
+]

@@ -1,0 +1,235 @@
+"""Отбор: отклики, этапы, интервью, обратная связь департамента, кадровый резерв."""
+import uuid
+from datetime import date, datetime
+
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    CheckConstraint,
+    Date,
+    DateTime,
+    ForeignKey,
+    Identity,
+    Index,
+    SmallInteger,
+    String,
+    Text,
+    func,
+    text as sa_text,
+)
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.db.base import Base, created_at_column, str_enum, uuid_pk
+from app.db.enums import (
+    ApplicationSource,
+    FeedbackOutcome,
+    InterviewKind,
+    InterviewResult,
+    QuestionAuthor,
+    RejectionSide,
+    ReserveStatus,
+)
+from app.db.models.candidates import Candidate
+from app.db.models.positions import Vacancy
+
+
+class SelectionStage(Base):
+    """Справочник этапов отбора. Кадровик может добавить свой этап без миграции."""
+    __tablename__ = "selection_stages"
+
+    code: Mapped[str] = mapped_column(String(32), primary_key=True)
+    title: Mapped[str] = mapped_column(String(256))
+    sort_order: Mapped[int] = mapped_column(SmallInteger)
+    # Из финального этапа (принят, отказ, кандидат отказался) переходов нет.
+    is_final: Mapped[bool] = mapped_column(Boolean)
+
+
+class RejectionReason(Base):
+    """Справочник причин отказа: чтобы их можно было посчитать, а не искать в комментариях."""
+    __tablename__ = "rejection_reasons"
+
+    code: Mapped[str] = mapped_column(String(32), primary_key=True)
+    title: Mapped[str] = mapped_column(String(256))
+    side: Mapped[RejectionSide] = mapped_column(str_enum(RejectionSide, "side"))
+
+
+class Application(Base):
+    """Участие кандидата в отборе на вакансию.
+
+    vacancy_id пуст для откликов на должности вне платформы — например, строки
+    «История общения с кандидатом» из резюме консультанта: тогда заполнено
+    external_position_title.
+    """
+    __tablename__ = "applications"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    candidate_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("candidates.id", ondelete="CASCADE"))
+    vacancy_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("vacancies.id", ondelete="CASCADE")
+    )
+    external_position_title: Mapped[str | None] = mapped_column(String(512))
+    source: Mapped[ApplicationSource] = mapped_column(str_enum(ApplicationSource, "source"))
+    applied_at: Mapped[date | None] = mapped_column(Date)
+    # Текущий этап; история переходов — в stage_events (развилка Р5).
+    current_stage_code: Mapped[str] = mapped_column(ForeignKey("selection_stages.code"))
+    created_at: Mapped[datetime] = created_at_column()
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    candidate: Mapped[Candidate] = relationship()
+    vacancy: Mapped[Vacancy | None] = relationship()
+    current_stage: Mapped[SelectionStage] = relationship()
+
+    __table_args__ = (
+        CheckConstraint(
+            "vacancy_id IS NOT NULL OR external_position_title IS NOT NULL",
+            name="has_target",
+        ),
+        # Один кандидат не может дважды участвовать в отборе на одну вакансию.
+        Index(
+            "uq_applications_candidate_vacancy",
+            "candidate_id",
+            "vacancy_id",
+            unique=True,
+            postgresql_where=sa_text("vacancy_id IS NOT NULL"),
+        ),
+    )
+
+
+class StageEvent(Base):
+    """Переход отклика между этапами: кто, когда, почему. Записи только добавляются."""
+    __tablename__ = "stage_events"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    # Порядковый номер события. Время created_at = начало транзакции (now()), и у нескольких
+    # переходов в одной транзакции оно совпадает; порядок истории задаёт seq.
+    seq: Mapped[int] = mapped_column(BigInteger, Identity(), unique=True)
+    application_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("applications.id", ondelete="CASCADE"), index=True
+    )
+    from_stage_code: Mapped[str | None] = mapped_column(ForeignKey("selection_stages.code"))
+    to_stage_code: Mapped[str] = mapped_column(ForeignKey("selection_stages.code"))
+    rejection_reason_code: Mapped[str | None] = mapped_column(ForeignKey("rejection_reasons.code"))
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    comment: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = created_at_column()
+
+
+class Interview(Base):
+    """Телефонное интервью кадровика или собеседование в департаменте."""
+    __tablename__ = "interviews"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    application_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("applications.id", ondelete="CASCADE"), index=True
+    )
+    kind: Mapped[InterviewKind] = mapped_column(str_enum(InterviewKind, "kind"))
+    interviewer_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    held_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    result: Mapped[InterviewResult] = mapped_column(
+        str_enum(InterviewResult, "result"),
+        default=InterviewResult.PENDING,
+        server_default="pending",
+    )
+    summary: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = created_at_column()
+
+    questions: Mapped[list["InterviewQuestion"]] = relationship(
+        back_populates="interview",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        order_by="InterviewQuestion.sort_order",
+    )
+
+
+class InterviewQuestion(Base):
+    """Вопрос интервью. Привязан к компетенции или к пробелу в резюме, чтобы
+    разных кандидатов проверяли по одним критериям."""
+    __tablename__ = "interview_questions"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    interview_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("interviews.id", ondelete="CASCADE"))
+    competency_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("competencies.id", ondelete="SET NULL")
+    )
+    # Чего не хватает в резюме: «не указан опыт работы с обращениями граждан».
+    gap: Mapped[str | None] = mapped_column(Text)
+    question: Mapped[str] = mapped_column(Text)
+    author: Mapped[QuestionAuthor] = mapped_column(str_enum(QuestionAuthor, "author"))
+    answer_notes: Mapped[str | None] = mapped_column(Text)
+    score: Mapped[int | None] = mapped_column(SmallInteger)
+    sort_order: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
+
+    interview: Mapped[Interview] = relationship(back_populates="questions")
+
+
+class DepartmentFeedback(Base):
+    """Итог рассмотрения кандидата департаментом — то, что сейчас теряется (проблема 6 кейса)."""
+    __tablename__ = "department_feedback"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    application_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("applications.id", ondelete="CASCADE"), index=True
+    )
+    interview_held: Mapped[bool | None] = mapped_column(Boolean)
+    outcome: Mapped[FeedbackOutcome] = mapped_column(
+        str_enum(FeedbackOutcome, "outcome"),
+        default=FeedbackOutcome.PENDING,
+        server_default="pending",
+    )
+    # Коды подтверждённых компетенций: ["ИТК", "РК"].
+    confirmed_competencies: Mapped[list[str]] = mapped_column(
+        JSONB, default=list, server_default="[]"
+    )
+    gaps: Mapped[str | None] = mapped_column(Text)
+    rejection_reason_code: Mapped[str | None] = mapped_column(ForeignKey("rejection_reasons.code"))
+    keep_in_reserve: Mapped[bool | None] = mapped_column(Boolean)
+    comment: Mapped[str | None] = mapped_column(Text)
+    author_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    received_at: Mapped[datetime] = created_at_column()
+
+
+class ReserveEntry(Base):
+    """Кадровый резерв. Резерв — не этап отбора: кандидат может получить отказ
+    на одну вакансию и одновременно остаться в резерве на должность или направление."""
+    __tablename__ = "reserve_entries"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    candidate_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("candidates.id", ondelete="CASCADE"), index=True
+    )
+    # Для какой должности резерв; пусто — резерв по направлению (competency_area).
+    position_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("positions.id", ondelete="SET NULL")
+    )
+    competency_area: Mapped[str | None] = mapped_column(String(256))
+    source_application_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("applications.id", ondelete="SET NULL")
+    )
+    reason: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[ReserveStatus] = mapped_column(
+        str_enum(ReserveStatus, "status"), default=ReserveStatus.ACTIVE, server_default="active"
+    )
+    added_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    added_at: Mapped[datetime] = created_at_column()
+    valid_until: Mapped[date | None] = mapped_column(Date)
+
+    candidate: Mapped[Candidate] = relationship()
+
+    __table_args__ = (
+        CheckConstraint(
+            "position_id IS NOT NULL OR competency_area IS NOT NULL",
+            name="has_target",
+        ),
+    )
