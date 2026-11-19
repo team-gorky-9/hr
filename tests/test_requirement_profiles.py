@@ -98,6 +98,42 @@ class RequirementProfileIntegrityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Processing error persisted"):
             check_fixtures(changed, self.keys)
 
+    def test_unsupported_rule_cannot_create_a_partial_assessment(self):
+        changed = deepcopy(self.fixtures)
+        next(c for c in changed["cases"] if c["id"] == "rule-unknown-key")["expected"]["write_assessment"] = True
+        with self.assertRaisesRegex(ValueError, "Processing error must refuse the whole assessment"):
+            check_fixtures(changed, self.keys)
+
+    def test_card_with_no_declared_role_is_not_an_extraction_oracle(self):
+        changed = deepcopy(self.fixtures)
+        changed["cases"][0].pop("card_role", None)
+        with self.assertRaisesRegex(ValueError, "Missing card role"):
+            check_fixtures(changed, self.keys)
+
+    def test_removing_supported_education_from_card_is_detected(self):
+        changed = deepcopy(self.fixtures)
+        case = next(c for c in changed["cases"] if c["id"] == "hr-field-no")
+        case["card"] = {"pii_hidden": True}
+        case["card_role"] = "expected_available_fields"
+        case["card_evidence"] = [{"path": "/education/0/field", "evidence_indexes": [0]}]
+        with self.assertRaisesRegex(ValueError, "Card evidence points to missing field"):
+            check_fixtures(changed, self.keys)
+
+    def test_empty_course_list_cannot_replace_explicit_negative_evidence(self):
+        changed = deepcopy(self.fixtures)
+        case = next(c for c in changed["cases"] if c["id"] == "hr-field-no")
+        case["expected"]["requires_text_evidence"] = True
+        case["expected"]["formal_evidence_indexes"] = []
+        with self.assertRaisesRegex(ValueError, "Explicit text evidence is required"):
+            check_fixtures(changed, self.keys)
+
+    def test_changed_text_cannot_keep_stale_content_hash(self):
+        changed = deepcopy(self.fixtures)
+        case = changed["cases"][0]
+        case["text_sha256"] = "0" * 64
+        with self.assertRaisesRegex(ValueError, "Text hash mismatch"):
+            check_fixtures(changed, self.keys)
+
 
 if __name__ == "__main__":
     unittest.main()

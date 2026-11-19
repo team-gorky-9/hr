@@ -11,6 +11,7 @@ import io
 import json
 from pathlib import Path
 import unicodedata
+import uuid
 import xml.etree.ElementTree as ET
 import zipfile
 
@@ -182,6 +183,53 @@ def check_package(package, source_manifest):
     return row_count, keys
 
 
+def check_evidence_indexes(indexes, case, *, required=False):
+    require(isinstance(indexes, list), f"Evidence indexes must be a list: {case['id']}")
+    require(not required or bool(indexes), f"Explicit text evidence is required: {case['id']}")
+    require(all(type(i) is int and 0 <= i < len(case["evidence"]) for i in indexes),
+            f"Invalid evidence index: {case['id']}")
+
+
+def check_card_evidence(case):
+    """Validate declared manual coverage, not the semantic accuracy of an extractor."""
+    require(case.get("card_role") == "expected_available_fields", f"Missing card role: {case['id']}")
+    card = case["card"]
+    require(isinstance(card, dict), f"Expected card object: {case['id']}")
+    links = case["card_evidence"]
+    covered = set()
+    for link in links:
+        path = link["path"]
+        require(path.startswith("/"), "Card evidence path must be a JSON pointer")
+        value = card
+        try:
+            for part in path[1:].split("/"):
+                value = value[int(part)] if isinstance(value, list) else value[part]
+        except (KeyError, IndexError, ValueError, TypeError):
+            raise ValueError(f"Card evidence points to missing field: {case['id']} {path}") from None
+        require(value is not None and value != "", f"Empty supported card field: {path}")
+        check_evidence_indexes(link["evidence_indexes"], case, required=True)
+        covered.add(path)
+
+    def leaf_paths(value, path=""):
+        if isinstance(value, dict):
+            for key, child in value.items():
+                if path or key not in {"pii_hidden", "missing"}:
+                    yield from leaf_paths(child, path + "/" + key)
+        elif isinstance(value, list):
+            for i, child in enumerate(value):
+                yield from leaf_paths(child, path + "/" + str(i))
+        elif value is not None:
+            yield path
+
+    facts = set(leaf_paths(card))
+    require(facts <= covered, f"Card facts missing evidence links: {case['id']} {facts - covered}")
+    limitations = case["card_limitations"]
+    require(bool(facts) or bool(limitations), f"Empty card needs an explicit explanation: {case['id']}")
+    for item in limitations:
+        require(bool(item["fact"].strip()) and bool(item["reason"].strip()), "Empty card limitation")
+        check_evidence_indexes(item["evidence_indexes"], case, required=True)
+
+
 def check_fixtures(fixtures, profile_keys):
     require(fixtures["schema_version"] == PACKAGE_SCHEMA, "Unsupported fixture schema")
     synthetic = fixtures["synthetic_profile"]
@@ -190,6 +238,8 @@ def check_fixtures(fixtures, profile_keys):
     require(synthetic["formal_requirements"][0]["params"]["min_months"] == 24, "Synthetic threshold changed")
     synthetic_keys = {r["key"] for r in all_rows(synthetic)}
     cases = fixtures["cases"]
+    namespace = uuid.UUID(fixtures["uuid_namespace"])
+    text_identities = {}
     require(len({c["id"] for c in cases}) == len(cases), "Duplicate fixture id")
     for case in cases:
         require(case["is_synthetic"] is True and "synthetic" not in case, "Fixture is not marked synthetic")
@@ -197,6 +247,19 @@ def check_fixtures(fixtures, profile_keys):
         require(case["expected"]["result"] in {"met", "not_met", "unknown", "processing_error"}, case["id"])
         if case["expected"]["result"] == "processing_error":
             require(case["expected"]["write_formal_check"] is False, "Processing error persisted as check")
+            require(case["expected"].get("write_assessment") is False
+                    and case["expected"].get("refusal_reason") == "rule_unsupported",
+                    "Processing error must refuse the whole assessment")
+        check_card_evidence(case)
+        expected = case["expected"]
+        check_evidence_indexes(expected.get("formal_evidence_indexes", []), case,
+                               required=expected.get("requires_text_evidence", False))
+        check_evidence_indexes(expected.get("indicator_evidence_indexes", []), case)
+        alternatives = expected.get("alternative_results", {})
+        alternative_evidence = expected.get("alternative_evidence_indexes", {})
+        require(alternatives.keys() == alternative_evidence.keys(), "Alternative evidence keys mismatch")
+        for indexes in alternative_evidence.values():
+            check_evidence_indexes(indexes, case)
         for evidence in case["evidence"]:
             require(evidence["candidate_text_id"] == case["candidate_text_id"], "Evidence version mismatch")
             start, end, quote = evidence["start"], evidence["end"], evidence["quote"]
@@ -204,12 +267,22 @@ def check_fixtures(fixtures, profile_keys):
                     "Invalid evidence offsets")
             require(case["text"][start:end] == quote and end - start == len(quote),
                     f"Evidence mismatch: {case['id']}")
+        require(hashlib.sha256(case["text"].encode("utf-8")).hexdigest() == case["text_sha256"],
+                f"Text hash mismatch: {case['id']}")
+        require(str(uuid.uuid5(namespace, case["text_key"])) == case["candidate_text_id"],
+                f"Text UUID does not follow shared identity rule: {case['id']}")
+        identity = (case["candidate_code"], case["text"])
+        previous = text_identities.setdefault(case["candidate_text_id"], identity)
+        require(previous == identity, "Different texts/candidates cannot share a text UUID")
     indexed = {c["id"]: c for c in cases}
     required = {"experience-absent": "unknown", "experience-three-years": "met", "experience-one-year": "not_met",
                 "experience-placeholder": "unknown", "experience-overlap": "met", "experience-conflict": "unknown"}
     for key, result in required.items():
         require(indexed[key]["expected"]["result"] == result, f"Agreed expectation changed: {key}")
-    require(indexed["experience-overlap"]["expected"]["months"] == 36, "Overlap fixture must expect 36 months")
+    overlap = indexed["experience-overlap"]["expected"]
+    require(overlap["months"] == 36 and overlap["proposed_months"] == 37
+            and overlap["months_status"] == "pending_agreement" and "Q-MONTHS" in overlap["pending"],
+            "Month conventions must remain explicitly pending until agreement")
     require(indexed["experience-absent"]["evidence"][0]["end"] == 37, "Base quote must span 37 code points")
     return len(cases)
 
