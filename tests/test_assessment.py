@@ -112,3 +112,26 @@ def test_only_one_approved_profile_per_position(session):
     second.status = RequirementStatus.APPROVED
     with pytest.raises(IntegrityError):
         session.flush()
+
+
+def test_same_requirement_twice_is_rejected(session):
+    candidate, card, profile, _ = setup(session)
+    requirement_id = profile.formal_requirements[0].id
+    with pytest.raises(repo.RepositoryError, match="дважды"):
+        repo.save_assessment(
+            session, candidate_id=candidate.id, profile_id=profile.id, card_id=card.id, model="m",
+            formal_checks=[FormalCheckIn(requirement_id=requirement_id, result=CheckResult.NOT_MET),
+                           FormalCheckIn(requirement_id=requirement_id, result=CheckResult.MET)],
+            competency_scores=[],
+        )
+
+
+def test_same_competency_twice_is_rejected(session):
+    candidate, card, profile, _ = setup(session)
+    competency_id = profile.competencies[0].id
+    with pytest.raises(repo.RepositoryError, match="дважды"):
+        repo.save_assessment(
+            session, candidate_id=candidate.id, profile_id=profile.id, card_id=card.id, model="m", formal_checks=[],
+            competency_scores=[CompetencyScoreIn(competency_id=competency_id, level=40),
+                               CompetencyScoreIn(competency_id=competency_id, level=90)],
+        )

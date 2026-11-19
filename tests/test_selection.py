@@ -2,11 +2,12 @@ import uuid
 from datetime import date, timedelta
 
 import pytest
+from sqlalchemy import delete
 from sqlalchemy.exc import IntegrityError
 
 from app.db import repository as repo
 from app.db.enums import ApplicationSource, FeedbackOutcome, ReserveStatus
-from app.db.models import Application
+from app.db.models import Application, Position
 from tests.factories import make_candidate, position, vacancy
 
 
@@ -137,3 +138,14 @@ def test_unknown_id_gives_clear_error(session):
                                 external_position_title="Аналитик")
     with pytest.raises(repo.StageTransitionError, match="нет отклика"):
         repo.move_application(session, uuid.uuid4(), "screening")
+
+
+def test_position_with_reserve_cannot_be_deleted(session):
+    """`reserve_entries.position_id` объявлен SET NULL, но CHECK «должность или направление»
+    не даёт обнулить его у записи без направления: удаление должности отклоняется (контракт, п. 4.5)."""
+    pos = position(session)
+    repo.add_to_reserve(session, candidate_id=make_candidate(session, "py-0112").id, position_id=pos.id)
+    savepoint = session.begin_nested()
+    with pytest.raises(IntegrityError, match="ck_reserve_entries_has_target"):
+        session.execute(delete(Position).where(Position.id == pos.id))
+    savepoint.rollback()

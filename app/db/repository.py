@@ -644,6 +644,10 @@ def save_assessment(
         r.id: r for r in session.scalars(select(FormalRequirement).where(FormalRequirement.profile_id == profile.id))
     }
     competency_ids = set(session.scalars(select(Competency.id).where(Competency.profile_id == profile.id)))
+    # Одно требование или компетенция — одна строка: иначе в оценке окажутся два
+    # противоречивых вывода, а formal_result посчитается только по последнему.
+    _reject_repeats([c.requirement_id for c in formal_checks], "требование")
+    _reject_repeats([s.competency_id for s in competency_scores], "компетенция")
     for check in formal_checks:
         if check.requirement_id not in requirements:
             raise RepositoryError(f"требование {check.requirement_id} не из профиля {profile.id}")
@@ -698,6 +702,12 @@ def save_assessment(
         )
     session.flush()
     return assessment
+
+
+def _reject_repeats(ids: Sequence[uuid.UUID], label: str) -> None:
+    repeated = sorted({str(i) for i in ids if ids.count(i) > 1})
+    if repeated:
+        raise RepositoryError(f"{label} оценено в одной оценке дважды: {', '.join(repeated)}")
 
 
 def _formal_result(
