@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 
     hr_search_work_token: SecretStr | None = None
-    hr_search_semantic_enabled: bool = True
+    hr_search_semantic_enabled: bool = False
     hr_search_dense_threshold: float = Field(default=DEFAULT_THRESHOLD, ge=0, le=1)
 
 

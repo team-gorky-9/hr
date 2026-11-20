@@ -11,7 +11,7 @@ MODEL_REVISION = "614241f622f53c4eeff9890bdc4f31cfecc418b3"
 INDEX_MODEL = f"{MODEL_ID}@{MODEL_REVISION}:{CHUNK_VERSION}"
 DIMENSIONS = 384
 WINDOW = 512
-DEFAULT_THRESHOLD = 0.86
+DEFAULT_THRESHOLD = 0.94
 MODEL_FILES = [
     "config.json", "model.safetensors", "modules.json", "sentence_bert_config.json",
     "tokenizer.json", "tokenizer_config.json", "sentencepiece.bpe.model",

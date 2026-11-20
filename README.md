@@ -49,6 +49,10 @@ uv run uvicorn app.main:app --reload
 
 Swagger UI — http://127.0.0.1:8000/docs, проверка — `GET /api/v1/health`. Маршруты чтения Этапа 1, контуры `working`/`training`, статусы оценки и переменная `CORS_ORIGINS` описаны в [docs/modules/api.md](docs/modules/api.md), контракт — [docs/contracts/api.md](docs/contracts/api.md).
 
+## Поиск кандидатов
+
+Поиск по профессиональному опыту, точным терминам, навыкам, образованию и действующему резерву. [HTTP-контракт](docs/contracts/search.md) · [Запуск, индексация и учебная проверка](docs/modules/search.md)
+
 ## Контрольный набор оценки
 
 ```bash
