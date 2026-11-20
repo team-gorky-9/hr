@@ -10,7 +10,8 @@
       "position_code": "python-dev",
       "channel": "hh_ru",
       "document_kind": "resume",
-      "file_format": "hh_txt"
+      "file_format": "hh_txt",
+      "synthetic": true
     },
     {
       "source_path": "консультанта сектора подбора кадров/hr-9001.docx",
@@ -18,7 +19,8 @@
       "position_code": "hr-consultant",
       "channel": "hh_ru",
       "document_kind": "resume",
-      "file_format": "hh_docx"
+      "file_format": "hh_docx",
+      "synthetic": true
     }
   ]
 }

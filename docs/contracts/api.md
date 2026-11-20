@@ -1,8 +1,10 @@
 # Контракт: HTTP API (`app/api/`)
 
-**Версия:** 0.1 (проект к Этапу 1 + контур Этапа 2) · **Дата:** 2026-11-19 · **Владелец:** Денис · **Потребители:** фронтенд (`frontend/`, Ася).
+**Версия:** 0.2 (проект к Этапу 1 + контур Этапа 2) · **Дата:** 2026-11-20 · **Владелец:** Денис · **Потребители:** фронтенд (`frontend/`, Ася).
 
-Опирается на [database.md](database.md) v1.0 и [assessment.md](assessment.md) v0.1.
+Опирается на [database.md](database.md) v1.5 и [assessment.md](assessment.md) v0.2.
+
+**Изменения v0.2:** учебный и рабочий контуры (п. 1.1), признаки `is_training`, `is_preliminary`, `formal_preliminary`, основание `basis` и альтернативы в блоке формальных требований.
 
 ## 1. Общие соглашения
 
@@ -15,6 +17,10 @@
   - В БД `Evidence.start` / `Evidence.end` хранятся в кодовых точках Unicode (`database.md`, п. 2.11).
   - При наличии символов вне BMP (эмодзи и т. п.) до цитаты `String.prototype.slice(start, end)` в JavaScript смещается.
   - Поэтому в HTTP-ответе каждый объект `EvidenceDTO` содержит **оба** набора границ: исходные `start`/`end` (Unicode) и вычисленные бэкендом `utf16_start`/`utf16_end` (`len(text[:start].encode("utf-16-le")) // 2`). Фронтенд для подсветки в JS использует `utf16_start`/`utf16_end`.
+- **Учебный и рабочий контуры [v0.2]** (`database.md` п. 2.6.1):
+  - Действующий профиль должности API берёт **только** через `get_approved_profile`. По умолчанию все маршруты работают в рабочем контуре: `approved_profile_*` — рабочий профиль, учебные кандидаты (`candidates.is_synthetic`) в списки откликов не попадают, `no_approved_profile` значит «нет утверждённого рабочего профиля», даже если учебный утверждён.
+  - Учебный срез — только явным query-параметром `contour=training` у `GET /vacancies` и `GET /vacancies/{id}/applications`: учебные кандидаты и учебный утверждённый профиль (`get_approved_profile(..., synthetic=True)`). Так `qa-01` показывает `py-9001` с утверждённым учебным профилем, не задевая рабочий список.
+  - Каждый профиль, кандидат и оценка в ответах несут `is_training` (оценка учебная, если учебный кандидат или профиль). При `is_training = true` интерфейс показывает плашку «Учебный пример — не рабочая рекомендация».
 - **Единый формат ошибок:**
 
 ```json
@@ -49,15 +55,16 @@
       "status": "open",
       "approved_profile_id": "44444444-4444-4444-8444-444444444444",
       "approved_profile_version": 1,
+      "approved_profile_is_training": true,
       "applications_count": 1
     }
   ]
 }
 ```
-Если у должности нет утверждённого профиля: `approved_profile_id = null`, `approved_profile_version = null` (интерфейс явно показывает «Утверждённый профиль требований недоступен»).
+Пример показан для `contour=training` (учебный профиль `py-9001`). Если у должности нет утверждённого профиля в запрошенном контуре: `approved_profile_id = null`, `approved_profile_version = null` (интерфейс явно показывает «Утверждённый профиль требований недоступен»). `applications_count` считает отклики кандидатов того же контура.
 
 ### 2.2. `GET /api/v1/vacancies/{vacancy_id}/applications`
-Список откликов выбранной вакансии. Query-параметры (опциональные): `stage_code`, `formal_result` (`met` | `not_met` | `unknown`), `assessment_status` (`ready` | `not_assessed` | `stale` | `no_approved_profile`).
+Список откликов выбранной вакансии. Query-параметры (опциональные): `contour` (`working` по умолчанию | `training`), `stage_code`, `formal_result` (`met` | `not_met` | `unknown`), `formal_preliminary` (`true` | `false`), `assessment_status` (`ready` | `not_assessed` | `stale` | `no_approved_profile`). В элементе списка добавлены `is_training` и `formal_preliminary` («допуск выполнен по резюме, нужен документ»).
 
 **Ответ `200 OK`** (пустой список при отсутствии откликов: `{"vacancy_id": "...", "total": 0, "items": []}`):
 ```json
@@ -136,6 +143,8 @@
     "profile_id": "44444444-4444-4444-8444-444444444444",
     "profile_version": 1,
     "profile_status": "approved",
+    "is_training": true,
+    "formal_preliminary": false,
     "model": "fake-llm/stage-1",
     "created_at": "2026-11-19T18:10:00+03:00",
     "is_stale": false,
@@ -149,10 +158,16 @@
         "kind": "experience",
         "description": "Подтверждённый общий коммерческий опыт не менее 2 лет",
         "is_mandatory": true,
+        "verification": "resume",
+        "check_stage": "screening",
         "source_quote": "synthetic_test_rule: stage-0b-02 (учебный порог 2 года)",
         "result": "unknown",
+        "basis": "resume",
+        "is_preliminary": false,
+        "confirmed_by": null,
         "explanation": "В очищенном тексте резюме нет сведений о длительности коммерческого опыта.",
-        "evidence": []
+        "evidence": [],
+        "alternatives": []
       }
     ],
     "competency_scores": [
@@ -182,6 +197,8 @@
 ```
 Если `assessment_status` равен `"not_assessed"` или `"no_approved_profile"`, поле `assessment` равно `null`. Если карточка ещё не извлечена, `candidate.card = null`.
 
+Поля формального требования [v0.2]: `verification` — где требование положено подтверждать; `basis` — на чём результат фактически основан (`resume` у вывода модели; `documents` / `interview` / `test` — подтвердил человек, тогда `confirmed_by` — логин, а `evidence` пуст); `is_preliminary = true` — подпись «по резюме, нужен документ»; `alternatives` — `[{key, result, evidence}]` по ключам `params.alternatives`. Требования этапа `interview` показываются отдельным блоком «проверить на интервью» и на `formal_result` не влияют. Карточка отклика учебного кандидата открывается по id и в рабочем контуре, но всегда с `is_training = true`.
+
 ### 2.4. `GET /api/v1/candidate-texts/{candidate_text_id}`
 Возвращает конкретную версию очищенного текста для панели источника и подсветки цитаты.
 
@@ -210,6 +227,7 @@
 - `POST /api/v1/applications/{application_id}/stage` — ручной перевод этапа кадровиком (`move_application`), возвращает `StageEvent`; `409` при попытке перевода из финального этапа.
 - `GET /api/v1/applications/{application_id}/history` — журнал `stage_history` по `seq`.
 - `POST /api/v1/applications/{application_id}/feedback` — сохранение обратной связи департамента (`record_department_feedback`, **не** меняет этап).
+- `GET /api/v1/applications/{application_id}/handoff-summary` — чистая обезличенная сводка кандидата (формальный итог, цитаты, пробелы, заметки кадровика) в JSON + готовом тексте для передачи руководителю «наверх».
 - `GET/POST /api/v1/applications/{application_id}/interview-guide` — чтение и генерация вопросов по пробелам (`A-11`/`M-09`).
 - `POST /api/v1/reserve` и `GET /api/v1/positions/{position_id}/reserve` — рабочий кадровый резерв (`M-05`/`A-05`).
 - `GET /api/v1/analytics/funnel` — сводка воронки по фактическим `stage_events` (`O-01`).

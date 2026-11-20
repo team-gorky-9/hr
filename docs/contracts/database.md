@@ -1,9 +1,9 @@
 # Контракт: база данных
 
-**Версия:** 1.2 (проект) · **Дата:** 2026-11-19 · **Статус:** v1.0 утверждена Родионом 19.11.2026; изменения v1.1 (раздел 12) и v1.2 (раздел 13) ждут утверждения
-**Автор:** Денис (бэкенд и база) · **Реализация:** v1.0 — PR team-gorky-9/hr#1, миграция `0001`; v1.1 — ветка `feature/requirement-profiles`, миграция `0002`; v1.2 — ветка `feature/stage-0a-01-import-resumes`, без миграции
+**Версия:** 1.6 (проект) · **Дата:** 2026-11-20 · **Статус:** v1.0 утверждена Родионом 19.11.2026; v1.1 принята решением Родиона 20.11 (Р1); изменения v1.2 (раздел 13), v1.3 (раздел 14), v1.4 (раздел 15), v1.5 (раздел 16) и v1.6 (раздел 17) ждут утверждения
+**Автор:** Денис (бэкенд и база) · **Реализация:** v1.0 — team-gorky-9/hr#1, миграция `0001`; v1.1 — team-gorky-9/hr#4, миграция `0002`; v1.2 — team-gorky-9/hr#5, без миграции; v1.3 — team-gorky-9/hr#6, без миграции; v1.4 — team-gorky-9/hr#8, без миграции; v1.5 — ветка `feature/profile-contours-and-basis`, миграция `0003`; v1.6 — ветка `feature/ingest-02-full-corpus-and-pii-audit`, миграция `0004`
 
-Контракт описывает, как платформа хранит данные и как другие модули их пишут и читают. По правилам команды схема базы входит в контракт и меняется только по согласованию с Родионом. Контракт утверждён, модули опираются на него. Каждая правка вносится этим же файлом вместе с миграцией (раздел 9).
+Контракт описывает, как платформа хранит данные и как другие модули их пишут и читают. По правилам команды схема базы входит в контракт и меняется только по согласованию с Родионом. Версия 1.0 утверждена, модули опираются на неё; v1.1 принята, правки v1.2–v1.5 ждут утверждения. Каждая правка вносится этим же файлом вместе с кодом, тестами и, если меняется схема, миграцией (раздел 9).
 
 **Происхождение пунктов:** **[Д]** — решение Дениса (обсуждение 19.11); **[Ч]** — из черновика контракта в `docs/project-context.md` штаба; **[А]** — предложение агента, выбор делегирован Денисом. Пометка стоит у решений, а не у очевидных полей.
 
@@ -12,18 +12,30 @@
 | Модуль | Пишет | Читает |
 |---|---|---|
 | Импорт | `source_documents`, `candidates`, `candidate_pii`, `candidate_texts`, `applications` | справочники, `positions`, `vacancies` |
-| Извлечение карточки, скоринг (Илья) | `candidate_cards`, `candidate_skills`, `assessments`, `formal_checks`, `competency_scores`, `interview_questions` | `candidate_texts`, требования должности |
+| Извлечение карточки, скоринг (Илья) | `candidate_cards`, `candidate_skills`, `assessments`, `formal_checks`, `competency_scores`, `interview_questions` | `candidate_texts`, требования должности — действующий профиль через `get_approved_profile` [v1.5] |
 | Матрицы компетенций (Давид) | `requirement_profiles`, `requirement_profile_sources`, `formal_requirements`, `competencies`, `competency_indicators` — через `create_requirement_profile` | `positions`, `source_documents` (ДИ, матрица, вакансия) |
 | Поиск (Родион) | `embeddings` | `candidate_texts`, `candidate_cards`, `candidate_skills`, `reserve_entries` |
-| API и интерфейс (Ася) | `stage_events`, `interviews`, `department_feedback`, `reserve_entries`, `users`, `audit_log`, утверждение требований (`approve_requirement_profile`) | всё, ПДн — только через `get_candidate_pii` |
+| API и интерфейс (Ася, Денис) | `stage_events`, `interviews`, `department_feedback`, `reserve_entries`, `users`, `audit_log`, утверждение требований (`approve_requirement_profile`), подтверждение требования документом, интервью или тестом (`confirm_formal_check`) [v1.5] | всё, ПДн — только через `get_candidate_pii`; действующий профиль — через `get_approved_profile` [v1.5] |
 
 Модули пишут в базу через функции доступа (раздел 7), а не прямыми `INSERT`: функции держат правила раздела 2. Читать таблицы напрямую можно, правила чтения ПДн — в п. 2.2.
 
+**Таблицы без функции записи [v1.3].** Для части записей из таблицы выше функции пока нет:
+
+| Что записать | Чья задача добавит функцию |
+|---|---|
+| `interviews` (назначить, внести итог), `interview_questions` | первая задача, где интервью появляются в интерфейсе или их генерирует модель (Ася, Илья) |
+| `users` (завести, отключить) | задача авторизации (Ася) |
+| `embeddings` | задача поиска (Родион), вместе с выбором модели и индекса (п. 11.4) |
+| смена `reserve_entries.status` (`withdrawn`, `hired`) | первая задача, где резервом управляют из интерфейса (Ася) |
+| `positions`, `vacancies` (новая должность, закрытие вакансии) | сейчас пишет только `python -m app.db.seed`; функция — когда должности заводят из интерфейса |
+
+Пока функции нет, модуль в эту таблицу не пишет. Функцию добавляет потребитель вместе с задачей, где запись нужна, по правилам раздела 9 (контракт, код и тест в одном PR, утверждает Родион). Обходной `INSERT` из модуля не допускается.
+
 ## 2. Обязательные правила
 
-**2.1. Три слоя данных о кандидате [Д].** `source_documents.raw_text` — исходный файл, после импорта не меняется. `candidate_texts.text` — текст без персональных данных. `candidate_cards.card` — карточка, извлечённая из очищенного текста.
+**2.1. Три слоя данных о кандидате [Д].** `source_documents.raw_text` — исходный файл, после импорта не меняется. `candidate_texts.text` — текст, из которого вычищены ПДн по п. 11.7; город и гражданство в нём остаются (п. 11.8). `candidate_cards.card` — карточка, извлечённая из очищенного текста.
 
-**2.2. Персональные данные отдельно [Д].** ФИО, пол, дата рождения, возраст, контакты и ссылки на профили лежат только в `candidate_pii`. Город и гражданство к ПДн для очистки не относятся и остаются в очищенном тексте (п. 11.8). Есть одно исключение: `raw_text`, исходник хранится как есть. Чтение `candidate_pii` идёт только через `get_candidate_pii`, который пишет запись `view_pii` в `audit_log` с целью. `raw_text` в модель и в интерфейс не передаётся.
+**2.2. Персональные данные отдельно [Д].** ФИО, пол, дата рождения, возраст, контакты и ссылки на профили лежат только в `candidate_pii`. Город и гражданство тоже персональные данные, но из текста не вычищаются и остаются в `candidate_texts.text` (п. 11.8). Есть одно исключение: `raw_text`, исходник хранится как есть. Чтение `candidate_pii` идёт только через `get_candidate_pii`, который пишет запись `view_pii` в `audit_log` с целью. `raw_text` в модель и в интерфейс не передаётся.
 
 **2.3. Модель видит только очищенный текст [Д][Ч].** В вызовы модели уходит `candidate_texts.text` текущей версии, а не `raw_text` и не `candidate_pii`.
 
@@ -38,13 +50,28 @@
 
 `unknown` означает «в резюме нет сведений». Это повод уточнить на интервью, а не отказать.
 
+**В итог входят только требования этапа `screening` [v1.5].** Обязательное требование с `check_stage = interview` (знание закона) по резюме не проверяется и итог не делает `unknown`.
+
+В одной оценке каждое требование и каждая компетенция встречаются не больше одного раза: повтор `save_assessment` отклоняет [v1.3].
+
+**План и факт проверки разделены [Родион, Р4; v1.5; заменяет правило v1.3 «met → unknown»].** `verification` требования — где его *положено* подтверждать (резюме, документы, интервью, тест). `formal_checks.basis` — на чём результат *фактически* основан. Модель видит только резюме, поэтому `save_assessment` пишет `basis = resume` и сохраняет результат как есть. Результат **предварительный** (`formal_checks.is_preliminary`, считает код), если он не `unknown`, а `basis ≠ verification` — как в контракте оценки п. 4.4: «по резюме да, нужен документ» или «по резюме нет, сверить с документом». В итоге `formal_result` предварительный результат считается как обычный — на первичном отборе это и есть вывод по резюме. `assessments.formal_preliminary = true`, если итог `met`, а хоть одно обязательное требование этапа `screening` в нём предварительное: в списке это «допуск выполнен по резюме, нужен документ». Подтверждение документом, интервью или тестом вносит человек через `confirm_formal_check` — это новая версия оценки (п. 2.5), прежняя «по резюме» остаётся в истории. Пример: «Направление: юриспруденция» с `verification = documents`, в резюме «Юриспруденция» → `met`, `basis = resume`, предварительный, итог `met`; кадровик проверил диплом → версия 2, `met`, `basis = documents`; в дипломе другое направление → версия 2, `not_met`, итог `not_met`.
+
+**2.6.1. Учебный и рабочий контуры [v1.5].** У кандидата и профиля есть признак `is_synthetic`: `false` — рабочий контур (реальные резюме, профили из ДИ), `true` — учебный (выдуманные тексты `py-9001`, учебное правило «стаж ≥ 24 мес.»). Признак ставится при создании и не меняется (триггер базы). Правила:
+- **утверждение по контуру:** утверждённая версия — одна на должность в каждом контуре; утверждение архивирует прежнюю утверждённую только своего контура. Учебный профиль утверждается по тем же правилам, что рабочий (решение Родиона 20.11 — снять запрет);
+- **нумерация по контуру:** версия уникальна в (`position_id`, `is_synthetic`, `version`): учебный `python-dev` v2 и рабочий v2 — разные профили;
+- **выбор действующего профиля — только `get_approved_profile`:** по умолчанию рабочий, учебный — явным `synthetic=True`. Потребители не пишут свой `WHERE status = 'approved'`;
+- **кого по чему оценивать — правило базы (`save_assessment`):** реального кандидата — только по утверждённому рабочему профилю; учебного — по любому не архивному профилю (так учебные случаи проверяют и правила реальных профилей);
+- **учебная оценка** — у которой учебный кандидат или учебный профиль (`is_training_assessment`). Рабочая рекомендация — только реальный кандидат × рабочий профиль. Отдельного столбца нет: признак выводится из двух неизменяемых полей. Рабочие списки и поиск не показывают учебных кандидатов; учебные результаты показываются только с пометкой «учебный пример — не рабочая рекомендация».
+
 **2.7. Решение принимает человек [Д][Ч].** Оценка ИИ не меняет этап отбора. Этап меняет только `move_application`, а в журнал пишется, кто это сделал. Обратная связь департамента (`record_department_feedback`) этап тоже не меняет.
+
+**Перескок этапа подтверждает человек [Д, v1.3].** Обычный шаг: на следующий этап по `sort_order`; в `rejected` или `withdrawn` — с любого этапа; в `hired` — только с последнего нефинального этапа (`documents`). Любой другой переход (перескок вперёд, возврат назад, `hired` раньше времени) выполняется только с `confirm_skip=True`, `actor_user_id` и непустым `comment` с причиной, иначе `StageTransitionError`. Подтверждение остаётся в `stage_events`: кто перевёл и почему. Причина отказа при `rejected` необязательна [Д, v1.3].
 
 **2.8. Транзакции [А].** Функции доступа не делают `commit`. Транзакцией управляет вызывающий (скрипт импорта, обработчик запроса), поэтому несколько шагов сохраняются вместе или не сохраняются вовсе.
 
 **2.9. Идентификаторы [Д].** Первичный ключ — UUID v4. Его ставит приложение, а при вставке через SQL — база (`gen_random_uuid()`). У кандидата есть читаемый `code`, уникальный, до 32 символов. Формат: `<префикс должности>-<номер отклика из 4 цифр>`, например `py-0005` (п. 11.2).
 
-**2.10. Даты и время.** Момент времени — `timestamptz`, в JSON ISO 8601 со смещением: `2026-11-19T15:03:24+03:00`. Дата — `date`, `2026-08-25`. Месяц в карточке — строка `2024-05`.
+**2.10. Даты и время.** Момент времени — `timestamptz`, в JSON ISO 8601 со смещением: `2026-11-19T15:03:24+03:00`. Дата — `date`, `2026-08-25`. Даты периодов в карточке — строка той точности, что в резюме: `2019`, `2024-05` или `2024-05-17` [v1.4]. Такая дата означает диапазон дней (`2019` — с 1 января по 31 декабря), месяц и день не выдумываются.
 
 **2.11. Позиции цитат — в символах [А].** `start`/`end` — индексы символов Unicode (кодовых точек), как срез строки Python `text[start:end]`, а не байты UTF-8. Кириллица лежит в BMP, поэтому индексы в JavaScript (UTF-16) совпадают, пока в тексте нет эмодзи и символов вне BMP.
 
@@ -66,18 +93,33 @@
 | `applied_to` | список строк | нет, `[]` | должности, на которые откликнулся |
 | `education` | список `Education` | нет, `[]` | образование, первым идёт основное |
 | `courses` | список `Course` | нет, `[]` | повышение квалификации, переподготовка |
-| `experience_years` | число \| null, 0–80 | нет | общий стаж в годах, один знак после запятой |
+| `experience_years` | число \| null, 0–80 | нет | общий стаж в годах, как заявлен в резюме («Опыт работы: 13 лет 4 месяца» → 13.3); стаж по периодам считает `experience_bounds` (п. 3.1.1) |
 | `experience` | список `Experience` | нет, `[]` | места работы |
 | `skills` | список `Skill` | нет, `[]` | навыки |
 | `languages` | список `Language` | нет, `[]` | языки |
 | `about` | строка \| null | нет | раздел «Обо мне» |
 | `cover_letter` | строка \| null | нет | сопроводительное письмо |
 | `missing` | список строк | нет, `[]` | каких сведений не хватает для оценки |
-| `pii_hidden` | bool | нет, `true` | ПДн убраны из карточки и текста |
+| `pii_hidden` | bool | нет, `true` | ПДн из п. 11.7 убраны из карточки и текста; город и гражданство могут остаться (п. 11.8) |
 
-- `Education`: `level`, `degree`, `institution`, `faculty`, `field` (строки или null), `year` (целое 1950–2100 или null).
-- `Course`: `title` (обязательно), `organization`, `year`.
-- `Experience`: `position`, `organization`, `start`, `end` (месяц `YYYY-MM` или null), `is_current` (bool, по умолчанию false), `duties` (список строк). Правила: `end >= start`; при `is_current = true` поле `end` пустое.
+- `Education`: `level` — словарь `высшее` | `неоконченное высшее` | `среднее профессиональное` | `среднее общее` или null [v1.4]; `level_raw` — формулировка уровня из резюме как написано [v1.4]; `degree` — ступень (`бакалавр`, `магистр`, `специалист`, `кандидат наук`); `status` — `completed` | `in_progress` | `incomplete` или null [v1.4]; `course` — курс 1–6 или null [v1.4]; `institution`, `faculty`, `field` (строки или null); `field_code` — код ОКСО `09.03.03` или null [v1.4]; `year` (целое 1950–2100 или null).
+- `Course`: `title` (обязательно), `organization`, `year`; `kind` — `retraining` (переподготовка) | `qualification_upgrade` (повышение квалификации) | `other` или null; `field` — направление переподготовки; `completed` — bool или null; `hours` — число ≥ 0 или null, порог часов нормой не задан [все v1.4].
+- `Experience`: `position`, `organization`, `start`, `end` (дата `YYYY`, `YYYY-MM` или `YYYY-MM-DD`, п. 2.10, или null), `is_current` (bool, по умолчанию false), `kind` — `work` | `internship` | `contract` | `project` или null [v1.4], `duties` (список строк). Правила: конец не раньше начала с учётом точности — ошибка, только если конец точно раньше (`2024-05` → `2024` допустимо, `2024-05` → `2023` нет); при `is_current = true` поле `end` пустое.
+
+**Уровень образования не из словаря [Д, v1.4].** Не ошибка: это сведения о кандидате, а не сбой правила. Строка, которая не совпала со словарём (ответ модели или карточка до v1.4), нормализуется при чтении (`normalize_education_level`): `бакалавр`, `магистр`, `специалист`, `кандидат наук`, `Высшее образование (Бакалавр)` → `высшее`; `Неоконченное высшее…` → `неоконченное высшее`; `Среднее специальное…`, `колледж`, `техникум` → `среднее профессиональное`; `Среднее образование` → `среднее общее`. Нераспознанная → `level = null`. Исходная строка в обоих случаях сохраняется в `level_raw`. В оценке `level = null` — `unknown` с вопросом на интервью. Нормализация покрывает все 7 формулировок уровня из TXT-откликов архива «Кадры».
+
+#### 3.1.1. Стаж по периодам — `experience_bounds` (`app/schemas/periods.py`) [v1.4]
+
+Реализует правила контракта оценки (`docs/contracts/assessment.md`, п. 4.3). Месяцы считаются включительно, как на hh.ru: май 2024 — май 2025 = 13 мес. Пересекающиеся периоды сливаются. Текущее место работы считается до месяца `as_of`. Неполная дата даёт две границы: `lower` — самое позднее начало и самый ранний конец, `upper` — самое раннее начало и самый поздний конец. Период без начала или конца даёт `upper = None`, то есть верхней границы нет. Для общего стажа: `work` и `contract` идут в обе границы, `internship` и период без `kind` — только в `upper`, `project` не считается.
+
+| Периоды | `lower` | `upper` | `estimate` | Порог 24 мес. |
+|---|---|---|---|---|
+| `2019` — `2021`, `work` | 14 | 36 | 25 | `unknown` |
+| `2024-05` — `2025-05`, `work` | 13 | 13 | 13 | `not_met` |
+| `2024-05-17` — `2025-05-03`, `work` | 13 | 13 | 13 | `not_met` |
+| `2025-01` — `2025-12` + `2025-06` — сейчас (`as_of` = 2026-11) | 23 | 23 | 23 | `not_met` |
+
+`verdict(min_months)`: `met` при `lower ≥ T`, `not_met` при `upper < T`, иначе `unknown`. `estimate = (lower + upper) / 2` нужен только для показа и сортировки. Решение по порогу принимается по границам, а не по `estimate`. День в дате принимается, но считается до месяца. Заявленный стаж (`experience_years`) и его сверку с периодами учитывает скоринг по контракту оценки.
 - `Skill`, `Language`: `name` (непустая строка), `level` (строка или null).
 
 ### 3.2. Доказательство — `Evidence`
@@ -86,7 +128,7 @@
 {"candidate_text_id": "<uuid>", "quote": "<дословная цитата>", "start": 473, "end": 511}
 ```
 
-Правила: `quote` непустая строка; `start >= 0`; `end - start == len(quote)`. Если `candidate_text_id` указывает на старую версию текста кандидата, цитата сверяется с ней.
+Правила: `quote` непустая строка; `start >= 0`; `end - start == len(quote)`. `candidate_text_id` цитаты должен совпадать с текстом, из которого извлечена карточка оценки (`candidate_cards.candidate_text_id`), иначе `EvidenceError` [Д, v1.3]: карточка, цитаты и подсветка относятся к одной версии резюме. Если карточка извлечена из старой версии текста, цитаты берутся из неё же.
 
 ### 3.3. Персональные данные — `PiiData` (вход `create_candidate`)
 
@@ -94,18 +136,33 @@
 
 ### 3.4. Результат оценки (вход `save_assessment`)
 
-- `FormalCheckIn`: `requirement_id` (uuid), `result` (`met` | `not_met` | `unknown`), `explanation` (строка или null), `evidence` (список `Evidence`).
+- `FormalCheckIn`: `requirement_id` (uuid), `result` (`met` | `not_met` | `unknown`), `explanation` (строка или null), `evidence` (список `Evidence`), `alternatives` (список `AlternativeResultIn`, по умолчанию пустой) [v1.5]. Основания во входе нет: `save_assessment` всегда пишет `basis = resume`.
+- `AlternativeResultIn` [v1.5]: `key` (ключ альтернативы из `params.alternatives`), `result`, `evidence`. Список либо пуст, либо содержит **все** альтернативы требования по одному разу. Итог строки им не противоречит: `met` — только если хоть одна альтернатива `met`; `not_met` — только если все `not_met`; `unknown` допустим всегда (направление проверяется только при подтверждённом уровне, `requires_requirement`, поэтому при найденном дипломе по направлению итог бывает `unknown`). Итог строки база не пересчитывает: зависимость между требованиями — правило оценщика (контракт оценки п. 4.2). Цитаты альтернатив проверяются так же, как цитаты строки.
 - `CompetencyScoreIn`: `competency_id` (uuid), `level` (целое 0–100 или null, где null значит «нет сведений»), `explanation`, `evidence`.
 
 ### 3.5. Прочие JSONB-поля
 
 | Поле | Формат |
 |---|---|
-| `formal_requirements.params` | объект условий (вход — `FormalRequirementIn`, п. 3.6), например `{"min_level": "высшее", "fields": ["Юриспруденция", "ГМУ"], "retraining_allowed": true}`. Схема свободная; ключи договаривают модуль матриц и скоринг |
+| `formal_requirements.params` | правило в формате **params 0.1** (решение Родиона, Р1): формат пакета профилей stage-0b-01, схемы — `app/schemas/requirements.py` (п. 3.5.1). Проверяется при `create_requirement_profile` [v1.5] |
+| `formal_checks.alternatives` [v1.5] | список `{key, result, evidence}` (п. 3.4) |
 | `formal_checks.evidence`, `competency_scores.evidence` | список `Evidence` |
 | `department_feedback.confirmed_competencies` | список кодов компетенций: `["ИТК", "РК"]` |
 | `candidate_pii.links` | список строк; `candidate_pii.extra` — объект |
 | `audit_log.details` | объект, для `view_pii` — `{"purpose": "<цель>"}` |
+
+#### 3.5.1. `params` 0.1 [v1.5]
+
+Общее: `schema_version = "0.1"` обязателен; лишний ключ, другая версия или неверная форма → ошибка проверки при создании профиля (до оценки). Внутри альтернативы условия соединяются AND, между альтернативами — OR. Ключи альтернатив уникальны в требовании.
+
+| `kind` | Ключи |
+|---|---|
+| `education_level` | `alternatives[]` (≥ 1): `key`; `level` — значение словаря карточки v1.4 (`высшее`, `неоконченное высшее`, `среднее профессиональное`, `среднее общее`); `field_group` (`technical`), `field_examples[]`, `field_exclusions[]`; `enrollment_status` (`senior_student`). Нужен `level` или `enrollment_status` |
+| `education_field` | `alternatives[]` (≥ 1): `key` + ровно одно из `degree_fields[]`, `retraining_fields[]`; `requires_requirement` — ключ требования `education_level` того же профиля (проверяет `create_requirement_profile`) |
+| `experience` | `scope` (`total_commercial` \| `relevant_role`), `minimum_defined`; `min_months` > 0 — тогда и только тогда, когда `minimum_defined = true`; `relevance_hint` — обязателен для `relevant_role` |
+| `knowledge`, `other` | правила нет: `{}` или `{"schema_version": "0.1"}`; проверяет человек |
+
+Пример (Python, пакет v3): `{"schema_version": "0.1", "alternatives": [{"key": "py.education.alt1", "level": "высшее", "field_group": "technical", "field_examples": [], "field_exclusions": []}, {"key": "py.education.alt2", "enrollment_status": "senior_student"}]}`.
 
 ### 3.6. Профиль требований (вход `create_requirement_profile`) [v1.1]
 
@@ -115,15 +172,19 @@
 - `SourceRefIn`: `source_document_id` (uuid, документ из `sources` профиля), `address` (до 256 символов: `п. 2.2.1`, `разд. 7, второй критерий; OOXML P201`, `ИТК, инд. 2`), `quote` (дословно). Строка может ссылаться на несколько документов: строка матрицы и пункт ДИ.
 - `AcceptanceIn` (поле `acceptance` условия и индикатора): `met`, `not_met`, `unknown`, `limit` — строки или null: что считать выполнением, явным невыполнением, нехваткой сведений и чем ограничен вывод.
 - `ProfileSourceIn`: `source_document_id`, `role` (`job_description` | `competency_matrix` | `vacancy_posting` | `regulation` | `other`), `observed_revision` (строка или null: `1.2 от 01.02.2024`), `is_primary` (bool).
-- `FormalRequirementIn`: `kind`, `description`, `params` (объект, по умолчанию `{}`), `is_mandatory` (по умолчанию true), `verification`, `acceptance`.
+- `FormalRequirementIn`: `kind`, `description`, `params` (п. 3.5.1; `{}` допустим только для `knowledge`, `other`), `is_mandatory` (по умолчанию true), `verification`, `check_stage` [v1.5], `acceptance`.
 - `CompetencyIn`: `code` (до 32), `name`, `rank` (или null), `target_level_min`, `target_level_max` (оба null или оба 0–100, min ≤ max), `indicators` — не пустой список `IndicatorIn`.
-- `IndicatorIn`: `text`, `is_mandatory` (по умолчанию true; false — «будет преимуществом»), `verification`, `acceptance`, `excluded_from_scoring` (по умолчанию false: строка хранится ради прослеживаемости, но в оценку не входит).
+- `IndicatorIn`: `text`, `is_mandatory` (по умолчанию true; false — «будет преимуществом»), `verification`, `check_stage` [v1.5], `acceptance`, `excluded_from_scoring` (по умолчанию false: строка хранится ради прослеживаемости, но в оценку не входит).
 
 `verification` — где подтверждается требование: `resume`, `documents` (диплом, трудовая книжка), `interview` (личные качества, знание законов), `test` (практическое задание).
+
+`check_stage` [v1.5] — на каком этапе отбора проверяется строка: `screening` (разбор резюме; входит в `formal_result` и счётчики) или `interview`. Без значения: `interview`/`test` → `interview`, `resume`/`documents` → `screening`. `screening` при `verification` = `interview` или `test` — ошибка (и CHECK базы).
 
 ## 4. Таблицы
 
 `id` — UUID, первичный ключ. `created_at` — `timestamptz`, ставит база. «→» означает внешний ключ и поведение при удалении родителя.
+
+**Удаление [v1.3].** Функций удаления нет, и в рабочей базе записи не удаляют: старые версии (п. 2.5) и журналы (`stage_events`, `audit_log`) хранятся всегда. Вместо удаления меняют статус: профиль → `archived`, вакансия → `closed`, запись резерва → `withdrawn`. Правила `CASCADE` в схеме нужны для очистки тестовой базы. В рабочей базе удаление родителя молча сотрёт историю: удаление профиля сотрёт его оценки, удаление вакансии — отклики вместе с журналом этапов. Особый случай — `reserve_entries.position_id` (SET NULL): у записи резерва без `competency_area` обнуление нарушает CHECK «должность или направление», поэтому удалить должность с таким резервом база не даст (`IntegrityError`, проверено тестом).
 
 ### 4.1. Источники
 
@@ -148,6 +209,7 @@
 | `code` | varchar(32), **unique** | нет | читаемый код (п. 2.9) |
 | `source_document_id` | → `source_documents` (RESTRICT), **unique** | нет | резюме |
 | `headline` | varchar(512) | да | заголовок резюме |
+| `is_synthetic` [v1.5] | bool, по умолчанию false | нет | учебный кандидат (п. 2.6.1); не меняется (триггер) |
 | `created_at`, `updated_at` | timestamptz | нет | |
 
 **`candidate_pii`** — ПДн, первичный ключ `candidate_id` → `candidates` (CASCADE). Столбцы по п. 3.3: `full_name` varchar(512), `gender` varchar(16), `birth_date` date, `age` smallint, `phone` varchar(64), `email` varchar(256), `city`, `citizenship` varchar(256) — все nullable; `links` jsonb `[]`, `extra` jsonb `{}`.
@@ -171,7 +233,7 @@
 | `prompt_version` | varchar(64) | да | |
 | `card` | jsonb | нет | `CandidateCard` (п. 3.1) |
 | `experience_years` | numeric(4,1) | да | копия из карточки для фильтров |
-| `education_level` | varchar(64) | да | `education[0].level` |
+| `education_level` | varchar(64) | да | `education[0].level`: значение словаря (п. 3.1) или null. Копия для фильтров без разбора JSONB; пишет только `add_candidate_card`, карточка после записи не меняется, поэтому копия не расходится с `card` |
 | `missing_count` | smallint, по умолчанию 0 | нет | `len(missing)` |
 
 **`candidate_skills`** — навыки карточки строками [Д].
@@ -197,9 +259,9 @@
 | Столбец | Тип | Null | Смысл |
 |---|---|---|---|
 | `position_id` | → `positions` (CASCADE) | нет | |
-| `version` | integer | нет | unique вместе с `position_id` |
-| `status` | `draft` \| `approved` \| `archived`, по умолчанию `draft` | нет | **утверждённая — одна на должность** (частичный уникальный индекс) |
-| `is_synthetic` | bool, по умолчанию false | нет | учебный профиль; утвердить нельзя |
+| `version` | integer | нет | unique вместе с `position_id` и `is_synthetic` [v1.5] |
+| `status` | `draft` \| `approved` \| `archived`, по умолчанию `draft` | нет | **утверждённая — одна на должность в контуре** (частичный уникальный индекс по `position_id`, `is_synthetic`) [v1.5] |
+| `is_synthetic` | bool, по умолчанию false | нет | учебный профиль (п. 2.6.1); утверждается по тем же правилам [v1.5]; не меняется (триггер) |
 | `created_by` | varchar(128) | нет | логин или имя модели |
 | `approved_by_user_id` | → `users` (SET NULL) | да | |
 | `approved_at` | timestamptz | да | |
@@ -210,11 +272,11 @@
 
 **Ключ и происхождение строки** — одинаковые столбцы у `formal_requirements`, `competencies`, `competency_indicators`: `key` varchar(64) — unique в профиле (у индикаторов — в компетенции; уникальность по всему профилю проверяет `create_requirement_profile`); `origin` `source` | `team`; `source_refs` jsonb, по умолчанию `[]` — список `{source_document_id, address, quote}`; `note` text null. CHECK `row_source`: при `source` список не пуст, при `team` заполнен `note`. Документы ссылок должны быть среди `requirement_profile_sources` профиля (проверяет `create_requirement_profile`). По `key` пакет сопоставляется с UUID строк базы.
 
-**`formal_requirements`** — условие допуска: `profile_id` → `requirement_profiles` (CASCADE); `kind` `FormalRequirementKind`; `description` text; `params` jsonb (п. 3.5); `is_mandatory` bool, по умолчанию true; `verification` `VerificationMethod`; `acceptance` jsonb `{}` (`AcceptanceIn`); ключ и происхождение; `sort_order` smallint. Столбец `source_quote` v1.0 заменён на `source_refs`.
+**`formal_requirements`** — условие допуска: `profile_id` → `requirement_profiles` (CASCADE); `kind` `FormalRequirementKind`; `description` text; `params` jsonb (п. 3.5.1); `is_mandatory` bool, по умолчанию true; `verification` `VerificationMethod`; `check_stage` `CheckStage`, по умолчанию `screening`, CHECK `check_stage = 'interview' OR verification IN ('resume', 'documents')` [v1.5]; `acceptance` jsonb `{}` (`AcceptanceIn`); ключ и происхождение; `sort_order` smallint. Столбец `source_quote` v1.0 заменён на `source_refs`.
 
 **`competencies`** — группа индикаторов: `profile_id` → (CASCADE); `code` varchar(32), unique в профиле (`ПАК`, `ИТК`, `PY-DB`); `name`; `rank` `key` | `basic` | `special` **или null**; `target_level_min`, `target_level_max` smallint **или оба null**, иначе `0 <= min <= max <= 100` («90–100 процентов» → 90 и 100); происхождение; `sort_order`.
 
-**`competency_indicators`** — проверяемое требование: `competency_id` → (CASCADE); `text`; `is_mandatory` bool, по умолчанию true; `verification` `VerificationMethod`; `acceptance` jsonb `{}`; `excluded_from_scoring` bool, по умолчанию false; ключ и происхождение; `sort_order`.
+**`competency_indicators`** — проверяемое требование: `competency_id` → (CASCADE); `text`; `is_mandatory` bool, по умолчанию true; `verification` `VerificationMethod`; `check_stage` — как у формальных требований [v1.5]; `acceptance` jsonb `{}`; `excluded_from_scoring` bool, по умолчанию false; ключ и происхождение; `sort_order`.
 
 ### 4.4. Оценка [Д]
 
@@ -227,10 +289,11 @@
 | `version`, `is_current` | integer, bool | нет | версия в паре (кандидат, профиль) |
 | `model`, `prompt_version` | varchar(128), varchar(64) null | | кто оценил |
 | `formal_result` | `met` \| `not_met` \| `unknown` | нет | считает код (п. 2.6) |
+| `formal_preliminary` [v1.5] | bool, по умолчанию false | нет | итог `met`, но с предварительным обязательным требованием этапа `screening`; считает код (п. 2.6) |
 | `overall_score` | smallint 0–100 | да | итог по компетенциям |
 | `summary` | text | да | |
 
-**`formal_checks`**: `assessment_id` → (CASCADE); `requirement_id` → `formal_requirements` (CASCADE); `result`; `explanation` null; `evidence` jsonb `[]`.
+**`formal_checks`**: `assessment_id` → (CASCADE); `requirement_id` → `formal_requirements` (CASCADE); `result`; `basis` `VerificationMethod`, по умолчанию `resume` [v1.5]; `is_preliminary` bool, по умолчанию false, считает код (п. 2.6) [v1.5]; `explanation` null; `evidence` jsonb `[]`; `alternatives` jsonb `[]` [v1.5]; `confirmed_by_user_id` → `users` (RESTRICT) null [v1.5]. CHECK `basis_confirmation`: при `resume` подтвердившего нет; иначе подтвердивший обязателен, а цитат резюме и альтернатив нет — основание документ, интервью или тест.
 
 **`competency_scores`**: `assessment_id` → (CASCADE); `competency_id` → `competencies` (CASCADE); `level` smallint 0–100 null; `explanation` null; `evidence` jsonb `[]`.
 
@@ -242,12 +305,15 @@
 | `candidate_id` | → `candidates` (CASCADE) | нет | |
 | `vacancy_id` | → `vacancies` (CASCADE) | да | пусто для внешней должности |
 | `external_position_title` | varchar(512) | да | должность вне платформы (из «Истории общения с кандидатом») |
+| `posting_title` [v1.6] | varchar(512) | да | публикация hh, на которую пришёл отклик (подвал резюме «Отклик на вакансию: «…»»); у внешних откликов пусто |
 | `source` | `response` \| `history` \| `manual` | нет | |
 | `applied_at` | date | да | |
 | `current_stage_code` | → `selection_stages.code` | нет | текущий этап |
 | `created_at`, `updated_at` | timestamptz | нет | |
 
-Ограничения: заполнено `vacancy_id` или `external_position_title` (CHECK); пара (`candidate_id`, `vacancy_id`) уникальна, если вакансия указана.
+Ограничения: заполнено `vacancy_id` или `external_position_title` (CHECK); пара (`candidate_id`, `vacancy_id`) уникальна, если вакансия указана; внешний отклик (`source = history`) уникален по (`candidate_id`, `external_position_title`, `applied_at`), пустая дата считается одинаковой (`NULLS NOT DISTINCT`) [v1.6].
+
+Внешний отклик — факт из прошлого, а не текущий отбор: он создаётся на этапе `new` (так устроен `create_application`), но рабочие списки, воронка и действия кадровика берут только `source = response` [v1.6].
 
 **`stage_events`** — журнал переходов, только добавление: `seq` bigint identity unique (порядок); `application_id` → (CASCADE); `from_stage_code` (null у первого события), `to_stage_code` → `selection_stages`; `rejection_reason_code` → `rejection_reasons` null; `actor_user_id` → `users` (SET NULL) null; `comment` null.
 
@@ -261,7 +327,7 @@
 | Столбец | Тип | Null | Смысл |
 |---|---|---|---|
 | `candidate_id` | → `candidates` (CASCADE) | нет | |
-| `position_id` | → `positions` (SET NULL) | да | резерв на должность |
+| `position_id` | → `positions` (SET NULL) | да | резерв на должность; удалить должность с резервом без направления нельзя (раздел 4, «Удаление») |
 | `competency_area` | varchar(256) | да | резерв по направлению |
 | `source_application_id` | → `applications` (SET NULL) | да | из какого отбора |
 | `reason` | text | да | |
@@ -302,7 +368,8 @@
 | `Channel` | `hh_ru`, `rabota_rossii`, `city_site`, `email`, `citizen_appeal` (обращение по 59-ФЗ), `internship`, `internal`, `other` |
 | `FileFormat` | `hh_txt`, `hh_docx`, `docx`, `pdf`, `txt`, `other` |
 | `FormalRequirementKind` | `education_level`, `education_field`, `experience`, `knowledge`, `other` |
-| `VerificationMethod` [v1.1] | `resume`, `documents`, `interview`, `test` |
+| `VerificationMethod` [v1.1] | `resume`, `documents`, `interview`, `test` — и для `verification` строк профиля, и для `formal_checks.basis` [v1.5] |
+| `CheckStage` [v1.5] | `screening`, `interview` |
 | `RowOrigin` [v1.1] | `source`, `team` |
 | `SourceRole` [v1.1] | `job_description`, `competency_matrix`, `vacancy_posting`, `regulation`, `other` |
 | `ChunkKind` | `experience`, `about`, `skills`, `education`, `cover_letter`, `full` |
@@ -338,16 +405,19 @@
 | Функция | Что гарантирует | Ошибки |
 |---|---|---|
 | `add_source_document(kind, channel, file_format, original_path, raw_text, content=None, import_batch=None) → (документ, создан)` | повтор с тем же SHA-256 (`content`, иначе текста) возвращает существующий документ и `False`; путь приводится к NFC | — |
-| `create_candidate(code, source_document_id, redacted_text, redaction_method, headline=None, pii=None) → Candidate` | кандидат, ПДн (если переданы), текст версии 1 | документ не `resume` → `RepositoryError`; повтор `code` или документа → `IntegrityError` |
+| `create_candidate(code, source_document_id, redacted_text, redaction_method, headline=None, pii=None, is_synthetic=False) → Candidate` | кандидат, ПДн (если переданы), текст версии 1; `is_synthetic` — учебный контур [v1.5]. Если тот же файл пришёл в папке другой вакансии, второго кандидата не создают: импорт находит кандидата по документу и добавляет ему отклик (`docs/modules/ingest.md`, «Статусы и дубли») | нет документа, документ не `resume` → `RepositoryError`; повтор `code` или документа → `IntegrityError` |
 | `add_candidate_text(candidate_id, text, redaction_method)` / `get_current_text(candidate_id)` | новая текущая версия текста / текущий текст или `None` | — |
 | `add_candidate_card(candidate_id, card, extractor, prompt_version=None, candidate_text_id=None)` | новая текущая версия карточки; навыки из `card.skills` нормализованы и без дублей | нет текста, или текст другого кандидата → `RepositoryError` |
 | `get_current_card(candidate_id)` | текущая карточка или `None` | — |
 | `find_candidates_by_skills(skills, match_all=True) → [Candidate]` | по текущим карточкам: все навыки или хотя бы один; сортировка по `code` | — |
-| `create_requirement_profile(position_id, created_by, formal_requirements, competencies, sources=(), version=None, is_synthetic=False, note=None) → RequirementProfile` [v1.1] | черновик профиля (п. 3.6); порядок строк → `sort_order`; без `version` — следующий номер для должности | нет должности или документа, документ ссылки не в `sources`, документ в `sources` дважды, повтор ключа строки или кода компетенции → `RepositoryError`; повтор (`position_id`, `version`) → `IntegrityError` |
-| `approve_requirement_profile(profile_id, approved_by_user_id, approval_basis) → RequirementProfile` [v1.1] | черновик → `approved`; прежняя утверждённая версия должности → `archived`; `approved_at` = время транзакции | не черновик, учебный профиль, пользователь не активный `hr`/`admin`, пустое основание → `RepositoryError` |
-| `save_assessment(candidate_id, profile_id, card_id, model, formal_checks, competency_scores, overall_score=None, summary=None, prompt_version=None)` | новая текущая версия оценки; `formal_result` считает код (п. 2.6) | профиль в архиве [v1.1], карточка чужая, требование или компетенция из другого профиля → `RepositoryError`; цитата не на месте или из чужого текста → `EvidenceError` |
+| `create_requirement_profile(position_id, created_by, formal_requirements, competencies, sources=(), version=None, is_synthetic=False, note=None) → RequirementProfile` [v1.1] | черновик профиля (п. 3.6); порядок строк → `sort_order`; без `version` — следующий номер для должности **в контуре** [v1.5]; `params` проверены по формату 0.1 (при построении входа) | нет должности или документа, документ ссылки не в `sources`, документ в `sources` дважды, повтор ключа строки или кода компетенции, `requires_requirement` не указывает на требование уровня образования профиля [v1.5] → `RepositoryError`; повтор (`position_id`, `is_synthetic`, `version`) → `IntegrityError` |
+| `approve_requirement_profile(profile_id, approved_by_user_id, approval_basis) → RequirementProfile` [v1.1] | черновик → `approved`; прежняя утверждённая версия должности **того же контура** → `archived` [v1.5]; `approved_at` = время транзакции | не черновик, пользователь не активный `hr`/`admin`, пустое основание → `RepositoryError`. Учебный профиль утверждается [v1.5] |
+| `get_approved_profile(position_id, synthetic=False) → RequirementProfile \| None` [v1.5] | действующий профиль должности в контуре; по умолчанию рабочий | — |
+| `save_assessment(candidate_id, profile_id, card_id, model, formal_checks, competency_scores, overall_score=None, summary=None, prompt_version=None)` | новая текущая версия оценки; `basis = resume` у всех строк; альтернативы проверены (п. 3.4); `formal_result`, `is_preliminary`, `formal_preliminary` считает код по этапу `screening` (п. 2.6) | профиль в архиве [v1.1]; реальный кандидат × учебный профиль или × неутверждённый профиль [v1.5]; карточка чужая, требование или компетенция из другого профиля, одно требование или компетенция дважды [v1.3]; альтернативы неполные, лишние или итог строки им противоречит (п. 3.4) [v1.5] → `RepositoryError`; цитата (в том числе альтернативы) не на месте, из чужого текста или не из текста карточки [v1.3] → `EvidenceError` |
+| `confirm_formal_check(assessment_id, requirement_id, result, basis, actor_user_id, comment) → Assessment` [v1.5] | новая текущая версия оценки: строки текущей скопированы, строка требования заменена результатом с `basis` ∈ {`documents`, `interview`, `test`}, `confirmed_by_user_id`, `explanation = comment`, без цитат; итог пересчитан; прежняя версия в истории | `basis = resume`, пустой комментарий, оценка не текущая, пользователь не активный `hr`/`admin`, требование не из профиля, профиль не допускает оценку кандидата (п. 2.6.1) → `RepositoryError` |
+| `is_preliminary(result, basis, verification) → bool`, `is_training_assessment(candidate, profile) → bool` [v1.5] | предварительный результат (п. 2.6); учебная оценка (п. 2.6.1) | — |
 | `create_application(candidate_id, source, vacancy_id=None, external_position_title=None, applied_at=None, actor_user_id=None)` | этап `new` и первое событие журнала | нет ни вакансии, ни внешней должности → `RepositoryError`; повтор на ту же вакансию → `IntegrityError` |
-| `move_application(application_id, to_stage_code, actor_user_id=None, comment=None, rejection_reason_code=None) → StageEvent` | блокирует строку отклика (`SELECT … FOR UPDATE`), меняет этап и пишет событие | нет такого этапа, тот же этап, отклик уже в финальном этапе, причина отказа не при `rejected`/`withdrawn`, неизвестная причина → `StageTransitionError` |
+| `move_application(application_id, to_stage_code, actor_user_id=None, comment=None, rejection_reason_code=None, confirm_skip=False) → StageEvent` | блокирует строку отклика (`SELECT … FOR UPDATE`), меняет этап и пишет событие; переход не по порядку — только с подтверждением человека (п. 2.7) | нет такого отклика, нет такого этапа, тот же этап, переход не по порядку без `confirm_skip`, `actor_user_id` и `comment` [v1.3], отклик уже в финальном этапе, причина отказа не при `rejected`/`withdrawn`, неизвестная причина → `StageTransitionError` |
 | `stage_history(application_id) → [StageEvent]` | события по `seq` | — |
 | `record_department_feedback(application_id, outcome, …)` | сохраняет обратную связь, этап не меняет | неизвестная причина отказа → `RepositoryError` |
 | `add_to_reserve(candidate_id, position_id=None, competency_area=None, source_application_id=None, reason=None, added_by_user_id=None, valid_until=None)` | при активной записи на ту же должность или направление возвращает её, дубль не создаётся | нет ни должности, ни направления → `RepositoryError` |
@@ -393,7 +463,7 @@
 
 В таблицу при этом попадают `experience_years = 13.3`, `education_level = "высшее"`, `missing_count = 1` и строки `candidate_skills` с `normalized` = `python`, `fastapi`, `pytest`. После этого `find_candidates_by_skills(["FastAPI", "pytest"])` находит `py-0005`.
 
-**3. Оценка** (`save_assessment`) по профилю `python-dev` (создан `create_requirement_profile`, учебный) с требованием «Высшее образование» и компетенцией `BACKEND`:
+**3. Оценка** (`save_assessment`) по профилю `python-dev` (создан `create_requirement_profile`, рабочий, утверждён `approve_requirement_profile` — реального кандидата база оценивает только по утверждённому рабочему профилю, п. 2.6.1) с требованием «Высшее образование» и компетенцией `BACKEND`:
 
 ```json
 {"requirement_id": "<id требования>", "result": "met",
@@ -425,8 +495,12 @@
 | второй `create_application` того же кандидата на ту же вакансию | `IntegrityError` |
 | карточка с полем `"salary": 100000` | ошибка проверки `CandidateCard`: лишнее поле |
 | `Experience(start="2025-05", end="2024-05")` | ошибка проверки: конец раньше начала |
+| `move_application(…, "sent_to_department")` сразу после `new` | `StageTransitionError`: перескок этапов без подтверждения человека |
+| то же с `confirm_skip=True, actor_user_id=<кадровик>, comment="…"` | переход выполнен, причина в журнале |
+| `met` по требованию с `verification = documents` | сохраняется `met`, `basis = resume`, `is_preliminary = true`; итог `met`, `formal_preliminary = true` [v1.5] |
+| `save_assessment` реального `py-0005` по учебному или неутверждённому профилю | `RepositoryError` [v1.5] |
 
-Проверено запуском: тесты ветки `feature/db-skeleton` (40 шт.) и `scripts/smoke_real_candidate.py` на этом отклике. v1.1: тесты ветки `feature/requirement-profiles` (59 шт.) и тот же скрипт.
+Проверено запуском: v1.0 — 41 тест (team-gorky-9/hr#1) и `scripts/smoke_real_candidate.py` на этом отклике; v1.1 — 59 тестов (team-gorky-9/hr#4) и тот же скрипт; v1.3 — 115 тестов на PostgreSQL (вместе с тестами импорта).
 
 ## 9. Как менять контракт
 
@@ -446,7 +520,7 @@
 
 1. **Функции доступа принимают UUID, а не ORM-объекты** [Д]. Модули не импортируют модели базы. Сигнатуры — раздел 7. Реализация в team-gorky-9/hr#1 приводится к этому.
 2. **Формат `code` кандидата** [А, принято]: префиксы `jpy`, `py`, `qa`, `fe`, `ux`, `hr` и номер файла из 4 цифр (`py-0005`).
-3. **Прямое чтение таблиц разрешено** [А, принято] всем модулям, кроме `candidate_pii` (только через `get_candidate_pii`). Запись — только через функции раздела 7.
+3. **Прямое чтение таблиц разрешено** [А, принято] всем модулям, кроме `candidate_pii` (только через `get_candidate_pii`). Запись — только через функции раздела 7. Таблицы, для которых функции ещё нет, и кто её добавит — раздел 1.
 4. **Эмбеддинги хранятся в pgvector** (тип `vector`). Модель, размерность и индекс выбирает модуль поиска; Родион допишет их в этот контракт вместе с миграцией.
 5. **Роль `department` остаётся** в `users`. Заводить ли учётки сотрудникам департаментов, решим позже; схема от этого не меняется.
 6. **Даты рождения хранятся в `candidate_pii`**, как и прочие ПДн. Допустимость хранения на стенде уточняем у организаторов.
@@ -480,8 +554,97 @@
 
 | Изменение | Совместимость |
 |---|---|
-| Город и гражданство не относятся к ПДн для очистки: остаются в `candidate_texts.text` (п. 2.2, 11.8) | схема не меняется; меняется только правило очистки в импорте |
+| Город и гражданство (это ПДн) не вычищаются и остаются в `candidate_texts.text` (п. 2.2, 11.8) | схема не меняется; меняется только правило очистки в импорте |
 | `PiiData.city` и `citizenship` импорт не заполняет (п. 3.3) | поля и столбцы остаются, значения null |
 | Пол добавлен в список вычищаемого (п. 11.7) | уточнение: пол уже был ПДн по п. 2.2 |
 
 **Затронутые потребители.** Илья — модель видит город и гражданство в очищенном тексте. Ася — при слепом режиме город можно скрывать в интерфейсе отдельно. Импорт (`app/ingest/`, Денис) реализует правило; проверено тестами `tests/test_ingest_redact.py` и прогоном архива «Кадры».
+
+## 14. Изменения v1.3 — сверка контракта с кодом (19.11.2026, ждёт утверждения)
+
+**Почему.** После v1.1 и v1.2 контракт сверили с `main` (`1e1f654`): моделями, миграциями `0001`–`0002`, `repository.py`, импортом и архивом «Кадры». Найдены места, где текст обещает не то, что делает код, и правила, которых не хватало. Решения по открытым вопросам принял Денис 19.11 [Д].
+
+| Изменение | Совместимость |
+|---|---|
+| `save_assessment` отклоняет одно требование или компетенцию дважды в одной оценке (п. 2.6, раздел 7). Раньше сохранялись обе строки, а `formal_result` считался по последней | новое правило в функции, схема не меняется. Вызовы без повторов работают как раньше |
+| Раздел 1: таблицы без функции записи и кто её добавит | только текст |
+| Раздел 4, «Удаление»: в рабочей базе записи не удаляют; `reserve_entries.position_id` (SET NULL) на деле запрещает удаление должности | только текст, схема не меняется. Поведение закреплено тестом |
+| П. 2.1, 2.2, `pii_hidden`, раздел 13: город и гражданство — ПДн, которые не вычищаются, а не «не ПДн» | только текст |
+| П. 2.6: `met` по требованию с `verification` ≠ `resume` сохраняется как `unknown` [Д] | новое правило в функции. Меняет итог только для требований «по документам / интервью / тесту»; у загруженных профилей это образование консультанта и Python |
+| П. 3.2: цитата должна быть из текста карточки оценки [Д] | новое правило в функции. Вызовы, где карточка и цитаты из одного текста (smoke-скрипт, тесты), не меняются |
+| П. 2.7: перескок этапа — только с `confirm_skip`, `actor_user_id` и `comment` [Д]; причина отказа необязательна | новый необязательный параметр. Последовательные переходы и выход в `rejected`/`withdrawn` работают как раньше; один тест, который перескакивал этапы, переведён на пошаговый путь |
+| Повтор файла в папке другой вакансии решает импорт (раздел 7) | только текст |
+| Шапка, вступление, раздел 8: номера PR и число тестов | только текст |
+
+**Затронутые потребители.** Илья — повтор строки в `save_assessment` теперь ошибка; цитаты берутся из текста карточки; `met` по требованию «не по резюме» сохраняется как `unknown`. Ася — перескок этапа в интерфейсе требует подтверждения кадровика с причиной (передать `confirm_skip`, пользователя и комментарий); функции для интервью, пользователей и резерва — в её задачах. Родион — функция записи `embeddings` в задаче поиска.
+
+**Не входит, решается отдельно:**
+- Уникальность (`assessment_id`, `requirement_id`) и (`assessment_id`, `competency_id`) в самой базе — миграцией, если понадобится запись в обход функции.
+- Замена `CASCADE`/`SET NULL` на `RESTRICT` — миграцией, если правило «не удалять» нужно держать базой, а не договорённостью.
+- Пересчёт индексов цитат для эмодзи в интерфейсе (п. 2.11): риск известен, пока не делаем.
+
+**Как проверено:** 108 тестов на PostgreSQL, в том числе новые: повтор строки оценки, `met` → `unknown` по требованию «по документам», цитата не из текста карточки, перескок этапа без подтверждения и с подтверждением, выход и найм по порядку, запрет удаления должности с резервом.
+
+## 15. Изменения v1.4 — расширение карточки кандидата (20.11.2026, ждёт утверждения)
+
+**Почему.** Профили требований (v1.1) и контракт оценки проверяют то, чего в карточке не было: уровень образования из закрытого списка, «учится / окончил», курс, код специальности, переподготовку отдельно от повышения квалификации, периоды работы, где указан только год, и вид занятости. Предложение Ильи. Расширение разрешил Родион, решения по вопросам принял Денис 20.11.
+
+| Изменение | Совместимость |
+|---|---|
+| `Education.level` — закрытый словарь; новое `level_raw` | читается всё, что было: свободная строка нормализуется, нераспознанная → `null` и `level_raw`. В `candidate_cards.education_level` теперь только значения словаря или null |
+| `Education.status`, `course`, `field_code`; `Course.kind`, `field`, `completed`, `hours`; `Experience.kind` | новые необязательные поля (null — не указано), старые карточки валидны |
+| `Experience.start/end` — `YYYY`, `YYYY-MM`, `YYYY-MM-DD`; сравнение с учётом точности | расширение формата: прежние `YYYY-MM` валидны. Прежнее сравнение строк ошибочно отклоняло `2024-05` → `2024` |
+| `experience_bounds` — стаж по периодам с границами (п. 3.1.1) | новая функция, существующий код не меняется |
+
+Схема базы не меняется: `card` хранится в JSONB, миграция не нужна.
+
+**Затронутые потребители.** Илья — извлечение карточки заполняет новые поля, а стаж по периодам считает через `experience_bounds`. Важно: в карточках до v1.4 нет `kind`, поэтому их периоды попадают только в верхнюю границу, и по ним `lower = 0`. Ася — показывает `level` из словаря, а для `level = null` показывает `level_raw`.
+
+**Как проверено:** тесты `tests/test_card_v14.py`: нормализация всех формулировок уровня из архива «Кадры», чтение старой карточки, новые поля и их ограничения, даты любой точности, границы стажа на примерах из таблицы п. 3.1.1. Все тесты проекта на PostgreSQL проходят, вместе с контрольным набором оценки `py-9001`.
+
+## 16. Изменения v1.5 — учебный и рабочий контуры, основание результата, альтернативы, этап проверки (20.11.2026, ждёт утверждения)
+
+**Почему.** Решения Родиона по пакету профилей (20.11, через Давида): снять запрет утверждения учебного профиля, сохранив `is_synthetic`; формат `params` пакета — основа (Р1); хранить основание результата, результаты альтернатив по ключам и `check_stage` (Р4). Простое снятие запрета ломало рабочий контур: `approve_requirement_profile` архивировал утверждённый профиль должности без учёта `is_synthetic`, индекс держал одну утверждённую версию на должность, а «утверждённый профиль» каждый потребитель выбирал своим запросом — учебное правило «стаж ≥ 24 мес.» стало бы рабочим для реальных откликов Python. Разбор и развилки: `hq/work/2026-11-20-profile-contours-and-basis/plan.md` в штабе. В v1.5 сведены две правки Дениса (первая — контуры и `basis`, вторая — `hq/work/2026-11-20-profile-assessment-joints/proposal.md`): из второй взяты хранимые признаки предварительности, определение «предварительный» по контракту оценки п. 4.4 и правило «`unknown` допустим всегда» для альтернатив.
+
+| Изменение | Совместимость |
+|---|---|
+| Контуры (п. 2.6.1): `candidates.is_synthetic`; уникальность версии и «одна утверждённая» — в контуре; триггер неизменяемости `is_synthetic` у кандидатов и профилей | новые столбцы и ослабление уникальности; существующие строки — рабочий контур. **Меняет поведение:** учебный профиль утверждается; утверждение архивирует только свой контур |
+| `get_approved_profile(position_id, synthetic=False)` | новая функция; потребители, которые выбирали `status = 'approved'` сами, переходят на неё |
+| `save_assessment`: реальный кандидат — только утверждённый рабочий профиль | **несовместимо для вызовов** «реальный кандидат × черновик» (v1.1 разрешал черновик для проверки на учебных данных). Эту потребность закрывают учебные кандидаты: их можно оценивать по любому не архивному профилю. Тесты и smoke-скрипт переведены на утверждённый профиль или учебного кандидата |
+| `check_stage` у условий и индикаторов + CHECK; `formal_result` — только по `screening` | новый столбец. Миграция: `verification` `interview`/`test` → `interview`, иначе `screening` (у данных пакета v2 — 57 строк `interview`, как `check_stage` в пакете). Итог меняется только у профилей с обязательным требованием этапа `interview`; в данных таких нет |
+| `formal_checks.basis`, `is_preliminary`, `alternatives`, `confirmed_by_user_id` + CHECK `basis_confirmation`; `assessments.formal_preliminary` | новые столбцы; старые строки — `resume`, `false`, `[]` |
+| Правило v1.3 «`met` → `unknown` при `verification ≠ resume`» отменено | **меняет итоги:** образование «по документам» по резюме даёт предварительный `met`, итог допуска снова различает кандидатов (вопрос из team-gorky-9/hr#6 закрыт решением Р4) |
+| `confirm_formal_check` | новая функция: подтверждение документом, интервью или тестом — новая версия оценки, прежняя в истории |
+| `params` 0.1 проверяются при создании профиля (п. 3.5.1) | **несовместимо для входа** со свободной формой (`{"min_level": …}`): такие профили больше не создаются. Загруженные данные не перепроверяются; пакеты Давида v2 и v3 и учебный профиль проходят без правок |
+| Импорт: `mapping.json` → `synthetic` у записи; отчёт → `is_synthetic`; явная смена контура уже сохранённого файла → `conflict` (`CONTOUR_CONFLICT`) | новое необязательное поле; без него новый кандидат реальный, повтор остаётся в своём контуре. Пакет 0а (`py-9001`, `hr-9001`) помечен учебным |
+| Загрузчик профилей: `check_stage` из пакета, `--synthetic synthetic/cases.json` | `check_stage` ушёл из полей «остались только в пакете» |
+
+**Затронутые потребители.**
+- **Илья:** выбирать профиль через `get_approved_profile`; рабочий режим — только рабочий контур, технический — учебный кандидат или учебный профиль (правка `assessment_refusal` и п. 1.1 контракта оценки — в его задаче); читать `check_stage` вместо угадывания по `verification`/`kind`; писать альтернативы в `FormalCheckIn.alternatives`, а не в `explanation`; не понижать `met` до `unknown` заранее; `basis` во входе нет. Контрольный набор `py-9001` загружается учебными кандидатами.
+- **Давид:** пакет v3 и учебный профиль грузятся без правок (`--synthetic`). Свободные `params` не принимаются.
+- **Ася / Денис (API):** рабочие списки — без учебных кандидатов, действующий профиль — `get_approved_profile`; учебный срез — явным параметром; поля `is_training`, `is_preliminary`, `formal_preliminary` (`api.md`).
+- **Родион:** поиск не показывает учебных кандидатов в рабочей выдаче (`search-01`).
+
+**Не входит:** результаты и основание по индикаторам, счётчики, группы повторов (`same_as`) — после методики Ильи (решение Родиона); основание у `competency_scores`.
+
+**Как проверено:** 233 теста на PostgreSQL, в том числе `tests/test_contours.py`: утверждение по контурам в обе стороны, нумерация, выбор профиля, правила оценки для реального и учебного кандидата, триггер неизменяемости, `basis` и подтверждение с историей, CHECK `basis_confirmation`, альтернативы (полнота, противоречия, цитаты, `unknown` при подтверждённой альтернативе), `check_stage` (вход, CHECK, итог), формат `params` 0.1; тесты импорта на флаг и конфликт контура. Тесты контуров ловят ослабление: при удалённых фильтрах по контуру падают 5 из них. Миграция `0003` применена к базе с пакетом Давида v2, загруженным кодом до неё; перенос `check_stage`, откат `0003 → 0002`, повторное применение, `alembic check`. Сценарий на реальных данных (`hq/work/2026-11-20-profile-contours-and-basis/check_contours.py`): пакеты Давида v2 и v3 (`3926099`, `b62a3b2`) и учебный профиль с байтами архива «Кадры», реальный «Python-разработчик/отклик 5.txt» и пакет 0а через импорт — 16 проверок.
+
+## 17. Изменения v1.6 — публикация отклика и внешние отклики из истории (20.11.2026, ждёт утверждения)
+
+**Почему.** Задача `ingest-02`: «История общения с кандидатом» из резюме DOCX консультанта. Разбор архива (`hq/work/2026-11-20-ingest-02-full-corpus/plan.md` в штабе): в 226 из 229 блоков истории запись совпадает с подвалом резюме «Отклик на вакансию: «…»» — это сам отклик, а не другая должность. Настоящих внешних откликов — 24 в 4 файлах. Кроме того, папка консультанта собрана из 7 разных публикаций hh (20 откликов — на начальника отдела финконтроля, 1 — на сметчика), и без отдельного поля это сведение теряется.
+
+| Изменение | Совместимость |
+|---|---|
+| `applications.posting_title` varchar(512) null — публикация hh основного отклика | новый необязательный столбец; существующие строки — `NULL` до повторного прогона импорта |
+| Частичный уникальный индекс `uq_applications_history` (`candidate_id`, `external_position_title`, `applied_at`) `WHERE source = 'history'` `NULLS NOT DISTINCT` | новое ограничение; до v1.6 строк `history` не было. Требует PostgreSQL 15+ (стенд и `hr_dev` — 16) |
+| `create_application(..., posting_title=None)` | новый необязательный аргумент |
+| Внешние отклики не участвуют в рабочих списках и воронке (п. 4.5) | уточнение для потребителей; схема не меняется |
+
+**Решение Дениса (20.11):** публикацию хранить отдельным столбцом, а не в `external_position_title` (иначе поле значило бы две разные вещи: «должность вне платформы» и «откуда пришёл отклик»); дубли внешних откликов запрещает база, а не только код импорта.
+
+**Что делать потребителям:**
+- **Денис (API, `backend-01`/`02`):** `vacancies/{id}/applications` внешних откликов не содержит (у них нет `vacancy_id`); `analytics/funnel` и переходы этапов — только `source = response`; `posting_title` отдавать в отклике после правки `api.md`.
+- **Илья (`ai-02`):** история другого отбора — 24 строки `source = history` с `external_position_title` и `applied_at`.
+- **Ася:** поле «на какую публикацию откликнулся» (после `api.md`).
+
+**Как проверено:** миграция `0004` на `hr_dev` с архивом «Кадры» — вперёд, откат `0004 → 0003`, снова вперёд; `test_models_match_migrations`; тест на отказ базы при повторе внешнего отклика (с датой и без); 290 тестов на PostgreSQL.

@@ -25,7 +25,9 @@ from pydantic import ValidationError
 from app.db.enums import FileFormat
 from app.schemas.pii import PiiData
 
-REDACTION_METHOD = "ingest-rules v1"
+# v2 (ingest-02): личные ссылки с путём (Google Drive/Docs, Figma, Notion, Яндекс.Диск, личные сайты)
+# и личный хостинг; «Git: CI/CD» больше не считается адресом.
+REDACTION_METHOD = "ingest-rules v2"
 
 MASK_NAME = "[имя скрыто]"
 MASK_CONTACT = "[контакт скрыт]"
@@ -122,6 +124,32 @@ LABELED_PHONE = re.compile(
 )
 # Сайт на GitHub/GitLab Pages: поддомен — это ник («ivan-petrov.github.io»).
 PAGES_URL = re.compile(r"(?i)(?:https?://)?([\w-]+)\.(?:github|gitlab)\.io\b[^\s|)\]>,;\"'«»]*")
+# Любая ссылка: с протоколом/www или «домен.зона/путь». Решение — в _personal_url: скрываем ссылку с путём
+# (файл на Google Drive, макет Figma, страница Notion ведут к человеку) и личный хостинг без пути.
+# Сайт компании без пути («www.sibur.ru» после города в выгрузке hh) — не ПДн кандидата, остаётся.
+# Слева не латиница и не точка: так берётся и «Москваyandex.ru/…» (город склеен со ссылкой в выгрузке hh).
+ANY_URL = re.compile(
+    r"(?<![A-Za-z0-9@.\-/_])(?P<scheme>https?://(?:www\.)?|www\.)?"
+    r"(?P<host>(?:[A-Za-z0-9-]+\.)+(?P<tld>[A-Za-z]{2,}|рф))(?::\d{2,5})?"
+    r"(?P<path>/[^\s|)\]>,;\"'«»]*)?",
+    re.IGNORECASE,
+)
+URL_TLDS = {
+    "ru", "com", "net", "org", "io", "me", "so", "site", "app", "dev", "рф", "su", "info", "pro", "tech",
+    "online", "ai", "co", "us", "uk", "de", "by", "kz", "ua", "xyz", "biz", "ws", "page", "space", "store",
+    "ae", "uz", "am", "ge", "kg", "az", "eu", "tv", "cc", "gg", "ly", "fm", "sh", "pl", "cz", "lt", "lv", "ee",
+    "fi", "se", "nl", "fr", "it", "es", "il", "tr", "cn", "jp", "website", "link", "cloud", "digital",
+}
+# Хостинг личных страниц: поддомен — страница человека даже без пути.
+PERSONAL_HOSTS = (
+    "notion.site", "github.io", "gitlab.io", "netlify.app", "vercel.app", "tilda.ws", "wixsite.com",
+    "carrd.co", "readymag.com", "taplink.cc", "narod.ru", "ucoz.ru", "pages.dev", "sites.google.com",
+    "framer.app", "framer.website", "webflow.io", "wordpress.com", "blogspot.com", "tumblr.com",
+    "herokuapp.com", "onrender.com", "pythonanywhere.com", "surge.sh", "glitch.me", "replit.app",
+    "na4u.ru", "github.dev",
+    # Динамический DNS: адрес домашнего сервера человека.
+    "chickenkiller.com", "zapto.org", "ddns.net", "no-ip.org", "duckdns.org",
+)
 BIRTH_DATE_RESIDUE = re.compile(r"(?i)(?:дата рождения|д\.\s?р\.|г\.\s?р\.)[ \t]*[:–—-]?[ \t]*\d")
 
 CAP = r"[А-ЯЁ][а-яё]+(?:-[А-ЯЁ][а-яё]+)?"
@@ -297,7 +325,8 @@ def _labeled_fields(text: str, found: _Found) -> str:
         value = match.group("value").strip()
         if not value or value in MASKS:
             return match.group(0)
-        looks_like_address = bool(re.search(r"[/@.\d]", value))
+        # Адрес — есть «@», протокол, домен («name.ru») или длинное число. «Git: CI/CD» — навык.
+        looks_like_address = bool(re.search(r"@|https?://|www\.|[a-z0-9-]\.[a-z]{2,}|\d{5,}", value, re.IGNORECASE))
         if re.fullmatch(LINK_LABELS, label) and not looks_like_address:
             return match.group(0)  # «Git: уверенно» — это навык, не контакт
 
@@ -366,9 +395,22 @@ def _contacts(text: str, found: _Found) -> str:
         found.add_nick(match.group(1))
         return MASK_LINK
 
+    def personal_url(match: re.Match) -> str:
+        url, host = match.group(0), match.group("host").casefold()
+        explicit = match.group("scheme") is not None
+        if not explicit and (match.group("host") != host or match.group("tld").casefold() not in URL_TLDS):
+            return url  # «ASP.NET/Core», «Node.js/Express» — технологии, не ссылки
+        has_path = bool((match.group("path") or "").strip("/"))  # «/#/» у SPA — тоже путь
+        personal = any(host == suffix or host.endswith("." + suffix) for suffix in PERSONAL_HOSTS)
+        if not (has_path or personal):
+            return url
+        found.add_unique(found.links, url)  # ник из такой ссылки не берём: «file», «d» — не ники
+        return MASK_LINK
+
     text = PROFILE_URL.sub(link, text)
     text = PAGES_URL.sub(pages, text)
     text = EMAIL.sub(email, text)
+    text = ANY_URL.sub(personal_url, text)
     text = PHONE.sub(phone, text)
     text = PHONE_INTL.sub(phone, text)
     return NICK.sub(nick, text)

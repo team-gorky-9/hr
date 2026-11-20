@@ -85,6 +85,22 @@ HR_9001_PARAGRAPHS = [
     "- Ведение кадрового делопроизводства",
     "Телефон: +7 999 000-00-02",
     "Эл. почта: petrova.test@example.com",
+    # «История общения» и подвал — как в выгрузке hh (задача ingest-02). Первая запись совпадает
+    # с подвалом: это сам отклик, из неё берётся только дата. Две другие — отклики на другие должности.
+    "История общения с кандидатом",
+    "Откликнулась	Консультант отдела кадровой работы",
+    "6 августа 2026",
+    "",
+    "Консультант отдела муниципальной службы",
+    "31 июля 2026",
+    "",
+    "Главный специалист отдела прогнозирования",
+    "2 мая 2026",
+    "",
+    "ФИО 9001  •  Резюме обновлено 16 августа 2026 в 11:58",
+    "Резюме обновлено 16 августа 2026 в 11:58",
+    "Отклик на вакансию: «Консультант отдела кадровой работы»",
+    "6 августа 2026",
 ]
 HR_9001_TABLE = [["Образование", "Высшее, Юриспруденция, 2018"]]
 
@@ -100,7 +116,9 @@ def _zip_member(archive: zipfile.ZipFile, name: str, data: str) -> None:
 def build_docx(paragraphs: list[str], table: list[list[str]]) -> bytes:
     w = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
     def para(text: str) -> str:
-        return f"<w:p><w:r><w:t xml:space=\"preserve\">{escape(text)}</w:t></w:r></w:p>"
+        # Табуляция — отдельным элементом <w:tab/>, как пишет Word («Откликнулся<TAB>должность»).
+        runs = "<w:tab/>".join(f"<w:t xml:space=\"preserve\">{escape(part)}</w:t>" for part in text.split("	"))
+        return f"<w:p><w:r>{runs}</w:r></w:p>"
     rows = "".join(
         "<w:tr>" + "".join(f"<w:tc>{para(cell)}</w:tc>" for cell in row) + "</w:tr>" for row in table
     )
@@ -149,6 +167,7 @@ MAPPING = {
             "channel": "hh_ru",
             "document_kind": "resume",
             "file_format": "hh_txt",
+            "synthetic": True,  # учебный контур: в рабочих списках не показывается
         },
         {
             "source_path": f"{CONSULTANT_FOLDER}/hr-9001.docx",
@@ -157,6 +176,7 @@ MAPPING = {
             "channel": "hh_ru",
             "document_kind": "resume",
             "file_format": "hh_docx",
+            "synthetic": True,
         },
     ]
 }

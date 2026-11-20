@@ -69,6 +69,9 @@ class Application(Base):
         ForeignKey("vacancies.id", ondelete="CASCADE")
     )
     external_position_title: Mapped[str | None] = mapped_column(String(512))
+    # Публикация hh, на которую пришёл отклик (подвал резюме «Отклик на вакансию: «…»») [v1.6].
+    # Не путать с external_position_title: там должность вне платформы, здесь — откуда пришёл отклик.
+    posting_title: Mapped[str | None] = mapped_column(String(512))
     source: Mapped[ApplicationSource] = mapped_column(str_enum(ApplicationSource, "source"))
     applied_at: Mapped[date | None] = mapped_column(Date)
     # Текущий этап; история переходов — в stage_events (развилка Р5).
@@ -94,6 +97,16 @@ class Application(Base):
             "vacancy_id",
             unique=True,
             postgresql_where=sa_text("vacancy_id IS NOT NULL"),
+        ),
+        # Внешний отклик из «Истории общения» не повторяется: кандидат + название + дата [v1.6].
+        Index(
+            "uq_applications_history",
+            "candidate_id",
+            "external_position_title",
+            "applied_at",
+            unique=True,
+            postgresql_where=sa_text("source = 'history'"),
+            postgresql_nulls_not_distinct=True,
         ),
     )
 

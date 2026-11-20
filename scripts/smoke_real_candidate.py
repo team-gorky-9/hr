@@ -27,12 +27,14 @@ from app.db.enums import (
     FileFormat,
     FormalRequirementKind,
     RowOrigin,
+    UserRole,
     VerificationMethod,
 )
 from app.db.models import (
     AuditLog,
     Position,
     StageEvent,
+    User,
     Vacancy,
 )
 from app.db.session import SessionLocal
@@ -110,18 +112,38 @@ def main(root: Path) -> None:
             extractor="manual-smoke",
         )
 
-        # 3. Требования должности (черновик, вручную) и оценка с цитатами из настоящего текста.
+        # 3. Требования должности (вручную, утверждены smoke-кадровиком) и оценка с цитатами из настоящего
+        #    текста. Реального кандидата база оценивает только по утверждённому рабочему профилю (v1.5),
+        #    поэтому сначала проверяем, что учебный профиль для него отклоняется.
         team = {"origin": RowOrigin.TEAM, "note": "проверочный профиль smoke-скрипта"}
-        profile = repo.create_requirement_profile(
+        smoke_user = User(login="manual-smoke", full_name="Smoke", role=UserRole.HR, is_active=True)
+        session.add(smoke_user)
+        session.flush()
+        education = FormalRequirementIn(
+            key="smoke.education", kind=FormalRequirementKind.EDUCATION_LEVEL, description="Высшее образование",
+            params={"schema_version": "0.1", "alternatives": [{"key": "smoke.education.alt1", "level": "высшее"}]},
+            verification=VerificationMethod.RESUME, **team)
+        training = repo.create_requirement_profile(
             session, position_id=position.id, created_by="manual-smoke", is_synthetic=True,
-            formal_requirements=[FormalRequirementIn(
-                key="smoke.education", kind=FormalRequirementKind.EDUCATION_LEVEL,
-                description="Высшее образование", verification=VerificationMethod.RESUME, **team)],
+            formal_requirements=[education], competencies=[])
+        repo.approve_requirement_profile(session, training.id, approved_by_user_id=smoke_user.id,
+                                         approval_basis="smoke: учебный профиль")
+        try:
+            repo.save_assessment(session, candidate_id=candidate.id, profile_id=training.id, card_id=card.id,
+                                 model="manual-smoke", formal_checks=[], competency_scores=[])
+            training_rejected = False
+        except repo.RepositoryError:
+            training_rejected = True
+        profile = repo.create_requirement_profile(
+            session, position_id=position.id, created_by="manual-smoke",
+            formal_requirements=[education],
             competencies=[CompetencyIn(
                 key="smoke.BACKEND", code="BACKEND", name="Разработка backend на Python", **team,
                 indicators=[IndicatorIn(key="smoke.BACKEND.01", text="разрабатывал REST API и писал автотесты",
                                         verification=VerificationMethod.RESUME, **team)])],
         )
+        repo.approve_requirement_profile(session, profile.id, approved_by_user_id=smoke_user.id,
+                                         approval_basis="smoke: проверочный рабочий профиль")
         assessment = repo.save_assessment(
             session, candidate_id=candidate.id, profile_id=profile.id, card_id=card.id, model="manual-smoke",
             formal_checks=[FormalCheckIn(requirement_id=profile.formal_requirements[0].id, result=CheckResult.MET,
@@ -167,6 +189,10 @@ def main(root: Path) -> None:
             "оценка: формальные / балл": (assessment.formal_result.value,
                                           assessment.competency_scores[0].level),
             "выдуманная цитата отклонена": fake_quote_rejected,
+            "оценка реального кандидата по учебному профилю отклонена": training_rejected,
+            "учебный и рабочий профили утверждены одновременно": (
+                repo.get_approved_profile(session, position.id).id == profile.id
+                and repo.get_approved_profile(session, position.id, synthetic=True).id == training.id),
             "история этапов": [e.to_stage_code for e in repo.stage_history(session, application.id)],
             "в резерве на должность": candidate.id in {
                 e.candidate_id for e in repo.reserve_for_position(session, position.id)},

@@ -39,6 +39,14 @@ uv run python -m app.ingest --input fixtures/stage_0a --mapping fixtures/stage_0
 
 Команда загружает синтетический контрольный пакет и печатает JSON-отчёт. Ожидаемые счётчики на чистой базе: `imported=2, excluded_non_resume=1, quarantined=1`. Повторный запуск дублей не создаёт. Как подключить реальный архив, переименовать папки через словарь `folders` в `mapping.json` и проверить таблицы, описано в [docs/modules/ingest.md](docs/modules/ingest.md).
 
+## HTTP API
+
+```bash
+uv run uvicorn app.main:app --reload
+```
+
+Swagger UI — http://127.0.0.1:8000/docs, проверка — `GET /api/v1/health`. Маршруты чтения Этапа 1, контуры `working`/`training`, статусы оценки и переменная `CORS_ORIGINS` описаны в [docs/modules/api.md](docs/modules/api.md), контракт — [docs/contracts/api.md](docs/contracts/api.md).
+
 ## Контрольный набор оценки
 
 ```bash

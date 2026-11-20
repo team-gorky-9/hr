@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "alembic>=1.14",
+    "fastapi>=0.115",
     "openai>=1.40",
     "pgvector>=0.3.6",
     "psycopg[binary]>=3.2",
@@ -14,10 +15,12 @@ dependencies = [
     "pymorphy3>=2.0.6",
     "pypdf>=5,<7",
     "sqlalchemy>=2.0.36",
+    "uvicorn>=0.32",
 ]
 
 [dependency-groups]
 dev = [
+    "httpx>=0.27",
     "pytest>=8.3",
 ]
 

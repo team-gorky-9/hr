@@ -4,11 +4,11 @@
 
 | Контракт | Версия и статус | Владелец | Потребители | Что фиксирует |
 |---|---|---|---|---|
-| [database.md](database.md) | **v1.0 утверждён; v1.1–v1.2 в `main`, v1.3 — PR #6** | Денис | Все модули | Схема PostgreSQL + pgvector, Pydantic-схемы `CandidateCard`/`Evidence`/`PiiData`, функции `app/db/repository.py` и правила транзакций. |
+| [database.md](database.md) | **v1.0 утверждён; v1.1 принят (Р1); v1.2 в `main`, v1.3 — PR #6, v1.4 — PR #8, v1.5 — `feature/profile-contours-and-basis`** | Денис | Все модули | Схема PostgreSQL + pgvector, Pydantic-схемы `CandidateCard`/`Evidence`/`PiiData`, функции `app/db/repository.py` и правила транзакций. |
 | [import.md](import.md) | **v0.1 · проект к Этапу 1** | Денис | Илья (текст), Ася/API (список откликов) | Вход импорта (выгрузка парсера и синтетический пакет), сопоставление с вакансией, отделение ПДн, дедупликация/конфликты, карантин и формат отчёта. |
-| [requirements.md](requirements.md) | **v0.1 · устарел** — действующий формат профиля: `database.md` §3.6 и §12 (v1.1) и пакет Давида 0.2 (`fixtures/requirement_profiles/`); обновит Давид | Давид | Илья (скоринг), Денис (БД/API) | Формат профилей требований, `params`, жизненный цикл `draft → approved → archived`. |
+| [requirements.md](requirements.md) | **v0.1 · устарел** — действующий формат профиля: `database.md` §3.6 и §12 (v1.1), формат `params` 0.1 — §3.5.1 (v1.5, схемы `app/schemas/requirements.py`, решение Родиона Р1), `check_stage` и контуры — §2.6.1 и §16; пакет Давида 0.2 (`fixtures/requirement_profiles/`); обновит Давид | Давид | Илья (скоринг), Денис (БД/API) | Формат профилей требований, `params`, жизненный цикл `draft → approved → archived`. |
 | [assessment.md](assessment.md) | **v0.2 · проект к Этапу 1** | Илья | Денис (API чтения), Давид (критерии) | Интерфейс `LLMClient`/`LLMConfig`, режимы `operational`/`technical`, извлечение `CandidateCard`, оценивание по `params` пакета 0.2, позиции `Evidence`, счётчики «X из Y», ошибки и CLI. |
-| [api.md](api.md) | **v0.1 · проект к Этапу 1** | Денис | Ася (фронтенд), Илья (формат оценок) | HTTP-маршруты FastAPI `/api/v1/...`, DTO, статусы отсутствия оценки и ошибок, UTF-16 оффсеты для подсветки цитат, границы доступа к ПДн. |
+| [api.md](api.md) | **v0.2 · проект к Этапу 1** | Денис | Ася (фронтенд), Илья (формат оценок) | HTTP-маршруты FastAPI `/api/v1/...`, DTO, статусы отсутствия оценки и ошибок, UTF-16 оффсеты для подсветки цитат, границы доступа к ПДн. |
 
 ## Правила изменения контрактов
 

@@ -26,6 +26,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--batch", help="метка запуска (до 64 символов), по умолчанию ingest-<дата-время>")
     parser.add_argument("--report", type=Path, help="сохранить JSON-отчёт ещё и в файл")
     parser.add_argument("--dry-run", action="store_true", help="пробный прогон: всё откатить в конце")
+    parser.add_argument("--reredact", action="store_true",
+                        help="очистить уже загруженные резюме заново текущими правилами (новая версия текста)")
     return parser
 
 
@@ -54,7 +56,8 @@ def main(argv: list[str] | None = None, session_factory=None) -> int:
     mapping = load_mapping(args.mapping)
     session: Session = session_factory()
     try:
-        report = run_import(session, files, mapping, import_batch=batch, commit_each=not args.dry_run)
+        report = run_import(session, files, mapping, import_batch=batch, commit_each=not args.dry_run,
+                            reredact=args.reredact)
         if args.dry_run:
             session.rollback()
     finally:
@@ -65,7 +68,10 @@ def main(argv: list[str] | None = None, session_factory=None) -> int:
     if args.report is not None:
         args.report.write_text(payload, encoding="utf-8")
     counts = ", ".join(f"{name}={value}" for name, value in report.counts.items() if value)
-    print(f"импорт {batch}: {counts}", file=sys.stderr)
+    history = ", ".join(f"{name}={value}" for name, value in report.history.items())
+    reredact = ", ".join(f"{name}={value}" for name, value in report.reredact.items())
+    print(f"импорт {batch}: {counts}; история: {history}" + (f"; перечистка: {reredact}" if reredact else ""),
+          file=sys.stderr)
     return 1 if report.counts.get(ItemStatus.ERROR.value) else 0
 
 

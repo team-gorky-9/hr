@@ -147,6 +147,10 @@ class MappingEntry(BaseModel):
     candidate_code: str | None = Field(default=None, max_length=32)
     channel: Channel | None = None
     file_format: FileFormat | None = None
+    # Учебный файл (выдуманный текст, py-9001): кандидат создаётся в учебном контуре и не
+    # попадает в рабочие списки (контракт БД v1.5). Не указано — новый кандидат реальный,
+    # а повтор уже сохранённого файла остаётся в своём контуре.
+    synthetic: bool | None = None
 
 
 class Mapping(BaseModel):
@@ -197,6 +201,7 @@ class Route:
     file_format: FileFormat
     position_code: str | None = None
     candidate_code: str | None = None
+    is_synthetic: bool | None = None  # None — в mapping не указано
 
 
 def _resume_format(channel: Channel, extension: str) -> FileFormat:
@@ -266,4 +271,4 @@ def resolve_route(item: InputFile, mapping: MappingConfig) -> Route:
     code = entry.candidate_code if entry and entry.candidate_code else _candidate_code(file_name, position_code)
     if not CANDIDATE_CODE.match(code):
         raise Problem("BAD_CANDIDATE_CODE", "код кандидата должен иметь вид «префикс-0000»")
-    return Route(kind, channel, file_format, position_code, code)
+    return Route(kind, channel, file_format, position_code, code, is_synthetic=entry.synthetic if entry else None)
