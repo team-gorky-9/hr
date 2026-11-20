@@ -1,0 +1,32 @@
+{
+  "folders": {
+    "Junior Python-разработчик": "junior-python-dev",
+    "Python-разработчик": "python-dev",
+    "QA Engineer Manual": "qa-manual",
+    "Frontend developer": "frontend-dev",
+    "Junior UX_UI Дизайнер": "junior-ux-ui",
+    "консультанта сектора подбора кадров": "hr-consultant"
+  },
+  "entries": [
+    {
+      "source_path": "Кадры/Кейс.pdf",
+      "document_kind": "other",
+      "channel": "internal"
+    },
+    {
+      "source_path": "Кадры/Frontend developer/Разработчик клиентского ПО.docx",
+      "document_kind": "job_description",
+      "channel": "internal"
+    },
+    {
+      "source_path": "Кадры/Junior UX_UI Дизайнер/Дизайнер клиентского ПО.docx",
+      "document_kind": "job_description",
+      "channel": "internal"
+    },
+    {
+      "source_path": "Кадры/QA Engineer Manual/ПРОВЕРЕНО 2024 Инженер по тестированию ПО.docx",
+      "document_kind": "job_description",
+      "channel": "internal"
+    }
+  ]
+}
