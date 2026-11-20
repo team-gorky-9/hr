@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.errors import install_error_handlers
 from app.api.routes import router
 from app.config import settings
+from app.reporting.api import create_router as create_reporting_router
 
 
 def create_app() -> FastAPI:
@@ -25,6 +26,7 @@ def create_app() -> FastAPI:
     )
     install_error_handlers(app)
     app.include_router(router)
+    app.include_router(create_reporting_router())
     return app
 
 
