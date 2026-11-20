@@ -375,6 +375,8 @@ class Workforce:
         return serialize(row)
 
     def intake_reject(self, body, row):
+        if row.assignment_id:
+            raise Problem(409, "CORRECTION_REVIEW_REQUIRED", "Review the existing assignment")
         if row.status not in {"received", "needs_review"} or row.assignment_id:
             raise Problem(409, "INVALID_STATE", "This intake cannot be rejected")
         before = serialize(row)
@@ -384,6 +386,8 @@ class Workforce:
         return serialize(row)
 
     def intake_register(self, body, row):
+        if row.assignment_id:
+            raise Problem(409, "CORRECTION_REVIEW_REQUIRED", "Review the existing assignment")
         if row.status not in {"received", "needs_review"} or row.assignment_id:
             raise Problem(
                 409, "INVALID_STATE", "An existing registration requires a separate correction decision"
@@ -456,7 +460,7 @@ class Workforce:
             ):
                 raise Problem(
                     409,
-                    "INVALID_STATE",
+                    "MANUAL_PERSONNEL_CHANGE_REQUIRED",
                     "Changing employee, department or position requires a separate personnel event",
                 )
             starts_on = date.fromisoformat(proposed["starts_on"])
@@ -497,6 +501,25 @@ class Workforce:
             )
         )
         return {"intake": serialize(row), "assignment": serialize(assignment), "review": review}
+
+    def intake_resolve_correction(self, body, row):
+        from workforce.schemas import Review
+
+        decision = "apply" if body.action == "apply_correction" else "keep"
+        result = self.intake_review(
+            Review(
+                expected_revision=body.expected_revision,
+                expected_assignment_revision=body.expected_assignment_revision,
+                decision=decision,
+                reason=body.reason,
+            ),
+            row,
+        )
+        return {
+            "intake": result["intake"],
+            "assignment": result["assignment"],
+            "resolution": "corrected" if decision == "apply" else "kept_existing",
+        }
 
     def delivery_retry(self, body, row):
         if row.status == "sent":

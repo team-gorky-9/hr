@@ -431,6 +431,10 @@ def create_app(settings=None):
     def intake_review(id: UUID, body: s.Review, request: Request):
         return execute(request, body, "intake_review", Intake, id)
 
+    @app.post("/api/v1/intakes/{id}/resolve-correction")
+    def intake_resolve_correction(id: UUID, body: s.Correction, request: Request):
+        return execute(request, body, "intake_resolve_correction", Intake, id)
+
     @app.get("/api/v1/deliveries")
     def deliveries(
         request: Request,

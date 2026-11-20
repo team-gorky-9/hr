@@ -53,17 +53,19 @@ def test_review_completes_same_assignment_and_publishes_result(app, client, deci
     with Session(app.state.engine) as session:
         assert session.scalar(select(func.count()).select_from(Assignment)) == 1
         result_events = list(
-            session.scalars(select(Outbox).where(Outbox.event_type == "assignment.reviewed"))
+            session.scalars(select(Outbox).where(Outbox.event_type == "assignment.review-resolved"))
         )
         assert len(result_events) == 1
         message = result_events[0].envelope
         assert message["correlation_id"] == correction["correlation_id"]
         assert message["payload"]["source_event_id"] == correction["event_id"]
         assert message["payload"]["source_case_revision"] == 5
-        assert message["payload"]["decision"] == decision
+        assert message["payload"]["resolution"] == ("corrected" if decision == "apply" else "kept_existing")
         assert message["payload"]["assignment_id"] == first["assignment"]["id"]
         assert message["payload"]["starts_on"] == reviewed["assignment"]["starts_on"]
-        assert message["payload"]["basis"] == reviewed["assignment"]["basis"]
+        assert message["aggregate_id"] == first["assignment"]["id"]
+        assert message["aggregate_revision"] == reviewed["assignment"]["revision"]
+        assert message["payload"]["reason"]
 
 
 def test_keep_requires_explanation_and_access(app, client):
@@ -108,7 +110,9 @@ def test_review_checks_assignment_revision_and_rolls_back(app, client):
         assert session.get(Assignment, first["assignment"]["id"]).basis["reference"] == "LOCAL"
         assert (
             session.scalar(
-                select(func.count()).select_from(Outbox).where(Outbox.event_type == "assignment.reviewed")
+                select(func.count())
+                .select_from(Outbox)
+                .where(Outbox.event_type == "assignment.review-resolved")
             )
             == 0
         )
@@ -154,7 +158,9 @@ def test_parallel_review_creates_one_outcome(app, client):
     with Session(app.state.engine) as session:
         assert (
             session.scalar(
-                select(func.count()).select_from(Outbox).where(Outbox.event_type == "assignment.reviewed")
+                select(func.count())
+                .select_from(Outbox)
+                .where(Outbox.event_type == "assignment.review-resolved")
             )
             == 1
         )
@@ -202,3 +208,56 @@ def test_review_date_cannot_invalidate_existing_end(app, client):
     )
     assert result.status_code == 422
     assert intake(client, headers)["status"] == "needs_review"
+
+
+@pytest.mark.parametrize(
+    "action,resolution", [("apply_correction", "corrected"), ("keep_existing", "kept_existing")]
+)
+def test_main_correction_endpoint_and_legacy_alias_share_one_decision(app, client, action, resolution):
+    headers, first, _, pending = corrected(app, client)
+    body = {
+        "expected_revision": pending["revision"],
+        "expected_assignment_revision": 1,
+        "action": action,
+        "reason": "Confirmed review of the source",
+    }
+    key = str(uuid4())
+    path = f"/intakes/{pending['id']}/resolve-correction"
+    missing_reason = {k: v for k, v in body.items() if k != "reason"}
+    assert command(client, path, missing_reason, headers).status_code == 422
+    assert command(client, path, body, auth(client, "hr_other")).status_code == 404
+    result = command(client, path, body, headers, key)
+    assert result.status_code == 200, result.text
+    assert result.json()["resolution"] == resolution
+    assert result.json()["assignment"]["id"] == first["assignment"]["id"]
+    assert command(client, path, body, headers, key).json() == result.json()
+    legacy = {
+        "expected_revision": result.json()["intake"]["revision"],
+        "expected_assignment_revision": result.json()["assignment"]["revision"],
+        "decision": "keep",
+        "reason": "Cannot repeat a completed review",
+    }
+    assert command(client, f"/intakes/{pending['id']}/review", legacy, headers).status_code == 409
+    with Session(app.state.engine) as session:
+        rows = list(session.scalars(select(Outbox).where(Outbox.event_type == "assignment.review-resolved")))
+        assert len(rows) == 1
+        assert rows[0].envelope["payload"]["resolution"] == resolution
+        assert rows[0].envelope["payload"]["reason"] == body["reason"]
+
+
+def test_existing_assignment_requires_correction_endpoint(app, client):
+    headers, _, _, pending = corrected(app, client)
+    registered = register(client, pending, headers)
+    assert registered.status_code == 409
+    assert registered.json()["error"]["code"] == "CORRECTION_REVIEW_REQUIRED"
+    rejected = command(
+        client,
+        f"/intakes/{pending['id']}/reject",
+        {
+            "expected_revision": pending["revision"],
+            "reason": "Use correction review",
+        },
+        headers,
+    )
+    assert rejected.status_code == 409
+    assert rejected.json()["error"]["code"] == "CORRECTION_REVIEW_REQUIRED"

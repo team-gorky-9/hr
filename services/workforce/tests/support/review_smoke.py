@@ -33,9 +33,9 @@ def main():
     try:
         channel = connection.channel()
         topology(channel)
-        queue = "w1.hiring.assignment.reviewed"
+        queue = "w1.hiring.assignment.review-resolved"
         channel.queue_declare(queue=queue, durable=True)
-        channel.queue_bind(queue=queue, exchange="w1.workforce", routing_key="assignment.reviewed")
+        channel.queue_bind(queue=queue, exchange="w1.workforce", routing_key="assignment.review-resolved")
         publish(channel, event, repeat=2)
         item = eventually(
             lambda: http(args.url, f"/api/v1/intakes/{state['intake']['id']}", token)[1],
@@ -44,11 +44,11 @@ def main():
         body = {
             "expected_revision": item["revision"],
             "expected_assignment_revision": old_assignment["revision"],
-            "decision": args.decision,
-            "reason": "Synthetic review: original order remains valid" if args.decision == "keep" else None,
+            "action": "apply_correction" if args.decision == "apply" else "keep_existing",
+            "reason": "Synthetic review of the corrected employment basis",
         }
         key = str(uuid4())
-        path = f"/api/v1/intakes/{item['id']}/review"
+        path = f"/api/v1/intakes/{item['id']}/resolve-correction"
         status, result = http(args.url, path, token, body, key)
         assert status == 200, result
         assert http(args.url, path, token, body, key)[1] == result
@@ -68,7 +68,9 @@ def main():
             return message if message["correlation_id"] == event["correlation_id"] else None
 
         message = eventually(read, lambda value: value is not None)
-        assert message["payload"]["decision"] == args.decision
+        assert message["payload"]["resolution"] == (
+            "corrected" if args.decision == "apply" else "kept_existing"
+        )
         assert message["payload"]["assignment_id"] == assignment_id
         assert message["payload"]["starts_on"] == expected_date
         assert message["payload"]["source_event_id"] == event["event_id"]

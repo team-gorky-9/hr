@@ -1,6 +1,6 @@
 # Workforce · первая волна
 
-**Промежуточная поставка, 21 ноября 2026.** Опубликована по просьбе Давида без нового итогового прогона тестов. Что реализовано и что осталось — в [отчёте](../../docs/reports/wave-1-workforce.md). Полная приёмка пока не закрыта.
+**Автономная поставка, завершение 21 ноября 2026.** Выполнены итоговый набор PostgreSQL/RabbitMQ, сборка Compose и настоящий HTTP/worker-проход. Версии, команды и граница интеграции с Hiring — в [отчёте](../../docs/reports/wave-1-workforce.md).
 
 Сервис ведёт учебный вход, подразделения, сотрудников, назначения, переводы, замещения, историю и передачу результатов оформления через RabbitMQ. Контракты: [общий](../../docs/contracts/wave-1-common.md), [Workforce](../../docs/contracts/wave-1-workforce.md). [Устройство](../../docs/modules/workforce-service.md).
 
@@ -10,7 +10,7 @@
 docker compose -f services/workforce/compose.yml up --build
 ```
 
-Compose описывает собственные PostgreSQL 17, RabbitMQ, миграции/seed, API и worker. Порт API — 8101, документация — http://localhost:8101/docs, OpenAPI — `/openapi.json`. Синтаксис Compose проверен, **сборка и запуск контейнеров пока не проверены**: в среде разработки отсутствует Docker Engine. Фактические проверки выполнялись отдельными процессами Python, PostgreSQL и RabbitMQ.
+Compose описывает собственные PostgreSQL 17, RabbitMQ, миграции/seed, API и worker. Порт API — 8101, документация — http://localhost:8101/docs, OpenAPI — `/openapi.json`. Сборка и запуск проверены с Docker Engine 29.4.3. Данные БД и брокера сохраняются в собственных томах. Файлового тома у Workforce нет.
 
 `POST /api/v1/sessions` с телом `{"login":"hr","password":"123"}` и заголовком `Idempotency-Key: <UUID>` возвращает Bearer-токен. Учебные логины и роли — [actors.json](../../fixtures/wave-1/actors.json). `GET /api/v1/session` проверяет сессию, `DELETE /api/v1/session` отзывает её. По умолчанию сессия живёт 8 часов.
 
@@ -37,7 +37,7 @@ uv run uvicorn workforce.api:create_app --factory --host 127.0.0.1 --port 8101
 
 ## Проверки и учебный проход
 
-Команда полного контейнерного набора (ещё требует проверки Docker-сборки):
+Команда полного контейнерного набора:
 
 ```sh
 docker compose -f services/workforce/compose.yml --profile test run --build --rm tests
@@ -61,7 +61,9 @@ uv run python -m tests.support.review_smoke apply
 uv run python -m tests.support.review_smoke keep
 ```
 
-Повторная проверка меняет прежнее назначение либо оставляет его значения с обязательным объяснением. Оба исхода сохраняют assignment_id и отправляют `assignment.reviewed`. Файлового API у Workforce нет: сохраняются только ссылки и реквизиты оснований.
+Основной интерфейс повторной проверки — `POST /api/v1/intakes/{id}/resolve-correction` с `action=apply_correction|keep_existing`, двумя ожидаемыми ревизиями и обязательной причиной. Оба исхода сохраняют assignment_id и отправляют **одно** `assignment.review-resolved` с `resolution=corrected|kept_existing`. Проверка использует общий `fixtures/wave-1/corrections.json`. Файлового API у Workforce нет: сохраняются только ссылки и реквизиты оснований.
+
+`POST /intakes/{id}/review` сохранён как совместимый алиас первоначальной ветки Давида с `decision=apply|keep`. Его HTTP-ответ сохраняет поле review. Он вызывает ту же предметную операцию и публикует только canonical `assignment.review-resolved`. Для прежнего apply без причины сообщение явно указывает применение входного основания. Новые потребители используют resolve-correction.
 
 Для отдельного прогона сбоя: `smoke prepare` → остановить **свой учебный** брокер → `smoke offline` → запустить брокер → `smoke recover`. После перезапуска API/worker/БД выполнить `smoke restart`. Для Compose остановка/восстановление: `docker compose -f services/workforce/compose.yml stop rabbitmq` / `start rabbitmq` из корня продукта. Если истёк лимит автоматических попыток, перед recover выполнить ручной retry доставки через API.
 

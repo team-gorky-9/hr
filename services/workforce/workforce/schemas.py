@@ -157,3 +157,9 @@ class Review(Revision):
         if self.decision == "keep" and self.reason is None:
             raise ValueError("Keeping the previous values requires an explanation")
         return self
+
+
+class Correction(Revision):
+    expected_assignment_revision: Annotated[int, Field(ge=1, strict=True)]
+    action: Literal["apply_correction", "keep_existing"]
+    reason: Text

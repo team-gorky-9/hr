@@ -183,11 +183,10 @@ def registration_event(intake, assignment):
 
 def review_event(intake, assignment, review):
     envelope = registration_event(intake, assignment)
-    envelope.update(
-        event_type="assignment.reviewed", aggregate_id=intake.id, aggregate_revision=intake.revision
-    )
+    envelope["event_type"] = "assignment.review-resolved"
     envelope["payload"].update(
-        {key: review[key] for key in ("decision", "reason", "reviewed_by_actor_id", "reviewed_at")}
+        resolution="corrected" if review["decision"] == "apply" else "kept_existing",
+        reason=review["reason"] or "Correction applied from the received employment basis",
+        reviewed_by_actor_id=review["reviewed_by_actor_id"],
     )
-    envelope["payload"]["basis"] = assignment.basis
     return envelope

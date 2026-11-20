@@ -166,22 +166,26 @@ def test_review_result_delivered_to_hiring_queue_and_matches_shared_fixture(app,
 
     settings, channel, _ = broker
     queue = channel.queue_declare(queue="", exclusive=True).method.queue
-    channel.queue_bind(queue=queue, exchange="w1.workforce", routing_key="assignment.reviewed")
+    channel.queue_bind(queue=queue, exchange="w1.workforce", routing_key="assignment.review-resolved")
     headers, first, correction, pending = corrected(app, client)
-    body = {"expected_revision": pending["revision"], "expected_assignment_revision": 1, "decision": decision}
-    if decision == "keep":
-        body["reason"] = "Original employment order remains valid"
-    result = command(client, f"/intakes/{pending['id']}/review", body, headers)
+    action = "apply_correction" if decision == "apply" else "keep_existing"
+    expected = json.loads((FIXTURES / "corrections.json").read_text(encoding="utf-8"))["alternatives"][action]
+    body = {
+        "expected_revision": pending["revision"],
+        "expected_assignment_revision": 1,
+        "action": action,
+        "reason": expected["payload"]["reason"],
+    }
+    result = command(client, f"/intakes/{pending['id']}/resolve-correction", body, headers)
     assert result.status_code == 200
     assert publish_pending(app.state.engine, settings) == 2
     method, properties, raw = channel.basic_get(queue, auto_ack=False)
     assert method is not None and properties.delivery_mode == 2
     received = json.loads(raw)
-    expected = json.loads((FIXTURES / "review-events.json").read_text(encoding="utf-8"))[decision + "_result"]
     # Only runtime identities/timestamps differ from the independently authored shared fixture.
     expected.update(
         event_id=received["event_id"],
-        aggregate_id=pending["id"],
+        aggregate_id=first["assignment"]["id"],
         correlation_id=correction["correlation_id"],
         occurred_at=received["occurred_at"],
     )
@@ -190,7 +194,6 @@ def test_review_result_delivered_to_hiring_queue_and_matches_shared_fixture(app,
         source_event_id=correction["event_id"],
         employee_id=first["employee"]["id"],
         assignment_id=first["assignment"]["id"],
-        reviewed_at=result.json()["review"]["reviewed_at"],
     )
     assert received == expected
     channel.basic_ack(method.delivery_tag)

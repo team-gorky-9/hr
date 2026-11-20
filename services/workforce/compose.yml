@@ -14,8 +14,6 @@ x-runtime: &runtime
     RETRY_SECONDS: ${RETRY_SECONDS:-5}
     MAX_ATTEMPTS: ${MAX_ATTEMPTS:-5}
     POLL_SECONDS: ${POLL_SECONDS:-1}
-  volumes:
-    - files:/var/lib/workforce/files
 
 services:
   db:
@@ -111,4 +109,3 @@ services:
 volumes:
   db:
   rabbitmq:
-  files:

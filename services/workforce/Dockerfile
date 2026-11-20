@@ -8,9 +8,7 @@ ENV FIXTURE_DIR=/srv/fixtures/wave-1 PATH=/srv/workforce/.venv/bin:$PATH
 
 FROM base AS runtime
 RUN uv sync --locked --no-dev --python /usr/local/bin/python \
-    && useradd --uid 10001 --create-home workforce \
-    && mkdir -p /var/lib/workforce/files \
-    && chown -R workforce:workforce /var/lib/workforce
+    && useradd --uid 10001 --create-home workforce
 USER workforce
 EXPOSE 8101
 CMD ["uvicorn", "workforce.api:create_app", "--factory", "--host", "0.0.0.0", "--port", "8101"]
