@@ -1,0 +1,29 @@
+[project]
+name = "workforce"
+version = "0.1.0"
+description = "Workforce service — wave 1"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+  "fastapi>=0.115,<1", "pydantic>=2.10,<3", "sqlalchemy>=2.0,<2.1",
+  "alembic>=1.14,<2", "psycopg[binary]>=3.2,<4", "pika>=1.3,<2",
+  "uvicorn>=0.34,<1",
+]
+
+[dependency-groups]
+dev = ["pytest>=8,<9", "httpx>=0.28,<1", "ruff>=0.11,<1", "pyyaml>=6,<7"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["workforce"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = ["integration: requires PostgreSQL and RabbitMQ"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 110

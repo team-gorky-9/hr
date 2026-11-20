@@ -1,0 +1,111 @@
+name: wave-1-workforce
+
+x-runtime: &runtime
+  build:
+    context: ../..
+    dockerfile: services/workforce/Dockerfile
+    target: runtime
+  environment: &environment
+    DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://workforce:workforce@db:5432/workforce}
+    RABBITMQ_URL: ${RABBITMQ_URL:-amqp://workforce:workforce@rabbitmq:5672/%2F}
+    AUTH_MODE: ${AUTH_MODE:-fixture}
+    FIXTURE_DIR: /srv/fixtures/wave-1
+    SESSION_HOURS: ${SESSION_HOURS:-8}
+    RETRY_SECONDS: ${RETRY_SECONDS:-5}
+    MAX_ATTEMPTS: ${MAX_ATTEMPTS:-5}
+    POLL_SECONDS: ${POLL_SECONDS:-1}
+
+services:
+  db:
+    image: postgres:17.6
+    environment:
+      POSTGRES_DB: workforce
+      POSTGRES_USER: workforce
+      POSTGRES_PASSWORD: workforce
+    ports: ["127.0.0.1:${POSTGRES_PORT:-5411}:5432"]
+    volumes: ["db:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U workforce -d workforce"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  rabbitmq:
+    image: rabbitmq:4.1.8-management
+    environment:
+      RABBITMQ_DEFAULT_USER: workforce
+      RABBITMQ_DEFAULT_PASS: workforce
+    ports:
+      - "127.0.0.1:${AMQP_PORT:-5681}:5672"
+      - "127.0.0.1:${MANAGEMENT_PORT:-15681}:15672"
+    volumes: ["rabbitmq:/var/lib/rabbitmq"]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  prepare:
+    <<: *runtime
+    command: ["python", "-m", "workforce", "prepare"]
+    depends_on:
+      db: {condition: service_healthy}
+
+  api:
+    <<: *runtime
+    ports: ["127.0.0.1:${HTTP_PORT:-8101}:8101"]
+    depends_on:
+      prepare: {condition: service_completed_successfully}
+    restart: unless-stopped
+
+  worker:
+    <<: *runtime
+    command: ["python", "-m", "workforce.worker"]
+    depends_on:
+      prepare: {condition: service_completed_successfully}
+    restart: unless-stopped
+
+  testdb:
+    image: postgres:17.6
+    profiles: [test]
+    environment:
+      POSTGRES_DB: workforce_test
+      POSTGRES_USER: workforce
+      POSTGRES_PASSWORD: workforce
+    tmpfs: ["/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U workforce -d workforce_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  testbroker:
+    image: rabbitmq:4.1.8-management
+    profiles: [test]
+    environment:
+      RABBITMQ_DEFAULT_USER: workforce
+      RABBITMQ_DEFAULT_PASS: workforce
+      RABBITMQ_DEFAULT_VHOST: workforce_test
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  tests:
+    build:
+      context: ../..
+      dockerfile: services/workforce/Dockerfile
+      target: tests
+    profiles: [test]
+    environment:
+      WORKFORCE_TEST_DATABASE_URL: postgresql+psycopg://workforce:workforce@testdb:5432/workforce_test
+      WORKFORCE_TEST_RABBITMQ_URL: amqp://workforce:workforce@testbroker:5672/workforce_test
+      FIXTURE_DIR: /srv/fixtures/wave-1
+    depends_on:
+      testdb: {condition: service_healthy}
+      testbroker: {condition: service_healthy}
+
+volumes:
+  db:
+  rabbitmq:
