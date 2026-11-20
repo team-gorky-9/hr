@@ -10,6 +10,7 @@ import hashlib
 import io
 import json
 from pathlib import Path
+import re
 import unicodedata
 import uuid
 import xml.etree.ElementTree as ET
@@ -101,6 +102,19 @@ def check_profile_format(profile, sources):
         require(row["check_stage"] in {"screening", "interview"}, row["key"])
         if row["verification"] == "interview":
             require(row["check_stage"] == "interview", "Interview check cannot run at screening")
+    groups = {}
+    for competency in profile["competencies"]:
+        for row in competency["indicators"]:
+            if "same_as" not in row:
+                continue
+            group_key = row["same_as"]
+            require(isinstance(group_key, str) and bool(group_key.strip()),
+                    "same_as must be a nonempty group key")
+            require(not row.get("excluded_from_scoring", False),
+                    "Excluded indicator cannot join same_as")
+            group = groups.setdefault(group_key, (competency["key"], row["check_stage"]))
+            require(group[0] == competency["key"], "same_as must stay within one competency")
+            require(group[1] == row["check_stage"], "same_as must use one check_stage")
 
 
 def check_package(package, source_manifest):
@@ -252,6 +266,14 @@ def check_fixtures(fixtures, profile_keys):
                     "Processing error must refuse the whole assessment")
         check_card_evidence(case)
         expected = case["expected"]
+        require(expected.get("numeric_competency_score") is None,
+                "Numeric competency scale is not agreed")
+        require(expected.get("basis") in {None, "resume", "documents", "interview", "test"},
+                "Invalid result basis")
+        if any(period.get("is_current") for period in case["card"].get("experience", [])):
+            require(isinstance(case.get("as_of"), str)
+                    and re.fullmatch(r"[0-9]{4}-(0[1-9]|1[0-2])", case["as_of"]) is not None,
+                    f"Current work requires a fixed as_of month: {case['id']}")
         check_evidence_indexes(expected.get("formal_evidence_indexes", []), case,
                                required=expected.get("requires_text_evidence", False))
         check_evidence_indexes(expected.get("indicator_evidence_indexes", []), case)
@@ -280,9 +302,10 @@ def check_fixtures(fixtures, profile_keys):
     for key, result in required.items():
         require(indexed[key]["expected"]["result"] == result, f"Agreed expectation changed: {key}")
     overlap = indexed["experience-overlap"]["expected"]
-    require(overlap["months"] == 36 and overlap["proposed_months"] == 37
-            and overlap["months_status"] == "pending_agreement" and "Q-MONTHS" in overlap["pending"],
-            "Month conventions must remain explicitly pending until agreement")
+    require(overlap["months"] == 37 and overlap["months_status"] == "agreed"
+            and overlap.get("month_convention") == "inclusive_calendar_months"
+            and "proposed_months" not in overlap and "Q-MONTHS" not in overlap.get("pending", []),
+            "Agreed inclusive overlap must use 37 months")
     require(indexed["experience-absent"]["evidence"][0]["end"] == 37, "Base quote must span 37 code points")
     return len(cases)
 

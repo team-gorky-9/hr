@@ -134,6 +134,85 @@ class RequirementProfileIntegrityTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Text hash mismatch"):
             check_fixtures(changed, self.keys)
 
+    def test_agreed_inclusive_overlap_is_accepted(self):
+        changed = deepcopy(self.fixtures)
+        expected = next(c for c in changed["cases"] if c["id"] == "experience-overlap")["expected"]
+        expected.update(months=37, months_status="agreed", month_convention="inclusive_calendar_months")
+        expected.pop("proposed_months", None)
+        expected["pending"] = []
+        check_fixtures(changed, self.keys)
+
+    def test_historical_overlap_cannot_remain_the_active_expectation(self):
+        changed = deepcopy(self.fixtures)
+        expected = next(c for c in changed["cases"] if c["id"] == "experience-overlap")["expected"]
+        expected.update(months=36, months_status="pending_agreement", proposed_months=37, pending=["Q-MONTHS"])
+        with self.assertRaisesRegex(ValueError, "Agreed inclusive overlap"):
+            check_fixtures(changed, self.keys)
+
+    def test_current_work_requires_a_reproducible_assessment_month(self):
+        for as_of in (None, "2026", "2026-13"):
+            with self.subTest(as_of=as_of):
+                changed = deepcopy(self.fixtures)
+                case = next(c for c in changed["cases"] if c["id"] == "experience-current-below")
+                case["as_of"] = as_of
+                with self.assertRaisesRegex(ValueError, "Current work requires a fixed as_of"):
+                    check_fixtures(changed, self.keys)
+
+    def test_fixture_cannot_claim_an_unagreed_numeric_competency_score(self):
+        changed = deepcopy(self.fixtures)
+        changed["cases"][0]["expected"]["numeric_competency_score"] = 75
+        with self.assertRaisesRegex(ValueError, "Numeric competency scale is not agreed"):
+            check_fixtures(changed, self.keys)
+
+    def test_same_as_cannot_cross_competencies(self):
+        changed = deepcopy(self.package)
+        competencies = changed["profiles"][1]["competencies"]
+        for competency in competencies[:2]:
+            competency["indicators"][0]["same_as"] = "test.group"
+        with self.assertRaisesRegex(ValueError, "same_as must stay within one competency"):
+            check_package(changed, self.sources)
+
+    def test_same_as_cannot_mix_stages(self):
+        changed = deepcopy(self.package)
+        rows = changed["profiles"][1]["competencies"][0]["indicators"][:2]
+        for row in rows:
+            row["same_as"] = "test.group"
+        rows[1].update(check_stage="interview", verification="interview")
+        with self.assertRaisesRegex(ValueError, "same_as must use one check_stage"):
+            check_package(changed, self.sources)
+
+    def test_excluded_indicator_cannot_join_same_as(self):
+        changed = deepcopy(self.package)
+        rows = changed["profiles"][1]["competencies"][0]["indicators"][:2]
+        for row in rows:
+            row["same_as"] = "test.group"
+        rows[0]["excluded_from_scoring"] = True
+        with self.assertRaisesRegex(ValueError, "Excluded indicator cannot join same_as"):
+            check_package(changed, self.sources)
+
+    def test_same_as_can_include_mandatory_and_desirable_indicators(self):
+        changed = deepcopy(self.package)
+        rows = changed["profiles"][1]["competencies"][0]["indicators"][:2]
+        for row in rows:
+            row["same_as"] = "test.group"
+        rows[1]["is_mandatory"] = False
+        check_package(changed, self.sources)
+
+    def test_empty_same_as_is_not_a_group_key(self):
+        changed = deepcopy(self.package)
+        changed["profiles"][1]["competencies"][0]["indicators"][0]["same_as"] = " "
+        with self.assertRaisesRegex(ValueError, "same_as must be a nonempty group key"):
+            check_package(changed, self.sources)
+
+    def test_basis_uses_verification_method_values(self):
+        changed = deepcopy(self.fixtures)
+        changed["cases"][0]["expected"]["basis"] = "document"
+        with self.assertRaisesRegex(ValueError, "Invalid result basis"):
+            check_fixtures(changed, self.keys)
+        for basis in ("resume", "documents", "interview", "test"):
+            changed["cases"][0]["expected"]["basis"] = basis
+            check_fixtures(changed, self.keys)
+
 
 if __name__ == "__main__":
     unittest.main()

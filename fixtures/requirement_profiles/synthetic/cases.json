@@ -377,22 +377,19 @@
       ],
       "expected": {
         "result": "met",
-        "reason": "По прежней конвенции 36 месяцев, по включительной конвенции Ильи 37. Обе дают met для порога 24; Q-MONTHS открыт.",
+        "reason": "Включительные календарные месяцы: объединение 2021-01–2024-01 даёт 37 месяцев; пересечения учитываются один раз. Илья подтвердил правило 20.11.2026.",
         "write_formal_check": true,
         "basis": "resume",
         "numeric_competency_score": null,
-        "months": 36,
-        "pending": [
-          "Q-MONTHS"
-        ],
+        "months": 37,
+        "pending": [],
         "formal_evidence_indexes": [
           0,
           1
         ],
         "indicator_evidence_indexes": [],
-        "months_status": "pending_agreement",
-        "proposed_months": 37,
-        "proposed_month_convention": "inclusive_months"
+        "months_status": "agreed",
+        "month_convention": "inclusive_calendar_months"
       },
       "is_synthetic": true,
       "previous_candidate_text_id": "060e9681-e8a3-5705-8ca9-61c6e29c1f58",
@@ -437,7 +434,15 @@
           ]
         }
       ],
-      "card_limitations": []
+      "card_limitations": [],
+      "expectation_history": [
+        {
+          "fixture_revision": 2,
+          "months": 36,
+          "status": "superseded",
+          "reason": "Прежняя конвенция заменена включительной после ответа Ильи 20.11.2026."
+        }
+      ]
     },
     {
       "id": "experience-conflict",
@@ -474,7 +479,7 @@
       ],
       "expected": {
         "result": "unknown",
-        "reason": "Прямое заявление и периоды противоречат друг другу; ручная сверка.",
+        "reason": "Заявление даёт 12 месяцев (not_met), периоды — 37 (met): исходы по порогу 24 различаются, unknown и ручная сверка.",
         "write_formal_check": true,
         "basis": "resume",
         "numeric_competency_score": null,
@@ -483,7 +488,11 @@
           0,
           1
         ],
-        "indicator_evidence_indexes": []
+        "indicator_evidence_indexes": [],
+        "period_months_lower": 37,
+        "period_months_upper": 37,
+        "statement_months": 12,
+        "experience_conflict": true
       },
       "is_synthetic": true,
       "previous_candidate_text_id": "96266d0e-0252-5d63-a060-12a280a47f71",
@@ -1738,6 +1747,1209 @@
         }
       ],
       "card_limitations": []
+    },
+    {
+      "id": "experience-current-below",
+      "rule_key": "synthetic.py.experience",
+      "candidate_code": "py-9001",
+      "candidate_text_id": "0f131778-9c82-5d40-b56c-fadd5d6e43f6",
+      "text": "Коммерческая работа разработчиком: январь 2025 — по настоящее время.",
+      "card": {
+        "experience": [
+          {
+            "position": "разработчик",
+            "start": "2025-01",
+            "is_current": true
+          }
+        ],
+        "pii_hidden": true
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "0f131778-9c82-5d40-b56c-fadd5d6e43f6",
+          "quote": "Коммерческая работа разработчиком: январь 2025 — по настоящее время.",
+          "start": 0,
+          "end": 68
+        }
+      ],
+      "expected": {
+        "write_formal_check": true,
+        "basis": "resume",
+        "numeric_competency_score": null,
+        "formal_evidence_indexes": [
+          0
+        ],
+        "indicator_evidence_indexes": [],
+        "result": "not_met",
+        "months": 23,
+        "period_months_lower": 23,
+        "period_months_upper": 23,
+        "month_convention": "inclusive_calendar_months",
+        "reason": "По резюме на 2026-11 включительно 23 месяца: меньше учебного порога 24. Дата расчёта фиксирована, а не взята из системных часов."
+      },
+      "is_synthetic": true,
+      "text_key": "py-9001/text/experience-current-below/v1",
+      "text_sha256": "c05207fc77f44065dfc9a1ebcf4f540b1cfbdd2ec0b4608705547061908ed48d",
+      "card_role": "expected_available_fields",
+      "card_evidence": [
+        {
+          "path": "/experience/0/position",
+          "evidence_indexes": [
+            0
+          ]
+        },
+        {
+          "path": "/experience/0/start",
+          "evidence_indexes": [
+            0
+          ]
+        },
+        {
+          "path": "/experience/0/is_current",
+          "evidence_indexes": [
+            0
+          ]
+        }
+      ],
+      "card_limitations": [],
+      "authoring_note": "Адаптация примера Ильи от 20.11.2026: коммерческий характер указан явно; это не правило об учёте любого опыта.",
+      "as_of": "2026-11"
+    },
+    {
+      "id": "experience-year-only",
+      "rule_key": "synthetic.py.experience",
+      "candidate_code": "py-9001",
+      "candidate_text_id": "93eaf4fe-b15e-5d1d-9ca5-8673e8a6b57b",
+      "text": "Коммерческая работа разработчиком: 2019 — 2023.",
+      "card": {
+        "experience": [
+          {
+            "position": "разработчик"
+          }
+        ],
+        "pii_hidden": true
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "93eaf4fe-b15e-5d1d-9ca5-8673e8a6b57b",
+          "quote": "Коммерческая работа разработчиком: 2019 — 2023.",
+          "start": 0,
+          "end": 47
+        }
+      ],
+      "expected": {
+        "write_formal_check": true,
+        "basis": "resume",
+        "numeric_competency_score": null,
+        "formal_evidence_indexes": [
+          0
+        ],
+        "indicator_evidence_indexes": [],
+        "result": "met",
+        "period_months_lower": 38,
+        "period_months_upper": 60,
+        "month_convention": "inclusive_calendar_months",
+        "requires_text_evidence": true,
+        "reason": "Один период с годами: нижняя граница 38 месяцев (2019-12–2023-01), верхняя 60. Даже нижняя превышает 24; met по резюме. Не превращать границы в извлечённые даты."
+      },
+      "is_synthetic": true,
+      "text_key": "py-9001/text/experience-year-only/v1",
+      "text_sha256": "27fe0d2200dddec16d52a05b8e319d62781debf9a5e1e98464781c66a6a8ebcf",
+      "card_role": "expected_available_fields",
+      "card_evidence": [
+        {
+          "path": "/experience/0/position",
+          "evidence_indexes": [
+            0
+          ]
+        }
+      ],
+      "card_limitations": [
+        {
+          "fact": "Годы начала 2019 и окончания 2023 без месяцев",
+          "reason": "Текущий CandidateCard допускает только ГГГГ-ММ. Годы сохранены в тексте; start/end не заполняются выдуманными месяцами. Расширение схемы согласуют Денис и Илья.",
+          "evidence_indexes": [
+            0
+          ]
+        }
+      ],
+      "authoring_note": "Адаптация примера Ильи от 20.11.2026: коммерческий характер указан явно; это не правило об учёте любого опыта."
+    },
+    {
+      "id": "experience-statement-consistent",
+      "rule_key": "synthetic.py.experience",
+      "candidate_code": "py-9001",
+      "candidate_text_id": "65a0a86a-28fa-5a74-b42a-8774f07baf48",
+      "text": "Общий коммерческий опыт — 3 года.\nКоммерческая работа разработчиком: 2021-01–2023-12.",
+      "card": {
+        "experience_years": 3,
+        "experience": [
+          {
+            "position": "разработчик",
+            "start": "2021-01",
+            "end": "2023-12"
+          }
+        ],
+        "pii_hidden": true
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "65a0a86a-28fa-5a74-b42a-8774f07baf48",
+          "quote": "Общий коммерческий опыт — 3 года.",
+          "start": 0,
+          "end": 33
+        },
+        {
+          "candidate_text_id": "65a0a86a-28fa-5a74-b42a-8774f07baf48",
+          "quote": "Коммерческая работа разработчиком: 2021-01–2023-12.",
+          "start": 34,
+          "end": 85
+        }
+      ],
+      "expected": {
+        "write_formal_check": true,
+        "basis": "resume",
+        "numeric_competency_score": null,
+        "formal_evidence_indexes": [
+          0,
+          1
+        ],
+        "indicator_evidence_indexes": [],
+        "result": "met",
+        "months": 36,
+        "statement_months": 36,
+        "period_months_lower": 36,
+        "period_months_upper": 36,
+        "experience_conflict": false,
+        "value_discrepancy": false,
+        "reason": "Заявление и периоды дают 36 месяцев: met по резюме без расхождения."
+      },
+      "is_synthetic": true,
+      "text_key": "py-9001/text/experience-statement-consistent/v1",
+      "text_sha256": "3f0bc355db0fc066984b22c369d4c54ade1d9a36212d507a6c9d770d596ca805",
+      "card_role": "expected_available_fields",
+      "card_evidence": [
+        {
+          "path": "/experience_years",
+          "evidence_indexes": [
+            0
+          ]
+        },
+        {
+          "path": "/experience/0/position",
+          "evidence_indexes": [
+            1
+          ]
+        },
+        {
+          "path": "/experience/0/start",
+          "evidence_indexes": [
+            1
+          ]
+        },
+        {
+          "path": "/experience/0/end",
+          "evidence_indexes": [
+            1
+          ]
+        }
+      ],
+      "card_limitations": [],
+      "authoring_note": "Адаптация примера Ильи от 20.11.2026: коммерческий характер указан явно; это не правило об учёте любого опыта."
+    },
+    {
+      "id": "experience-undated-with-statement",
+      "rule_key": "synthetic.py.experience",
+      "candidate_code": "py-9001",
+      "candidate_text_id": "d63dd706-e2dd-5488-918d-111a621cde8c",
+      "text": "Общий коммерческий опыт — 3 года.\nКоммерческая работа разработчиком; даты не указаны.",
+      "card": {
+        "experience_years": 3,
+        "experience": [
+          {
+            "position": "разработчик"
+          }
+        ],
+        "pii_hidden": true
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "d63dd706-e2dd-5488-918d-111a621cde8c",
+          "quote": "Общий коммерческий опыт — 3 года.",
+          "start": 0,
+          "end": 33
+        },
+        {
+          "candidate_text_id": "d63dd706-e2dd-5488-918d-111a621cde8c",
+          "quote": "Коммерческая работа разработчиком; даты не указаны.",
+          "start": 34,
+          "end": 85
+        }
+      ],
+      "expected": {
+        "write_formal_check": true,
+        "basis": "resume",
+        "numeric_competency_score": null,
+        "formal_evidence_indexes": [
+          0,
+          1
+        ],
+        "indicator_evidence_indexes": [],
+        "result": "met",
+        "statement_months": 36,
+        "period_months_lower": 0,
+        "period_months_upper": null,
+        "period_months_upper_unbounded": true,
+        "experience_conflict": false,
+        "reason": "Период без дат даёт [0, бесконечность]. Заявленные 36 месяцев допустимы внутри границ; met по заявлению, даты не выдумываются."
+      },
+      "is_synthetic": true,
+      "text_key": "py-9001/text/experience-undated-with-statement/v1",
+      "text_sha256": "0256f4294ab1f80048542ff594382ae39e050eb8c0175786fdcc4cdd8807222a",
+      "card_role": "expected_available_fields",
+      "card_evidence": [
+        {
+          "path": "/experience_years",
+          "evidence_indexes": [
+            0
+          ]
+        },
+        {
+          "path": "/experience/0/position",
+          "evidence_indexes": [
+            1
+          ]
+        }
+      ],
+      "card_limitations": [],
+      "authoring_note": "Адаптация примера Ильи от 20.11.2026: коммерческий характер указан явно; это не правило об учёте любого опыта."
+    },
+    {
+      "id": "experience-discrepancy-same-outcome",
+      "rule_key": "synthetic.py.experience",
+      "candidate_code": "py-9001",
+      "candidate_text_id": "b50a23c9-143e-5a14-9bc2-e5f8efd3643c",
+      "text": "Общий коммерческий опыт — 4 года.\nКоммерческая работа разработчиком: 2021-01–2023-12.",
+      "card": {
+        "experience_years": 4,
+        "experience": [
+          {
+            "position": "разработчик",
+            "start": "2021-01",
+            "end": "2023-12"
+          }
+        ],
+        "pii_hidden": true
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "b50a23c9-143e-5a14-9bc2-e5f8efd3643c",
+          "quote": "Общий коммерческий опыт — 4 года.",
+          "start": 0,
+          "end": 33
+        },
+        {
+          "candidate_text_id": "b50a23c9-143e-5a14-9bc2-e5f8efd3643c",
+          "quote": "Коммерческая работа разработчиком: 2021-01–2023-12.",
+          "start": 34,
+          "end": 85
+        }
+      ],
+      "expected": {
+        "write_formal_check": true,
+        "basis": "resume",
+        "numeric_competency_score": null,
+        "formal_evidence_indexes": [
+          0,
+          1
+        ],
+        "indicator_evidence_indexes": [],
+        "result": "met",
+        "statement_months": 48,
+        "period_months_lower": 36,
+        "period_months_upper": 36,
+        "value_discrepancy": true,
+        "experience_conflict": false,
+        "reason": "Заявлено 48 месяцев, по периодам 36: значения расходятся, но оба исхода met при пороге 24. Сохранить оба свидетельства и пометку о расхождении; не выбирать удобное число."
+      },
+      "is_synthetic": true,
+      "text_key": "py-9001/text/experience-discrepancy-same-outcome/v1",
+      "text_sha256": "11cb26aa090d8bc827ff85f7359e1ddd081cb746ad27c2e3de2d3ad1b475bbc5",
+      "card_role": "expected_available_fields",
+      "card_evidence": [
+        {
+          "path": "/experience_years",
+          "evidence_indexes": [
+            0
+          ]
+        },
+        {
+          "path": "/experience/0/position",
+          "evidence_indexes": [
+            1
+          ]
+        },
+        {
+          "path": "/experience/0/start",
+          "evidence_indexes": [
+            1
+          ]
+        },
+        {
+          "path": "/experience/0/end",
+          "evidence_indexes": [
+            1
+          ]
+        }
+      ],
+      "card_limitations": [],
+      "authoring_note": "Дополнительный случай команды по правилу Ильи 1.4: одинаковый исход по порогу при разных числах. Это ручное ожидание, не результат оценщика."
+    },
+    {
+      "id": "experience-year-same",
+      "rule_key": "synthetic.py.experience",
+      "candidate_code": "py-9001",
+      "candidate_text_id": "b8d7f656-4670-5c0a-8a6b-306b835f56e3",
+      "text": "Оплачиваемая работа разработчиком: 2022–2022.",
+      "card": {
+        "pii_hidden": true,
+        "experience": [
+          {
+            "duties": [
+              "Оплачиваемая работа разработчиком: 2022–2022."
+            ]
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "b8d7f656-4670-5c0a-8a6b-306b835f56e3",
+          "quote": "Оплачиваемая работа разработчиком: 2022–2022.",
+          "start": 0,
+          "end": 45
+        }
+      ],
+      "expected": {
+        "result": "not_met",
+        "write_formal_check": true,
+        "basis": "resume",
+        "numeric_competency_score": null,
+        "formal_evidence_indexes": [
+          0
+        ],
+        "indicator_evidence_indexes": [],
+        "period_months_lower": 0,
+        "period_months_upper": 12,
+        "period_kinds": [
+          "work"
+        ],
+        "reason": "По уточнению Ильи 20.11.2026: L=0, U=12, учебный порог 24 месяца; not_met по резюме. Вид опыта и точность дат не угадываются."
+      },
+      "is_synthetic": true,
+      "text_key": "py-9001/text/experience-year-same/v1",
+      "text_sha256": "f81d4a5c2084631345059cde323292ea2137b851555587f571f7a1dab834cda2",
+      "card_role": "expected_available_fields",
+      "card_evidence": [
+        {
+          "path": "/experience/0/duties/0",
+          "evidence_indexes": [
+            0
+          ]
+        }
+      ],
+      "card_limitations": [
+        {
+          "fact": "Тип периода: work; точность дат — как в цитате",
+          "reason": "В текущей карточке нет Experience.kind, даты без месяцев не представимы. Тип и неполные даты читаются из цитаты; вычисленные границы не подменяют исходные даты.",
+          "evidence_indexes": [
+            0
+          ]
+        }
+      ],
+      "authoring_note": "Ручной контрольный случай команды по уточнению Ильи от 20.11.2026; не результат модели и не расширение CandidateCard."
+    },
+    {
+      "id": "experience-year-duplicate",
+      "rule_key": "synthetic.py.experience",
+      "candidate_code": "py-9001",
+      "candidate_text_id": "3f5ed8e6-d355-5701-83da-0f0805b76d38",
+      "text": "Оплачиваемая работа разработчиком в компании А: 2022–2022.\nОплачиваемая работа разработчиком в компании Б: 2022–2022.",
+      "card": {
+        "pii_hidden": true,
+        "experience": [
+          {
+            "duties": [
+              "Оплачиваемая работа разработчиком в компании А: 2022–2022."
+            ]
+          },
+          {
+            "duties": [
+              "Оплачиваемая работа разработчиком в компании Б: 2022–2022."
+            ]
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "3f5ed8e6-d355-5701-83da-0f0805b76d38",
+          "quote": "Оплачиваемая работа разработчиком в компании А: 2022–2022.",
+          "start": 0,
+          "end": 58
+        },
+        {
+          "candidate_text_id": "3f5ed8e6-d355-5701-83da-0f0805b76d38",
+          "quote": "Оплачиваемая работа разработчиком в компании Б: 2022–2022.",
+          "start": 59,
+          "end": 117
+        }
+      ],
+      "expected": {
+        "result": "not_met",
+        "write_formal_check": true,
+        "basis": "resume",
+        "numeric_competency_score": null,
+        "formal_evidence_indexes": [
+          0,
+          1
+        ],
+        "indicator_evidence_indexes": [],
+        "period_months_lower": 0,
+        "period_months_upper": 12,
+        "period_kinds": [
+          "work",
+          "work"
+        ],
+        "reason": "По уточнению Ильи 20.11.2026: L=0, U=12, учебный порог 24 месяца; not_met по резюме. Вид опыта и точность дат не угадываются."
+      },
+      "is_synthetic": true,
+      "text_key": "py-9001/text/experience-year-duplicate/v1",
+      "text_sha256": "85cdb344f4a8f16ee4d137665db282ad2b4aa72053a89494b135e95c257f1f61",
+      "card_role": "expected_available_fields",
+      "card_evidence": [
+        {
+          "path": "/experience/0/duties/0",
+          "evidence_indexes": [
+            0
+          ]
+        },
+        {
+          "path": "/experience/1/duties/0",
+          "evidence_indexes": [
+            1
+          ]
+        }
+      ],
+      "card_limitations": [
+        {
+          "fact": "Тип периода: work; точность дат — как в цитате",
+          "reason": "В текущей карточке нет Experience.kind, даты без месяцев не представимы. Тип и неполные даты читаются из цитаты; вычисленные границы не подменяют исходные даты.",
+          "evidence_indexes": [
+            0
+          ]
+        },
+        {
+          "fact": "Тип периода: work; точность дат — как в цитате",
+          "reason": "В текущей карточке нет Experience.kind, даты без месяцев не представимы. Тип и неполные даты читаются из цитаты; вычисленные границы не подменяют исходные даты.",
+          "evidence_indexes": [
+            1
+          ]
+        }
+      ],
+      "authoring_note": "Ручной контрольный случай команды по уточнению Ильи от 20.11.2026; не результат модели и не расширение CandidateCard."
+    },
+    {
+      "id": "experience-year-adjacent",
+      "rule_key": "synthetic.py.experience",
+      "candidate_code": "py-9001",
+      "candidate_text_id": "7c3c62bf-c008-5f2d-b8db-0cc06e5533d4",
+      "text": "Оплачиваемая работа разработчиком в компании А: 2022–2022.\nОплачиваемая работа разработчиком в компании Б: 2023–2023.",
+      "card": {
+        "pii_hidden": true,
+        "experience": [
+          {
+            "duties": [
+              "Оплачиваемая работа разработчиком в компании А: 2022–2022."
+            ]
+          },
+          {
+            "duties": [
+              "Оплачиваемая работа разработчиком в компании Б: 2023–2023."
+            ]
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "7c3c62bf-c008-5f2d-b8db-0cc06e5533d4",
+          "quote": "Оплачиваемая работа разработчиком в компании А: 2022–2022.",
+          "start": 0,
+          "end": 58
+        },
+        {
+          "candidate_text_id": "7c3c62bf-c008-5f2d-b8db-0cc06e5533d4",
+          "quote": "Оплачиваемая работа разработчиком в компании Б: 2023–2023.",
+          "start": 59,
+          "end": 117
+        }
+      ],
+      "expected": {
+        "result": "unknown",
+        "write_formal_check": true,
+        "basis": "resume",
+        "numeric_competency_score": null,
+        "formal_evidence_indexes": [
+          0,
+          1
+        ],
+        "indicator_evidence_indexes": [],
+        "period_months_lower": 0,
+        "period_months_upper": 24,
+        "period_kinds": [
+          "work",
+          "work"
+        ],
+        "reason": "По уточнению Ильи 20.11.2026: L=0, U=24, учебный порог 24 месяца; unknown по резюме. Вид опыта и точность дат не угадываются."
+      },
+      "is_synthetic": true,
+      "text_key": "py-9001/text/experience-year-adjacent/v1",
+      "text_sha256": "327f1c88276622c72a06c2a71af58c21ace0202c3144747794321e3986db6858",
+      "card_role": "expected_available_fields",
+      "card_evidence": [
+        {
+          "path": "/experience/0/duties/0",
+          "evidence_indexes": [
+            0
+          ]
+        },
+        {
+          "path": "/experience/1/duties/0",
+          "evidence_indexes": [
+            1
+          ]
+        }
+      ],
+      "card_limitations": [
+        {
+          "fact": "Тип периода: work; точность дат — как в цитате",
+          "reason": "В текущей карточке нет Experience.kind, даты без месяцев не представимы. Тип и неполные даты читаются из цитаты; вычисленные границы не подменяют исходные даты.",
+          "evidence_indexes": [
+            0
+          ]
+        },
+        {
+          "fact": "Тип периода: work; точность дат — как в цитате",
+          "reason": "В текущей карточке нет Experience.kind, даты без месяцев не представимы. Тип и неполные даты читаются из цитаты; вычисленные границы не подменяют исходные даты.",
+          "evidence_indexes": [
+            1
+          ]
+        }
+      ],
+      "authoring_note": "Ручной контрольный случай команды по уточнению Ильи от 20.11.2026; не результат модели и не расширение CandidateCard."
+    },
+    {
+      "id": "experience-mixed-precision",
+      "rule_key": "synthetic.py.experience",
+      "candidate_code": "py-9001",
+      "candidate_text_id": "60d117b5-59bd-53f6-a97b-f19671bb7ed6",
+      "text": "Оплачиваемая работа разработчиком: 2021 — 2023-06.",
+      "card": {
+        "pii_hidden": true,
+        "experience": [
+          {
+            "duties": [
+              "Оплачиваемая работа разработчиком: 2021 — 2023-06."
+            ],
+            "end": "2023-06"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "60d117b5-59bd-53f6-a97b-f19671bb7ed6",
+          "quote": "Оплачиваемая работа разработчиком: 2021 — 2023-06.",
+          "start": 0,
+          "end": 50
+        }
+      ],
+      "expected": {
+        "result": "unknown",
+        "write_formal_check": true,
+        "basis": "resume",
+        "numeric_competency_score": null,
+        "formal_evidence_indexes": [
+          0
+        ],
+        "indicator_evidence_indexes": [],
+        "period_months_lower": 19,
+        "period_months_upper": 30,
+        "period_kinds": [
+          "work"
+        ],
+        "reason": "По уточнению Ильи 20.11.2026: L=19, U=30, учебный порог 24 месяца; unknown по резюме. Вид опыта и точность дат не угадываются."
+      },
+      "is_synthetic": true,
+      "text_key": "py-9001/text/experience-mixed-precision/v1",
+      "text_sha256": "bf8ee7033e8071d4c00d3361a53d1920b192bf8b659e2d637a06460f0a05204c",
+      "card_role": "expected_available_fields",
+      "card_evidence": [
+        {
+          "path": "/experience/0/end",
+          "evidence_indexes": [
+            0
+          ]
+        },
+        {
+          "path": "/experience/0/duties/0",
+          "evidence_indexes": [
+            0
+          ]
+        }
+      ],
+      "card_limitations": [
+        {
+          "fact": "Тип периода: work; точность дат — как в цитате",
+          "reason": "В текущей карточке нет Experience.kind, даты без месяцев не представимы. Тип и неполные даты читаются из цитаты; вычисленные границы не подменяют исходные даты.",
+          "evidence_indexes": [
+            0
+          ]
+        }
+      ],
+      "authoring_note": "Ручной контрольный случай команды по уточнению Ильи от 20.11.2026; не результат модели и не расширение CandidateCard."
+    },
+    {
+      "id": "experience-contract",
+      "rule_key": "synthetic.py.experience",
+      "candidate_code": "py-9001",
+      "candidate_text_id": "0a0b120e-703e-5329-9586-22420f27c2f0",
+      "text": "Оплачиваемая разработка для работодателя по договору: 2021-01–2023-12.",
+      "card": {
+        "pii_hidden": true,
+        "experience": [
+          {
+            "duties": [
+              "Оплачиваемая разработка для работодателя по договору: 2021-01–2023-12."
+            ],
+            "start": "2021-01",
+            "end": "2023-12"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "0a0b120e-703e-5329-9586-22420f27c2f0",
+          "quote": "Оплачиваемая разработка для работодателя по договору: 2021-01–2023-12.",
+          "start": 0,
+          "end": 70
+        }
+      ],
+      "expected": {
+        "result": "met",
+        "write_formal_check": true,
+        "basis": "resume",
+        "numeric_competency_score": null,
+        "formal_evidence_indexes": [
+          0
+        ],
+        "indicator_evidence_indexes": [],
+        "period_months_lower": 36,
+        "period_months_upper": 36,
+        "period_kinds": [
+          "contract"
+        ],
+        "reason": "По уточнению Ильи 20.11.2026: L=36, U=36, учебный порог 24 месяца; met по резюме. Вид опыта и точность дат не угадываются."
+      },
+      "is_synthetic": true,
+      "text_key": "py-9001/text/experience-contract/v1",
+      "text_sha256": "982f3a91d80955a62c1f7eca74bd7c2c44e2b188662bb5d0097d99aea57f663a",
+      "card_role": "expected_available_fields",
+      "card_evidence": [
+        {
+          "path": "/experience/0/start",
+          "evidence_indexes": [
+            0
+          ]
+        },
+        {
+          "path": "/experience/0/end",
+          "evidence_indexes": [
+            0
+          ]
+        },
+        {
+          "path": "/experience/0/duties/0",
+          "evidence_indexes": [
+            0
+          ]
+        }
+      ],
+      "card_limitations": [
+        {
+          "fact": "Тип периода: contract; точность дат — как в цитате",
+          "reason": "В текущей карточке нет Experience.kind, даты без месяцев не представимы. Тип и неполные даты читаются из цитаты; вычисленные границы не подменяют исходные даты.",
+          "evidence_indexes": [
+            0
+          ]
+        }
+      ],
+      "authoring_note": "Ручной контрольный случай команды по уточнению Ильи от 20.11.2026; не результат модели и не расширение CandidateCard."
+    },
+    {
+      "id": "experience-internship-uncertain",
+      "rule_key": "synthetic.py.experience",
+      "candidate_code": "py-9001",
+      "candidate_text_id": "70475c89-b335-593d-9d3e-f97807add351",
+      "text": "Стажировка разработчиком: 2021-01–2023-12; оплата и вид договора не указаны.",
+      "card": {
+        "pii_hidden": true,
+        "experience": [
+          {
+            "duties": [
+              "Стажировка разработчиком: 2021-01–2023-12; оплата и вид договора не указаны."
+            ],
+            "start": "2021-01",
+            "end": "2023-12"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "70475c89-b335-593d-9d3e-f97807add351",
+          "quote": "Стажировка разработчиком: 2021-01–2023-12; оплата и вид договора не указаны.",
+          "start": 0,
+          "end": 76
+        }
+      ],
+      "expected": {
+        "result": "unknown",
+        "write_formal_check": true,
+        "basis": "resume",
+        "numeric_competency_score": null,
+        "formal_evidence_indexes": [
+          0
+        ],
+        "indicator_evidence_indexes": [],
+        "period_months_lower": 0,
+        "period_months_upper": 36,
+        "period_kinds": [
+          "internship"
+        ],
+        "reason": "По уточнению Ильи 20.11.2026: L=0, U=36, учебный порог 24 месяца; unknown по резюме. Вид опыта и точность дат не угадываются."
+      },
+      "is_synthetic": true,
+      "text_key": "py-9001/text/experience-internship-uncertain/v1",
+      "text_sha256": "d8265bba6871f483b1f64186f196ee5753d9824b17aca697a4574dd2feb026f5",
+      "card_role": "expected_available_fields",
+      "card_evidence": [
+        {
+          "path": "/experience/0/start",
+          "evidence_indexes": [
+            0
+          ]
+        },
+        {
+          "path": "/experience/0/end",
+          "evidence_indexes": [
+            0
+          ]
+        },
+        {
+          "path": "/experience/0/duties/0",
+          "evidence_indexes": [
+            0
+          ]
+        }
+      ],
+      "card_limitations": [
+        {
+          "fact": "Тип периода: internship; точность дат — как в цитате",
+          "reason": "В текущей карточке нет Experience.kind, даты без месяцев не представимы. Тип и неполные даты читаются из цитаты; вычисленные границы не подменяют исходные даты.",
+          "evidence_indexes": [
+            0
+          ]
+        }
+      ],
+      "authoring_note": "Ручной контрольный случай команды по уточнению Ильи от 20.11.2026; не результат модели и не расширение CandidateCard."
+    },
+    {
+      "id": "experience-kind-unknown",
+      "rule_key": "synthetic.py.experience",
+      "candidate_code": "py-9001",
+      "candidate_text_id": "47f76f35-8e33-5b11-83e2-609a22f13edd",
+      "text": "Разработка: 2021-01–2023-12; вид занятости и оплата не указаны.",
+      "card": {
+        "pii_hidden": true,
+        "experience": [
+          {
+            "duties": [
+              "Разработка: 2021-01–2023-12; вид занятости и оплата не указаны."
+            ],
+            "start": "2021-01",
+            "end": "2023-12"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "47f76f35-8e33-5b11-83e2-609a22f13edd",
+          "quote": "Разработка: 2021-01–2023-12; вид занятости и оплата не указаны.",
+          "start": 0,
+          "end": 63
+        }
+      ],
+      "expected": {
+        "result": "unknown",
+        "write_formal_check": true,
+        "basis": "resume",
+        "numeric_competency_score": null,
+        "formal_evidence_indexes": [
+          0
+        ],
+        "indicator_evidence_indexes": [],
+        "period_months_lower": 0,
+        "period_months_upper": 36,
+        "period_kinds": [
+          null
+        ],
+        "reason": "По уточнению Ильи 20.11.2026: L=0, U=36, учебный порог 24 месяца; unknown по резюме. Вид опыта и точность дат не угадываются."
+      },
+      "is_synthetic": true,
+      "text_key": "py-9001/text/experience-kind-unknown/v1",
+      "text_sha256": "75ff88386c7b82472d231a02f7135808722599bb5cfa423e1bc0b0c8bd4218da",
+      "card_role": "expected_available_fields",
+      "card_evidence": [
+        {
+          "path": "/experience/0/start",
+          "evidence_indexes": [
+            0
+          ]
+        },
+        {
+          "path": "/experience/0/end",
+          "evidence_indexes": [
+            0
+          ]
+        },
+        {
+          "path": "/experience/0/duties/0",
+          "evidence_indexes": [
+            0
+          ]
+        }
+      ],
+      "card_limitations": [
+        {
+          "fact": "Тип периода: не установлен; точность дат — как в цитате",
+          "reason": "В текущей карточке нет Experience.kind, даты без месяцев не представимы. Тип и неполные даты читаются из цитаты; вычисленные границы не подменяют исходные даты.",
+          "evidence_indexes": [
+            0
+          ]
+        }
+      ],
+      "authoring_note": "Ручной контрольный случай команды по уточнению Ильи от 20.11.2026; не результат модели и не расширение CandidateCard."
+    },
+    {
+      "id": "experience-project-excluded",
+      "rule_key": "synthetic.py.experience",
+      "candidate_code": "py-9001",
+      "candidate_text_id": "b8c898e7-b781-581c-90ea-a1bdccf3726c",
+      "text": "Оплачиваемая работа разработчиком: 2024-01–2024-12.\nЛичный учебный проект: 2021-01–2023-12.",
+      "card": {
+        "pii_hidden": true,
+        "experience": [
+          {
+            "duties": [
+              "Оплачиваемая работа разработчиком: 2024-01–2024-12."
+            ],
+            "start": "2024-01",
+            "end": "2024-12"
+          },
+          {
+            "duties": [
+              "Личный учебный проект: 2021-01–2023-12."
+            ],
+            "start": "2021-01",
+            "end": "2023-12"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "b8c898e7-b781-581c-90ea-a1bdccf3726c",
+          "quote": "Оплачиваемая работа разработчиком: 2024-01–2024-12.",
+          "start": 0,
+          "end": 51
+        },
+        {
+          "candidate_text_id": "b8c898e7-b781-581c-90ea-a1bdccf3726c",
+          "quote": "Личный учебный проект: 2021-01–2023-12.",
+          "start": 52,
+          "end": 91
+        }
+      ],
+      "expected": {
+        "result": "not_met",
+        "write_formal_check": true,
+        "basis": "resume",
+        "numeric_competency_score": null,
+        "formal_evidence_indexes": [
+          0,
+          1
+        ],
+        "indicator_evidence_indexes": [],
+        "period_months_lower": 12,
+        "period_months_upper": 12,
+        "period_kinds": [
+          "work",
+          "project"
+        ],
+        "reason": "По уточнению Ильи 20.11.2026: L=12, U=12, учебный порог 24 месяца; not_met по резюме. Вид опыта и точность дат не угадываются."
+      },
+      "is_synthetic": true,
+      "text_key": "py-9001/text/experience-project-excluded/v1",
+      "text_sha256": "25f8fe696d19612f35994af369c47a197908581c3b1ed63f133465b9fb4f0ae0",
+      "card_role": "expected_available_fields",
+      "card_evidence": [
+        {
+          "path": "/experience/0/start",
+          "evidence_indexes": [
+            0
+          ]
+        },
+        {
+          "path": "/experience/0/end",
+          "evidence_indexes": [
+            0
+          ]
+        },
+        {
+          "path": "/experience/0/duties/0",
+          "evidence_indexes": [
+            0
+          ]
+        },
+        {
+          "path": "/experience/1/start",
+          "evidence_indexes": [
+            1
+          ]
+        },
+        {
+          "path": "/experience/1/end",
+          "evidence_indexes": [
+            1
+          ]
+        },
+        {
+          "path": "/experience/1/duties/0",
+          "evidence_indexes": [
+            1
+          ]
+        }
+      ],
+      "card_limitations": [
+        {
+          "fact": "Тип периода: work; точность дат — как в цитате",
+          "reason": "В текущей карточке нет Experience.kind, даты без месяцев не представимы. Тип и неполные даты читаются из цитаты; вычисленные границы не подменяют исходные даты.",
+          "evidence_indexes": [
+            0
+          ]
+        },
+        {
+          "fact": "Тип периода: project; точность дат — как в цитате",
+          "reason": "В текущей карточке нет Experience.kind, даты без месяцев не представимы. Тип и неполные даты читаются из цитаты; вычисленные границы не подменяют исходные даты.",
+          "evidence_indexes": [
+            1
+          ]
+        }
+      ],
+      "authoring_note": "Ручной контрольный случай команды по уточнению Ильи от 20.11.2026; не результат модели и не расширение CandidateCard."
+    },
+    {
+      "id": "experience-internship-upper-below",
+      "rule_key": "synthetic.py.experience",
+      "candidate_code": "py-9001",
+      "candidate_text_id": "5bd74aae-52c7-5f4f-8255-24ffc812e220",
+      "text": "Стажировка разработчиком: 2024-01–2024-12; оплата не указана.",
+      "card": {
+        "pii_hidden": true,
+        "experience": [
+          {
+            "duties": [
+              "Стажировка разработчиком: 2024-01–2024-12; оплата не указана."
+            ],
+            "start": "2024-01",
+            "end": "2024-12"
+          }
+        ]
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "5bd74aae-52c7-5f4f-8255-24ffc812e220",
+          "quote": "Стажировка разработчиком: 2024-01–2024-12; оплата не указана.",
+          "start": 0,
+          "end": 61
+        }
+      ],
+      "expected": {
+        "result": "not_met",
+        "write_formal_check": true,
+        "basis": "resume",
+        "numeric_competency_score": null,
+        "formal_evidence_indexes": [
+          0
+        ],
+        "indicator_evidence_indexes": [],
+        "period_months_lower": 0,
+        "period_months_upper": 12,
+        "period_kinds": [
+          "internship"
+        ],
+        "reason": "По уточнению Ильи 20.11.2026: L=0, U=12, учебный порог 24 месяца; not_met по резюме. Вид опыта и точность дат не угадываются."
+      },
+      "is_synthetic": true,
+      "text_key": "py-9001/text/experience-internship-upper-below/v1",
+      "text_sha256": "ecd7055c846250a7e7e211a403f77d8dbc6f1011178cfe762c8201d8563fbf2a",
+      "card_role": "expected_available_fields",
+      "card_evidence": [
+        {
+          "path": "/experience/0/start",
+          "evidence_indexes": [
+            0
+          ]
+        },
+        {
+          "path": "/experience/0/end",
+          "evidence_indexes": [
+            0
+          ]
+        },
+        {
+          "path": "/experience/0/duties/0",
+          "evidence_indexes": [
+            0
+          ]
+        }
+      ],
+      "card_limitations": [
+        {
+          "fact": "Тип периода: internship; точность дат — как в цитате",
+          "reason": "В текущей карточке нет Experience.kind, даты без месяцев не представимы. Тип и неполные даты читаются из цитаты; вычисленные границы не подменяют исходные даты.",
+          "evidence_indexes": [
+            0
+          ]
+        }
+      ],
+      "authoring_note": "Ручной контрольный случай команды по уточнению Ильи от 20.11.2026; не результат модели и не расширение CandidateCard."
+    },
+    {
+      "id": "experience-general-one-year",
+      "rule_key": "synthetic.py.experience",
+      "candidate_code": "py-9001",
+      "candidate_text_id": "b90910ee-73dd-5b01-9091-79f9a92b7c4a",
+      "text": "Общий опыт — 1 год.",
+      "card": {
+        "pii_hidden": true,
+        "experience_years": 1
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "b90910ee-73dd-5b01-9091-79f9a92b7c4a",
+          "quote": "Общий опыт — 1 год.",
+          "start": 0,
+          "end": 19
+        }
+      ],
+      "expected": {
+        "result": "not_met",
+        "write_formal_check": true,
+        "basis": "resume",
+        "numeric_competency_score": null,
+        "formal_evidence_indexes": [
+          0
+        ],
+        "indicator_evidence_indexes": [],
+        "period_kinds": [],
+        "reason": "Заявлен общий, не явно коммерческий опыт: только верхняя граница 12 месяцев. При пороге 24 результат not_met; положительное подтверждение коммерческого стажа не выводится.",
+        "statement_scope": "total",
+        "statement_upper_months": 12
+      },
+      "is_synthetic": true,
+      "text_key": "py-9001/text/experience-general-one-year/v1",
+      "text_sha256": "9c6b00350e5a653ba0967fb01211ddc9087fc3d339f92fdb67bc890de203033e",
+      "card_role": "expected_available_fields",
+      "card_evidence": [
+        {
+          "path": "/experience_years",
+          "evidence_indexes": [
+            0
+          ]
+        }
+      ],
+      "card_limitations": [
+        {
+          "fact": "Заявление об общем опыте без коммерческого уточнения",
+          "reason": "experience_years не хранит scope заявления; оценщик обязан учитывать цитату. Это верхняя граница коммерческого стажа, не точное значение.",
+          "evidence_indexes": [
+            0
+          ]
+        }
+      ],
+      "authoring_note": "Ручной контрольный случай команды по уточнению Ильи от 20.11.2026; не результат модели и не расширение CandidateCard."
+    },
+    {
+      "id": "experience-general-three-years",
+      "rule_key": "synthetic.py.experience",
+      "candidate_code": "py-9001",
+      "candidate_text_id": "2fb96977-df31-53e5-a32b-d6208897492c",
+      "text": "Общий опыт — 3 года.",
+      "card": {
+        "pii_hidden": true,
+        "experience_years": 3
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "2fb96977-df31-53e5-a32b-d6208897492c",
+          "quote": "Общий опыт — 3 года.",
+          "start": 0,
+          "end": 20
+        }
+      ],
+      "expected": {
+        "result": "unknown",
+        "write_formal_check": true,
+        "basis": "resume",
+        "numeric_competency_score": null,
+        "formal_evidence_indexes": [
+          0
+        ],
+        "indicator_evidence_indexes": [],
+        "period_kinds": [],
+        "reason": "Заявлен общий, не явно коммерческий опыт: только верхняя граница 36 месяцев. При пороге 24 результат unknown; положительное подтверждение коммерческого стажа не выводится.",
+        "statement_scope": "total",
+        "statement_upper_months": 36
+      },
+      "is_synthetic": true,
+      "text_key": "py-9001/text/experience-general-three-years/v1",
+      "text_sha256": "0cd543968a3d72873b17956961ecf3ffffed449a6a862e0c5182bc22d3b6a6c8",
+      "card_role": "expected_available_fields",
+      "card_evidence": [
+        {
+          "path": "/experience_years",
+          "evidence_indexes": [
+            0
+          ]
+        }
+      ],
+      "card_limitations": [
+        {
+          "fact": "Заявление об общем опыте без коммерческого уточнения",
+          "reason": "experience_years не хранит scope заявления; оценщик обязан учитывать цитату. Это верхняя граница коммерческого стажа, не точное значение.",
+          "evidence_indexes": [
+            0
+          ]
+        }
+      ],
+      "authoring_note": "Ручной контрольный случай команды по уточнению Ильи от 20.11.2026; не результат модели и не расширение CandidateCard."
     }
   ],
   "notes": [
@@ -1747,14 +2959,18 @@
     "Знания с verification=interview представлено индикаторами, не формальными воротами; баллы компетенций не рассчитаны.",
     "card — ручное ожидание доступных полей текущего CandidateCard, не результат модели. card_limitations перечисляет факты, которые контракт не выражает; исходные цитаты обязательны.",
     "Илья вручную принял 20 из прежних 24 ожиданий. Оценщика с моделью пока нет; исправленные случаи ожидают повторной сверки.",
-    "Overlap сохраняет прежние 36 только как historical expectation; предложенные 37 и включительная конвенция требуют решения Q-MONTHS."
+    "period_months_lower/upper, statement_months, value_discrepancy, experience_conflict — поля ручного ожидания, не расширение CandidateCard или формата БД. upper=null при upper_unbounded=true означает бесконечность.",
+    "as_of — фиксированный месяц запуска для текущей работы; это вход расчёта, не извлечённый факт резюме.",
+    "20.11.2026: ответ Ильи и последующее уточнение приняты для учебных ожиданий. Включительные месяцы, L/U по виду работы и неполным датам, общий стаж только как верхняя граница. Специальные значения не добавлены в CandidateCard.",
+    "Ревизия 3: 16 новых случаев; четыре исходных примера Ильи адаптированы явным коммерческим контекстом, замена в двух заявлениях подтверждена Ильёй. Прежние 25 текстов и UUID сохранены.",
+    "same_as и словарь basis=resume/documents/interview/test уточнены Ильёй. Карточка и хранение результатов в БД остаются в работе владельцев модулей."
   ],
-  "fixture_revision": 2,
+  "fixture_revision": 3,
   "uuid_namespace": "d0137233-a161-59f2-876e-34ec1c1142a6",
   "uuid_rule": "candidate_text_id = uuid5(UUID(uuid_namespace), text_key); изменённый текст получает новый версионный text_key",
   "identity_source": "Принят предложенный Ильёй namespace из fixtures/assessment/py-9001.json; первые три текста используют его text_key. Изменение его ключей профиля остаётся за Ильёй.",
   "real_profile_versions": {
     "hr-consultant": 3,
-    "python-dev": 3
+    "python-dev": 4
   }
 }
