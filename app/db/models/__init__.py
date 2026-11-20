@@ -23,10 +23,12 @@ from app.db.models.selection import (
     StageEvent,
 )
 from app.db.models.sources import SourceDocument
+from app.db.models.postings import ApplicationPostingSource
 from app.db.models.users import AuditLog, User
 
 __all__ = [
     "Application",
+    "ApplicationPostingSource",
     "Assessment",
     "AuditLog",
     "Candidate",

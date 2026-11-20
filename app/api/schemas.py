@@ -8,6 +8,7 @@ from datetime import date, datetime
 from enum import StrEnum
 from typing import Any, Literal
 from app.assessment.applicability import Applicability
+from app.postings.service import ApplicationResolution
 # Статусы оценки — общие с моделью чтения кросс-оценок (app.assessment.state).
 from app.assessment.state import AssessmentStatus, StaleReason  # noqa: F401
 from app.schemas.competency_details import CompetencyDetails, IndicatorResult, ProfileCounters
@@ -76,6 +77,7 @@ class VacancyListOut(BaseModel):
 # --- GET /vacancies/{id}/applications -----------------------------------------
 
 class ApplicationListItemOut(BaseModel):
+    posting_resolution: ApplicationResolution | None = None
     posting_title: str | None = None
     target_position_code: str | None = None
     applicability: Applicability | None = None
@@ -199,6 +201,7 @@ class AssessmentOut(BaseModel):
 
 
 class ApplicationDetailOut(BaseModel):
+    posting_resolution: ApplicationResolution | None = None
     posting_title: str | None = None
     target_position_code: str | None = None
     applicability: Applicability | None = None
@@ -211,7 +214,12 @@ class ApplicationDetailOut(BaseModel):
     assessment: AssessmentOut | None
 
 
+class PostingSnapshotIn(BaseModel):
+    application_ids: list[uuid.UUID] = Field(min_length=1, max_length=5000)
+
+
 class ComparisonOut(BaseModel):
+    posting_resolution: ApplicationResolution | None = None
     purpose: Literal['comparison'] = 'comparison'
     application_id: uuid.UUID
     candidate_id: uuid.UUID

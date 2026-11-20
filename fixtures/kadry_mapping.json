@@ -9,24 +9,25 @@
   },
   "entries": [
     {
-      "source_path": "Кадры/Кейс.pdf",
+      "source_path": "Кейс.pdf",
       "document_kind": "other",
       "channel": "internal"
     },
     {
-      "source_path": "Кадры/Frontend developer/Разработчик клиентского ПО.docx",
+      "source_path": "Frontend developer/Разработчик клиентского ПО.docx",
       "document_kind": "job_description",
       "channel": "internal"
     },
     {
-      "source_path": "Кадры/Junior UX_UI Дизайнер/Дизайнер клиентского ПО.docx",
+      "source_path": "Junior UX_UI Дизайнер/Дизайнер клиентского ПО.docx",
       "document_kind": "job_description",
       "channel": "internal"
     },
     {
-      "source_path": "Кадры/QA Engineer Manual/ПРОВЕРЕНО 2024 Инженер по тестированию ПО.docx",
+      "source_path": "QA Engineer Manual/ПРОВЕРЕНО 2024 Инженер по тестированию ПО.docx",
       "document_kind": "job_description",
       "channel": "internal"
     }
-  ]
+  ],
+  "dataset_id": "kadry-2026"
 }
