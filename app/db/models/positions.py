@@ -300,12 +300,15 @@ class CompetencyIndicator(_RowSource, Base):
     acceptance: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
     # Строка сохранена ради прослеживаемости, но в оценку не входит (например, право, а не компетенция).
     excluded_from_scoring: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    same_as: Mapped[str | None] = mapped_column(String(64))
     sort_order: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
 
     competency: Mapped[Competency] = relationship(back_populates="indicators")
 
     __table_args__ = (
         UniqueConstraint("competency_id", "key", name="uq_competency_indicators_competency_key"),
+        CheckConstraint("same_as IS NULL OR (length(trim(same_as)) > 0 AND NOT excluded_from_scoring)",
+                        name="same_as_member"),
         _row_source_check(),
         _check_stage_check(),
     )

@@ -55,6 +55,8 @@ Swagger UI — http://127.0.0.1:8000/docs, проверка — `GET /api/v1/hea
 uv run python -m scripts.check_assessment_fixtures
 ```
 
+Сквозной прогон `py-9001` от импорта до ответа API (утверждение профиля, оценка, цитата) — [docs/modules/assessment.md](docs/modules/assessment.md#сквозной-прогон-py-9001-qa-01).
+
 Синтетический отклик `py-9001` с ожидаемой карточкой, проверками, цитатами и итогом для 12 случаев, включая отрицательные. Описание — [fixtures/assessment/README.md](fixtures/assessment/README.md), устройство модуля — [docs/modules/assessment.md](docs/modules/assessment.md).
 
 ## Проверка на реальном резюме

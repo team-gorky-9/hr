@@ -17,6 +17,12 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.errors import ApiError, not_found
+from app.assessment.applicability import resolve_applicability
+from app.assessment.version import ALGORITHM_VERSION
+from app.assessment.prompts import ASSESS_PROMPT_VERSION
+from app.assessment.counters import aggregate_profile
+from app.schemas.competency_details import CompetencyDetails
+from app.api.schemas import ComparisonOut, CompetencyDetailsOut
 from app.api.schemas import (
     AlternativeOut,
     ApplicationDetailOut,
@@ -97,6 +103,39 @@ class AssessmentState:
     stale_reason: StaleReason | None = None
 
 
+def application_state(state: AssessmentState, position_code: str, posting_title: str | None):
+    mapping = resolve_applicability(position_code, posting_title)
+    if mapping and mapping.status != 'confirmed':
+        status = AssessmentStatus.NOT_APPLICABLE if mapping.status == 'mismatch' else AssessmentStatus.MAPPING_REQUIRED
+        return AssessmentState(status), mapping
+    return state, mapping
+
+
+def _competency_details_out(details, texts):
+    if details is None:
+        return None
+    return CompetencyDetailsOut.model_validate({**details, 'indicators': [
+        {**item, 'evidence': evidence_out(item['evidence'], texts)} for item in details['indicators']]})
+
+
+def get_comparison(session: Session, application_id: uuid.UUID, profile_id: uuid.UUID) -> ComparisonOut:
+    application = session.get(Application, application_id)
+    profile = session.get(RequirementProfile, profile_id)
+    if application is None or profile is None:
+        raise not_found('COMPARISON_NOT_FOUND', 'Отклик или профиль не найден')
+    candidate = session.get(Candidate, application.candidate_id)
+    if profile.status == RequirementStatus.ARCHIVED or (not candidate.is_synthetic and
+            (profile.is_synthetic or profile.status != RequirementStatus.APPROVED)):
+        raise ApiError(422, 'PROFILE_NOT_ALLOWED', 'Профиль недоступен в контуре кандидата', {})
+    position = session.get(Position, profile.position_id)
+    state = resolve_states(session, [candidate.id], profile, position.id, profile.is_synthetic)[candidate.id]
+    return ComparisonOut(application_id=application.id, candidate_id=candidate.id,
+        posting_title=application.posting_title, target_position_code=position.code, profile_id=profile.id,
+        applicability=resolve_applicability(position.code, application.posting_title),
+        assessment_status=state.status,
+        assessment=_assessment_out(session, candidate, state) if state.assessment else None)
+
+
 def resolve_states(
     session: Session,
     candidate_ids: Sequence[uuid.UUID],
@@ -109,7 +148,8 @@ def resolve_states(
     Правила (api.md п. 2.2, развилка Р2 плана):
     1. нет утверждённого профиля в контуре → no_approved_profile;
     2. есть текущая оценка по утверждённому профилю → ready, но если карточка этой оценки
-       извлечена не из текущей версии текста → stale (text_changed);
+       извлечена не из текущей версии текста → stale (text_changed), а алгоритм или
+       промпт оценки отличается от текущего → stale (algorithm_changed);
     3. есть только текущая оценка по другому профилю этой должности в том же контуре
        (утверждённый профиль с тех пор сменился) → stale (profile_changed);
     4. иначе → not_assessed.
@@ -155,6 +195,9 @@ def resolve_states(
             assessment, card_text_id = on_approved[cid]
             if card_text_id != current_text_ids.get(cid):
                 states[cid] = AssessmentState(AssessmentStatus.STALE, assessment, StaleReason.TEXT_CHANGED)
+            elif (assessment.algorithm_version != ALGORITHM_VERSION
+                  or assessment.prompt_version != ASSESS_PROMPT_VERSION):
+                states[cid] = AssessmentState(AssessmentStatus.STALE, assessment, StaleReason.ALGORITHM_CHANGED)
             else:
                 states[cid] = AssessmentState(AssessmentStatus.READY, assessment)
         elif cid in on_other:
@@ -216,6 +259,7 @@ def list_vacancies(session: Session, contour: Contour) -> VacancyListOut:
 
 @dataclass
 class ApplicationFilters:
+    applicability: str | None = None
     stage_code: str | None = None
     formal_result: CheckResult | None = None
     formal_preliminary: bool | None = None
@@ -239,9 +283,8 @@ def list_applications(
         .where(Application.vacancy_id == vacancy.id, Candidate.is_synthetic == synthetic)
         .order_by(Application.applied_at.desc().nulls_last(), Candidate.code)
     )
-    if filters.stage_code is not None:
-        query = query.where(Application.current_stage_code == filters.stage_code)
     rows = session.execute(query).all()
+    position = session.get(Position, vacancy.position_id)
 
     candidate_ids = [candidate.id for _, candidate, _ in rows]
     profile = repo.get_approved_profile(session, vacancy.position_id, synthetic=synthetic)
@@ -249,11 +292,14 @@ def list_applications(
     cards = _current_cards(session, candidate_ids)
 
     items = []
+    counts = dict(confirmed=0, mismatch=0, unresolved=0, not_covered=0)
     for application, candidate, stage in rows:
-        state = states[candidate.id]
+        state, mapping = application_state(states[candidate.id], position.code, application.posting_title)
+        counts[mapping.status if mapping else 'not_covered'] += 1
         assessment = state.assessment
         card = cards.get(candidate.id)
         item = ApplicationListItemOut(
+            posting_title=application.posting_title, target_position_code=position.code, applicability=mapping,
             application_id=application.id,
             candidate_id=candidate.id,
             candidate_code=candidate.code,
@@ -270,11 +316,16 @@ def list_applications(
         )
         if _matches(item, filters):
             items.append(item)
-    return ApplicationListOut(vacancy_id=vacancy.id, total=len(items), items=items)
+    return ApplicationListOut(vacancy_id=vacancy.id, total=len(items), items=items, imported_count=len(rows),
+                              **{f'{key}_count': value for key, value in counts.items()})
 
 
 def _matches(item: ApplicationListItemOut, filters: ApplicationFilters) -> bool:
     """Фильтры по вычисленным полям: статус считается в Python, поэтому и фильтр здесь."""
+    if filters.stage_code is not None and item.current_stage_code != filters.stage_code:
+        return False
+    if filters.applicability is not None and (item.applicability.status if item.applicability else 'not_covered') != filters.applicability:
+        return False
     if filters.assessment_status is not None and item.assessment_status != filters.assessment_status:
         return False
     if filters.formal_result is not None and item.formal_result != filters.formal_result:
@@ -314,12 +365,17 @@ def get_application(session: Session, application_id: uuid.UUID) -> ApplicationD
         state = AssessmentState(AssessmentStatus.NO_APPROVED_PROFILE)
     else:
         state = resolve_states(session, [candidate.id], profile, position.id, synthetic)[candidate.id]
+    mapping = None
+    if position:
+        state, mapping = application_state(state, position.code, application.posting_title)
 
     current_text = repo.get_current_text(session, candidate.id)
     card = repo.get_current_card(session, candidate.id)
     card_out = {"version": card.version, "extractor": card.extractor, **card.card} if card else None
 
     return ApplicationDetailOut(
+        posting_title=application.posting_title, target_position_code=position.code if position else None,
+        applicability=mapping,
         application_id=application.id,
         vacancy=VacancyBriefOut(
             vacancy_id=vacancy.id,
@@ -358,6 +414,9 @@ def _assessment_out(session: Session, candidate: Candidate, state: AssessmentSta
     checks = sorted(assessment.formal_checks, key=lambda c: (requirements[c.requirement_id].sort_order, requirements[c.requirement_id].key))
     scores = sorted(assessment.competency_scores, key=lambda s: (competencies[s.competency_id].sort_order, competencies[s.competency_id].code))
     return AssessmentOut(
+        competency_summary=aggregate_profile([CompetencyDetails.model_validate(s.details) if s.details else None
+                                              for s in scores]) if len(scores) == len(competencies) else None,
+        algorithm_version=assessment.algorithm_version, calculation_as_of=assessment.calculation_as_of,
         assessment_id=assessment.id,
         version=assessment.version,
         profile_id=profile.id,
@@ -384,6 +443,7 @@ def _assessment_out(session: Session, candidate: Candidate, state: AssessmentSta
                 level=s.level,
                 explanation=s.explanation,
                 evidence=evidence_out(s.evidence, texts),
+                details=_competency_details_out(s.details, texts),
             )
             for s in scores
         ],
@@ -434,6 +494,8 @@ def _evidence_texts(session: Session, *groups: Iterable[Any]) -> dict[uuid.UUID,
             items = list(row.evidence)
             for alt in getattr(row, "alternatives", []) or []:
                 items.extend(alt.get("evidence", []))
+            for indicator in (getattr(row, 'details', None) or {}).get('indicators', []):
+                items.extend(indicator['evidence'])
             ids.update(uuid.UUID(str(item["candidate_text_id"])) for item in items)
     if not ids:
         return {}

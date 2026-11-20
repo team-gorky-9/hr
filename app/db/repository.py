@@ -547,6 +547,11 @@ def create_requirement_profile(
     Версии нумеруются отдельно в рабочем и учебном контуре (is_synthetic): без version
     берётся следующий номер для должности в этом контуре; повтор номера → IntegrityError.
     """
+    from app.assessment.counters import validate_groups
+    try:
+        validate_groups(competencies)
+    except ValueError as error:
+        raise RepositoryError(str(error)) from error
     position = _get(session, Position, position_id, "должность")
     source_ids = [s.source_document_id for s in sources]
     if len(set(source_ids)) != len(source_ids):
@@ -726,6 +731,8 @@ def save_assessment(
     overall_score: int | None = None,
     summary: str | None = None,
     prompt_version: str | None = None,
+    algorithm_version: str | None = None,
+    calculation_as_of: str | None = None,
 ) -> Assessment:
     """Сохранить новую версию оценки кандидата по версии требований (вывод модели по резюме).
 
@@ -755,9 +762,12 @@ def save_assessment(
     for score in competency_scores:
         if score.competency_id not in competency_ids:
             raise RepositoryError(f"компетенция {score.competency_id} не из профиля {profile.id}")
+        _validate_competency_details(score, session.get(Competency, score.competency_id))
 
     all_evidence = [e for item in [*formal_checks, *competency_scores] for e in item.evidence]
     all_evidence += [e for check in formal_checks for alt in check.alternatives for e in alt.evidence]
+    all_evidence += [e for score in competency_scores if score.details
+                     for indicator in score.details.indicators for e in indicator.evidence]
     _verify_evidence(session, candidate.id, card.candidate_text_id, all_evidence)
 
     rows = [
@@ -777,12 +787,15 @@ def save_assessment(
             level=score.level,
             explanation=score.explanation,
             evidence=[e.model_dump(mode="json") for e in score.evidence],
+            details=score.details.model_dump(mode='json') if score.details else None,
         )
         for score in competency_scores
     ]
     return _add_assessment_version(
         session, candidate.id, profile.id, card.id, requirements, rows, scores,
-        model=model, prompt_version=prompt_version, overall_score=overall_score, summary=summary,
+        model=model, prompt_version=prompt_version, algorithm_version=algorithm_version,
+        calculation_as_of=calculation_as_of,
+        overall_score=overall_score, summary=summary,
     )
 
 
@@ -847,13 +860,15 @@ def confirm_formal_check(
     )
     scores = [
         CompetencyScore(
-            competency_id=old.competency_id, level=old.level, explanation=old.explanation, evidence=old.evidence
+            competency_id=old.competency_id, level=old.level, explanation=old.explanation, evidence=old.evidence,
+            details=old.details,
         )
         for old in current.competency_scores
     ]
     return _add_assessment_version(
         session, candidate.id, profile.id, current.card_id, requirements, rows, scores,
-        model=current.model, prompt_version=current.prompt_version,
+        model=current.model, prompt_version=current.prompt_version, algorithm_version=current.algorithm_version,
+        calculation_as_of=current.calculation_as_of,
         overall_score=current.overall_score, summary=current.summary,
     )
 
@@ -898,6 +913,28 @@ def _add_assessment_version(
     session.add(assessment)
     session.flush()
     return assessment
+
+
+def _validate_competency_details(score, competency) -> None:
+    from app.assessment.counters import aggregate_competency, validate_groups
+    if score.details is None:
+        return  # legacy scores remain readable by existing callers
+    try:
+        validate_groups([competency])
+    except ValueError as error:
+        raise RepositoryError(str(error)) from error
+    results = score.details.indicators
+    keys = [r.key for r in results]
+    expected = {i.key for i in competency.indicators
+                if i.check_stage == 'screening' and not i.excluded_from_scoring}
+    if set(keys) != expected or len(keys) != len(expected):
+        raise RepositoryError('details must contain every screening indicator exactly once')
+    if any(r.status != 'no_info' and not r.evidence for r in results):
+        raise RepositoryError('confirmed/contradicted indicator requires evidence')
+    calculated = aggregate_competency(competency.indicators, {r.key: r.status for r in results})
+    calculated.indicators = results
+    if calculated != score.details:
+        raise RepositoryError('competency counters or groups contradict indicator results')
 
 
 def _reject_repeats(ids: Sequence[uuid.UUID], label: str) -> None:

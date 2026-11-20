@@ -1,67 +1,71 @@
-# Модуль «Оценка»
+# Модуль оценки
 
-Оценка кандидата по профилю требований: карточка → формальные проверки и компетенции с цитатами → итог. Код — `app/ai/` (модель) и `app/assessment/` (оценивание). Хранение — `add_candidate_card` и `save_assessment` модуля БД. Контракт — [assessment.md](../contracts/assessment.md) v0.2 с поправками БД v1.5 (контуры, `basis`, альтернативы, `check_stage`).
+Контракт: [assessment v0.3](../contracts/assessment.md). Интеграция `feature/profile-assessment-integration`: main fc61d26 + профили 905ea9b + ai-01 c94285e. [Проверки и ограничения](../reports/profile-assessment-integration.md).
 
-**Статус:** этап 1 (`ai-01`). Работают извлечение карточки, оценивание по `params` пакета 0.2, режимы `operational`/`technical` по контурам БД v1.5, CLI. Офлайн-тесты на `FakeLLMClient`; живой прогон на YandexGPT (20.11, `py-9001`: `met`, ≈10 с и ≈4,5 тыс. токенов на кандидата) — по инструкции ниже.
+## Путь данных
 
-## Как устроен путь одного кандидата
+1. CLI выбирает профиль через get_approved_profile с явным контуром; draft для учебного кандидата задаётся по ID. Для основного отбора передаётся ID отклика; сравнение включается явно через purpose=comparison.
+2. `orchestration.assess_in_context` проверяет кандидата, профиль, все params, as_of и отклик до модели. Для hr-consultant resolver проверяет posting_title. Если соответствие не установлено или должность другая, primary пишет skipped без оценки кандидата.
+3. `service.assess_candidate` получает текущий очищенный текст. Подходящая карточка переиспользуется; иначе извлекается CandidateCard. В модель не передаются raw_text и candidate_pii.
+4. Формальная модель получает критерии acceptance, альтернативы и описание релевантности. Компетентностная — только screening-индикаторы с acceptance. Код находит позиции цитат, считает включительные месяцы и границы [L,U], объединяет альтернативы. Вывод без цитаты понижается; необходимость документа оставляет met предварительным.
+5. `counters` сводит same_as: одна единица в компетенции, обязательность OR, конфликт подтверждения и противоречия требует ручной сверки. Интервью-группы и исключённые строки считаются отдельно. Численный уровень и общий процент не придумываются.
+6. Repository проверяет все вложенные цитаты и результаты, сохраняет formal_checks.alternatives и competency_scores.details, algorithm_version и calculation_as_of. Контекст запуска записывается отдельно в audit_log. API заново применяет политику к отклику и не выдаёт сравнение за основной отбор.
 
-1. `extract_candidate_card` — очищенный текст в `<resume_text>` → модель (роль `extract`) → `CandidateCard` → `add_candidate_card`.
-2. `assess_candidate` проверяет режим до вызова модели: `operational` — реальный кандидат по утверждённому рабочему профилю; `technical` — учебный кандидат по любому не архивному профилю; архивный профиль — отказ всем (`save_assessment` повторяет эти правила). Затем разбирает `params` (`rules.py`): неизвестная версия или ключ — `RuleUnsupportedError` до вызова модели.
-3. Модели отправляются только строки этапа `screening` (`check_stage`). Один вызов на формальные требования (`FormalExtraction`: периоды с видом записи, фраза о стаже, статусы альтернатив образования — всё с цитатами) и по одному на каждую компетенцию с индикаторами разбора резюме (`CompetencyExtraction`).
-4. Код: позиция каждой цитаты (`evidence.py`), стаж с границами `[L, U]` (`experience.py`), итог по альтернативам (результат и цитаты каждой — в `FormalCheckIn.alternatives`), понижение вывода без цитаты (`verification.py`). Вывод по резюме при `verification ≠ resume` не понижается: база ставит `is_preliminary` («по резюме да, нужен документ»), в объяснении — `needs`.
-5. Компетенции: `level = null`, в `explanation` — счётчики «подтверждено X из Y» отдельно для обязательных и желательных, индикаторы интервью и исключённые — отдельными числами.
-6. `save_assessment`; вызовы модели — в `audit_log` (`llm_call`) без текста резюме и ключей.
+## Компоненты
 
-`explanation` формальной проверки и компетенции — строка `[resume] {JSON}`: основание, итог альтернатив, месяцы `months_low/high`, `gap`, `conflict`, `divergence`, `needs`, счётчики. Когда у БД появятся поля, их переносят из этого JSON без изменения логики.
+`llm_schemas` нормализует перечисленные синонимы статусов и проверяет ключи ответа. Повторы альтернатив одного статуса сохраняют все цитаты с контекстом; несовместимые повторы требуют одного исправления ответа моделью. `service` проверяет отрицание опыта в пределах фразы и направление образования отдельно по каждой цитате. Версия алгоритма — `assessment-2.0.2`, промпта — `assess-v4`. API помечает оценки с прежним алгоритмом или промптом как `stale/algorithm_changed`. Ошибки схемы журналируются без значений ответа. [Исходная регрессия unknown](../reports/formal-extraction-unknown-status.md).
 
-## Модель (`app/ai/`)
+| Файл | Ответственность |
+|---|---|
+| app/ai/client.py, config.py | Провайдер, структурированный ответ, повторы, метаданные вызовов |
+| app/assessment/applicability.py + policies/ | Версионируемое точное сопоставление публикаций |
+| app/assessment/orchestration.py | Контекст, проверки до модели, повторное использование пары, manifest |
+| app/assessment/service.py | Извлечение и оценка по очищенному тексту |
+| app/assessment/rules.py | Проверка params общей схемой и разбор правил |
+| app/assessment/experience.py, evidence.py | Стаж и позиции цитат |
+| app/assessment/counters.py | Группы и счётчики по компетенции/профилю |
+| app/schemas/competency_details.py | Типизированный результат с отдельными цитатами |
 
-`LLMConfig` читает `.env` (см. `.env.example`). `OpenAICompatClient` ходит в YandexGPT через `openai` SDK (`base_url` + `project` = каталог): сначала `response_format=json_schema`, при отказе провайдера — JSON по инструкции (режим запоминается); один повтор при таймауте/429/5xx; одна просьба исправить невалидный JSON. `FakeLLMClient` — для тестов.
+## Сквозной прогон `py-9001` (qa-01)
 
-## Запуск
+Из подготовленной базы до оценки, которую читает API. Учебный кандидат и учебный профиль; на шаге 6 нужен ключ YandexGPT в `.env`. Предусловие: администратор заранее создал активного пользователя HR или admin. В примере его логин — `hr-demo`, замените на существующий. `app.db.seed` создаёт справочники, но не пользователей. Команда утверждения не создаёт кадровика и не назначает роли.
 
 ```bash
-uv run python -m app.ingest --input fixtures/stage_0a --mapping fixtures/stage_0a/mapping.json   # py-9001 в базе
-uv run python -m scripts.load_synthetic_profile                                                   # учебный профиль (черновик)
-uv run python -m app.assessment run --candidate-code py-9001 --position-code python-dev --technical --as-of 2025-11
+docker compose up -d
+uv run alembic upgrade head                                                          # 1. схема
+uv run python -m app.db.seed                                                         # 2. справочники
+uv run python -m app.ingest --input fixtures/stage_0a --mapping fixtures/stage_0a/mapping.json   # 3. py-9001 (учебный)
+uv run python -m scripts.load_synthetic_profile                                      # 4. учебный профиль — черновик
+uv run python -m scripts.approve_profile --position-code python-dev --synthetic \
+    --approver hr-demo --basis "учебный профиль для qa-01" --commit                  # 5. утверждение кадровиком
+APP=$(docker compose exec -T db psql -U hr -d hr -Atc \
+  "select a.id from applications a join candidates c on c.id = a.candidate_id where c.code = 'py-9001' and a.source = 'response'")
+uv run python -m app.assessment run --candidate-code py-9001 --position-code python-dev \
+    --technical --application-id "$APP" --as-of 2025-11                              # 6. оценка по отклику
+uv run uvicorn app.main:app                                                          # 7. API
+curl -s "http://127.0.0.1:8000/api/v1/applications/$APP" | python -m json.tool | head -40
 ```
 
-Без `--profile-id` берётся утверждённый профиль своего контура (`get_approved_profile`), а в `--technical` при его отсутствии — последний учебный черновик. `batch` оценивает только кандидатов своего контура.
+Ожидается: на шаге 6 `status: ok`; в API `assessment_status: ready`, формальная проверка стажа и компетенция с цитатой «Написал API-тесты для сервиса заявок.». Срез `text[utf16_start:utf16_end]` из `GET /api/v1/candidate-texts/{candidate_text_id}` совпадает с `quote`.
 
-`--as-of` — месяц, до которого считается «по настоящее время». Дата резюме в архиве не хранится; без параметра берётся текущий месяц, и стаж на текущем месте может оказаться больше, чем было на момент отклика. Расхождение с фразой «Опыт работы: N» помечается `divergence`.
+- Без шага 5 API отвечает `no_approved_profile`: загрузчик и оценщик профиль не утверждают, это отдельное действие кадровика. `approve_profile` без `--commit` только показывает, что будет утверждено.
+- Неизвестный логин даёт `status=refused`, код завершения 1, без создания пользователя и утверждения профиля. Правило одинаково для учебного/рабочего профиля и выбора по `--profile-id`/`--position-code`; `--approver-name` удалён. CLI рассчитан на доверенного оператора с доступом к БД: `--approver` фиксирует существующего утверждающего, но не является механизмом аутентификации.
+- Повторное утверждение того же контура отправляет прежнюю версию в архив; рабочий контур не меняется.
+- База, импортированная до БД v1.5, считает `py-9001` реальным кандидатом — её нужно пересоздать.
 
-## Правила доверия к выводу (`app/assessment/verification.py`)
+## Запуск и проверка
 
-Чистые функции, без базы и модели.
+После настройки .env и миграций:
 
-| Функция | Что решает |
-|---|---|
-| `check_evidence` | Стоит ли цитата в нужном тексте. Порядок проверок: текст известен → это текст того же кандидата → это та версия, по которой оценка → на месте `start:end` ровно эта цитата |
-| `confirm_result` | «Выполнено» и «не выполнено» — фактические выводы. Без хотя бы одной годной цитаты вывод понижается до `unknown` с причиной. `unknown` цитаты не требует |
-| `competency_issue` | Есть ли опора у уровня или свидетельства компетенции |
-| `formal_result` | Итог по обязательным требованиям: `not_met` > `unknown` > `met`. Компетенции в нём не участвуют |
-| `assessment_refusal` | Можно ли выдавать рабочую оценку: профиль утверждён, модель ответила. Отказ ≠ `unknown` |
-| `utf16_offsets` | Перевод границ цитаты для подсветки в браузере |
+```bash
+uv run python -m app.assessment run --candidate-code py-9001 --position-code python-dev --technical --purpose comparison --profile-id <draft-profile-uuid> --as-of 2026-11
+uv run python -m app.assessment run --candidate-code <real-code> --position-code hr-consultant --application-id <application-uuid> --as-of 2026-11
+uv run python -m scripts.replay_requirement_cases --mode controlled --output controlled.json
+uv run python -m scripts.replay_requirement_cases --mode live --output live.json
+uv run python -m scripts.report_profile_applicability <archive.zip> --output coverage.json
+uv run pytest
+```
 
-## Что уже обеспечивает БД v1.0, а что нет
+Для pytest полной БД требуется PostgreSQL с pgvector и отдельная TEST_DATABASE_URL с именем базы, заканчивающимся `_test`. Тесты очищают её схему. Controlled replay проверяет правила кода на прежних 41 случаях. Live replay проверяет формальное извлечение, не извлечение CandidateCard и не качество полной оценки; эталон в живой промпт не передаётся. 16 содержательных примеров проверяются отдельно; случаи интервью проверяют только отсутствие в screening.
 
-Сверено тестом `tests/test_assessment_fixtures_db.py` на контрольном наборе. Профиль в тесте создаётся через `create_requirement_profile` (контракт БД v1.1).
-
-| Проверка | БД v1.0 (`save_assessment`) | Модуль оценки |
-|---|---|---|
-| Цитата на своём месте в тексте | ✅ отклоняет | ✅ |
-| Цитата из текста другого кандидата | ✅ отклоняет | ✅ |
-| Цитата из другой версии текста того же кандидата | ❌ принимает | ✅ `stale_text_version` |
-| Вывод `met` / `not_met` без цитаты | ❌ принимает, итог считает по нему | ✅ понижает до `unknown` |
-| Оценка по черновому профилю | ❌ принимает | ✅ `profile_not_approved` |
-| Итог по обязательным требованиям | ✅ | ✅ то же правило, совпадение проверено тестом |
-
-Где на этапе 1 закрыть три ❌ — в сервисе оценивания перед вызовом `save_assessment` или в самой функции БД — решение Родиона с Денисом. Если решат в пользу БД, тест сверки упадёт: ожидание в наборе надо будет перевести из `stage_1` в `db_v1`.
-
-## Открытые вопросы
-
-- Шкала `competency_scores.level` (0–100) не согласована.
-- Доказательство по индикатору компетенции, а не по компетенции целиком, в БД v1.0 не хранится.
-- Ключи `formal_requirements.params` — предложение Давида, в контракт не внесены.
-- Нет признака источника подтверждения: «по резюме» или «после интервью» (состояния `A-01`).
+as_of фиксирует месяц расчёта текущего стажа; дата резюме сама не выводится. Старые оценки с другой algorithm_version или prompt_version API помечает stale. При обновлении содержимого уже загруженного профиля создаётся новая версия; approve не выполняется загрузчиком или оценщиком.

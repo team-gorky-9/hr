@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from app.assessment.errors import RuleUnsupportedError
+from app.schemas.requirements import parse_params
+from app.db.enums import FormalRequirementKind
 
 SUPPORTED_VERSIONS = {"0.1"}
 
@@ -52,6 +54,10 @@ def _check_keys(where: str, given: dict[str, Any], allowed: set[str]) -> None:
 
 
 def parse_rule(key: str, kind: str, params: dict[str, Any], verification: str) -> Rule:
+    try:
+        parse_params(FormalRequirementKind(kind), params)
+    except (ValueError, TypeError, KeyError) as error:
+        raise RuleUnsupportedError(f'{key}: {error}') from error
     if kind in ("knowledge", "other"):
         return InterviewOnlyRule(key=key)
     version = params.get("schema_version")

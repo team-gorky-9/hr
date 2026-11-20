@@ -14,6 +14,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
 from app.api.services import utf16_offset
+from app.assessment.version import ALGORITHM_VERSION
+from app.assessment.prompts import ASSESS_PROMPT_VERSION
 from app.db import repository as repo
 from app.db.enums import ApplicationSource, CheckResult, VerificationMethod
 from app.db.models import Candidate, CandidatePii, RequirementProfile
@@ -75,7 +77,8 @@ def build_case(session: Session, case_id: str, *, approve: bool = True, assess: 
         scores = [CompetencyScoreIn.model_validate(_remap(i["score"], ids))
                   for i in case["assessment"]["competency_scores"]]
         assessment = repo.save_assessment(session, candidate_id=candidate_id, profile_id=profile_id, card_id=card.id,
-                                          model="fixture", formal_checks=checks, competency_scores=scores)
+                                          model="fixture", formal_checks=checks, competency_scores=scores,
+                                          algorithm_version=ALGORITHM_VERSION, prompt_version=ASSESS_PROMPT_VERSION)
         result |= {"assessment_id": assessment.id, "text_id": assessed_text_id}
     return result
 
@@ -125,6 +128,7 @@ def test_openapi_has_all_stage_1_routes(client):
         "/api/v1/vacancies",
         "/api/v1/vacancies/{vacancy_id}/applications",
         "/api/v1/applications/{application_id}",
+        "/api/v1/applications/{application_id}/comparison",
         "/api/v1/candidate-texts/{candidate_text_id}",
     }
 
@@ -274,6 +278,7 @@ def test_real_candidate_formal_check_fields(session, client):
 
     assessment = repo.save_assessment(
         session, candidate_id=candidate.id, profile_id=profile.id, card_id=card.id, model="test",
+        algorithm_version=ALGORITHM_VERSION, prompt_version=ASSESS_PROMPT_VERSION,
         formal_checks=[
             FormalCheckIn(requirement_id=level.id, result=CheckResult.MET, evidence=[quote("Высшее образование")],
                           alternatives=[AlternativeResultIn(key="t.education.level.alt1", result=CheckResult.MET,
@@ -288,7 +293,12 @@ def test_real_candidate_formal_check_fields(session, client):
         competency_scores=[],
     )
     body = detail(client, application.id)
-    assert body["assessment_status"] == "ready" and body["candidate"]["is_training"] is False
+    assert body['assessment_status'] == 'mapping_required' and body['assessment'] is None
+    assert body['candidate']['is_training'] is False
+    response = client.get(f'/api/v1/applications/{application.id}/comparison', params={'profile_id': str(profile.id)})
+    assert response.status_code == 200
+    body = response.json()
+    assert body['purpose'] == 'comparison' and body['assessment_status'] == 'ready'
     checks = {c["key"]: c for c in body["assessment"]["formal_checks"]}
     assert checks["t.education.field"]["is_preliminary"] is True  # по резюме, нужен документ
     assert checks["t.education.field"]["verification"] == "documents"
@@ -300,7 +310,9 @@ def test_real_candidate_formal_check_fields(session, client):
     hr = f.make_user(session, login="hr-1")
     repo.confirm_formal_check(session, assessment_id=assessment.id, requirement_id=field.id, result=CheckResult.MET,
                               basis=VerificationMethod.DOCUMENTS, actor_user_id=hr.id, comment="диплом проверен")
-    body = detail(client, application.id)
+    response = client.get(f'/api/v1/applications/{application.id}/comparison', params={'profile_id': str(profile.id)})
+    assert response.status_code == 200
+    body = response.json()
     assert body["assessment"]["version"] == 2 and body["assessment_status"] == "ready"
     confirmed = next(c for c in body["assessment"]["formal_checks"] if c["key"] == "t.education.field")
     assert (confirmed["basis"], confirmed["confirmed_by"], confirmed["is_preliminary"]) == ("documents", "hr-1", False)
@@ -331,7 +343,9 @@ def test_unknown_filter_values(session, client):
 def test_empty_application_list(client):
     vacancy_id = _python_vacancy_id(client)
     body = client.get(f"/api/v1/vacancies/{vacancy_id}/applications").json()
-    assert body == {"vacancy_id": vacancy_id, "total": 0, "items": []}
+    assert body == {"vacancy_id": vacancy_id, "total": 0, "items": [],
+                    "imported_count": 0, "confirmed_count": 0, "mismatch_count": 0,
+                    "unresolved_count": 0, "not_covered_count": 0}
 
 
 # --- Ошибки --------------------------------------------------------------------

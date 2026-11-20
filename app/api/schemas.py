@@ -6,7 +6,9 @@
 import uuid
 from datetime import date, datetime
 from enum import StrEnum
-from typing import Any
+from typing import Any, Literal
+from app.assessment.applicability import Applicability
+from app.schemas.competency_details import CompetencyDetails, IndicatorResult, ProfileCounters
 
 from pydantic import BaseModel
 
@@ -29,6 +31,8 @@ class Contour(StrEnum):
 
 
 class AssessmentStatus(StrEnum):
+    NOT_APPLICABLE = 'not_applicable'
+    MAPPING_REQUIRED = 'mapping_required'
     READY = "ready"                              # актуальная оценка по текущему тексту и утверждённому профилю
     STALE = "stale"                              # оценка есть, но текст или утверждённый профиль сменились
     NOT_ASSESSED = "not_assessed"                # утверждённый профиль есть, оценки нет
@@ -36,6 +40,7 @@ class AssessmentStatus(StrEnum):
 
 
 class StaleReason(StrEnum):
+    ALGORITHM_CHANGED = 'algorithm_changed'
     TEXT_CHANGED = "text_changed"        # оценка по прежней версии очищенного текста
     PROFILE_CHANGED = "profile_changed"  # оценка по прежней версии профиля требований
 
@@ -81,6 +86,9 @@ class VacancyListOut(BaseModel):
 # --- GET /vacancies/{id}/applications -----------------------------------------
 
 class ApplicationListItemOut(BaseModel):
+    posting_title: str | None = None
+    target_position_code: str | None = None
+    applicability: Applicability | None = None
     application_id: uuid.UUID
     candidate_id: uuid.UUID
     candidate_code: str
@@ -97,6 +105,11 @@ class ApplicationListItemOut(BaseModel):
 
 
 class ApplicationListOut(BaseModel):
+    imported_count: int = 0
+    confirmed_count: int = 0
+    mismatch_count: int = 0
+    unresolved_count: int = 0
+    not_covered_count: int = 0
     vacancy_id: uuid.UUID
     total: int
     items: list[ApplicationListItemOut]
@@ -152,7 +165,16 @@ class FormalCheckOut(BaseModel):
     alternatives: list[AlternativeOut]
 
 
+class IndicatorResultOut(IndicatorResult):
+    evidence: list[EvidenceOut]
+
+
+class CompetencyDetailsOut(CompetencyDetails):
+    indicators: list[IndicatorResultOut]
+
+
 class CompetencyScoreOut(BaseModel):
+    details: CompetencyDetailsOut | None = None
     competency_id: uuid.UUID
     rank: CompetencyRank | None
     code: str
@@ -165,6 +187,9 @@ class CompetencyScoreOut(BaseModel):
 
 
 class AssessmentOut(BaseModel):
+    competency_summary: ProfileCounters | None = None
+    algorithm_version: str | None = None
+    calculation_as_of: str | None = None
     assessment_id: uuid.UUID
     version: int
     profile_id: uuid.UUID
@@ -184,11 +209,26 @@ class AssessmentOut(BaseModel):
 
 
 class ApplicationDetailOut(BaseModel):
+    posting_title: str | None = None
+    target_position_code: str | None = None
+    applicability: Applicability | None = None
     application_id: uuid.UUID
     # Пусто только у записей «История общения» без вакансии на платформе.
     vacancy: VacancyBriefOut | None
     stage: StageOut
     candidate: CandidateOut
+    assessment_status: AssessmentStatus
+    assessment: AssessmentOut | None
+
+
+class ComparisonOut(BaseModel):
+    purpose: Literal['comparison'] = 'comparison'
+    application_id: uuid.UUID
+    candidate_id: uuid.UUID
+    posting_title: str | None
+    target_position_code: str
+    profile_id: uuid.UUID
+    applicability: Applicability | None
     assessment_status: AssessmentStatus
     assessment: AssessmentOut | None
 

@@ -5,7 +5,7 @@ FastAPI сам выполняет такие обработчики в пуле 
 через Depends(get_session) и закрывается после ответа. Маршруты ничего не пишут в базу.
 """
 import uuid
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query
 from fastapi.responses import JSONResponse
@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.api import services
 from app.api.schemas import (
     ApplicationDetailOut,
+    ComparisonOut,
     ApplicationListOut,
     AssessmentStatus,
     CandidateTextOut,
@@ -58,8 +59,10 @@ def list_applications(
     formal_result: CheckResult | None = None,
     formal_preliminary: bool | None = None,
     assessment_status: AssessmentStatus | None = None,
+    applicability: Literal['confirmed', 'mismatch', 'unresolved', 'not_covered'] | None = None,
 ):
     filters = services.ApplicationFilters(
+        applicability=applicability,
         stage_code=stage_code,
         formal_result=formal_result,
         formal_preliminary=formal_preliminary,
@@ -71,6 +74,11 @@ def list_applications(
 @router.get("/applications/{application_id}", response_model=ApplicationDetailOut)
 def get_application(application_id: uuid.UUID, session: SessionDep):
     return services.get_application(session, application_id)
+
+
+@router.get('/applications/{application_id}/comparison', response_model=ComparisonOut)
+def get_comparison(application_id: uuid.UUID, profile_id: uuid.UUID, session: SessionDep):
+    return services.get_comparison(session, application_id, profile_id)
 
 
 @router.get("/candidate-texts/{candidate_text_id}", response_model=CandidateTextOut)
