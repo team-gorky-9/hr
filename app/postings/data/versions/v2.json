@@ -1,0 +1,384 @@
+{
+  "schema_version": "posting-register/1.0",
+  "version": "v2",
+  "rules": [
+    {
+      "id": "kadry-hr-work",
+      "context": {
+        "dataset_id": "kadry-2026",
+        "dataset_sha256": "53c7b6d1918b96c106d99371f9e942b2e8720f164ce85cf4fde6fb275c998548",
+        "channel": "hh_ru",
+        "source_folder": "консультанта сектора подбора кадров",
+        "is_synthetic": false
+      },
+      "match_kind": "posting_title",
+      "posting_title": "Консультант отдела кадровой работы",
+      "decision_state": "needs_review",
+      "position_code": null,
+      "decision_author": null,
+      "decision_date": null,
+      "decision_basis": null,
+      "evidence_refs": [
+        "fixtures/posting_positions/evidence.json#/paragraphs/P60",
+        "fixtures/posting_positions/evidence.json#/paragraphs/P67",
+        "fixtures/posting_positions/evidence.json#/paragraphs/P102"
+      ],
+      "reason": "awaiting_hr",
+      "excluded_position_codes": []
+    },
+    {
+      "id": "kadry-development",
+      "context": {
+        "dataset_id": "kadry-2026",
+        "dataset_sha256": "53c7b6d1918b96c106d99371f9e942b2e8720f164ce85cf4fde6fb275c998548",
+        "channel": "hh_ru",
+        "source_folder": "консультанта сектора подбора кадров",
+        "is_synthetic": false
+      },
+      "match_kind": "posting_title",
+      "posting_title": "Консультант отдела профессионального развития",
+      "decision_state": "needs_review",
+      "position_code": null,
+      "decision_author": null,
+      "decision_date": null,
+      "decision_basis": null,
+      "evidence_refs": [
+        "fixtures/posting_positions/evidence.json#/paragraphs/P63",
+        "fixtures/posting_positions/evidence.json#/paragraphs/P65",
+        "fixtures/posting_positions/evidence.json#/paragraphs/P102"
+      ],
+      "reason": "awaiting_hr",
+      "excluded_position_codes": []
+    },
+    {
+      "id": "kadry-appeals",
+      "context": {
+        "dataset_id": "kadry-2026",
+        "dataset_sha256": "53c7b6d1918b96c106d99371f9e942b2e8720f164ce85cf4fde6fb275c998548",
+        "channel": "hh_ru",
+        "source_folder": "консультанта сектора подбора кадров",
+        "is_synthetic": false
+      },
+      "match_kind": "posting_title",
+      "posting_title": "Консультант отдела по работе с обращениями граждан и предпринимателей",
+      "decision_state": "needs_review",
+      "position_code": null,
+      "decision_author": null,
+      "decision_date": null,
+      "decision_basis": null,
+      "evidence_refs": [
+        "fixtures/posting_positions/evidence.json#/paragraphs/P60",
+        "fixtures/posting_positions/evidence.json#/paragraphs/P102",
+        "fixtures/posting_positions/evidence.json#/paragraphs/P108"
+      ],
+      "reason": "awaiting_hr",
+      "excluded_position_codes": []
+    },
+    {
+      "id": "kadry-financial-control",
+      "context": {
+        "dataset_id": "kadry-2026",
+        "dataset_sha256": "53c7b6d1918b96c106d99371f9e942b2e8720f164ce85cf4fde6fb275c998548",
+        "channel": "hh_ru",
+        "source_folder": "консультанта сектора подбора кадров",
+        "is_synthetic": false
+      },
+      "match_kind": "posting_title",
+      "posting_title": "Начальник отдела внутреннего финансового контроля, аудита и закупок",
+      "decision_state": "needs_review",
+      "position_code": null,
+      "decision_author": null,
+      "decision_date": null,
+      "decision_basis": null,
+      "evidence_refs": [
+        "fixtures/posting_positions/evidence.json#/paragraphs/P60",
+        "fixtures/posting_positions/evidence.json#/paragraphs/P67",
+        "fixtures/posting_positions/evidence.json#/paragraphs/P102"
+      ],
+      "reason": "awaiting_hr",
+      "excluded_position_codes": [
+        "hr-consultant"
+      ]
+    },
+    {
+      "id": "kadry-municipal-service",
+      "context": {
+        "dataset_id": "kadry-2026",
+        "dataset_sha256": "53c7b6d1918b96c106d99371f9e942b2e8720f164ce85cf4fde6fb275c998548",
+        "channel": "hh_ru",
+        "source_folder": "консультанта сектора подбора кадров",
+        "is_synthetic": false
+      },
+      "match_kind": "posting_title",
+      "posting_title": "Консультант отдела муниципальной службы",
+      "decision_state": "needs_review",
+      "position_code": null,
+      "decision_author": null,
+      "decision_date": null,
+      "decision_basis": null,
+      "evidence_refs": [
+        "fixtures/posting_positions/evidence.json#/paragraphs/P62",
+        "fixtures/posting_positions/evidence.json#/paragraphs/P63",
+        "fixtures/posting_positions/evidence.json#/paragraphs/P67",
+        "fixtures/posting_positions/evidence.json#/paragraphs/P102"
+      ],
+      "reason": "awaiting_hr",
+      "excluded_position_codes": []
+    },
+    {
+      "id": "kadry-documentation",
+      "context": {
+        "dataset_id": "kadry-2026",
+        "dataset_sha256": "53c7b6d1918b96c106d99371f9e942b2e8720f164ce85cf4fde6fb275c998548",
+        "channel": "hh_ru",
+        "source_folder": "консультанта сектора подбора кадров",
+        "is_synthetic": false
+      },
+      "match_kind": "posting_title",
+      "posting_title": "Консультант отдела документационного обеспечения департамента обеспечения деятельности главы города",
+      "decision_state": "needs_review",
+      "position_code": null,
+      "decision_author": null,
+      "decision_date": null,
+      "decision_basis": null,
+      "evidence_refs": [
+        "fixtures/posting_positions/evidence.json#/paragraphs/P60",
+        "fixtures/posting_positions/evidence.json#/paragraphs/P67",
+        "fixtures/posting_positions/evidence.json#/paragraphs/P96",
+        "fixtures/posting_positions/evidence.json#/paragraphs/P102"
+      ],
+      "reason": "awaiting_hr",
+      "excluded_position_codes": []
+    },
+    {
+      "id": "kadry-estimator",
+      "context": {
+        "dataset_id": "kadry-2026",
+        "dataset_sha256": "53c7b6d1918b96c106d99371f9e942b2e8720f164ce85cf4fde6fb275c998548",
+        "channel": "hh_ru",
+        "source_folder": "консультанта сектора подбора кадров",
+        "is_synthetic": false
+      },
+      "match_kind": "posting_title",
+      "posting_title": "Сметчик",
+      "decision_state": "needs_review",
+      "position_code": null,
+      "decision_author": null,
+      "decision_date": null,
+      "decision_basis": null,
+      "evidence_refs": [
+        "fixtures/posting_positions/evidence.json#/paragraphs/P60",
+        "fixtures/posting_positions/evidence.json#/paragraphs/P102"
+      ],
+      "reason": "awaiting_hr",
+      "excluded_position_codes": [
+        "hr-consultant"
+      ]
+    },
+    {
+      "id": "kadry-junior-python-dev",
+      "context": {
+        "dataset_id": "kadry-2026",
+        "dataset_sha256": "53c7b6d1918b96c106d99371f9e942b2e8720f164ce85cf4fde6fb275c998548",
+        "channel": "hh_ru",
+        "source_folder": "Junior Python-разработчик",
+        "is_synthetic": false
+      },
+      "match_kind": "folder",
+      "posting_title": "Junior Python-разработчик (Аналитика данных)",
+      "decision_state": "confirmed",
+      "position_code": "junior-python-dev",
+      "decision_author": "Команда проекта: техническое решение по явному соответствию архива",
+      "decision_date": "2026-11-20",
+      "decision_basis": "docs/contracts/posting-registry-sources.md#junior-python-dev",
+      "evidence_refs": [
+        "fixtures/posting_positions/runtime-sources.json#/decisions/kadry-junior-python-dev",
+        "fixtures/kadry_mapping.json#/folders"
+      ],
+      "reason": "explicit_archive_folder",
+      "excluded_position_codes": []
+    },
+    {
+      "id": "kadry-python-dev",
+      "context": {
+        "dataset_id": "kadry-2026",
+        "dataset_sha256": "53c7b6d1918b96c106d99371f9e942b2e8720f164ce85cf4fde6fb275c998548",
+        "channel": "hh_ru",
+        "source_folder": "Python-разработчик",
+        "is_synthetic": false
+      },
+      "match_kind": "folder",
+      "posting_title": "Python-разработчик",
+      "decision_state": "confirmed",
+      "position_code": "python-dev",
+      "decision_author": "Команда проекта: техническое решение по явному соответствию архива",
+      "decision_date": "2026-11-20",
+      "decision_basis": "docs/contracts/posting-registry-sources.md#python-dev",
+      "evidence_refs": [
+        "fixtures/posting_positions/runtime-sources.json#/decisions/kadry-python-dev",
+        "fixtures/kadry_mapping.json#/folders"
+      ],
+      "reason": "explicit_archive_folder",
+      "excluded_position_codes": []
+    },
+    {
+      "id": "kadry-qa-manual",
+      "context": {
+        "dataset_id": "kadry-2026",
+        "dataset_sha256": "53c7b6d1918b96c106d99371f9e942b2e8720f164ce85cf4fde6fb275c998548",
+        "channel": "hh_ru",
+        "source_folder": "QA Engineer Manual",
+        "is_synthetic": false
+      },
+      "match_kind": "folder",
+      "posting_title": "QA Engineer (Manual)",
+      "decision_state": "confirmed",
+      "position_code": "qa-manual",
+      "decision_author": "Команда проекта: техническое решение по явному соответствию архива",
+      "decision_date": "2026-11-20",
+      "decision_basis": "docs/contracts/posting-registry-sources.md#qa-manual",
+      "evidence_refs": [
+        "fixtures/posting_positions/runtime-sources.json#/decisions/kadry-qa-manual",
+        "fixtures/kadry_mapping.json#/folders"
+      ],
+      "reason": "explicit_archive_folder",
+      "excluded_position_codes": []
+    },
+    {
+      "id": "kadry-frontend-dev",
+      "context": {
+        "dataset_id": "kadry-2026",
+        "dataset_sha256": "53c7b6d1918b96c106d99371f9e942b2e8720f164ce85cf4fde6fb275c998548",
+        "channel": "hh_ru",
+        "source_folder": "Frontend developer",
+        "is_synthetic": false
+      },
+      "match_kind": "folder",
+      "posting_title": "Frontend developer",
+      "decision_state": "confirmed",
+      "position_code": "frontend-dev",
+      "decision_author": "Команда проекта: техническое решение по явному соответствию архива",
+      "decision_date": "2026-11-20",
+      "decision_basis": "docs/contracts/posting-registry-sources.md#frontend-dev",
+      "evidence_refs": [
+        "fixtures/posting_positions/runtime-sources.json#/decisions/kadry-frontend-dev",
+        "fixtures/kadry_mapping.json#/folders"
+      ],
+      "reason": "explicit_archive_folder",
+      "excluded_position_codes": []
+    },
+    {
+      "id": "kadry-junior-ux-ui",
+      "context": {
+        "dataset_id": "kadry-2026",
+        "dataset_sha256": "53c7b6d1918b96c106d99371f9e942b2e8720f164ce85cf4fde6fb275c998548",
+        "channel": "hh_ru",
+        "source_folder": "Junior UX_UI Дизайнер",
+        "is_synthetic": false
+      },
+      "match_kind": "folder",
+      "posting_title": "Junior UX/UI Дизайнер",
+      "decision_state": "confirmed",
+      "position_code": "junior-ux-ui",
+      "decision_author": "Команда проекта: техническое решение по явному соответствию архива",
+      "decision_date": "2026-11-20",
+      "decision_basis": "docs/contracts/posting-registry-sources.md#junior-ux-ui",
+      "evidence_refs": [
+        "fixtures/posting_positions/runtime-sources.json#/decisions/kadry-junior-ux-ui",
+        "fixtures/kadry_mapping.json#/folders"
+      ],
+      "reason": "explicit_archive_folder",
+      "excluded_position_codes": []
+    },
+    {
+      "id": "training-python-dev",
+      "context": {
+        "dataset_id": "stage0a-training",
+        "dataset_sha256": "034d53be38bf0d2e5a55c938a9991fad6780e1190b5a292f0f57c6990989e326",
+        "channel": "hh_ru",
+        "source_folder": "Python-разработчик",
+        "is_synthetic": true
+      },
+      "match_kind": "folder",
+      "posting_title": "Python-разработчик",
+      "decision_state": "confirmed",
+      "position_code": "python-dev",
+      "decision_author": "Команда проекта: авторы учебного набора stage_0a",
+      "decision_date": "2026-11-20",
+      "decision_basis": "docs/contracts/posting-registry-sources.md#stage0a-training",
+      "evidence_refs": [
+        "fixtures/stage_0a/mapping.json#/entries",
+        "fixtures/posting_positions/runtime-sources.json#/decisions/training-python-dev"
+      ],
+      "reason": "synthetic_fixture",
+      "excluded_position_codes": []
+    },
+    {
+      "id": "training-hr-consultant",
+      "context": {
+        "dataset_id": "stage0a-training",
+        "dataset_sha256": "034d53be38bf0d2e5a55c938a9991fad6780e1190b5a292f0f57c6990989e326",
+        "channel": "hh_ru",
+        "source_folder": "консультанта сектора подбора кадров",
+        "is_synthetic": true
+      },
+      "match_kind": "folder",
+      "posting_title": "Консультант отдела кадровой работы",
+      "decision_state": "confirmed",
+      "position_code": "hr-consultant",
+      "decision_author": "Команда проекта: авторы учебного набора stage_0a",
+      "decision_date": "2026-11-20",
+      "decision_basis": "docs/contracts/posting-registry-sources.md#stage0a-training",
+      "evidence_refs": [
+        "fixtures/stage_0a/mapping.json#/entries",
+        "fixtures/posting_positions/runtime-sources.json#/decisions/training-hr-consultant"
+      ],
+      "reason": "synthetic_fixture",
+      "excluded_position_codes": []
+    },
+    {
+      "id": "demo-python-dev",
+      "context": {
+        "dataset_id": "demo-training",
+        "dataset_sha256": "5c23626a4a6fdef6846944ac05c67d851519101c8c3ac3672fc79e9712c61113",
+        "channel": "hh_ru",
+        "source_folder": "Python-разработчик",
+        "is_synthetic": true
+      },
+      "match_kind": "folder",
+      "posting_title": "Python-разработчик",
+      "decision_state": "confirmed",
+      "position_code": "python-dev",
+      "decision_author": "Команда проекта: авторы учебного набора demo_training",
+      "decision_date": "2026-11-20",
+      "decision_basis": "docs/contracts/posting-registry-sources.md#demo-training",
+      "evidence_refs": [
+        "fixtures/demo_training/mapping.json#/entries"
+      ],
+      "reason": "synthetic_fixture",
+      "excluded_position_codes": []
+    },
+    {
+      "id": "demo-hr-consultant",
+      "context": {
+        "dataset_id": "demo-training",
+        "dataset_sha256": "5c23626a4a6fdef6846944ac05c67d851519101c8c3ac3672fc79e9712c61113",
+        "channel": "hh_ru",
+        "source_folder": "консультанта сектора подбора кадров",
+        "is_synthetic": true
+      },
+      "match_kind": "folder",
+      "posting_title": "Консультант отдела кадровой работы",
+      "decision_state": "confirmed",
+      "position_code": "hr-consultant",
+      "decision_author": "Команда проекта: авторы учебного набора demo_training",
+      "decision_date": "2026-11-20",
+      "decision_basis": "docs/contracts/posting-registry-sources.md#demo-training",
+      "evidence_refs": [
+        "fixtures/demo_training/mapping.json#/entries"
+      ],
+      "reason": "synthetic_fixture",
+      "excluded_position_codes": []
+    }
+  ]
+}

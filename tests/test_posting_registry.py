@@ -260,7 +260,7 @@ def test_bundled_training_rules_match_actual_fixture_inventory_and_are_isolated(
     assert parent_root_fingerprint != fingerprint
     mapping = load_mapping(root / 'mapping.json')
     assert mapping.dataset_id == 'stage0a-training'
-    rows = [r for r in value.rules if r.context.is_synthetic]
+    rows = [r for r in value.rules if r.context.is_synthetic and r.context.dataset_id == 'stage0a-training']
     assert len(rows) == 2
     for row in rows:
         assert row.context.dataset_sha256 == fingerprint
@@ -270,3 +270,28 @@ def test_bundled_training_rules_match_actual_fixture_inventory_and_are_isolated(
         assert api().resolve_posting(value, posting_title=row.posting_title, contexts=[row.context], is_synthetic=False).reason == 'contour_mismatch'
         parent_context = row.context.model_copy(update={'dataset_sha256': parent_root_fingerprint})
         assert api().resolve_posting(value, posting_title=row.posting_title, contexts=[parent_context], is_synthetic=True).reason == 'unknown_publication'
+
+
+def test_demo_training_rules_match_fixture_and_leave_v1_unchanged():
+    # Учебный набор для демо: по папке подтверждены Python и консультант; отклик на «Сметчика»
+    # в той же папке остаётся без решения (серый в светофоре), v1 не переписан.
+    from app.ingest.package import load_mapping, read_package
+    from app.postings.provenance import dataset_fingerprint
+    store = api().RegistryStore(Path('app/postings/data'))
+    current, v1 = store.load(), store.load('v1')
+    assert current.version == 'v2' and len(v1.rules) == 14
+    assert current.rules[:len(v1.rules)] == v1.rules
+    root = Path('fixtures/demo_training')
+    files = read_package(root)
+    assert len(files) == 12
+    mapping = load_mapping(root / 'mapping.json')
+    rows = [r for r in current.rules if r.context.dataset_id == 'demo-training']
+    assert {r.position_code for r in rows} == {'python-dev', 'hr-consultant'}
+    for row in rows:
+        assert row.context.is_synthetic and row.context.dataset_id == mapping.dataset_id
+        assert row.context.dataset_sha256 == dataset_fingerprint(files)
+        assert api().resolve_posting(current, posting_title=row.posting_title, contexts=[row.context],
+                                     is_synthetic=True).decision_state == 'confirmed'
+    consultant = next(r for r in rows if r.position_code == 'hr-consultant')
+    estimator = api().resolve_posting(current, posting_title='Сметчик', contexts=[consultant.context], is_synthetic=True)
+    assert estimator.decision_state == 'needs_review' and estimator.reason == 'unknown_publication'

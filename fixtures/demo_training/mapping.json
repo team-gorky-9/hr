@@ -1,0 +1,117 @@
+{
+  "folders": {
+    "Python-разработчик": "python-dev",
+    "консультанта сектора подбора кадров": "hr-consultant"
+  },
+  "entries": [
+    {
+      "source_path": "Python-разработчик/py-9101.txt",
+      "candidate_code": "py-9101",
+      "position_code": "python-dev",
+      "channel": "hh_ru",
+      "document_kind": "resume",
+      "file_format": "hh_txt",
+      "synthetic": true
+    },
+    {
+      "source_path": "Python-разработчик/py-9102.txt",
+      "candidate_code": "py-9102",
+      "position_code": "python-dev",
+      "channel": "hh_ru",
+      "document_kind": "resume",
+      "file_format": "hh_txt",
+      "synthetic": true
+    },
+    {
+      "source_path": "Python-разработчик/py-9103.txt",
+      "candidate_code": "py-9103",
+      "position_code": "python-dev",
+      "channel": "hh_ru",
+      "document_kind": "resume",
+      "file_format": "hh_txt",
+      "synthetic": true
+    },
+    {
+      "source_path": "Python-разработчик/py-9104.txt",
+      "candidate_code": "py-9104",
+      "position_code": "python-dev",
+      "channel": "hh_ru",
+      "document_kind": "resume",
+      "file_format": "hh_txt",
+      "synthetic": true
+    },
+    {
+      "source_path": "Python-разработчик/py-9105.txt",
+      "candidate_code": "py-9105",
+      "position_code": "python-dev",
+      "channel": "hh_ru",
+      "document_kind": "resume",
+      "file_format": "hh_txt",
+      "synthetic": true
+    },
+    {
+      "source_path": "Python-разработчик/py-9106.txt",
+      "candidate_code": "py-9106",
+      "position_code": "python-dev",
+      "channel": "hh_ru",
+      "document_kind": "resume",
+      "file_format": "hh_txt",
+      "synthetic": true
+    },
+    {
+      "source_path": "консультанта сектора подбора кадров/hr-9101.txt",
+      "candidate_code": "hr-9101",
+      "position_code": "hr-consultant",
+      "channel": "hh_ru",
+      "document_kind": "resume",
+      "file_format": "hh_txt",
+      "synthetic": true
+    },
+    {
+      "source_path": "консультанта сектора подбора кадров/hr-9102.txt",
+      "candidate_code": "hr-9102",
+      "position_code": "hr-consultant",
+      "channel": "hh_ru",
+      "document_kind": "resume",
+      "file_format": "hh_txt",
+      "synthetic": true
+    },
+    {
+      "source_path": "консультанта сектора подбора кадров/hr-9103.txt",
+      "candidate_code": "hr-9103",
+      "position_code": "hr-consultant",
+      "channel": "hh_ru",
+      "document_kind": "resume",
+      "file_format": "hh_txt",
+      "synthetic": true
+    },
+    {
+      "source_path": "консультанта сектора подбора кадров/hr-9104.txt",
+      "candidate_code": "hr-9104",
+      "position_code": "hr-consultant",
+      "channel": "hh_ru",
+      "document_kind": "resume",
+      "file_format": "hh_txt",
+      "synthetic": true
+    },
+    {
+      "source_path": "консультанта сектора подбора кадров/hr-9105.txt",
+      "candidate_code": "hr-9105",
+      "position_code": "hr-consultant",
+      "channel": "hh_ru",
+      "document_kind": "resume",
+      "file_format": "hh_txt",
+      "synthetic": true
+    },
+    {
+      "source_path": "консультанта сектора подбора кадров/hr-9106.txt",
+      "candidate_code": "hr-9106",
+      "position_code": "hr-consultant",
+      "channel": "hh_ru",
+      "document_kind": "resume",
+      "file_format": "hh_txt",
+      "synthetic": true
+    }
+  ],
+  "dataset_id": "demo-training"
+}
