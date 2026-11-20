@@ -10,6 +10,7 @@
 | [assessment.md](assessment.md) | **v0.3 · интеграция** | Илья | API, Давид | Контуры кандидата, acceptance, альтернативы, same_as, purpose и CLI. |
 | [api.md](api.md) | **v0.3 · интеграция** | Денис | Фронтенд, Илья | Применимость, явное comparison, typed details и UTF-16 цитат. |
 | [profile-applicability.md](profile-applicability.md) | **v1.0 · интеграция** | Давид | Оценщик, API, замеры | Отделение маршрутизации отклика от оценки кандидата. |
+| [search.md](search.md) | **v1.0 · search-01** | Родион | HTTP API, frontend-02, eval-01 | Запрос, условия, контуры, доступ, версия текста, доказательства и ошибки поиска кандидатов. |
 
 ## Правила изменения контрактов
 
