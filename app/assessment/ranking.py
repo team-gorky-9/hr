@@ -183,7 +183,7 @@ def rank_input(*, key: Any, candidate_code: str, assessment_status: str, applied
             if title not in item.open_mandatory:  # одинаковый пробел у двух требований — один вопрос
                 item.open_mandatory.append(title)
         elif result == "not_met":
-            item.not_met_mandatory.append(requirement.description)
+            item.not_met_mandatory.append(_refutation(requirement, check))
     competencies = {c.id: c for c in profile.competencies}
     for score in assessment.competency_scores:
         details = score.details or {}
@@ -199,6 +199,24 @@ def rank_input(*, key: Any, candidate_code: str, assessment_status: str, applied
             if group.get("manual_review") and group.get("is_mandatory"):
                 item.manual_review.append(competency.name if competency else group["key"])
     return item
+
+
+_KIND_TITLE = {"experience": "опыт работы", "education_level": "образование",
+               "education_field": "направление подготовки"}
+_QUOTE_LIMIT = 90
+
+
+def _refutation(requirement, check) -> str:
+    """«опыт работы — «Коммерческого опыта в разработке нет»»: что не выполнено и на чём основано.
+    Формулировку требования из ДИ берём, только если тип не узнаём; цитату — первую из оснований."""
+    title = _KIND_TITLE.get(_value(requirement.kind), requirement.description)
+    quotes = [e.get("quote") for e in (check.evidence or []) if isinstance(e, dict) and e.get("quote")]
+    if not quotes:
+        return title
+    quote = " ".join(quotes[0].split())
+    if len(quote) > _QUOTE_LIMIT:
+        quote = quote[:_QUOTE_LIMIT].rstrip() + "…"
+    return f"{title} — «{quote}»"
 
 
 def _gap_title(check) -> str | None:

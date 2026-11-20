@@ -458,7 +458,7 @@ def test_vacancy_applications_traffic_light_ranking_and_sort(session, client):
     assert ranks_by_code["py-clarify"][:2] == ("clarify", 2)
     assert "Высшее образование" in ranks_by_code["py-clarify"][2]
     assert ranks_by_code["py-not-met"][:2] == ("not_met", 3)
-    assert ranks_by_code["py-not-met"][2] == "Не проходит: Высшее образование"
+    assert ranks_by_code["py-not-met"][2] == "Не проходит: образование — «Высшее»"
     assert ranks_by_code["py-unassessed"] == ("needs_action", None, "Нужна оценка: отклик ещё не оценивался")
     assert ranks_by_code["py-stale"] == ("needs_action", None, "Нужна переоценка: резюме, профиль или алгоритм изменились")
     assert ranks_by_code["py-unmapped"][:2] == ("needs_action", None)

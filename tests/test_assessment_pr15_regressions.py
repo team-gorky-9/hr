@@ -189,3 +189,21 @@ PYTHON_HINT = "Собственная работа по разработке н�
 def test_scoped_negation_refutes_only_its_own_role(quote, hint, refutes):
     # «Опыта нет» с областью относится к требованию, только если область совпадает с релевантной ролью.
     assert _explicit_no_experience(quote, hint) is refutes
+
+
+@pytest.mark.parametrize('text_value, expected', [
+    ('Я студент старших курсов вуза.', 'met'),
+    ('Студент-старшекурсник технического вуза.', 'met'),
+    ('Фундаментальная информатика и информационные технологии, 3 курс', 'unknown'),
+    ('Неоконченное высшее, 4 курс', 'unknown'),
+])
+def test_senior_student_needs_explicit_words_not_a_course_number(text_value, expected):
+    # Acceptance: «число курса само по себе не задаёт согласованную границу».
+    response = {'alternatives': [
+        {'alternative_key': 'py.education.alt1', 'status': 'no_info'},
+        {'alternative_key': 'py.education.alt2', 'status': 'confirmed', 'quote': text_value},
+    ]}
+    result = evaluate('py-education-student', text_value, response)
+    assert result.result == expected
+    if expected == 'unknown':
+        assert result.details['gap'] == 'образование'

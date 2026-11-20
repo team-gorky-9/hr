@@ -329,6 +329,9 @@ def _education_check(requirement: FormalRequirement, rule: EducationRule, extrac
         if answer and answer.status == "confirmed" and valid and not _field_matches(alternative, quotes):
             statuses[alternative["key"]] = "unknown"
             notes.append(f"{alternative['key']}: направление не совпадает с подтверждёнными примерами — уточнить")
+        elif answer and answer.status == "confirmed" and valid and not _senior_student_stated(alternative, quotes):
+            statuses[alternative["key"]] = "unknown"
+            notes.append(f"{alternative['key']}: указан курс без статуса «старших курсов» — уточнить")
         elif answer and answer.status == "confirmed" and valid:
             statuses[alternative["key"]] = "met"
             met_evidence.extend(quotes)
@@ -403,6 +406,16 @@ def _explicit_no_experience(quote: str, relevance_hint: str | None = None) -> bo
 
 def _norm_field(value: str) -> str:
     return re.sub(r"\s+", " ", value.lower().replace("ё", "е")).strip()
+
+
+def _senior_student_stated(alternative: dict[str, Any], quotes: list[Evidence]) -> bool:
+    """Альтернатива «студент старших курсов» подтверждается только прямыми словами об этом.
+
+    По acceptance профилей номер курса сам по себе не задаёт согласованную границу: «3 курс»
+    модель склонна считать старшим, а для четырёх-, пяти- и шестилетних программ это разное."""
+    if alternative.get("enrollment_status") != "senior_student":
+        return True
+    return any(re.search(r"старш\w*\s+курс|старшекурсни", _norm_field(q.quote)) for q in quotes)
 
 
 def _field_matches(alternative: dict[str, Any], quotes: list[Evidence]) -> bool:
