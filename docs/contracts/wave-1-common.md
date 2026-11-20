@@ -1,4 +1,4 @@
-# Первая волна · общий контракт 1.0
+# Первая волна · общий контракт 1.1
 
 21 ноября 2026. Спецификация к реализации первой волны. Существующий API продукта продолжает действовать по своим контрактам. Новые операции, описанные здесь, ещё предстоит реализовать. Основания — принятое сервисное устройство и поручение Родиона подготовить автономные задачи.
 
@@ -36,6 +36,8 @@
 
 ## Файлы на сервере
 
+Файловый API этого раздела реализуют Hiring и Requirements. Workforce хранит ссылки и реквизиты оснований, не принимает и не хранит байты файлов (уточнение участника 21 ноября 2026).
+
 Каждый владелец реализует POST /documents (multipart file и kind, возвращает 201 document), GET /documents/{id} (метаданные), GET /documents/{id}/content (поток оригинала). document содержит id, organization_id, kind, original_name, media_type, size_bytes, sha256, revision, uploaded_by. Метаданные в БД, байты в собственном FILE_ROOT. Серверный путь формируется по ID; original_name — подпись, никогда путь. MIME и размер проверяются, превышение настроенного лимита даёт 413 FILE_TOO_LARGE. FILE_MAX_BYTES задаётся средой, стартовое значение 20 MiB — стендовый параметр.
 
 Загрузка создаёт новую неизменяемую версию-объект; исправленный документ имеет новый ID. Повтор с прежним ключом возвращает тот же объект. Файл полностью сохраняется до доступности записи; незавершённый временный файл недоступен через API. Повтор/сбой проверяются, очистка сирот не удаляет связанный документ. Скачивание проверяет право по организации и связанному делу. Точная политика конкретных документов уточнена в сервисных контрактах. Перезапуск контейнера сохраняет том.
@@ -50,17 +52,20 @@ Envelope содержит event_id UUID, event_type, schema_version="1.0", produ
 
 Transient-сбой приводит к отложенному повтору с конечным числом попыток и ручным повтором POST /deliveries/{event_id}/retry. Базовые задержки и лимит конфигурируемы; инструкции содержат фактические значения. Невалидная версия/схема отправляется в w1.<consumer>.dead с причиной. Неподходящая организация/неожиданный producer отклоняются. Запоздалая ревизия отмечается stale и не откатывает факт. Равная ревизия с другим содержимым требует сверки и не заменяет текущую запись.
 
-## Три общих сообщения
+## Общие сообщения
 
 | event_type / producer | Payload | Потребитель |
 |---|---|---|
 | employment.ready / hiring | case_id, application_ref, person_ref, department_id, position_code, starts_on, basis {document_ref,reference,issued_on}, confirmed_by_actor_id | workforce создаёт intake, HR проверяет личность и регистрирует назначение |
 | assignment.registered / workforce | intake_id, source_case_id, source_case_revision, source_event_id, employee_id, assignment_id, department_id, position_code, starts_on, revision | hiring отмечает кадровую передачу зарегистрированной |
+| assignment.reviewed / workforce | Те же поля связи и фактического назначения, что у assignment.registered, плюс basis {reference,issued_on}, decision apply/keep, reason string/null, reviewed_by_actor_id, reviewed_at | hiring завершает review_required по соответствующей версии и сохраняет решение HR |
 | requirements.approved / requirements | profile_id, position_code, profile_version, contour, approved_by_actor_id, approval_basis, source_document_ids | Пока демонстрационный получатель и будущий подбор. API самого сервиса даёт профиль по ID |
 
 person_ref — {system:"legacy-hr",id:UUID,display_name:string}; он обозначает кандидатскую запись. application_ref — {system:"legacy-hr",id:UUID}. document_ref — {service:"hiring",id:UUID}; байты документа в сообщение не вкладываются. Выдача документа другому сервису требует разрешённого внутреннего чтения; в первой волне Workforce получает реквизиты основания и при необходимости запрашивает уполномоченного регистратора, а не автоматически скачивает файл чужого сервиса.
 
 Каждый автор проверяет свои сообщения на [events.json](../../fixtures/wave-1/events.json). Это общая семантика обмена. Примеры содержат учебные ID. Локальный тестовый получатель публикует/читает эти сообщения через настоящий RabbitMQ, а не только вызывает функцию памяти.
+
+`assignment.reviewed` — отдельный тип события со schema_version="1.0", exchange `w1.workforce`, очередью `w1.hiring.assignment.reviewed`. Его aggregate_id/revision относятся к Intake и его завершённой проверке; payload.revision — к существующему назначению. `source_event_id/source_case_revision/correlation_id` относятся к исправленному employment.ready. `starts_on/basis` содержат фактически оставленные кадровые значения: при keep они могут отличаться от предложенных Hiring. `reason` обязателен для keep. При apply назначение меняет revision, при keep — сохраняет. Прежний assignment.registered не меняет формат. [Примеры повторной проверки](../../fixtures/wave-1/review-events.json) — альтернативные исходы одной коррекции.
 
 ## Подмены и начало без коллег
 
