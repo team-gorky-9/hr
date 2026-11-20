@@ -1,0 +1,3 @@
+# Optional local E5 runtime. Install a platform-specific CPU build of torch first.
+sentence-transformers==6.2.0
+transformers==5.20.2
