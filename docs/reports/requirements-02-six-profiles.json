@@ -1,0 +1,196 @@
+{
+  "date": "2026-11-20",
+  "base_product_commit": "fec6bd276e2f1545e1f685a999560e06142f391c",
+  "worktree_changes_included": true,
+  "run_id": "ea7157eb",
+  "postgresql": "PostgreSQL 16.15, compiled by Visual C++ build 1944, 64-bit",
+  "pgvector": "0.8.6",
+  "migration_revision": "0006",
+  "pytest_summary": "718 passed, 1 skipped, 3 subtests passed in 50.95s",
+  "skips": [
+    {
+      "test": "test_node_sdk_against_uvicorn",
+      "reason": "Node.js is required to exercise the JavaScript SDK"
+    }
+  ],
+  "task_tests_passed": 14,
+  "migration_cycle_passed": true,
+  "cli_load_passed": true,
+  "server_stopped": true,
+  "sources_verified": 7,
+  "loaded_profiles": [
+    {
+      "position_code": "frontend-dev",
+      "profile_id": "c1e26e23-b0f4-445d-b7c8-b4e8b7ff70ff",
+      "version": 1,
+      "status": "draft",
+      "is_synthetic": false,
+      "sources": [
+        {
+          "source_id": "fe-di",
+          "role": "job_description",
+          "revision": "1.1 от 01.02.2024"
+        }
+      ]
+    },
+    {
+      "position_code": "hr-consultant",
+      "profile_id": "f3f45ddb-bd85-4c4c-b6e1-7b3f93788f86",
+      "version": 4,
+      "status": "draft",
+      "is_synthetic": false,
+      "sources": [
+        {
+          "source_id": "hr-di",
+          "role": "job_description",
+          "revision": null
+        },
+        {
+          "source_id": "hr-matrix",
+          "role": "competency_matrix",
+          "revision": null
+        }
+      ]
+    },
+    {
+      "position_code": "junior-python-dev",
+      "profile_id": "58f9509e-b7d2-4fe4-b31c-487567ebfb06",
+      "version": 1,
+      "status": "draft",
+      "is_synthetic": false,
+      "sources": [
+        {
+          "source_id": "jpy-di",
+          "role": "job_description",
+          "revision": "1.2 от 01.02.2024"
+        }
+      ]
+    },
+    {
+      "position_code": "junior-ux-ui",
+      "profile_id": "d60556f6-222f-47df-a01c-2b9869159624",
+      "version": 1,
+      "status": "draft",
+      "is_synthetic": false,
+      "sources": [
+        {
+          "source_id": "ux-di",
+          "role": "job_description",
+          "revision": "1.1 от 01.03.2024"
+        }
+      ]
+    },
+    {
+      "position_code": "python-dev",
+      "profile_id": "19ea2eb4-42f1-4521-8630-75f1bed4538d",
+      "version": 6,
+      "status": "draft",
+      "is_synthetic": false,
+      "sources": [
+        {
+          "source_id": "py-di",
+          "role": "job_description",
+          "revision": "1.2 от 01.02.2024"
+        }
+      ]
+    },
+    {
+      "position_code": "qa-manual",
+      "profile_id": "0e62c8d3-a5bc-44b9-a909-6841fecd69dd",
+      "version": 1,
+      "status": "draft",
+      "is_synthetic": false,
+      "sources": [
+        {
+          "source_id": "qa-di",
+          "role": "job_description",
+          "revision": "1.1 от 01.02.2024"
+        }
+      ]
+    }
+  ],
+  "profile_ids_scope": "Only the isolated test database; obtain actual deployment IDs from its load report.",
+  "operational_approval": false,
+  "known_previous_failure": {
+    "run_id": "6cc99de3",
+    "test": "tests/test_reporting.py::test_idempotent_concurrent_and_correction",
+    "result": "Windows PermissionError reading the concurrently saved file; 705 passed, 1 failed, 1 skipped, 3 subtests. Standalone rerun: 1 passed. Reporting code unchanged."
+  },
+  "scope": [
+    "Real DI/matrix documents, byte hashes and literal citations",
+    "Public loader and lifecycle on PostgreSQL+pgvector",
+    "Synthetic Junior/QA example with controlled LLM outputs, not live model quality"
+  ],
+  "not_checked": [
+    "Docker/PostgreSQL 17",
+    "live LLM quality on real resumes",
+    "automatic FRDO lookup"
+  ],
+  "sha256": {
+    "app/assessment/service.py": "7153d4811fbc82b35fd0fdc00ab56c3987d5b468ed56d8a8a462998859eae0eb",
+    "app/assessment/version.py": "0a8f9111cb38b5b5ea6f87a42f94dadd564f4287f16915e84acd95c38a904aa5",
+    "fixtures/requirement_profiles/all_six/coverage.json": "7e5abaea64625fc5fb89f07268a457050606015399c499148e08d4c4d2c50103",
+    "fixtures/requirement_profiles/all_six/example-junior-response.json": "7c29aa80612c86d694d6b5076bbe8d83d63aba871c46fc32f58c8aaf7a8f87a9",
+    "fixtures/requirement_profiles/all_six/originals/Frontend developer/Разработчик клиентского ПО.docx": "3f90fd15700622928626d8600e2a52798b3a3a374c89e145dbd874184eb649a8",
+    "fixtures/requirement_profiles/all_six/originals/Junior Python-разработчик/ПРОВЕРЕНО 2024 Младший инженер по аналитике и работе с большими данными ДИ.docx": "355838c153287830ec7913860d61ae7a0e34f62c478e8d528105a848f8b4f7cd",
+    "fixtures/requirement_profiles/all_six/originals/Junior UX_UI Дизайнер/Дизайнер клиентского ПО.docx": "59c7b3da8e5df6ac235e7ab27c83365df207fbe6fd0b667bc742cbd3dd4650e5",
+    "fixtures/requirement_profiles/all_six/originals/Python-разработчик/ПРОВЕРЕНО 2024 Инженер по аналитике и работе с большими данными ДИ.docx": "28c08b3b9a9b070651dda9f01942dabf5f959c5b05bd84975eb47f6af56f55e6",
+    "fixtures/requirement_profiles/all_six/originals/QA Engineer Manual/ПРОВЕРЕНО 2024 Инженер по тестированию ПО.docx": "6c6bfbbc26ab27ac748075a488c2c94760321b1e665132a36c32b7f05ac7f73c",
+    "fixtures/requirement_profiles/all_six/originals/матрица компетеннций для консультанта отдела.docx": "4a566ad8025fa4d580f80e7c77f382986194b97a873b4570fda11c6a5639f07a",
+    "fixtures/requirement_profiles/all_six/originals/Положения/ДИ консультант сектора подбора кадров  (2026)ИТОГ 2.docx": "fdf5afb5623cae2d63d1fae603bf992f833a86d9e736a968d5f3061745dd87d0",
+    "fixtures/requirement_profiles/all_six/profiles/frontend-dev.md": "0609104e734fd3da68c3ccecd3e32af0970d20b51d703f0cfe93813404560355",
+    "fixtures/requirement_profiles/all_six/profiles/hr-consultant.md": "27577906da39382d04175ac050145a1b72cbef3c1168bb95f8ae8bdc38ab5ea4",
+    "fixtures/requirement_profiles/all_six/profiles/junior-python-dev.md": "3ee1694f3c72189e3d1f4597ee1fcd7c27519d88ac4ed35e0cf0628b5e791961",
+    "fixtures/requirement_profiles/all_six/profiles/junior-ux-ui.md": "c631f1dee16b994e6d3bf21f1d2348ef68bf4add18eb7671d853833b1a598bf2",
+    "fixtures/requirement_profiles/all_six/profiles/python-dev.md": "313b5e6e109f68c6d58fabcdcfd12c94402971533046eb6842661cb94b13f1fc",
+    "fixtures/requirement_profiles/all_six/profiles/qa-manual.md": "5aeff480643bf3fcf37d5b1f89b825137e8a4c24289b366d28caeeb84ff8eb60",
+    "fixtures/requirement_profiles/all_six/profiles.draft.json": "f95606082e11ad20215992a21617a821f55d834aafed0a9f1353a3ae339df2a6",
+    "fixtures/requirement_profiles/all_six/README.md": "7a00d36b641b1a7ac9c31334ab49e8239ba2efe825aaa92ccc8559718803e464",
+    "fixtures/requirement_profiles/all_six/sources.json": "1970cd825092c7e61648fd7dbb16c24b7116109e32101e1498e1e665da7235a6",
+    "scripts/load_all_six_profiles.py": "127b668bd3316c2a0e624a6bc397f163a44f0bd21fb5b7c414c3488d2a76eddb",
+    "scripts/verify_all_six_profiles.py": "e0d272214d1a56b3769e320a123d2db83bf689b8c5cd92a45be80bf0ffebfe24",
+    "tests/test_all_six_profiles.py": "5cbea455eeaac867ab7fbdff69cf612b1281ab4c8a0a93750096822d1f0689ad",
+    "tests/test_assessment_pr15_regressions.py": "27995d54855190054511040fe30bb0edb72e1ec8be77f6e67b4eaabb3bd70c59"
+  },
+  "sha256_verified_before_lf_normalization": {
+    "app/assessment/service.py": "7153d4811fbc82b35fd0fdc00ab56c3987d5b468ed56d8a8a462998859eae0eb",
+    "app/assessment/version.py": "0a8f9111cb38b5b5ea6f87a42f94dadd564f4287f16915e84acd95c38a904aa5",
+    "fixtures/requirement_profiles/all_six/coverage.json": "ae58297231db20677c77bd40e96708e75ac0e9c944a18d298c90260c5534f01a",
+    "fixtures/requirement_profiles/all_six/example-junior-response.json": "7c29aa80612c86d694d6b5076bbe8d83d63aba871c46fc32f58c8aaf7a8f87a9",
+    "fixtures/requirement_profiles/all_six/originals/Frontend developer/Разработчик клиентского ПО.docx": "3f90fd15700622928626d8600e2a52798b3a3a374c89e145dbd874184eb649a8",
+    "fixtures/requirement_profiles/all_six/originals/Junior Python-разработчик/ПРОВЕРЕНО 2024 Младший инженер по аналитике и работе с большими данными ДИ.docx": "355838c153287830ec7913860d61ae7a0e34f62c478e8d528105a848f8b4f7cd",
+    "fixtures/requirement_profiles/all_six/originals/Junior UX_UI Дизайнер/Дизайнер клиентского ПО.docx": "59c7b3da8e5df6ac235e7ab27c83365df207fbe6fd0b667bc742cbd3dd4650e5",
+    "fixtures/requirement_profiles/all_six/originals/Python-разработчик/ПРОВЕРЕНО 2024 Инженер по аналитике и работе с большими данными ДИ.docx": "28c08b3b9a9b070651dda9f01942dabf5f959c5b05bd84975eb47f6af56f55e6",
+    "fixtures/requirement_profiles/all_six/originals/QA Engineer Manual/ПРОВЕРЕНО 2024 Инженер по тестированию ПО.docx": "6c6bfbbc26ab27ac748075a488c2c94760321b1e665132a36c32b7f05ac7f73c",
+    "fixtures/requirement_profiles/all_six/originals/матрица компетеннций для консультанта отдела.docx": "4a566ad8025fa4d580f80e7c77f382986194b97a873b4570fda11c6a5639f07a",
+    "fixtures/requirement_profiles/all_six/originals/Положения/ДИ консультант сектора подбора кадров  (2026)ИТОГ 2.docx": "fdf5afb5623cae2d63d1fae603bf992f833a86d9e736a968d5f3061745dd87d0",
+    "fixtures/requirement_profiles/all_six/profiles/frontend-dev.md": "dadc0f311e12b234316c428a41fb8daada8d4098d03a7a642b23d0169d721c0c",
+    "fixtures/requirement_profiles/all_six/profiles/hr-consultant.md": "3e358595a243f591e4d68bc86ff174facb48f7ad5f4464433577969c7297a9b2",
+    "fixtures/requirement_profiles/all_six/profiles/junior-python-dev.md": "955b67391400a5e2931a805543cf3769f079f3c3dedac63ea6fb82680fd4426f",
+    "fixtures/requirement_profiles/all_six/profiles/junior-ux-ui.md": "b22f9559a0a617fd593be77ba299ee53bddfd89d8303f1f029a6d40dafff8583",
+    "fixtures/requirement_profiles/all_six/profiles/python-dev.md": "d8abdb827b42a50e317d8e1dd4f2409f191ce7a145a7b11295b8140532e279a2",
+    "fixtures/requirement_profiles/all_six/profiles/qa-manual.md": "3154a23f202cba78326ce1c6fa1798c856e7ccff92731a30d7464740cbc70612",
+    "fixtures/requirement_profiles/all_six/profiles.draft.json": "78b13451bd458fad062716be4319e69f88c8a1b9f1be7112959bd3db22229591",
+    "fixtures/requirement_profiles/all_six/README.md": "7a00d36b641b1a7ac9c31334ab49e8239ba2efe825aaa92ccc8559718803e464",
+    "fixtures/requirement_profiles/all_six/sources.json": "3826675bdfe5480cbffe98a83aa38fff89b028ed4093f8a72ae38ac314249443",
+    "scripts/load_all_six_profiles.py": "127b668bd3316c2a0e624a6bc397f163a44f0bd21fb5b7c414c3488d2a76eddb",
+    "scripts/verify_all_six_profiles.py": "e0d272214d1a56b3769e320a123d2db83bf689b8c5cd92a45be80bf0ffebfe24",
+    "tests/test_all_six_profiles.py": "5cbea455eeaac867ab7fbdff69cf612b1281ab4c8a0a93750096822d1f0689ad",
+    "tests/test_assessment_pr15_regressions.py": "27995d54855190054511040fe30bb0edb72e1ec8be77f6e67b4eaabb3bd70c59"
+  },
+  "publication_normalization": {
+    "files": [
+      "fixtures/requirement_profiles/all_six/coverage.json",
+      "fixtures/requirement_profiles/all_six/profiles/frontend-dev.md",
+      "fixtures/requirement_profiles/all_six/profiles/hr-consultant.md",
+      "fixtures/requirement_profiles/all_six/profiles/junior-python-dev.md",
+      "fixtures/requirement_profiles/all_six/profiles/junior-ux-ui.md",
+      "fixtures/requirement_profiles/all_six/profiles/python-dev.md",
+      "fixtures/requirement_profiles/all_six/profiles/qa-manual.md",
+      "fixtures/requirement_profiles/all_six/profiles.draft.json",
+      "fixtures/requirement_profiles/all_six/sources.json"
+    ],
+    "change": "CRLF to LF only, parsed JSON equality asserted; DOCX bytes unchanged.",
+    "followup": "Offline package verification and all non-DB requirements-02 tests rerun."
+  }
+}

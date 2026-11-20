@@ -1,0 +1,13 @@
+{
+  "example_id": "requirements02-junior-comparison",
+  "is_synthetic": true,
+  "purpose": "Контролируемая проверка правил двух реальных черновиков; не замер качества LLM.",
+  "resume_text": "Окончил бакалавриат: Программная инженерия. На стажировке разрабатывал Python-скрипты обработки данных и SQL-запросы. В тестировании ПО опыта нет.",
+  "education_quote": "Окончил бакалавриат: Программная инженерия.",
+  "work_quote": "На стажировке разрабатывал Python-скрипты обработки данных и SQL-запросы.",
+  "qa_no_experience_quote": "В тестировании ПО опыта нет.",
+  "expected": {
+    "junior-python-dev": {"version": 1, "education": "met", "experience": "met"},
+    "qa-manual": {"version": 1, "education": "met", "experience": "not_met"}
+  }
+}
