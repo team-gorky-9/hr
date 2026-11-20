@@ -198,12 +198,19 @@ def test_rules_do_not_guess(path, problem):
     assert error.value.code == problem
 
 
-def test_kadry_mapping_covers_unrecognized_service_files():
+@pytest.mark.parametrize('path, kind', [
+    ('Кейс.pdf', DocumentKind.OTHER),
+    ('Frontend developer/Разработчик клиентского ПО.docx', DocumentKind.JOB_DESCRIPTION),
+    ('Junior UX_UI Дизайнер/Дизайнер клиентского ПО.docx', DocumentKind.JOB_DESCRIPTION),
+    ('QA Engineer Manual/ПРОВЕРЕНО 2024 Инженер по тестированию ПО.docx', DocumentKind.JOB_DESCRIPTION),
+])
+def test_kadry_mapping_covers_unrecognized_service_files(path, kind):
     from app.ingest.package import load_mapping
 
     mapping = load_mapping(Path(__file__).resolve().parents[1] / "fixtures" / "kadry_mapping.json")
-    route = resolve_route(InputFile("Кадры/Кейс.pdf", b"", "text"), mapping)
-    assert route.document_kind == DocumentKind.OTHER
+    assert mapping.dataset_id == 'kadry-2026'
+    route = resolve_route(InputFile(path, b"", "text"), mapping)
+    assert route.document_kind == kind
 
 
 # --- Словарь папок: переименование папки без правки кода ----------------------------

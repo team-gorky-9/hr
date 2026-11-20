@@ -211,3 +211,23 @@ def test_guide_reads_only_when_caller_records_calls(session):
     guide = build_guide(session, assessment_id=assessment_id, llm=llm, record_calls=False)
     assert guide.assessment_id == str(assessment_id) and len(llm.calls) == 1
     assert session.scalar(select(func.count()).select_from(AuditLog)) == before
+
+
+def test_cli_requires_position_when_candidate_has_several_assessments(session, monkeypatch, capsys):
+    """Гайд строится по оценке нужной должности, а не по последней кросс-оценке."""
+    from contextlib import nullcontext
+
+    from app.db import session as db_session
+    from app.interview import __main__ as cli
+
+    profile = create_fixture_profile(session, FIXTURE)
+    first = assess(session, profile, BASE, "py-9001")
+    monkeypatch.setattr(db_session, "SessionLocal", lambda: nullcontext(session))
+    monkeypatch.setattr(cli, "build_client", lambda: FakeLLMClient(guide_model([])))
+    monkeypatch.setattr(session, "commit", lambda: None)
+    assert cli.main(["--candidate-code", "py-9001", "--position-code", "hr-consultant", "--no-core"]) == 1
+    assert json.loads(capsys.readouterr().out)["status"] == "assessment_required"
+    assert cli.main(["--candidate-code", "py-9001", "--position-code", "python-dev", "--no-core"]) == 0
+    assert json.loads(capsys.readouterr().out)["assessment_id"] == str(first)
+    assert cli.main(["--assessment-id", str(first), "--no-core"]) == 0
+    assert json.loads(capsys.readouterr().out)["assessment_id"] == str(first)

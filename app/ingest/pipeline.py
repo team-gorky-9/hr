@@ -28,6 +28,7 @@ from app.ingest.package import InputFile, MappingConfig, Problem, Route, resolve
 from app.ingest.redact import REDACTION_METHOD, RedactionError, redact
 from app.schemas.pii import PiiData
 from app.ingest.report import ImportReport, ItemStatus, ReportItem
+from app.postings.provenance import dataset_fingerprint, record_source
 
 
 def default_batch_label(now: datetime) -> str:
@@ -277,6 +278,7 @@ def _import_resume(
 def _import_one(
     session: Session, item: InputFile, mapping: MappingConfig, batch: str, text_index: _TextIndex,
     reredact: bool = False,
+    dataset_sha256: str | None = None,
 ) -> ReportItem:
     base = ReportItem(source_path=item.source_path, sha256=item.sha256, status=ItemStatus.QUARANTINED)
     if item.extract_error is not None:
@@ -303,6 +305,12 @@ def _import_one(
             result = base.model_copy(update={"status": ItemStatus.EXCLUDED_NON_RESUME})
         else:
             result = _import_resume(session, item, route, base, batch, text_index, reredact)
+            if mapping.dataset_id is not None and result.status in (
+                ItemStatus.IMPORTED, ItemStatus.APPLICATION_ADDED, ItemStatus.DUPLICATE_SKIPPED,
+            ):
+                application = session.get(Application, result.application_id)
+                if application.source == ApplicationSource.RESPONSE:
+                    record_source(session, application.id, mapping.dataset_id, dataset_sha256, item, route.channel)
     except repo.RepositoryError as error:
         savepoint.rollback()
         return base.model_copy(update={"status": ItemStatus.ERROR, "reason": f"REPOSITORY_ERROR: {error}"})
@@ -342,8 +350,9 @@ def run_import(
     если результат изменился)."""
     report = ImportReport(import_batch=import_batch, started_at=now().astimezone(), dry_run=not commit_each)
     text_index = _TextIndex(session)
+    dataset_sha256 = dataset_fingerprint(files) if mapping.dataset_id is not None else None
     for item in files:
-        report.add(_import_one(session, item, mapping, import_batch, text_index, reredact))
+        report.add(_import_one(session, item, mapping, import_batch, text_index, reredact, dataset_sha256))
         if commit_each:
             session.commit()
     report.finish(now().astimezone())

@@ -1,0 +1,124 @@
+{
+  "schema_version": "posting-registry-sources/1.0",
+  "registry_version": "v1",
+  "datasets": {
+    "kadry-2026": {
+      "package_root": "Кадры",
+      "archive_sha256": "801efb82667a63d5d2370e6d39b00c74bea5069a3643472d41f476348a559baf",
+      "dataset_sha256": "53c7b6d1918b96c106d99371f9e942b2e8720f164ce85cf4fde6fb275c998548",
+      "input_file_count": 1739,
+      "inventory_method": "read_package folder semantics, bytes inventory without text extraction",
+      "is_synthetic": false
+    },
+    "stage0a-training": {
+      "package_root": "fixtures/stage_0a",
+      "archive_sha256": null,
+      "dataset_sha256": "034d53be38bf0d2e5a55c938a9991fad6780e1190b5a292f0f57c6990989e326",
+      "input_file_count": 4,
+      "inventory_method": "read_package(fixtures/stage_0a)",
+      "is_synthetic": true
+    }
+  },
+  "decisions": {
+    "kadry-junior-python-dev": {
+      "position_code": "junior-python-dev",
+      "note": "Публикация уточняет аналитическую специализацию Junior Python; ДИ относится к младшему инженеру по аналитике.",
+      "publication": {
+        "source_path": "Junior Python-разработчик/Вакансия.txt",
+        "sha256": "2b80672fbbfe28cd9ec4986b112da46e13c51f06030182ea30483e9698b0f0a2",
+        "title": "Junior Python-разработчик (Аналитика данных)",
+        "exact_passage": "Разрабатывать и поддерживать скрипты на Python для сбора, обработки и анализа данных из городских информационных систем."
+      },
+      "job_description": {
+        "source_path": "Junior Python-разработчик/ПРОВЕРЕНО 2024 Младший инженер по аналитике и работе с большими данными ДИ.docx",
+        "sha256": "355838c153287830ec7913860d61ae7a0e34f62c478e8d528105a848f8b4f7cd",
+        "exact_passage": "Младшего инженера по аналитике и работе с большими данными"
+      },
+      "mapping_ref": "fixtures/kadry_mapping.json#/folders"
+    },
+    "kadry-python-dev": {
+      "position_code": "python-dev",
+      "note": "Публикация прямо называет внутреннюю должность инженера по данным; ДИ описывает Python, данные и BI.",
+      "publication": {
+        "source_path": "Python-разработчик/Вакансия.txt",
+        "sha256": "1581f4d7f2021083f97384c0f4fc5cf62bee1f9cf29de736c3fdf0def614d301",
+        "title": "Python-разработчик",
+        "exact_passage": "В связи с расширением, мы открываем набор на позицию \"Инженер по работе с большими данными\"."
+      },
+      "job_description": {
+        "source_path": "Python-разработчик/ПРОВЕРЕНО 2024 Инженер по аналитике и работе с большими данными ДИ.docx",
+        "sha256": "28c08b3b9a9b070651dda9f01942dabf5f959c5b05bd84975eb47f6af56f55e6",
+        "exact_passage": "Инженера по аналитике и работе с большими данными"
+      },
+      "mapping_ref": "fixtures/kadry_mapping.json#/folders"
+    },
+    "kadry-qa-manual": {
+      "position_code": "qa-manual",
+      "note": "Публикация прямо связывает QA Engineer (Manual) с инженером по тестированию. Различие обязательных автотестов в ДИ и преимуществ в публикации не утверждается этим решением.",
+      "publication": {
+        "source_path": "QA Engineer Manual/Вакансия.txt",
+        "sha256": "dccbeb531c5a96c2342e7780e86430c74f26e552d653f861b80c061db6931b2f",
+        "title": "QA Engineer (Manual)",
+        "exact_passage": "В связи с расширением, мы открываем набор на позицию \"Инженер по тестированию ПО\"."
+      },
+      "job_description": {
+        "source_path": "QA Engineer Manual/ПРОВЕРЕНО 2024 Инженер по тестированию ПО.docx",
+        "sha256": "6c6bfbbc26ab27ac748075a488c2c94760321b1e665132a36c32b7f05ac7f73c",
+        "exact_passage": "Инженера по тестированию ПО"
+      },
+      "mapping_ref": "fixtures/kadry_mapping.json#/folders"
+    },
+    "kadry-frontend-dev": {
+      "position_code": "frontend-dev",
+      "note": "Публикация прямо связывает Frontend developer с разработчиком клиентского ПО; ДИ описывает создание интерфейсов.",
+      "publication": {
+        "source_path": "Frontend developer/Вакансия.txt",
+        "sha256": "4b84d6cfcdaa5e88d6e964114627fe5de25fd2d263383648e5a7a7f1405d788e",
+        "title": "Frontend developer",
+        "exact_passage": "В связи с расширением, мы открываем набор на позицию \"Разработчик клиентского ПО\"."
+      },
+      "job_description": {
+        "source_path": "Frontend developer/Разработчик клиентского ПО.docx",
+        "sha256": "3f90fd15700622928626d8600e2a52798b3a3a374c89e145dbd874184eb649a8",
+        "exact_passage": "Разработчика клиентского ПО"
+      },
+      "mapping_ref": "fixtures/kadry_mapping.json#/folders"
+    },
+    "kadry-junior-ux-ui": {
+      "position_code": "junior-ux-ui",
+      "note": "Папка и публикация однозначно задают Junior UX/UI. ДИ описывает дизайнера без младшего уровня, требует опыт и обучение младших специалистов; это открытое расхождение профиля, не альтернативная целевая должность отклика.",
+      "publication": {
+        "source_path": "Junior UX_UI Дизайнер/Вакансия.txt",
+        "sha256": "dff5a29170ffbec271573af36effbd0df191955dd4f7e39ebcf0ba133861e129",
+        "title": "Junior UX/UI Дизайнер",
+        "exact_passage": "В связи с расширением, мы открываем набор на позицию \"Младший дизайнер клиентского ПО (Junior UX/UI Дизайнер)\"."
+      },
+      "job_description": {
+        "source_path": "Junior UX_UI Дизайнер/Дизайнер клиентского ПО.docx",
+        "sha256": "59c7b3da8e5df6ac235e7ab27c83365df207fbe6fd0b667bc742cbd3dd4650e5",
+        "exact_passage": "Дизайнера клиентского ПО"
+      },
+      "mapping_ref": "fixtures/kadry_mapping.json#/folders"
+    },
+    "training-python-dev": {
+      "position_code": "python-dev",
+      "note": "Явно учебное решение команды для вымышленных файлов stage_0a.",
+      "source": {
+        "source_path": "Python-разработчик/py-9001.txt",
+        "sha256": "219f23aac189d29ee203c3dfe85a2c70dbede64d79cccf805616689ab433445f"
+      },
+      "mapping_ref": "fixtures/stage_0a/mapping.json#/entries",
+      "posting_title": "Python-разработчик"
+    },
+    "training-hr-consultant": {
+      "position_code": "hr-consultant",
+      "note": "Явно учебное решение команды для вымышленных файлов stage_0a.",
+      "source": {
+        "source_path": "консультанта сектора подбора кадров/hr-9001.docx",
+        "sha256": "32ed64528fb860c3fb26bd59a660a9faa846ee8a3bb702b334312ded26b46c32"
+      },
+      "mapping_ref": "fixtures/stage_0a/mapping.json#/entries",
+      "posting_title": "Консультант отдела кадровой работы"
+    }
+  }
+}

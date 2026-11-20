@@ -19,6 +19,8 @@ from sqlalchemy.orm import Session, selectinload
 from app.api.errors import ApiError, not_found
 from app.assessment.applicability import resolve_applicability
 from app.assessment.ranking import rank, rank_input
+from app.postings.service import resolve_application, resolved_state, compatibility_applicability
+from app.postings import service as postings
 # Правила актуальности оценки и границ цитат живут в слое оценки и общие с кросс-оценкой ai-02.
 from app.assessment.state import AssessmentState, assessment_texts, evidence_with_utf16, resolve_states  # noqa: F401
 from app.assessment.verification import utf16_offsets
@@ -105,9 +107,11 @@ def get_comparison(session: Session, application_id: uuid.UUID, profile_id: uuid
         raise ApiError(422, 'PROFILE_NOT_ALLOWED', 'Профиль недоступен в контуре кандидата', {})
     position = session.get(Position, profile.position_id)
     state = resolve_states(session, [candidate.id], profile, position.id, profile.is_synthetic)[candidate.id]
+    resolution = resolve_application(session, application.id)
     return ComparisonOut(application_id=application.id, candidate_id=candidate.id,
         posting_title=application.posting_title, target_position_code=position.code, profile_id=profile.id,
-        applicability=resolve_applicability(position.code, application.posting_title),
+        posting_resolution=resolution,
+        applicability=compatibility_applicability(resolution, comparison_target=position.code),
         assessment_status=state.status,
         assessment=assessment_out(session, candidate, state) if state.assessment else None)
 
@@ -134,7 +138,8 @@ def list_vacancies(session: Session, contour: Contour) -> VacancyListOut:
         session.execute(
             select(Application.vacancy_id, func.count())
             .join(Candidate, Candidate.id == Application.candidate_id)
-            .where(Application.vacancy_id.is_not(None), Candidate.is_synthetic == synthetic)
+            .where(Application.vacancy_id.is_not(None), Candidate.is_synthetic == synthetic,
+                   Application.source == 'response')
             .group_by(Application.vacancy_id)
         ).all()
     )
@@ -189,18 +194,31 @@ def list_applications(
         select(Application, Candidate, SelectionStage)
         .join(Candidate, Candidate.id == Application.candidate_id)
         .join(SelectionStage, SelectionStage.code == Application.current_stage_code)
-        .where(Application.vacancy_id == vacancy.id, Candidate.is_synthetic == synthetic)
+        .where(Application.vacancy_id == vacancy.id, Candidate.is_synthetic == synthetic,
+               Application.source == 'response')
         .order_by(Application.applied_at.desc().nulls_last(), Candidate.code)
     )
     rows = session.execute(query).all()
     position = session.get(Position, vacancy.position_id)
 
     candidate_ids = [candidate.id for _, candidate, _ in rows]
-    profile = repo.get_approved_profile(session, vacancy.position_id, synthetic=synthetic)
-    states = resolve_states(session, candidate_ids, profile, vacancy.position_id, synthetic)
     cards = _current_cards(session, candidate_ids)
+    registry = postings.get_default_registry()
 
-    assessment_ids = {s.assessment.id for s in states.values() if s.assessment is not None}
+    # 1. Цель и оценка каждого отклика — через реестр публикаций (requirements-03): профиль у каждого
+    #    отклика свой, а не один на вакансию. Неготовая цель (mapping_required, no_approved_profile,
+    #    not_applicable) даёт статус без оценки, и светофор относит такой отклик к ⚪.
+    resolved = []
+    counts = dict(confirmed=0, mismatch=0, unresolved=0, not_covered=0)
+    for application, candidate, stage in rows:
+        resolution = resolve_application(session, application.id, registry=registry)
+        state = resolved_state(session, resolution, imported_position_code=position.code)
+        mapping = compatibility_applicability(resolution, position.code)
+        counts[mapping.status if mapping else 'not_covered'] += 1
+        resolved.append((application, candidate, stage, resolution, state, mapping))
+
+    # 2. Оценки и их профили для светофора — двумя запросами на всю вакансию.
+    assessment_ids = {state.assessment.id for *_, state, _ in resolved if state.assessment is not None}
     assessments_by_id: dict[uuid.UUID, Assessment] = {}
     profiles_by_id: dict[uuid.UUID, RequirementProfile] = {}
     if assessment_ids:
@@ -229,12 +247,10 @@ def list_applications(
                 )
             }
 
+    # 3. Светофор: профиль — тот, по которому оценён именно этот отклик.
     row_entries = []
     rank_inputs = []
-    counts = dict(confirmed=0, mismatch=0, unresolved=0, not_covered=0)
-    for application, candidate, stage in rows:
-        state, mapping = application_state(states[candidate.id], position.code, application.posting_title)
-        counts[mapping.status if mapping else 'not_covered'] += 1
+    for application, candidate, stage, resolution, state, mapping in resolved:
         loaded_assessment = assessments_by_id.get(state.assessment.id) if state.assessment else None
         assessment_profile = profiles_by_id.get(loaded_assessment.profile_id) if loaded_assessment else None
         rank_inputs.append(
@@ -247,23 +263,24 @@ def list_applications(
                 profile=assessment_profile,
             )
         )
-        row_entries.append((application, candidate, stage, state, mapping, loaded_assessment))
+        row_entries.append((application, candidate, stage, resolution, state, mapping, loaded_assessment))
 
     ranked = rank(rank_inputs)
     rank_by_app = {r.key: r for r in ranked}
     fit_order = {r.key: idx for idx, r in enumerate(ranked)}
 
     items = []
-    for application, candidate, stage, state, mapping, assessment in row_entries:
+    for application, candidate, stage, resolution, state, mapping, assessment in row_entries:
         card = cards.get(candidate.id)
         ranked_item = rank_by_app[application.id]
         item = ApplicationListItemOut(
-            posting_title=application.posting_title, target_position_code=position.code, applicability=mapping,
+            posting_title=application.posting_title, target_position_code=resolution.position_code, applicability=mapping,
+            posting_resolution=resolution,
             application_id=application.id,
             candidate_id=candidate.id,
             candidate_code=candidate.code,
             headline=candidate.headline or (card.card.get("headline") if card else None),
-            is_training=candidate.is_synthetic or (profile is not None and profile.is_synthetic),
+            is_training=candidate.is_synthetic,
             current_stage_code=stage.code,
             current_stage_title=stage.title,
             applied_at=application.applied_at,
@@ -324,21 +341,17 @@ def get_application(session: Session, application_id: uuid.UUID) -> ApplicationD
     # Контур карточки задаёт кандидат (развилка Р3): учебный — учебный профиль, реальный — рабочий.
     # Так карточка всегда совпадает со строкой списка своего контура.
     synthetic = candidate.is_synthetic
-    profile = repo.get_approved_profile(session, position.id, synthetic=synthetic) if position else None
-    if position is None:
-        state = AssessmentState(AssessmentStatus.NO_APPROVED_PROFILE)
-    else:
-        state = resolve_states(session, [candidate.id], profile, position.id, synthetic)[candidate.id]
-    mapping = None
-    if position:
-        state, mapping = application_state(state, position.code, application.posting_title)
+    resolution = resolve_application(session, application.id)
+    state = resolved_state(session, resolution, imported_position_code=position.code if position else None)
+    mapping = compatibility_applicability(resolution, position.code if position else None)
 
     current_text = repo.get_current_text(session, candidate.id)
     card = repo.get_current_card(session, candidate.id)
     card_out = {"version": card.version, "extractor": card.extractor, **card.card} if card else None
 
     return ApplicationDetailOut(
-        posting_title=application.posting_title, target_position_code=position.code if position else None,
+        posting_title=application.posting_title, target_position_code=resolution.position_code,
+        posting_resolution=resolution,
         applicability=mapping,
         application_id=application.id,
         vacancy=VacancyBriefOut(

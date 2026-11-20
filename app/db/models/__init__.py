@@ -15,18 +15,26 @@ from app.db.models.search import Embedding
 from app.db.models.selection import (
     Application,
     DepartmentFeedback,
+    HandoffAttempt,
+    HandoffDeadlineExtension,
     Interview,
+    InterviewAnswer,
+    InterviewGuide,
     InterviewQuestion,
+    InterviewRubricQuestion,
+    ProductionCalendarDay,
     RejectionReason,
     ReserveEntry,
     SelectionStage,
     StageEvent,
 )
 from app.db.models.sources import SourceDocument
+from app.db.models.postings import ApplicationPostingSource
 from app.db.models.users import AuditLog, User
 
 __all__ = [
     "Application",
+    "ApplicationPostingSource",
     "Assessment",
     "AuditLog",
     "Candidate",
@@ -41,9 +49,15 @@ __all__ = [
     "Embedding",
     "FormalCheck",
     "FormalRequirement",
+    "HandoffAttempt",
+    "HandoffDeadlineExtension",
     "Interview",
+    "InterviewAnswer",
+    "InterviewGuide",
     "InterviewQuestion",
+    "InterviewRubricQuestion",
     "Position",
+    "ProductionCalendarDay",
     "ProfileSource",
     "RejectionReason",
     "RequirementProfile",

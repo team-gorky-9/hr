@@ -1,0 +1,16 @@
+{
+  "code_commit": "279c46093eae05754cb63ba4b520da51969e237e",
+  "integration_base": "e4910e2f7765e3690c769233382669871eb3f0f4",
+  "junit_testcase_count": 832,
+  "skipped": [
+    {
+      "test": "tests.test_reporting_management_api.test_node_sdk_against_uvicorn",
+      "reason": "Node.js is required to exercise the JavaScript SDK"
+    }
+  ],
+  "failures": 0,
+  "errors": 0,
+  "git_archive_registry_check": "passed",
+  "registry_version": "v1",
+  "registry_rule_count": 14
+}

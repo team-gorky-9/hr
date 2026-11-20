@@ -68,8 +68,9 @@ def pick_profile(session: Session, position_code: str, *, technical: bool,
     return profile
 
 
-def run_one(session_factory, llm: LLMClient, *, candidate_code: str, profile_id: uuid.UUID,
-            technical: bool, as_of: str | None, purpose='primary', application_id=None) -> dict:
+def run_one(session_factory, llm: LLMClient, *, candidate_code: str, profile_id: uuid.UUID | None,
+            technical: bool, as_of: str | None, purpose='primary', application_id=None,
+            expected_position_code=None) -> dict:
     summary = {"candidate_code": candidate_code, "mode": "technical" if technical else "operational",
                "purpose": purpose, "application_id": str(application_id) if application_id else None}
     with session_factory() as session:
@@ -79,7 +80,8 @@ def run_one(session_factory, llm: LLMClient, *, candidate_code: str, profile_id:
         candidate_id = candidate.id
         try:
             manifest = assess_in_context(session, candidate_id=candidate_id, profile_id=profile_id, llm=llm,
-                mode=summary['mode'], as_of=as_of, purpose=purpose, application_id=application_id)
+                mode=summary['mode'], as_of=as_of, purpose=purpose, application_id=application_id,
+                expected_position_code=expected_position_code)
             session.commit()
             return summary | manifest
         except RuleUnsupportedError as error:
@@ -110,8 +112,8 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     for name in ("run", "batch"):
         command = sub.add_parser(name)
-        command.add_argument("--position-code", required=(name == "run"),
-                             help="должность профиля; в batch вместе с --all-approved — должность исходного отклика")
+        command.add_argument("--position-code",
+                             help="run: ожидаемая должность; primary batch: фильтр импортированных вакансий; comparison: целевая должность")
         command.add_argument("--technical", action="store_true", help="учебный профиль, пометка «синтетика»")
         command.add_argument("--profile-id")
         command.add_argument("--as-of", help="месяц расчёта текущего стажа, 'ГГГГ-ММ'")
@@ -137,24 +139,32 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("batch без --all-approved требует --position-code")
     if args.command == 'run' and args.purpose == 'primary' and args.application_id is None:
         parser.error('primary требует --application-id; для отдельного сравнения задайте --purpose comparison')
+    if args.purpose == 'comparison' and not args.position_code:
+        parser.error('comparison требует --position-code')
 
     from app.db.session import SessionLocal  # подключение к базе — только при запуске
 
     llm = _DeferredClient()
     with SessionLocal() as session:
-        profile = pick_profile(session, args.position_code, technical=args.technical, profile_id=args.profile_id)
-        profile_id = profile.id
+        profile_id = uuid.UUID(args.profile_id) if args.profile_id else None
+        if args.purpose == 'comparison':
+            profile_id = pick_profile(session, args.position_code, technical=args.technical,
+                                      profile_id=args.profile_id).id
         if args.command == "run":
             targets = [(args.candidate_code, args.application_id)]
         else:
+            position = session.scalar(select(Position).where(Position.code == args.position_code))
+            if position is None:
+                parser.error('неизвестная должность импортированных вакансий')
             targets = list(session.execute(
                 select(Candidate.code, Application.id).join(Application, Application.candidate_id == Candidate.id)
                 .join(Vacancy, Vacancy.id == Application.vacancy_id)
-                .where(Vacancy.position_id == profile.position_id, Candidate.is_synthetic == args.technical,
-                       Application.source != 'history').order_by(Candidate.code, Application.id)
+                .where(Vacancy.position_id == position.id, Candidate.is_synthetic == args.technical,
+                       Application.source == 'response').order_by(Candidate.code, Application.id)
             ))
     results = [run_one(SessionLocal, llm, candidate_code=code, profile_id=profile_id,
-                       technical=args.technical, as_of=args.as_of, purpose=args.purpose, application_id=app_id)
+                       technical=args.technical, as_of=args.as_of, purpose=args.purpose, application_id=app_id,
+                       expected_position_code=args.position_code if args.command == 'run' else None)
                for code, app_id in targets]
     print(json.dumps(results if args.command == "batch" else results[0], ensure_ascii=False, indent=2))
     return 0 if all(r["status"] in {'ok', 'skipped'} for r in results) else 1

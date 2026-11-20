@@ -25,6 +25,7 @@ from app.main import create_app
 from app.schemas.assessment import AlternativeResultIn, CompetencyScoreIn, FormalCheckIn
 from app.schemas.card import CandidateCard, Evidence
 from tests import factories as f
+from tests.posting_helpers import confirm_response, posting_registry  # noqa: F401 (fixture)
 from tests.test_assessment_fixtures_db import FIXTURE, _load_profile, _load_texts, _remap
 
 CASES = {case["id"]: case for case in FIXTURE["cases"]}
@@ -41,7 +42,7 @@ RAW_MARKER = "RAW-ONLY-MARKER"  # есть только в source_documents.raw_
 
 
 @pytest.fixture
-def client(session: Session) -> Iterator[TestClient]:
+def client(session: Session, posting_registry) -> Iterator[TestClient]:
     app = create_app()
     app.dependency_overrides[get_session] = lambda: session
     with TestClient(app) as test_client:
@@ -56,7 +57,8 @@ def _add_pii(session: Session, candidate_id: uuid.UUID) -> None:
     session.flush()
 
 
-def build_case(session: Session, case_id: str, *, approve: bool = True, assess: bool = True) -> dict:
+def build_case(session: Session, case_id: str, *, approve: bool = True, assess: bool = True,
+               confirm: bool = True) -> dict:
     """Учебный py-9001 из набора: кандидат, отклик на python-dev, учебный профиль, карточка, оценка."""
     case = CASES[case_id]
     ids = _load_texts(session, case)
@@ -67,6 +69,8 @@ def build_case(session: Session, case_id: str, *, approve: bool = True, assess: 
     application = repo.create_application(
         session, candidate_id=candidate_id, source=ApplicationSource.RESPONSE, vacancy_id=f.vacancy(session).id
     )
+    if confirm:
+        confirm_response(session, application, "python-dev")
     if approve:
         f.approve(session, session.get(RequirementProfile, profile_id))
     result = {"ids": ids, "candidate_id": candidate_id, "application_id": application.id, "profile_id": profile_id}
@@ -129,6 +133,9 @@ STAGE_1_ROUTES = {
     "/api/v1/applications/{application_id}",
     "/api/v1/applications/{application_id}/comparison",
     "/api/v1/candidate-texts/{candidate_text_id}",
+    "/api/v1/applications/{application_id}/posting-resolution",
+    "/api/v1/posting-snapshots",
+    "/api/v1/posting-snapshots/{snapshot_id}",
 }
 
 # Маршруты backend-02 (api.md раздел 3); состав и методы проверяет tests/test_api_workflow.py.
@@ -143,14 +150,29 @@ STAGE_2_ROUTES = {
     "/api/v1/positions/{position_id}/reserve",
     "/api/v1/analytics/funnel",
 }
+# Гайд интервью, ответы и подтверждение требования (interview.md v0.4, interview-01).
+INTERVIEW_ROUTES = {
+    "/api/v1/applications/{application_id}/interview-guide",
+    "/api/v1/interviews/{interview_id}/questions/{question_id}/answers",
+    "/api/v1/assessments/{assessment_id}/formal-checks/{requirement_id}/confirm",
+}
+
+WORKFLOW_01_ROUTES = {
+    "/api/v1/applications/{application_id}/handoff-summary",
+    "/api/v1/applications/{application_id}/handoffs",
+    "/api/v1/applications/{application_id}/handoffs/{attempt_id}/deadline",
+    "/api/v1/handoffs",
+    "/api/v1/handoffs/{attempt_id}",
+    "/api/v1/applications/{application_id}/feedback",
+}
 
 
 def test_openapi_has_all_stage_1_routes(client):
-    """Маршруты чтения этапа 1 на месте, а лишних нет: кроме них — маршруты backend-02, поиск
-    и годовой отчёт (hr#16, проверяется в test_reporting.py). Новый модуль маршрутов добавляет сюда свой префикс."""
+    """Маршруты чтения этапа 1 на месте, а лишних нет: кроме них — маршруты backend-02,
+    workflow-01, поиск и годовой отчёт (hr#16). Новый модуль маршрутов добавляет сюда свой префикс."""
     paths = set(client.get("/openapi.json").json()["paths"])
     assert STAGE_1_ROUTES <= paths
-    extra = paths - STAGE_1_ROUTES - STAGE_2_ROUTES
+    extra = paths - STAGE_1_ROUTES - STAGE_2_ROUTES - WORKFLOW_01_ROUTES - INTERVIEW_ROUTES
     assert {p for p in extra if not p.startswith("/api/v1/reports/annual")} == {"/api/v1/search/candidates"}
 
 
@@ -216,6 +238,18 @@ def test_not_assessed_is_not_unknown(session, client):
     assert body["assessment_status"] == "not_assessed" and body["assessment"] is None
 
 
+def test_unproven_original_does_not_inherit_imported_python_profile(session, client):
+    built = build_case(session, "C1-unknown", confirm=False)
+    [item] = training_list(client)["items"]
+    assert item["assessment_status"] == "mapping_required"
+    assert item["formal_result"] is None
+    body = detail(client, built["application_id"])
+    assert body["assessment_status"] == "mapping_required" and body["assessment"] is None
+    resolution = client.get(f"/api/v1/applications/{built['application_id']}/posting-resolution").json()
+    assert resolution["ready"] is False and resolution["mapping"]["decision_state"] == "needs_review"
+    assert resolution["profile_id"] is None
+
+
 def test_no_approved_profile_when_profile_is_draft(session, client):
     """N7-подобный случай: профиль-черновик не действует, даже если по нему есть оценка."""
     built = build_case(session, "C1-unknown", approve=False)
@@ -260,8 +294,9 @@ def test_stale_when_approved_profile_changed(session, client):
 def test_training_candidate_is_hidden_from_working_contour(session, client):
     build_case(session, "C1-unknown")
     real = f.make_candidate(session, "py-0001")
-    repo.create_application(session, candidate_id=real.id, source=ApplicationSource.RESPONSE,
-                            vacancy_id=f.vacancy(session).id)
+    response = repo.create_application(session, candidate_id=real.id, source=ApplicationSource.RESPONSE,
+                                       vacancy_id=f.vacancy(session).id)
+    confirm_response(session, response, "python-dev")
     vacancy_id = _python_vacancy_id(client)
 
     working = client.get(f"/api/v1/vacancies/{vacancy_id}/applications").json()
@@ -376,11 +411,16 @@ def test_vacancy_applications_traffic_light_ranking_and_sort(session, client):
     edu_level = next(r for r in profile.formal_requirements if r.key == "t.education.level")
     text = "Высшее образование."
 
-    def add_app(code: str, applied: date, check_result: CheckResult | None = None, *, make_stale: bool = False):
+    def add_app(code: str, applied: date, check_result: CheckResult | None = None, *, make_stale: bool = False,
+                posting_confirmed: bool = True):
         cand = f.make_candidate(session, code, text=text, is_synthetic=True)
         app = repo.create_application(
-            session, candidate_id=cand.id, source=ApplicationSource.RESPONSE, vacancy_id=vac.id, applied_at=applied
+            session, candidate_id=cand.id, source=ApplicationSource.RESPONSE, vacancy_id=vac.id, applied_at=applied,
+            posting_title=None if posting_confirmed else "Неизвестная публикация",
         )
+        if posting_confirmed:
+            # После requirements-03 профиль отклика берётся из подтверждённой цели публикации.
+            confirm_response(session, app, "python-dev")
         if check_result is not None:
             card = f.add_card(session, cand, skills=[])
             text_id = repo.get_current_text(session, cand.id).id
@@ -401,11 +441,13 @@ def test_vacancy_applications_traffic_light_ranking_and_sort(session, client):
     add_app("py-unassessed", date(2026, 11, 17), None)
     add_app("py-not-met", date(2026, 11, 18), CheckResult.NOT_MET)
     add_app("py-stale", date(2026, 11, 20), CheckResult.MET, make_stale=True)
+    # Оценка есть, но цель публикации не подтверждена: профиль отклика не определён — светофор ⚪.
+    add_app("py-unmapped", date(2026, 11, 19), CheckResult.MET, posting_confirmed=False)
 
     # По умолчанию sort=date: порядок по дате убыванию, но места и причины светофора уже посчитаны.
     by_date = training_list(client)
     assert [i["candidate_code"] for i in by_date["items"]] == [
-        "py-stale", "py-not-met", "py-unassessed", "py-clarify", "py-ready"
+        "py-stale", "py-unmapped", "py-not-met", "py-unassessed", "py-clarify", "py-ready"
     ]
     ranks_by_code = {
         i["candidate_code"]: (i["rank_group"], i["rank_position"], i["rank_reason"])
@@ -419,13 +461,15 @@ def test_vacancy_applications_traffic_light_ranking_and_sort(session, client):
     assert ranks_by_code["py-not-met"][2] == "Не проходит: Высшее образование"
     assert ranks_by_code["py-unassessed"] == ("needs_action", None, "Нужна оценка: отклик ещё не оценивался")
     assert ranks_by_code["py-stale"] == ("needs_action", None, "Нужна переоценка: резюме, профиль или алгоритм изменились")
+    assert ranks_by_code["py-unmapped"][:2] == ("needs_action", None)
+    assert ranks_by_code["py-unmapped"][2].startswith("Публикация не сопоставлена с должностью")
 
     # Явный sort=fit: зелёные -> жёлтые -> красные -> серые (на одном уровне даты более ранний сначала).
     by_fit = training_list(client, sort="fit")
     assert [i["candidate_code"] for i in by_fit["items"]] == [
-        "py-ready", "py-clarify", "py-not-met", "py-unassessed", "py-stale"
+        "py-ready", "py-clarify", "py-not-met", "py-unassessed", "py-unmapped", "py-stale"
     ]
-    assert [i["rank_position"] for i in by_fit["items"]] == [1, 2, 3, None, None]
+    assert [i["rank_position"] for i in by_fit["items"]] == [1, 2, 3, None, None, None]
 
     # Фильтр сохраняет честное место внутри всей вакансии.
     filtered = training_list(client, formal_result="not_met", sort="fit")

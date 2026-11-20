@@ -36,40 +36,71 @@ def preflight_application(application, *, candidate_id, position_code,
     return resolve_applicability(position_code, application.posting_title if application else None, policy=policy)
 
 
-def assess_in_context(session, *, candidate_id, profile_id, llm, mode='operational',
-                      purpose: Purpose = 'primary', application_id=None, as_of=None, policy=None):
+def assess_in_context(session, *, candidate_id, llm, profile_id=None, mode='operational',
+                      purpose: Purpose = 'primary', application_id=None, as_of=None, policy=None, registry=None,
+                      expected_position_code=None):
+    from app.postings import service as postings
     candidate = session.get(Candidate, candidate_id)
-    profile = session.get(RequirementProfile, profile_id)
-    if candidate is None or profile is None:
-        raise AssessmentDomainError('not_found', 'кандидат или профиль не найден')
-    _check_mode(profile, mode, candidate=candidate)
-    validate_groups(profile.competencies)
-    # Validate every rule even if applicability would skip this application.
-    for row in profile.formal_requirements:
-        parse_rule(row.key, row.kind, row.params, row.verification)
+    if candidate is None:
+        raise AssessmentDomainError('not_found', 'кандидат не найден')
+    if purpose not in ('primary', 'comparison'):
+        raise AssessmentDomainError('bad_purpose', 'неизвестная цель оценки')
+    if policy is not None:
+        raise AssessmentDomainError('legacy_policy', 'Для основного отбора нужен справочник с контекстом происхождения')
     as_of = as_of or datetime.now(UTC).strftime('%Y-%m')
     if not _AS_OF.fullmatch(as_of):
         raise AssessmentDomainError('bad_as_of', 'as_of должен быть ГГГГ-ММ')
-    position = session.get(Position, profile.position_id)
     application = session.get(Application, application_id) if application_id else None
     if application_id and application is None:
         raise AssessmentDomainError('application_not_found', 'отклик не найден')
+    if application is not None and application.candidate_id != candidate_id:
+        raise AssessmentDomainError('application_owner', 'отклик принадлежит другому кандидату')
     vacancy = session.get(Vacancy, application.vacancy_id) if application and application.vacancy_id else None
-    applicability = preflight_application(application, candidate_id=candidate_id,
-        position_code=position.code, application_position_id=vacancy.position_id if vacancy else None,
-        target_position_id=profile.position_id, purpose=purpose, policy=policy)
+    resolution = None
+    registry_snapshot = None
+    if purpose == 'primary':
+        if application is None or application.source != 'response':
+            raise AssessmentDomainError('not_primary_application', 'нужен прямой отклик')
+        registry = registry or postings.get_default_registry()
+        registry_snapshot = registry.model_dump(mode='json')
+        resolution = postings.resolve_application(session, application.id, registry=registry)
+        if (resolution.position_code is not None and expected_position_code is not None
+                and resolution.position_code != expected_position_code):
+            raise AssessmentDomainError('position_mapping_mismatch', 'должность не соответствует решению о публикации')
+        if resolution.ready and profile_id is not None and profile_id != resolution.profile_id:
+            raise AssessmentDomainError('profile_mapping_mismatch', 'профиль не соответствует решению о публикации')
+        profile_id = resolution.profile_id
+    profile = session.get(RequirementProfile, profile_id) if profile_id else None
+    if purpose == 'comparison' and profile is None:
+        raise AssessmentDomainError('not_found', 'для повторного рассмотрения нужен профиль')
+    if mode not in ('technical', 'operational'):
+        raise AssessmentDomainError('bad_mode', 'неизвестный режим оценки')
+    if mode == 'technical' and not candidate.is_synthetic:
+        raise AssessmentDomainError('technical_mode_real_candidate', 'технический режим только для учебных кандидатов')
+    if mode == 'operational' and candidate.is_synthetic:
+        raise AssessmentDomainError('training_candidate', 'рабочий режим требует реального кандидата')
+    if profile is not None:
+        _check_mode(profile, mode, candidate=candidate)
+        validate_groups(profile.competencies)
+        for row in profile.formal_requirements:
+            parse_rule(row.key, row.kind, row.params, row.verification)
+    position = session.get(Position, profile.position_id) if profile else None
+    applicability = postings.compatibility_applicability(resolution) if resolution else None
     text = repo.get_current_text(session, candidate_id)
-    manifest = dict(schema_version='1.0', run_id=str(uuid.uuid4()), candidate_id=str(candidate_id),
+    manifest = dict(schema_version='1.1', run_id=str(uuid.uuid4()), candidate_id=str(candidate_id),
         application_id=str(application_id) if application_id else None,
         application_source=str(application.source) if application else None,
         vacancy_id=str(vacancy.id) if vacancy else None,
-        profile_id=str(profile.id), profile_version=profile.version, position_code=position.code,
+        profile_id=str(profile.id) if profile else None, profile_version=profile.version if profile else None,
+        position_code=resolution.position_code if resolution else position.code,
+        posting_resolution=resolution.model_dump(mode='json') if resolution else None,
+        registry_snapshot=registry_snapshot,
         candidate_text_id=str(text.id) if text else None, candidate_text_version=text.version if text else None,
         purpose=purpose, mode=mode, as_of=as_of, algorithm_version=ALGORITHM_VERSION,
         prompt_version=ASSESS_PROMPT_VERSION,
         applicability=applicability.model_dump(mode='json') if applicability else None)
-    if purpose == 'primary' and applicability and applicability.status != 'confirmed':
-        manifest.update(status='skipped', reason=applicability.reason, assessment_id=None)
+    if purpose == 'primary' and not resolution.ready:
+        manifest.update(status='skipped', reason=resolution.reason, assessment_id=None)
     else:
         cached = session.scalar(select(Assessment).join(CandidateCard, CandidateCard.id == Assessment.card_id).where(
             Assessment.candidate_id == candidate_id, Assessment.profile_id == profile.id,

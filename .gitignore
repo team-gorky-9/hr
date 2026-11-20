@@ -5,3 +5,10 @@ __pycache__/
 .pytest_cache/
 # Исходные данные организаторов содержат персональные данные.
 data/
+# Versioned routing decisions contain no resumes; ship them with the application.
+!/app/postings/data/
+/app/postings/data/*
+!/app/postings/data/current.json
+!/app/postings/data/versions/
+/app/postings/data/versions/*
+!/app/postings/data/versions/*.json
