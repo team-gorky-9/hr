@@ -1,5 +1,7 @@
 # Модуль оценки
 
+Для команд утверждения ниже заранее нужен существующий активный HR/admin. Seed загружает справочники, но не создаёт `hr-demo`; укажите логин кадровика своей среды. Скрипт не создаёт пользователей и не меняет роли. Новый маршрут загрузки и утверждения — [модуль requirements](requirements.md).
+
 Контракт: [assessment v0.3](../contracts/assessment.md). Интеграция `feature/profile-assessment-integration`: main fc61d26 + профили 905ea9b + ai-01 c94285e. [Проверки и ограничения](../reports/profile-assessment-integration.md).
 
 ## Путь данных

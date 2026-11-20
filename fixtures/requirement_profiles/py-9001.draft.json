@@ -1,0 +1,40 @@
+{
+  "schema_version": "requirement-draft/1.0",
+  "position_code": "python-dev",
+  "is_synthetic": true,
+  "note": "Автономный учебный профиль py-9001. Содержание соответствует fixtures/assessment/py-9001.json; это не требования реальной ДИ.",
+  "formal_requirements": [
+    {
+      "key": "py-train/requirement/experience-commercial-24m",
+      "origin": "team",
+      "note": "synthetic_test_rule: stage-0b-02; порог существует только в учебном примере",
+      "kind": "experience",
+      "description": "Подтверждённый общий коммерческий опыт не менее двух лет",
+      "params": {"schema_version": "0.1", "scope": "total_commercial", "minimum_defined": true, "min_months": 24},
+      "is_mandatory": true,
+      "verification": "resume"
+    }
+  ],
+  "competencies": [
+    {
+      "key": "py-train/competency/api-testing",
+      "origin": "team",
+      "note": "Учебный пример stage-0b-02, шкала не утверждена",
+      "code": "API-TEST",
+      "name": "Автоматизированное тестирование API",
+      "rank": null,
+      "target_level_min": null,
+      "target_level_max": null,
+      "indicators": [
+        {
+          "key": "py-train/competency/api-testing/indicator/1",
+          "origin": "team",
+          "note": "Учебный пример stage-0b-02, без численного уровня",
+          "text": "Писал автоматизированные API-тесты",
+          "is_mandatory": true,
+          "verification": "resume"
+        }
+      ]
+    }
+  ]
+}
