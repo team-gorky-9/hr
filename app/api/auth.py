@@ -46,6 +46,32 @@ def current_user(
     return user
 
 
+def optional_user(
+    session: Annotated[Session, Depends(get_session)],
+    x_user_login: Annotated[
+        str | None,
+        Header(
+            description="Логин пользователя стенда (учебная авторизация): hr_demo, admin_demo, dept_demo, dept2_demo"
+        ),
+    ] = None,
+) -> User | None:
+    """Активный пользователь из заголовка X-User-Login, если заголовок передан."""
+    if x_user_login is None:
+        return None
+    return current_user(session, x_user_login)
+
+
+def ensure_not_department(user: User | None) -> None:
+    """Запретить роли department доступ к общим спискам и сравнению."""
+    if user is not None and user.role == UserRole.DEPARTMENT:
+        raise ApiError(
+            403,
+            "FORBIDDEN_ROLE",
+            "Действие недоступно для роли пользователя",
+            {"role": str(user.role), "allowed_roles": [str(r) for r in STAFF]},
+        )
+
+
 def require_role(*roles: UserRole) -> Callable[..., User]:
     """Зависимость FastAPI: пользователь из заголовка с одной из ролей, иначе 403."""
     allowed = tuple(roles)
@@ -64,3 +90,5 @@ def require_role(*roles: UserRole) -> Callable[..., User]:
 
 
 StaffUser = Annotated[User, Depends(require_role(*STAFF))]
+AuthenticatedUser = Annotated[User, Depends(current_user)]
+OptionalUser = Annotated[User | None, Depends(optional_user)]

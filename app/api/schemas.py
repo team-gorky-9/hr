@@ -21,7 +21,12 @@ from app.db.enums import (
     CheckResult,
     CheckStage,
     CompetencyRank,
+    DeadlineExtensionReason,
+    FeedbackOutcome,
     FormalRequirementKind,
+    HandoffChannel,
+    HandoffStatus,
+    ProcessFactStatus,
     RejectionSide,
     RequirementStatus,
     ReserveStatus,
@@ -281,6 +286,16 @@ class RejectionReasonListOut(BaseModel):
 
 # --- Этапы и история --------------------------------------------------------------
 
+class HandoffIn(BaseModel):
+    recipient_user_id: uuid.UUID | None = None
+    recipient_name: str | None = None
+    recipient_department: str | None = None
+    channel: HandoffChannel
+    handed_off_at: datetime | None = None
+    summary_revision: str = Field(min_length=1)
+    request_id: uuid.UUID
+
+
 class StageMoveIn(BaseModel):
     to_stage_code: str = Field(min_length=1)
     # Последний seq истории, который видел кадровик (GET /history → last_seq). Если отклик
@@ -291,6 +306,8 @@ class StageMoveIn(BaseModel):
     rejection_reason_code: str | None = None
     # Перескок вперёд или возврат назад: кадровик подтверждает и пишет причину в comment.
     confirm_skip: bool = False
+    # Обязателен при переводе в sent_to_department, запрещён для остальных этапов (workflow-01).
+    handoff: HandoffIn | None = None
 
 
 class StageEventOut(BaseModel):
@@ -307,6 +324,7 @@ class StageMoveOut(BaseModel):
     application_id: uuid.UUID
     stage: StageOut
     event: StageEventOut  # event.seq — новый expected_seq для следующего перевода
+    handoff: "HandoffAttemptOut | None" = None
 
 
 class StageHistoryOut(BaseModel):
@@ -486,6 +504,28 @@ class FunnelClosureOut(BaseModel):
     count: int
 
 
+class OpenWaitsByDepartmentOut(BaseModel):
+    department: str
+    total: int
+    unique_applications: int
+    due_soon_total: int = 0
+    overdue_total: int = 0
+    extended_total: int = 0
+    max_wait_hours: float
+    median_wait_hours: float
+
+
+class OpenWaitsOut(BaseModel):
+    total: int
+    unique_applications: int
+    due_soon_total: int = 0
+    overdue_total: int = 0
+    extended_total: int = 0
+    max_wait_hours: float | None = None
+    median_wait_hours: float | None = None
+    by_department: list[OpenWaitsByDepartmentOut] = Field(default_factory=list)
+
+
 class FunnelOut(BaseModel):
     as_of: datetime  # момент среза
     contour: Contour
@@ -498,5 +538,213 @@ class FunnelOut(BaseModel):
     stages: list[FunnelStageOut]
     closures: list[FunnelClosureOut]
     closures_without_reason: int
-    # Открытые ожидания ответа и их длительность считает workflow-01 по передачам; до него null.
-    open_waits: dict | None
+    open_waits: OpenWaitsOut
+
+
+# --- Передача руководителю и ответы департамента (workflow-01) -------------------
+
+class HandoffSummaryNoteOut(BaseModel):
+    seq: int
+    stage_code: str
+    stage_title: str
+    actor: UserBriefOut | None
+    created_at: datetime
+    text: str
+
+
+class HandoffSummaryQuestionOut(BaseModel):
+    question_id: uuid.UUID
+    gap: str | None
+    question: str
+    answer_text: str | None
+
+
+class HandoffSummaryInterviewItemOut(BaseModel):
+    interview_id: uuid.UUID
+    kind: str
+    result: str
+    held_at: datetime | None
+    summary: str | None
+    questions: list[HandoffSummaryQuestionOut] = Field(default_factory=list)
+
+
+class HandoffSummaryPayloadOut(BaseModel):
+    application_id: uuid.UUID
+    candidate_id: uuid.UUID
+    candidate_code: str
+    is_training: bool
+    vacancy: VacancyBriefOut | None
+    posting_title: str | None
+    stage: StageOut
+    versions: dict[str, Any]
+    assessment_status: AssessmentStatus
+    stale_reason: StaleReason | None
+    candidate_brief: dict[str, Any]
+    formal_summary: dict[str, Any] | None
+    competencies: list[dict[str, Any]] = Field(default_factory=list)
+    gaps: dict[str, list[str]]
+    interview_notes: list[HandoffSummaryInterviewItemOut] = Field(default_factory=list)
+    hr_notes: list[HandoffSummaryNoteOut] = Field(default_factory=list)
+    omitted_notes_count: int = 0
+    referenced_text_ids: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+
+class HandoffSummaryOut(BaseModel):
+    summary_revision: str
+    summary: HandoffSummaryPayloadOut
+    markdown: str
+    from_snapshot: bool = False
+    attempt_id: uuid.UUID | None = None
+
+
+class HandoffFeedbackIn(BaseModel):
+    attempt_id: uuid.UUID
+    outcome: FeedbackOutcome
+    contact_status: ProcessFactStatus = ProcessFactStatus.NOT_REPORTED
+    interview_status: ProcessFactStatus = ProcessFactStatus.NOT_REPORTED
+    interview_held: bool | None = None
+    confirmed_competencies: list[str] = Field(default_factory=list)
+    gaps: str | None = None
+    rejection_reason_code: str | None = None
+    keep_in_reserve: bool | None = None
+    comment: str | None = None
+    response_channel: HandoffChannel | None = None
+    reported_by_name: str | None = None
+    reported_by_user_id: uuid.UUID | None = None
+    reported_at: datetime | None = None
+    supersedes_id: uuid.UUID | None = None
+    request_id: uuid.UUID
+
+
+class HandoffFeedbackOut(BaseModel):
+    feedback_id: uuid.UUID
+    application_id: uuid.UUID
+    attempt_id: uuid.UUID | None
+    revision: int
+    supersedes_id: uuid.UUID | None
+    is_current: bool
+    origin_unrecorded: bool
+    outcome: FeedbackOutcome
+    contact_status: ProcessFactStatus
+    interview_status: ProcessFactStatus
+    interview_held: bool | None
+    confirmed_competencies: list[str]
+    gaps: str | None
+    rejection_reason: RejectionReasonOut | None
+    keep_in_reserve: bool | None
+    comment: str | None
+    response_channel: HandoffChannel | None
+    reported_by_name: str | None
+    reported_by: UserBriefOut | None
+    reported_at: datetime | None
+    recorded_by: UserBriefOut | None
+    received_at: datetime
+    received_after_due: bool | None = None
+
+
+class HandoffFeedbackCreatedOut(BaseModel):
+    created: bool
+    feedback: HandoffFeedbackOut
+
+
+class HandoffFeedbackListOut(BaseModel):
+    application_id: uuid.UUID
+    total: int
+    items: list[HandoffFeedbackOut]
+
+
+DeadlineStatus = Literal["on_track", "due_soon", "overdue", "responded", "closed_without_response"]
+
+
+class HandoffDeadlineExtendIn(BaseModel):
+    new_due_date: date
+    expected_due_date: date
+    reason_code: DeadlineExtensionReason
+    comment: str | None = None
+    request_id: uuid.UUID
+
+
+class HandoffDeadlineExtensionOut(BaseModel):
+    extension_id: uuid.UUID
+    seq: int
+    previous_due_date: date
+    new_due_date: date
+    previous_reminder_date: date
+    new_reminder_date: date
+    was_overdue: bool
+    reason_code: DeadlineExtensionReason
+    reason_title: str
+    comment: str | None
+    actor: UserBriefOut | None
+    created_at: datetime
+
+
+class HandoffAttemptOut(BaseModel):
+    attempt_id: uuid.UUID
+    application_id: uuid.UUID
+    candidate_id: uuid.UUID
+    candidate_code: str
+    is_training: bool
+    vacancy_id: uuid.UUID | None
+    vacancy_title: str | None
+    position_code: str | None
+    stage_event_id: uuid.UUID | None
+    recipient_user: UserBriefOut | None
+    recipient_name: str
+    recipient_department: str
+    channel: HandoffChannel
+    handed_off_at: datetime
+    initial_due_date: date
+    due_date: date
+    reminder_date: date
+    deadline_business_days: int
+    reminder_business_day: int
+    extensions_count: int = 0
+    deadline_status: DeadlineStatus
+    business_days_left: int | None = None
+    is_overdue: bool = False
+    overdue_notice: str | None = None
+    cross_assessments_url: str | None = None
+    answered_late: bool | None = None
+    response_business_days: int | None = None
+    created_by: UserBriefOut | None
+    created_at: datetime
+    summary_revision: str
+    status: HandoffStatus
+    closed_at: datetime | None
+    close_reason: str | None
+    wait_hours: float
+    latest_feedback: HandoffFeedbackOut | None
+
+
+class HandoffAttemptDetailOut(HandoffAttemptOut):
+    summary: HandoffSummaryPayloadOut
+    markdown: str
+    feedback_history: list[HandoffFeedbackOut]
+    deadline_extensions: list[HandoffDeadlineExtensionOut] = Field(default_factory=list)
+
+
+class HandoffDeadlineExtendedOut(BaseModel):
+    created: bool
+    extension: HandoffDeadlineExtensionOut
+    attempt: HandoffAttemptOut
+
+
+class HandoffCreateIn(BaseModel):
+    expected_seq: int
+    handoff: HandoffIn
+
+
+class HandoffCreatedOut(BaseModel):
+    created: bool
+    attempt: HandoffAttemptOut
+
+
+class HandoffListOut(BaseModel):
+    as_of: datetime
+    total: int
+    items: list[HandoffAttemptOut]
+
+
+StageMoveOut.model_rebuild()

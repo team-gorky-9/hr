@@ -19,5 +19,10 @@ class Settings(BaseSettings):
     hr_search_semantic_enabled: bool = False
     hr_search_dense_threshold: float = Field(default=DEFAULT_THRESHOLD, ge=0, le=1)
 
+    # Срок ответа департамента на переданный отклик (workflow-01): 10 рабочих дней,
+    # предупреждение «скоро срок» с 7-го рабочего дня (по производственному календарю РФ).
+    handoff_feedback_deadline_business_days: int = Field(default=10, ge=1, le=90)
+    handoff_feedback_reminder_business_day: int = Field(default=7, ge=1, le=90)
+
 
 settings = Settings()
