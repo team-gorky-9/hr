@@ -121,16 +121,22 @@ def test_health_reports_unavailable_database():
     assert response.json() == {"status": "error", "db": "error"}
 
 
+STAGE_1_ROUTES = {
+    "/api/v1/health",
+    "/api/v1/vacancies",
+    "/api/v1/vacancies/{vacancy_id}/applications",
+    "/api/v1/applications/{application_id}",
+    "/api/v1/applications/{application_id}/comparison",
+    "/api/v1/candidate-texts/{candidate_text_id}",
+}
+
+
 def test_openapi_has_all_stage_1_routes(client):
+    """Все маршруты чтения этапа 1 на месте, а лишних нет: кроме них — только годовой отчёт
+    (hr#16, проверяется в test_reporting.py). Новый модуль маршрутов добавляет сюда свой префикс."""
     paths = set(client.get("/openapi.json").json()["paths"])
-    assert paths == {
-        "/api/v1/health",
-        "/api/v1/vacancies",
-        "/api/v1/vacancies/{vacancy_id}/applications",
-        "/api/v1/applications/{application_id}",
-        "/api/v1/applications/{application_id}/comparison",
-        "/api/v1/candidate-texts/{candidate_text_id}",
-    }
+    assert STAGE_1_ROUTES <= paths
+    assert {p for p in paths - STAGE_1_ROUTES if not p.startswith("/api/v1/reports/annual")} == set()
 
 
 def test_cors_allows_vite_dev_server(client):
