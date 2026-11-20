@@ -1,5 +1,7 @@
 # Контракт: база данных
 
+**Дополнение v1.9 (interview-01):** миграция `0007`, раздел 20 — версии гайда интервью, ревизии ответов, рубрика ядра, базовая оценка и ответ в подтверждении требования. Ждёт утверждения.
+
 **Дополнение v1.8 (backend-02):** миграция `0006`, раздел 19 — периоды кадрового резерва, одна действующая запись на цель, статус `expired`. Ждёт утверждения.
 
 **Интеграционное дополнение v1.7:** ветка `feature/profile-assessment-integration`, миграция `0005`, раздел 18. Реализацию по архитектурному плану разрешил Давид; исторические статусы утверждения версий ниже не переписываются и согласие коллег не подразумевается.
@@ -705,3 +707,41 @@ save_assessment проверяет полный набор ключей screenin
 - **Илья:** не затронут.
 
 **Как проверено:** `test_models_match_migrations`; тесты резерва в `tests/test_selection.py` и `tests/test_api_workflow.py`. Среди них последний день срока, новый период после истечения, отзыв и детерминированная гонка двух транзакций на настоящей PostgreSQL. Вторая транзакция ждёт индекс, получает конфликт и возвращает запись первой.
+
+## 20. Гайд интервью, ревизии ответов, рубрика ядра · v1.9 (20.11.2026, ждёт утверждения)
+
+Задача interview-01, контракт [interview.md](interview.md) v0.4 §5 (хранение, права и HTTP подтвердил Денис). Миграция `0007` поверх `0006`. Номер может сдвинуться (`0008`/`0009`), если раньше вольются ветки workflow-01 и requirements-03, где тоже `0007`.
+
+| Изменение | Зачем |
+|---|---|
+| `interviews`: частичный уникальный индекс `uq_interviews_open` (`application_id`, `kind`) `WHERE result = 'pending'` | одна открытая встреча на отклик и вид. Гайд — отдельная запись, поэтому перегенерация не создаёт ещё один «звонок» в отчётах |
+| `interview_guides` (новая): `interview_id` → `interviews` CASCADE, `guide_version` ≥ 1, `assessment_id` → `assessments` CASCADE (базовая оценка сборки), `profile_id` → `requirement_profiles` CASCADE, `rubric_version`, `prompt_version`, `model_calls`, `uncovered_gaps` jsonb, `request_id` UNIQUE null, `is_migrated`, `created_by_user_id` → `users` SET NULL; UNIQUE (`interview_id`, `guide_version`); CHECK: без оценки и профиля только при `is_migrated` | версии гайда к одной встрече. `CASCADE` у оценки и профиля: при удалении кандидата его оценки и отклики удаляются разными цепочками каскада, и ссылка без `CASCADE` проверялась раньше, чем каскад от отклика доходил до гайда (найдено тестом) |
+| `interview_questions`: `guide_id` → `interview_guides` CASCADE NOT NULL, `kind` (`core`/`clarification`), `gap_ref_id`, `criterion` jsonb, `sources` jsonb, `requirement_id`, `indicator_key`, `rubric_question_id`, `carried_from_question_id`; частичный UNIQUE `uq_interview_questions_gap` (`guide_id`, `gap_ref_id`); CHECK `kind = 'core'` ⇔ есть рубрика и нет `gap_ref_id` | вопрос принадлежит версии гайда. Перенесённый вопрос показывает ответ прежней версии. `answer_notes` больше не пишется |
+| `interview_answers` (новая): `question_id` → CASCADE, `revision` ≥ 1, `text`, `source` (`phone`/`in_person`/`written`/`unknown`), `author_user_id` → `users` RESTRICT, `previous_answer_id`, `request_id` UNIQUE null; UNIQUE (`question_id`, `revision`); CHECK: автор и `request_id` пусты только при `source = 'unknown'` | ревизии ответа, строки только добавляются. Две правки одной ревизии — одна вставка проходит, вторая получает конфликт |
+| `interview_rubric_questions` (новая): `profile_id` → CASCADE, `row_key`, ровно одно из `requirement_id`/`indicator_key`, `question`, `criterion`, `author`, `status` (`draft`/`approved`), `version`, `approved_by_user_id`, `approved_at`; UNIQUE (`profile_id`, `row_key`); CHECK: `approved` ⇔ есть кто и когда | ядро — одно на версию профиля. Первая генерация двумя запросами — `INSERT … ON CONFLICT DO NOTHING` и перечтение |
+| `assessments.base_assessment_id` → `assessments` null; `confirm_request_id` UNIQUE null; CHECK: ключ подтверждения только вместе с базовой | версия из `confirm_formal_check` ссылается на последнюю версию модели. По ней гайд не устаревает после подтверждения. Ключ запроса делает повтор подтверждения идемпотентным |
+| `formal_checks.source_answer_id` → `interview_answers` NO ACTION null; CHECK: только при `basis <> 'resume'` | на какой ответ опирался кадровик. `NO ACTION` проверяется в конце оператора: удаление кандидата целиком проходит, удаление отдельного ответа, на который ссылается подтверждение, отклоняется |
+
+**Перенос.** Каждая прежняя встреча получает гайд версии 1 с `is_migrated = true` без оценки, её вопросы привязываются к нему как `clarification`. Непустой `answer_notes` становится ревизией 1 с `source = unknown` без автора. Прежние версии оценки, где есть строка не по резюме, получают `base_assessment_id` — ближайшую предыдущую версию пары, где все строки по резюме. **Откат** возвращает последнюю ревизию в пустой `answer_notes` и удаляет вопросы гайдов, созданных после миграции.
+
+**Функции `repository`** (не делают commit):
+- `open_interview` — открытая встреча или новая, через `ON CONFLICT`;
+- `save_interview_guide` → `(гайд, created)` — повтор `request_id` и гонка номера версии возвращают существующий гайд;
+- `save_rubric_questions`, `rubric_for_profile`, `rubric_fingerprint`;
+- `add_interview_answer` → `(ответ, created)` — проверки по порядку: повтор, принадлежность вопроса, последняя версия гайда, ожидаемая ревизия, вставка в точке сохранения;
+- `visible_answer`, `question_answers`;
+- `allowed_bases(verification)`, `is_preliminary` по матрице оснований;
+- `confirm_formal_check(..., answer_id, request_id)` и `find_confirmation`.
+
+Ошибки с кодом API — `RuleConflict(code, details, not_found)`, наследник `RepositoryError`.
+
+**Затронутые потребители.**
+- **Илья:** `app.interview.build_guide` вызывается только на чтение (`record_calls=False`), журнал вызовов пишет HTTP.
+- **Ася:** DTO гайда и ответов — `api.md` §4.
+- **Родион (qa):** `hr_dev` и стенд — `alembic upgrade head`.
+- **Отчёты о звонках:** одна встреча на звонок, как раньше.
+
+**Как проверено:**
+- `test_models_match_migrations`;
+- `tests/test_api_interview.py` на PostgreSQL;
+- скрипт штаба `hq/work/2026-11-20-interview-01-storage-http/check_migration_0007.py`: перенос встречи, заметки и базовой оценки, откат, повторный подъём, `alembic check`.

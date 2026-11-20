@@ -1,6 +1,6 @@
 # Контракт: HTTP API (`app/api/`)
 
-**Версия:** 0.4 (проект: backend-02 поверх интеграционной v0.3) · **Дата:** 2026-11-20 · **Владелец:** Денис · **Потребители:** фронтенд (Ася), `qa-01`/`qa-02` (Родион), `search-01` (правило действующего резерва). Дополнение разрешено Давидом в составе интеграционного плана; согласование коллегами не приписывается.
+**Версия:** 0.5 (проект: interview-01, раздел 4, поверх v0.4 backend-02) · **Дата:** 2026-11-20 · **Владелец:** Денис · **Потребители:** фронтенд (Ася), `qa-01`/`qa-02` (Родион), `search-01` (правило действующего резерва). Дополнение разрешено Давидом в составе интеграционного плана; согласование коллегами не приписывается.
 
 Опирается на [database.md](database.md) v1.8 и [assessment.md](assessment.md) v0.3.
 
@@ -463,6 +463,38 @@ AssessmentOut дополнен algorithm_version, calculation_as_of и competenc
 ### 3.6. Запланировано
 
 - Переход в `sent_to_department` вместе с регистрацией передачи, ответ департамента, ожидания в воронке — `workflow-01`.
-- Гайд интервью, ответы и итог — `interview-01`.
 - `POST /api/v1/search/candidates` с фильтром действующего резерва — `search-01`.
 - Права роли `department` в своей области — после согласования области доступа.
+
+## 4. Гайд интервью, ответы, подтверждение требования [v0.5, interview-01]
+
+Полный контракт — [interview.md](interview.md) v0.4 §4: тела запросов, `InterviewGuideOut`, `InterviewQuestionOut`, статусы вопросов, матрица оснований. Здесь — маршруты, права и коды ошибок в общем формате п. 1.
+
+| Маршрут | Ответ | Права |
+|---|---|---|
+| `POST /api/v1/applications/{application_id}/interview-guide` | `201` новая версия; `200` существующая (без `regenerate`, основание не изменилось, гонка); повтор `request_id` — тот же гайд и тот же код | `hr`, `admin` |
+| `GET /api/v1/applications/{application_id}/interview-guide?kind=phone[&guide_version=N]` | `200` снимок версии и то, что считается по текущей оценке: `is_stale`, `stale_reason`, `status` вопросов, `document_requests` | `hr`, `admin` |
+| `POST /api/v1/interviews/{interview_id}/questions/{question_id}/answers` | `201` новая ревизия; `200` повтор `request_id` | `hr`, `admin` |
+| `GET /api/v1/interviews/{interview_id}/questions/{question_id}/answers` | `200` все ревизии по возрастанию | `hr`, `admin` |
+| `POST /api/v1/assessments/{assessment_id}/formal-checks/{requirement_id}/confirm` | `201` новая версия оценки (`AssessmentOut`); `200` повтор `request_id` | `hr`, `admin` |
+
+Роль `department` получает `403 FORBIDDEN_ROLE` на всех маршрутах до workflow-01. Без заголовка — `401 USER_REQUIRED`.
+
+**Ошибки.**
+- **Гайд:**
+  - `404 APPLICATION_NOT_FOUND`, `GUIDE_NOT_FOUND`;
+  - `409` `NOT_WORKING_APPLICATION`, `ASSESSMENT_REQUIRED`, `ASSESSMENT_STALE` (`details.stale_reason`), `NOT_APPLICABLE`, `MAPPING_REQUIRED`, `NO_APPROVED_PROFILE`, `ASSESSMENT_CHANGED` (оценка или рубрика сменилась за время вызова модели), `REQUEST_ID_REUSED`;
+  - `503 LLM_UNAVAILABLE` — модель недоступна;
+  - `502 LLM_INVALID_RESPONSE` — ответ модели не прошёл схему после исправления.
+
+  При `503` и `502` новая версия не создаётся, прежняя читается по `GET`.
+- **Ответ:**
+  - `404 INTERVIEW_NOT_FOUND`, `QUESTION_NOT_FOUND` (в том числе вопрос чужого отклика);
+  - `409 REVISION_CONFLICT` (`details.current_revision`, `current_answer_id`), `GUIDE_SUPERSEDED` (`details.guide_version`), `REQUEST_ID_REUSED`;
+  - `422` `VALIDATION_ERROR` (пустой текст, длиннее 4000 символов, `source` вне `phone`/`in_person`/`written`), `ANSWER_REJECTED`.
+- **Подтверждение:**
+  - `404 ASSESSMENT_NOT_FOUND`, `REQUIREMENT_NOT_IN_PROFILE`;
+  - `409` `ASSESSMENT_NOT_CURRENT` (`details.current_assessment_id`), `BASIS_NOT_ALLOWED` (`details.verification`, `allowed_bases`), `ANSWER_REQUIRED` (`basis = interview` без `answer_id`), `ANSWER_NOT_FOR_REQUIREMENT`, `REQUEST_ID_REUSED`;
+  - `422` `VALIDATION_ERROR` (`basis = resume`, пустой `comment`), `CONFIRM_REJECTED` (профиль в архиве и другие правила оценки).
+
+Проверки прав, принадлежности и ревизии выполняются до записи. При отказе строк не появляется.

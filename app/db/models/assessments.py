@@ -21,7 +21,7 @@ from sqlalchemy import (
     UniqueConstraint,
     text as sa_text,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, created_at_column, str_enum, uuid_pk
@@ -52,6 +52,12 @@ class Assessment(Base):
     # Итоговый балл 0–100 по компетенциям; пусто, если оценить нельзя.
     overall_score: Mapped[int | None] = mapped_column(SmallInteger)
     summary: Mapped[str | None] = mapped_column(Text)
+    # [v1.9] Версия из confirm_formal_check ссылается на базовую — последнюю версию save_assessment
+    # (вывод модели по резюме). У версии из save_assessment — пусто. По базовой оценке гайд интервью
+    # понимает, переоценивали ли резюме: подтверждение требования гайд не устаревает.
+    base_assessment_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("assessments.id"))
+    # [v1.9] request_id подтверждения, создавшего эту версию: повтор запроса возвращает её же.
+    confirm_request_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), unique=True)
     created_at: Mapped[datetime] = created_at_column()
 
     formal_checks: Mapped[list["FormalCheck"]] = relationship(
@@ -75,7 +81,15 @@ class Assessment(Base):
         CheckConstraint(
             "overall_score IS NULL OR overall_score BETWEEN 0 AND 100", name="overall_score_range"
         ),
+        CheckConstraint(
+            "confirm_request_id IS NULL OR base_assessment_id IS NOT NULL", name="confirm_request_has_base"
+        ),
     )
+
+    @property
+    def base_id(self) -> uuid.UUID:
+        """Базовая оценка этой версии: она сама, если записана save_assessment."""
+        return self.base_assessment_id or self.id
 
 
 class FormalCheck(Base):
@@ -108,6 +122,10 @@ class FormalCheck(Base):
     confirmed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT")
     )
+    # [v1.9] Ответ интервью, на который опирался кадровик при подтверждении. NO ACTION, а не RESTRICT:
+    # при удалении кандидата ответы (через отклик) и строки оценки удаляются одним оператором,
+    # и проверка ссылки в конце оператора их пропускает.
+    source_answer_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("interview_answers.id"))
 
     assessment: Mapped[Assessment] = relationship(back_populates="formal_checks")
 
@@ -120,6 +138,7 @@ class FormalCheck(Base):
             " AND jsonb_array_length(evidence) = 0 AND jsonb_array_length(alternatives) = 0)",
             name="basis_confirmation",
         ),
+        CheckConstraint("source_answer_id IS NULL OR basis <> 'resume'", name="answer_only_confirmed"),
     )
 
 

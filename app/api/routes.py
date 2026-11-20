@@ -15,9 +15,18 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.api import services, workflow
+from app.ai.client import LLMClient
+from app.api import interview, services, workflow
 from app.api.auth import StaffUser
 from app.api.schemas import (
+    AnswerIn,
+    AnswerListOut,
+    AnswerOut,
+    AssessmentOut,
+    ConfirmIn,
+    InterviewGuideIn,
+    InterviewGuideOut,
+    InterviewKindIn,
     CrossAssessmentListOut,
     FunnelOut,
     RejectionReasonListOut,
@@ -39,7 +48,7 @@ from app.api.schemas import (
     HealthOut,
     VacancyListOut,
 )
-from app.db.enums import CheckResult
+from app.db.enums import CheckResult, InterviewKind
 from app.db.session import get_session
 
 router = APIRouter(prefix="/api/v1")
@@ -161,3 +170,48 @@ def get_funnel(
     period_to: Annotated[date | None, Query(description="Конец периода закрытий, включительно (МСК)")] = None,
 ):
     return workflow.funnel(session, contour, vacancy_id, position_id, period_from, period_to)
+
+
+# --- Гайд интервью, ответы, подтверждение требования (interview.md v0.4, interview-01) ---------
+
+LLMDep = Annotated[LLMClient, Depends(interview.get_llm_client)]
+
+
+@router.post("/applications/{application_id}/interview-guide", response_model=InterviewGuideOut, status_code=201)
+def create_interview_guide(application_id: uuid.UUID, body: InterviewGuideIn, session: SessionDep, user: StaffUser,
+                           llm: LLMDep, response: Response):
+    guide, created = interview.create_guide(session, application_id, body, user, llm)
+    if not created:
+        response.status_code = 200  # возвращена уже существующая версия гайда
+    return guide
+
+
+@router.get("/applications/{application_id}/interview-guide", response_model=InterviewGuideOut)
+def get_interview_guide(application_id: uuid.UUID, session: SessionDep, user: StaffUser,
+                        kind: InterviewKindIn = InterviewKindIn.PHONE,
+                        guide_version: Annotated[int | None, Query(ge=1)] = None):
+    return interview.get_guide(session, application_id, InterviewKind(kind), guide_version)
+
+
+@router.post("/interviews/{interview_id}/questions/{question_id}/answers", response_model=AnswerOut, status_code=201)
+def add_interview_answer(interview_id: uuid.UUID, question_id: uuid.UUID, body: AnswerIn, session: SessionDep,
+                         user: StaffUser, response: Response):
+    answer, created = interview.add_answer(session, interview_id, question_id, body, user)
+    if not created:
+        response.status_code = 200  # повтор запроса с тем же request_id
+    return answer
+
+
+@router.get("/interviews/{interview_id}/questions/{question_id}/answers", response_model=AnswerListOut)
+def list_interview_answers(interview_id: uuid.UUID, question_id: uuid.UUID, session: SessionDep, user: StaffUser):
+    return interview.list_answers(session, interview_id, question_id)
+
+
+@router.post("/assessments/{assessment_id}/formal-checks/{requirement_id}/confirm", response_model=AssessmentOut,
+             status_code=201)
+def confirm_formal_check(assessment_id: uuid.UUID, requirement_id: uuid.UUID, body: ConfirmIn, session: SessionDep,
+                         user: StaffUser, response: Response):
+    assessment, created = interview.confirm_requirement(session, assessment_id, requirement_id, body, user)
+    if not created:
+        response.status_code = 200  # повтор запроса с тем же request_id
+    return assessment

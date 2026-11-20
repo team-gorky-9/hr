@@ -179,7 +179,7 @@
 
 - Вызывает `confirm_formal_check`; ответ `201` — новая версия оценки в формате `AssessmentOut` ([api.md](api.md)).
 - `assessment_id` служит и оптимистической блокировкой: подтверждать можно только текущую версию, иначе `409 ASSESSMENT_NOT_CURRENT` с `details.current_assessment_id`. Два кадровика, подтверждающие одновременно, не перезапишут друг друга молча.
-- `request_id` [Денис]: без него двойное нажатие создаёт две версии оценки. Повтор возвращает ту же версию (`200`).
+- `request_id` [Денис]: без него двойное нажатие создаёт две версии оценки. Повтор возвращает ту же версию (`200`). Хранится в `assessments.confirm_request_id` (§5) [Денис, v0.4]. Тот же `request_id` с другой оценкой, требованием или результатом → `409 REQUEST_ID_REUSED`.
 - `comment` обязателен и непуст (так проверяет функция).
 - **Допустимое основание** зависит от `verification` требования. Предложение Ильи («`interview` только при `verification = interview`») не закрывает контрольный пример: в `python-dev.v5` и учебном профиле стаж — `verification = resume`, `check_stage = screening`, и ответ на уточняющий вопрос про стаж нельзя было бы внести вообще, а `documents` дал бы `is_preliminary = true`. Вместо этого [Денис, предл.; итоговую матрицу подтверждают Маша и Давид с HR, задача п. «Предметное согласование»]:
 
@@ -219,12 +219,12 @@
 
 | Таблица | Изменение |
 |---|---|
-| `interview_guides` (новая) | `id`, `interview_id` FK, `guide_version`, `assessment_id` FK (базовая оценка сборки), `profile_id` FK, `rubric_version`, `prompt_version`, `model_calls`, `uncovered_gaps` jsonb, `request_id` UNIQUE, `is_migrated`, `created_by_user_id`, `created_at`; UNIQUE(`interview_id`, `guide_version`); CHECK: `assessment_id IS NULL` только при `is_migrated` |
+| `interview_guides` (новая) | `id`, `interview_id` FK, `guide_version`, `assessment_id` FK ON DELETE CASCADE (базовая оценка сборки), `profile_id` FK ON DELETE CASCADE [Денис, v0.4: без CASCADE удаление кандидата падало — ссылка из гайда на оценку проверялась раньше, чем каскад от отклика доходил до гайда], `rubric_version`, `prompt_version`, `model_calls`, `uncovered_gaps` jsonb, `request_id` UNIQUE, `is_migrated`, `created_by_user_id`, `created_at`; UNIQUE(`interview_id`, `guide_version`); CHECK: `assessment_id IS NULL` только при `is_migrated` |
 | `interviews` | частичный UNIQUE(`application_id`, `kind`) WHERE `result = 'pending'` — одна открытая встреча на тип |
 | `interview_questions` | `guide_id` FK (NOT NULL после переноса), `kind` (`core` / `clarification`), `gap_ref_id`, `sources` jsonb, `criterion` jsonb, `requirement_id` FK null, `indicator_key` null, `rubric_question_id` FK null, `carried_from_question_id` FK null; UNIQUE(`guide_id`, `gap_ref_id`) WHERE `gap_ref_id IS NOT NULL`; CHECK: `kind = 'core'` ⇔ `rubric_question_id IS NOT NULL` и `gap_ref_id IS NULL`. `interview_id` остаётся для обратной совместимости и маршрута ответа. `gap` хранит заголовок пробела |
 | `interview_answers` (новая) | `id`, `question_id` FK, `revision` (≥ 1), `text`, `source` (`phone` / `in_person` / `written` / `unknown`), `author_user_id` FK null, `previous_answer_id` FK null, `request_id` UNIQUE null, `created_at`; UNIQUE(`question_id`, `revision`); CHECK: `author_user_id IS NULL` и `request_id IS NULL` только при `source = 'unknown'`. Строки только добавляются |
 | `interview_rubric_questions` (новая) | `id`, `profile_id` FK, `row_key`, `requirement_id` FK null, `indicator_key` null (ровно одно из двух), `question`, `criterion` jsonb, `author`, `status` (`draft` / `approved`), `version`, `approved_by_user_id` null, `approved_at` null; UNIQUE(`profile_id`, `row_key`). Первую генерацию ядра двумя запросами одновременно разрешает `INSERT … ON CONFLICT DO NOTHING` с перечтением. Маршрут утверждения рубрики в этот контракт не входит: до решения §7 — скрипт, как утверждение профиля |
-| `assessments` | `base_assessment_id` FK null: `null` у версии из `save_assessment`; у версии из `confirm_formal_check` — базовая версия, от которой она произошла (копируется по цепочке) |
+| `assessments` | `base_assessment_id` FK null: `null` у версии из `save_assessment`; у версии из `confirm_formal_check` — базовая версия, от которой она произошла (копируется по цепочке). `confirm_request_id` uuid UNIQUE null — `request_id` подтверждения, создавшего эту версию [Денис, v0.4]; CHECK: не `null` только вместе с `base_assessment_id` |
 | `formal_checks` | `source_answer_id` FK `interview_answers` null, ON DELETE NO ACTION; CHECK: не `null` только при `basis <> 'resume'`; при копировании строк в новую версию копируется |
 | запросы документов | не храним: вычисляются из текущей оценки при чтении |
 
