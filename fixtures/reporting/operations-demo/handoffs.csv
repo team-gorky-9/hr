@@ -1,0 +1,6 @@
+handoff_key,department_key,sent_on,answered_on
+transfer-a,hr,2024-12-20,2025-01-02
+transfer-b,hr,2025-01-01,2025-02-02
+transfer-c,it,2025-01-16,2025-02-16
+transfer-d,it,2025-01-15,
+transfer-e,it,2025-02-10,2025-02-10

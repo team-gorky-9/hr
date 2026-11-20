@@ -1,0 +1,7 @@
+interview_key,application_key,held_on,result
+p1,A,2025-01-08,continue
+p2,A,2025-01-10,pending
+p3,B,2025-01-13,stop
+p4,A,2025-02-04,continue
+p5,C,,no_answer
+p6,D,2026-01-01,continue

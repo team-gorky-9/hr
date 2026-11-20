@@ -1,0 +1,39 @@
+{
+  "input_schema_version": 1,
+  "csv_delimiter": ",",
+  "scope_id": "example-city",
+  "scope_label": "Учебная администрация",
+  "scope_revision": "1",
+  "mode": "demo",
+  "timezone": "Europe/Moscow",
+  "extracted_at": "2026-02-02T09:00:00+03:00",
+  "observed_until": "2026-02-01",
+  "sources": {
+    "applications": {
+      "source_id": "applications",
+      "source_revision": "demo-1",
+      "complete_intervals": [
+        {
+          "from": "2024-01-01",
+          "to": "2026-02-01"
+        }
+      ],
+      "comparable_to_previous_year": true
+    },
+    "phone_interviews": {
+      "source_id": "phone_interviews",
+      "source_revision": "demo-1",
+      "complete_intervals": [
+        {
+          "from": "2024-01-01",
+          "to": "2026-02-01"
+        }
+      ],
+      "comparable_to_previous_year": true
+    }
+  },
+  "vacancies": {
+    "consultant": "Консультант",
+    "engineer": "Инженер"
+  }
+}
