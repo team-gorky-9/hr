@@ -169,7 +169,8 @@ class OpenAICompatClient:
                 except ValidationError as error:
                     if repairs_left == 0:
                         raise LLMInvalidResponseError(
-                            f"ответ модели не прошёл схему {response_model.__name__}: {error.error_count()} ошибок"
+                            f"ответ модели не прошёл схему {response_model.__name__}: {error.error_count()} ошибок; "
+                            f"первая — {_first_problem(error)}"
                         ) from None
                     repairs_left -= 1
                     messages += [
@@ -208,6 +209,12 @@ class OpenAICompatClient:
             **extra,
         )
         return response.choices[0].message.content or "", getattr(response, "usage", None)
+
+
+def _first_problem(error: ValidationError) -> str:
+    """Место и текст первой ошибки схемы — без входного значения (там может быть текст резюме)."""
+    item = error.errors()[0]
+    return f"{'.'.join(str(p) for p in item['loc']) or 'ответ'}: {item['msg']}"[:200]
 
 
 def _repair_request(error: ValidationError) -> str:

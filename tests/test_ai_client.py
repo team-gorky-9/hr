@@ -146,7 +146,7 @@ def test_live_unknown_alternative_status_reaches_evaluator_as_no_info():
     assert llm.calls[0].attempts == 1
 
 
-@pytest.mark.parametrize('status', [None, '', 'met', 'unrecognized'])
+@pytest.mark.parametrize('status', ['', 'unrecognized'])
 def test_unrecognized_alternative_status_is_not_silently_unknown(status):
     import json
     from app.assessment.llm_schemas import FormalExtraction
@@ -168,3 +168,16 @@ def test_unknown_alias_is_serialized_canonically_without_rewriting_quotes():
     assert alternative['status'] == 'no_info'
     assert alternative['alternative_key'] == 'py.education.alt1'
     assert alternative['quote'] == 'unknown'
+
+
+def test_unknown_answer_key_is_repaired_once():
+    """Ключ, которого не спрашивали, — ошибка разбора: клиент один раз просит исправить и называет допустимые."""
+    from app.assessment.llm_schemas import keyed_formal
+
+    bad = '{"alternatives": [{"alternative_key": "level-higher", "status": "confirmed"}]}'
+    good = '{"alternatives": [{"alternative_key": "t.level.alt1", "status": "confirmed", "quote": "Высшее"}]}'
+    llm = client(bad, good, llm_structured_mode="prompt_json")
+    answer = llm.complete_structured("s", "u", keyed_formal({"t.level.alt1"}), model_role="assess")
+    assert [a.alternative_key for a in answer.alternatives] == ["t.level.alt1"]
+    assert llm.calls[0].attempts == 2
+    assert "t.level.alt1" in llm._sdk.requests[-1]["messages"][-1]["content"]

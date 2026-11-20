@@ -19,13 +19,11 @@ from typing import Any, Literal
 from sqlalchemy.orm import Session
 
 from app.ai.client import LLMClient
-from app.assessment.errors import AssessmentDomainError
-from app.ai.errors import LLMInvalidResponseError
 from app.assessment.counters import aggregate_competency, validate_groups
-from app.assessment.version import ALGORITHM_VERSION
+from app.assessment.errors import AssessmentDomainError
 from app.assessment.evidence import ResolvedQuote, resolve_quote
 from app.assessment.experience import Period, Statement, decide_commercial
-from app.assessment.llm_schemas import CompetencyExtraction, FormalExtraction
+from app.assessment.llm_schemas import FormalExtraction, keyed_competency, keyed_formal
 from app.assessment.prompts import (
     ASSESS_COMPETENCY_SYSTEM,
     ASSESS_FORMAL_SYSTEM,
@@ -43,19 +41,20 @@ from app.assessment.rules import (
     parse_rule,
 )
 from app.assessment.verification import EvidenceVerdict, confirm_result, formal_result
+from app.assessment.version import ALGORITHM_VERSION
 from app.db import repository as repo
 from app.db.enums import AuditAction, CheckResult, RequirementStatus
-from app.db.models import CandidateCard as CardRow
 from app.db.models import (
-    CandidateText,
     Candidate,
+    CandidateText,
     Competency,
     FormalRequirement,
     RequirementProfile,
 )
+from app.db.models import CandidateCard as CardRow
 from app.schemas.assessment import AlternativeResultIn, CompetencyScoreIn, FormalCheckIn
-from app.schemas.competency_details import IndicatorResult
 from app.schemas.card import CandidateCard, Evidence
+from app.schemas.competency_details import IndicatorResult
 
 Mode = Literal["operational", "technical"]
 _AS_OF = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
@@ -218,10 +217,9 @@ def _assess_formal(profile: RequirementProfile, rules: dict[str, Rule], text: Ca
             ASSESS_FORMAL_SYSTEM,
             formal_user(text.text, experience=hints or ([{"requirement": r.key} for r in experience] or None),
                         alternatives=alternatives),
-            FormalExtraction, model_role="assess", prompt_version=prompt_version,
+            keyed_formal({a["key"] for r in education for a in r.alternatives}),
+            model_role="assess", prompt_version=prompt_version,
         )
-        _validate_answer_keys([a.alternative_key for a in extraction.alternatives],
-                              {a['key'] for r in education for a in r.alternatives})
 
     drafts: dict[str, _CheckDraft] = {}
     # Сначала требования без зависимостей, затем зависящие (направление после уровня).
@@ -274,6 +272,9 @@ def _experience_check(requirement: FormalRequirement, rule: ExperienceRule, extr
             return _CheckDraft(requirement, CheckResult.MET, [q.evidence for _, q in work],
                                {"rule": "relevant_role", "notes": notes, "ambiguous": _ambiguous(q for _, q in work)})
         no_exp = _resolve(text, extraction.no_experience_quote, None)
+        if no_exp is not None and not _explicit_no_experience(no_exp.evidence.quote):
+            notes.append("в ответе модели «опыта нет», но в цитате нет прямого отрицания — считаем отсутствием сведений")
+            no_exp = None
         if no_exp is not None:
             return _CheckDraft(requirement, CheckResult.NOT_MET, [no_exp.evidence],
                                {"rule": "relevant_role", "notes": notes})
@@ -316,6 +317,7 @@ def _education_check(requirement: FormalRequirement, rule: EducationRule, extrac
     met_evidence: list[Evidence] = []
     refuted_evidence: list[Evidence] = []
     alternative_results = []
+    notes: list[str] = []
     for alternative in rule.alternatives:
         answer = answers.get(alternative["key"])
         fragments = list(answer.quotes) if answer else []
@@ -324,7 +326,10 @@ def _education_check(requirement: FormalRequirement, rule: EducationRule, extrac
         resolved = [_resolve(text, q.quote, q.context_before) for q in fragments]
         valid = bool(resolved) and all(resolved)
         quotes = list({(q.evidence.start, q.evidence.end): q.evidence for q in resolved if q}.values())
-        if answer and answer.status == "confirmed" and valid:
+        if answer and answer.status == "confirmed" and valid and not _field_matches(alternative, quotes):
+            statuses[alternative["key"]] = "unknown"
+            notes.append(f"{alternative['key']}: направление не совпадает с подтверждёнными примерами — уточнить")
+        elif answer and answer.status == "confirmed" and valid:
             statuses[alternative["key"]] = "met"
             met_evidence.extend(quotes)
         elif answer and answer.status == "refuted" and valid:
@@ -335,12 +340,51 @@ def _education_check(requirement: FormalRequirement, rule: EducationRule, extrac
         alternative_results.append(AlternativeResultIn(key=alternative['key'],
             result=statuses[alternative['key']], evidence=quotes))
     details = {"rule": requirement.kind, "alternatives": statuses}
+    if notes:
+        details["notes"] = notes
     if "met" in statuses.values():
         return _CheckDraft(requirement, CheckResult.MET, met_evidence, details, alternative_results)
     if statuses and all(s == "not_met" for s in statuses.values()):
         return _CheckDraft(requirement, CheckResult.NOT_MET, refuted_evidence, details, alternative_results)
     details["gap"] = "образование" if requirement.kind == "education_level" else "направление подготовки"
     return _CheckDraft(requirement, CheckResult.UNKNOWN, [], details, alternative_results)
+
+
+_NO_EXPERIENCE = re.compile(
+    r"(нет|отсутству\w*|не\s+име\w*|без)\W+(?:\w+\W+){0,3}опыт"
+    r"|опыт\w*\W+(?:\w+\W+){0,10}(нет|отсутству\w*)\b",
+)
+
+
+def _explicit_no_experience(quote: str) -> bool:
+    """«Опыта нет» засчитывается только при прямом отрицании; заглушка «Не указано» — не отрицание."""
+    return bool(_NO_EXPERIENCE.search(quote.lower().replace("ё", "е")))
+
+
+def _norm_field(value: str) -> str:
+    return re.sub(r"\s+", " ", value.lower().replace("ё", "е")).strip()
+
+
+def _field_matches(alternative: dict[str, Any], quotes: list[Evidence]) -> bool:
+    """Направление из field_examples подтверждается только целым названием или словом «техническое».
+
+    Модель склонна засчитывать похожие направления («Прикладная информатика в экономике» как
+    «Прикладная информатика»). По acceptance профиля похожее или более узкое — не подтверждение.
+    Альтернатива без field_examples кодом не ограничивается."""
+    examples = [_norm_field(e) for e in alternative.get("field_examples") or []]
+    if not examples:
+        return True
+    joined = " ".join(_norm_field(q.quote) for q in quotes)
+    if "техническ" in joined:
+        return True
+    for example in examples:
+        for found in re.finditer(re.escape(example), joined):
+            before = joined[found.start() - 1:found.start()]
+            after = joined[found.end():].lstrip()
+            # Название целиком: дальше не продолжается словом («… в экономике» — уже другое направление).
+            if not before.isalpha() and (not after or not after[0].isalpha()):
+                return True
+    return False
 
 
 def _apply_basis(draft: _CheckDraft) -> _CheckDraft:
@@ -393,9 +437,8 @@ def _assess_competency(competency: Competency, text: CandidateText, llm: LLMClie
             competency_user(text.text, competency=competency.name,
                             indicators=[{"indicator_key": i.key, "text": i.text,
                                          "acceptance": i.acceptance} for i in screening]),
-            CompetencyExtraction, model_role="assess", prompt_version=prompt_version,
+            keyed_competency({i.key for i in screening}), model_role="assess", prompt_version=prompt_version,
         )
-        _validate_answer_keys([a.indicator_key for a in extraction.indicators], {i.key for i in screening})
         answers = {a.indicator_key: a for a in extraction.indicators}
 
     statuses: dict[str, dict[str, Any]] = {}
@@ -423,11 +466,6 @@ def _assess_competency(competency: Competency, text: CandidateText, llm: LLMClie
     return CompetencyScoreIn(competency_id=competency.id, level=None,
                              explanation="[resume] " + json.dumps(details, ensure_ascii=False), evidence=evidence,
                              details=typed)
-
-
-def _validate_answer_keys(keys: list[str], expected: set[str]) -> None:
-    if len(keys) != len(set(keys)) or not set(keys) <= expected:
-        raise LLMInvalidResponseError('ответ содержит повторяющийся или неизвестный ключ')
 
 
 def _summary(result: CheckResult, drafts: list[_CheckDraft]) -> str:
