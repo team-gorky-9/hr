@@ -1,0 +1,75 @@
+﻿{
+    "verified_commit":  "6c5f9baec31e7eae1284ec0848602e8d881cd66f",
+    "postgresql":  "PostgreSQL 16.15, compiled by Visual C++ build 1944, 64-bit",
+    "pgvector":  "0.8.6",
+    "pytest":  {
+                   "tests":  573,
+                   "failures":  0,
+                   "errors":  0,
+                   "skipped":  0,
+                   "output":  "........................................................................ [ 12%]\r\n........................................................................ [ 25%]\r\n........................................................................ [ 37%]\r\n........................................................................ [ 50%]\r\n........................................................................ [ 63%]\r\n........................................................................ [ 75%]\r\n........................................................................ [ 88%]\r\n..................................................................    [100%]\r\n570 passed, 3 subtests passed in 16.12s"
+               },
+    "vector_distance":  1.0,
+    "alembic_revision":  "0005",
+    "migration_cycle_passed":  true,
+    "checks":  [
+                   {
+                       "label":  "initdb",
+                       "exit_code":  0
+                   },
+                   {
+                       "label":  "start",
+                       "exit_code":  0
+                   },
+                   {
+                       "label":  "pytest",
+                       "exit_code":  0
+                   },
+                   {
+                       "label":  "upgrade",
+                       "exit_code":  0
+                   },
+                   {
+                       "label":  "check-before",
+                       "exit_code":  0
+                   },
+                   {
+                       "label":  "downgrade",
+                       "exit_code":  0
+                   },
+                   {
+                       "label":  "reupgrade",
+                       "exit_code":  0
+                   },
+                   {
+                       "label":  "check-after",
+                       "exit_code":  0
+                   },
+                   {
+                       "label":  "stop",
+                       "exit_code":  0
+                   }
+               ],
+    "packages":  [
+                     {
+                         "name":  "libpq",
+                         "version":  "16.15",
+                         "build_string":  "h43e12c5_0",
+                         "sha256":  "888a85aae50559ed390d8f1dd78ec708ca8f8a854327c795e2656a1de6ad850d"
+                     },
+                     {
+                         "name":  "postgresql",
+                         "version":  "16.15",
+                         "build_string":  "he837cf3_0",
+                         "sha256":  "4196f32d39459af329869c376fc616f6505af090cc63f713adb2a182033be14a"
+                     },
+                     {
+                         "name":  "pgvector",
+                         "version":  "0.8.6",
+                         "build_string":  "h2466b09_0",
+                         "sha256":  "5730998991a2b7349c4253ed7881f339bd43d005949b655edc616cca8caf21dd"
+                     }
+                 ],
+    "source":  "https://anaconda.org/conda-forge/pgvector",
+    "scope":  "Unmodified full pytest with PostgreSQL and pgvector, all migrations and full downgrade/reupgrade. Native Windows PostgreSQL 16; Docker PostgreSQL 17 not exercised. No live LLM calls."
+}
