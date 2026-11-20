@@ -108,14 +108,15 @@ def test_reason_templates():
 
 # --- Вход из сохранённой оценки ----------------------------------------------------------
 
-def _req(key, *, mandatory=True, stage="screening", order=0):
-    return NS(id=uuid.uuid4(), key=key, description=f"требование {key}", is_mandatory=mandatory,
+def _req(key, *, mandatory=True, stage="screening", order=0, kind="other"):
+    return NS(id=uuid.uuid4(), key=key, kind=kind, description=f"требование {key}", is_mandatory=mandatory,
               check_stage=stage, sort_order=order)
 
 
-def _check(requirement, result, gap=None):
+def _check(requirement, result, gap=None, quotes=()):
     body = json.dumps({"gap": gap} if gap else {}, ensure_ascii=False)
-    return NS(requirement_id=requirement.id, result=result, explanation=f"[resume] {body}")
+    return NS(requirement_id=requirement.id, result=result, explanation=f"[resume] {body}",
+              evidence=[{"quote": q} for q in quotes])
 
 
 def test_rank_input_counts_only_mandatory_screening_and_missing_check_is_a_question():
@@ -160,3 +161,18 @@ def test_saved_assessments_rank_known_experience_first(session):
     assert [(r.key, r.group, r.position) for r in result] == [("py-9002", "ready", 1), ("py-9001", "clarify", 2)]
     assert result[0].reason.startswith("Все обязательные подтверждены")
     assert result[1].reason.startswith("1 вопрос к уточнению: длительность коммерческого опыта")
+
+
+def test_not_met_reason_names_the_requirement_kind_and_quotes_the_basis():
+    exp = _req("exp", kind="experience")
+    profile = NS(formal_requirements=[exp], competencies=[])
+    assessment = NS(formal_result="not_met", formal_preliminary=False, competency_scores=[],
+                    formal_checks=[_check(exp, "not_met", quotes=["Коммерческого опыта   в разработке нет."])])
+    built = rank_input(key=1, candidate_code="py-1", assessment_status="ready", applied_at=None,
+                       assessment=assessment, profile=profile)
+    assert reason(built) == "Не проходит: опыт работы — «Коммерческого опыта в разработке нет.»"
+    long = _check(exp, "not_met", quotes=["слово " * 40])
+    assessment.formal_checks = [long]
+    built = rank_input(key=1, candidate_code="py-1", assessment_status="ready", applied_at=None,
+                       assessment=assessment, profile=profile)
+    assert reason(built).endswith("…»") and len(reason(built)) < 140
