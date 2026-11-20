@@ -132,11 +132,12 @@ STAGE_1_ROUTES = {
 
 
 def test_openapi_has_all_stage_1_routes(client):
-    """Все маршруты чтения этапа 1 на месте, а лишних нет: кроме них — только годовой отчёт
-    (hr#16, проверяется в test_reporting.py). Новый модуль маршрутов добавляет сюда свой префикс."""
+    """Маршруты чтения этапа 1, годового отчёта и поиска доступны в общей схеме."""
     paths = set(client.get("/openapi.json").json()["paths"])
     assert STAGE_1_ROUTES <= paths
-    assert {p for p in paths - STAGE_1_ROUTES if not p.startswith("/api/v1/reports/annual")} == set()
+    assert {p for p in paths - STAGE_1_ROUTES if not p.startswith("/api/v1/reports/annual")} == {
+        "/api/v1/search/candidates",
+    }
 
 
 def test_cors_allows_vite_dev_server(client):
