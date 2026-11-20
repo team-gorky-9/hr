@@ -20,7 +20,7 @@ from statistics import median
 from typing import Any
 
 from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session
 
 from app.api import services, workflow
 from app.api.errors import ApiError, not_found
@@ -231,7 +231,6 @@ def _collect_interview_notes(
         session.scalars(
             select(Interview)
             .where(Interview.application_id == application_id)
-            .options(selectinload(Interview.questions))
             .order_by(Interview.created_at, Interview.id)
         )
     )
@@ -243,8 +242,13 @@ def _collect_interview_notes(
             omitted += 1
             summary_text = None
         questions: list[HandoffSummaryQuestionOut] = []
-        for q in interview.questions:
-            answer_text = _clean(q.answer_notes)
+        # [interview-01, БД v2.1] Вопросы — из последней версии гайда встречи, ответ — последняя ревизия
+        # (свой или перенесённый из прошлой версии). answer_notes больше не пишется: миграция 0009
+        # перенесла старые заметки в interview_answers.
+        guide = repo.latest_guide(session, interview.id)
+        for q in repo.guide_questions(session, guide.id) if guide else []:
+            answer, _ = repo.visible_answer(session, q)
+            answer_text = _clean(answer.text if answer else None)
             if answer_text and contains_pii_or_contact(answer_text, own_pii):
                 omitted += 1
                 answer_text = None

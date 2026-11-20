@@ -12,9 +12,12 @@ from sqlalchemy import (
     ForeignKey,
     Identity,
     Index,
+    Integer,
     SmallInteger,
     String,
     Text,
+    UniqueConstraint,
+    false as sa_false,
     func,
     text as sa_text,
 )
@@ -23,17 +26,20 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, created_at_column, str_enum, uuid_pk
 from app.db.enums import (
+    AnswerSource,
     ApplicationSource,
     DeadlineExtensionReason,
     FeedbackOutcome,
     HandoffChannel,
     HandoffStatus,
     InterviewKind,
+    InterviewQuestionKind,
     InterviewResult,
     ProcessFactStatus,
     QuestionAuthor,
     RejectionSide,
     ReserveStatus,
+    RubricStatus,
 )
 from app.db.models.candidates import Candidate
 from app.db.models.positions import Vacancy
@@ -166,26 +172,176 @@ class Interview(Base):
         order_by="InterviewQuestion.sort_order",
     )
 
+    __table_args__ = (
+        # [v2.1] Одна открытая встреча на пару (отклик, вид). Гайд — отдельная запись
+        # (interview_guides): перегенерация не создаёт ещё один «звонок» в отчётах.
+        Index(
+            "uq_interviews_open",
+            "application_id",
+            "kind",
+            unique=True,
+            postgresql_where=sa_text("result = 'pending'"),
+        ),
+    )
+
+
+class InterviewGuide(Base):
+    """Версия гайда к встрече [v2.1]: снимок вопросов, собранных по одной базовой оценке.
+
+    Перегенерация создаёт новую версию той же встречи; прежняя читается по номеру.
+    """
+    __tablename__ = "interview_guides"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    interview_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("interviews.id", ondelete="CASCADE"))
+    guide_version: Mapped[int] = mapped_column(Integer)
+    # Базовая оценка сборки: версия из save_assessment (вывод модели по резюме), а не из confirm.
+    # CASCADE: гайд принадлежит паре «кандидат × профиль»; при удалении кандидата его оценки и отклики
+    # удаляются разными цепочками каскада, и ссылка без CASCADE проверялась бы раньше, чем дойдёт до гайда.
+    assessment_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("assessments.id", ondelete="CASCADE"))
+    profile_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("requirement_profiles.id", ondelete="CASCADE"))
+    # Отпечаток строк рубрики ядра, вошедших в гайд: (row_key, version, status).
+    rubric_version: Mapped[str | None] = mapped_column(String(32))
+    prompt_version: Mapped[str | None] = mapped_column(String(64))
+    model_calls: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    # Пробелы сверх бюджета и не сгенерированные: [{"gap_ref_id", "title", "reason"}].
+    uncovered_gaps: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list, server_default="[]")
+    request_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), unique=True)
+    # Версия создана миграцией 0009 из старых interviews: оценки, по которой собрана, нет.
+    is_migrated: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = created_at_column()
+
+    questions: Mapped[list["InterviewQuestion"]] = relationship(
+        back_populates="guide", order_by="InterviewQuestion.sort_order"
+    )
+
+    __table_args__ = (
+        UniqueConstraint("interview_id", "guide_version", name="uq_interview_guides_version"),
+        CheckConstraint(
+            "is_migrated OR (assessment_id IS NOT NULL AND profile_id IS NOT NULL)", name="assessment_unless_migrated"
+        ),
+        CheckConstraint("guide_version >= 1", name="guide_version_positive"),
+    )
+
+
+class InterviewRubricQuestion(Base):
+    """Вопрос общего ядра для строки профиля этапа interview [v2.1].
+
+    Генерируется один раз на версию профиля, поэтому у всех кандидатов одинаков.
+    Ровно одна ссылка: на формальное требование или на ключ индикатора компетенции.
+    """
+    __tablename__ = "interview_rubric_questions"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    profile_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("requirement_profiles.id", ondelete="CASCADE"))
+    row_key: Mapped[str] = mapped_column(String(64))
+    requirement_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("formal_requirements.id", ondelete="CASCADE"))
+    indicator_key: Mapped[str | None] = mapped_column(String(64))
+    question: Mapped[str] = mapped_column(Text)
+    # {"good_answer": "...", "insufficient_answer": "..."}
+    criterion: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    author: Mapped[QuestionAuthor] = mapped_column(str_enum(QuestionAuthor, "author"))
+    status: Mapped[RubricStatus] = mapped_column(
+        str_enum(RubricStatus, "status"), default=RubricStatus.DRAFT, server_default="draft"
+    )
+    version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    approved_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = created_at_column()
+
+    __table_args__ = (
+        UniqueConstraint("profile_id", "row_key", name="uq_interview_rubric_questions_row"),
+        CheckConstraint("(requirement_id IS NULL) <> (indicator_key IS NULL)", name="one_row_reference"),
+        CheckConstraint(
+            "(status = 'approved') = (approved_at IS NOT NULL AND approved_by_user_id IS NOT NULL)",
+            name="approval_fields",
+        ),
+    )
+
 
 class InterviewQuestion(Base):
     """Вопрос интервью. Привязан к компетенции или к пробелу в резюме, чтобы
-    разных кандидатов проверяли по одним критериям."""
+    разных кандидатов проверяли по одним критериям.
+
+    [v2.1] Вопрос принадлежит версии гайда (guide_id). Вопрос ядра ссылается на строку рубрики,
+    уточнение — на пробел (gap_ref_id). Ответы — в interview_answers с ревизиями;
+    answer_notes больше не пишется (перенесён миграцией 0009).
+    """
     __tablename__ = "interview_questions"
 
     id: Mapped[uuid.UUID] = uuid_pk()
     interview_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("interviews.id", ondelete="CASCADE"))
+    guide_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("interview_guides.id", ondelete="CASCADE"))
+    kind: Mapped[InterviewQuestionKind] = mapped_column(
+        str_enum(InterviewQuestionKind, "kind"),
+        default=InterviewQuestionKind.CLARIFICATION,
+        server_default="clarification",
+    )
     competency_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("competencies.id", ondelete="SET NULL")
     )
-    # Чего не хватает в резюме: «не указан опыт работы с обращениями граждан».
+    # Заголовок пробела: «не указан опыт работы с обращениями граждан».
     gap: Mapped[str | None] = mapped_column(Text)
+    gap_ref_id: Mapped[str | None] = mapped_column(String(32))
     question: Mapped[str] = mapped_column(Text)
+    # {"good_answer": "...", "insufficient_answer": "..."}
+    criterion: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    # Откуда вопрос: [{"type": "formal_check" | "indicator" | "group" | "card_missing" | "profile_row", ...}]
+    sources: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list, server_default="[]")
+    requirement_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("formal_requirements.id"))
+    indicator_key: Mapped[str | None] = mapped_column(String(64))
+    rubric_question_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("interview_rubric_questions.id"))
+    # Тот же пробел или та же строка ядра в прошлой версии гайда: её ответ показывается как перенесённый.
+    carried_from_question_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("interview_questions.id"))
     author: Mapped[QuestionAuthor] = mapped_column(str_enum(QuestionAuthor, "author"))
     answer_notes: Mapped[str | None] = mapped_column(Text)
     score: Mapped[int | None] = mapped_column(SmallInteger)
     sort_order: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
 
     interview: Mapped[Interview] = relationship(back_populates="questions")
+    guide: Mapped[InterviewGuide] = relationship(back_populates="questions")
+
+    __table_args__ = (
+        Index(
+            "uq_interview_questions_gap",
+            "guide_id",
+            "gap_ref_id",
+            unique=True,
+            postgresql_where=sa_text("gap_ref_id IS NOT NULL"),
+        ),
+        CheckConstraint(
+            "(kind = 'core') = (rubric_question_id IS NOT NULL AND gap_ref_id IS NULL)", name="core_has_rubric"
+        ),
+    )
+
+
+class InterviewAnswer(Base):
+    """Ревизия ответа кандидата на вопрос [v2.1]. Строки только добавляются:
+    исправление — новая ревизия, прежняя читается."""
+    __tablename__ = "interview_answers"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    question_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("interview_questions.id", ondelete="CASCADE"))
+    revision: Mapped[int] = mapped_column(Integer)
+    text: Mapped[str] = mapped_column(Text)
+    source: Mapped[AnswerSource] = mapped_column(str_enum(AnswerSource, "source"))
+    author_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
+    # Исправленная ревизия; у первой ревизии перенесённого вопроса — ответ прежнего вопроса.
+    previous_answer_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("interview_answers.id"))
+    request_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), unique=True)
+    created_at: Mapped[datetime] = created_at_column()
+
+    __table_args__ = (
+        UniqueConstraint("question_id", "revision", name="uq_interview_answers_revision"),
+        CheckConstraint("revision >= 1", name="revision_positive"),
+        # Автор и ключ запроса неизвестны только у ответов, перенесённых из answer_notes.
+        CheckConstraint(
+            "(source = 'unknown' AND author_user_id IS NULL AND request_id IS NULL)"
+            " OR (source <> 'unknown' AND author_user_id IS NOT NULL AND request_id IS NOT NULL)",
+            name="author_known",
+        ),
+    )
 
 
 class ProductionCalendarDay(Base):

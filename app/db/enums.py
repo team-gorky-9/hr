@@ -146,6 +146,26 @@ class QuestionAuthor(StrEnum):
     HUMAN = "human"
 
 
+class InterviewQuestionKind(StrEnum):
+    """Вид вопроса гайда [v2.1]."""
+    CORE = "core"                    # общее ядро должности: одинаково для всех кандидатов версии профиля
+    CLARIFICATION = "clarification"  # уточнение по пробелу именно этого кандидата
+
+
+class AnswerSource(StrEnum):
+    """Откуда ответ кандидата [v2.1]."""
+    PHONE = "phone"
+    IN_PERSON = "in_person"
+    WRITTEN = "written"
+    UNKNOWN = "unknown"  # только перенос старых answer_notes миграцией 0009; через API не передаётся
+
+
+class RubricStatus(StrEnum):
+    """Статус вопроса рубрики ядра [v2.1]."""
+    DRAFT = "draft"
+    APPROVED = "approved"
+
+
 class FeedbackOutcome(StrEnum):
     PENDING = "pending"
     FIT = "fit"

@@ -149,6 +149,12 @@ STAGE_2_ROUTES = {
     "/api/v1/positions/{position_id}/reserve",
     "/api/v1/analytics/funnel",
 }
+# Гайд интервью, ответы и подтверждение требования (interview.md v0.4, interview-01).
+INTERVIEW_ROUTES = {
+    "/api/v1/applications/{application_id}/interview-guide",
+    "/api/v1/interviews/{interview_id}/questions/{question_id}/answers",
+    "/api/v1/assessments/{assessment_id}/formal-checks/{requirement_id}/confirm",
+}
 
 WORKFLOW_01_ROUTES = {
     "/api/v1/applications/{application_id}/handoff-summary",
@@ -165,7 +171,7 @@ def test_openapi_has_all_stage_1_routes(client):
     workflow-01, поиск и годовой отчёт (hr#16). Новый модуль маршрутов добавляет сюда свой префикс."""
     paths = set(client.get("/openapi.json").json()["paths"])
     assert STAGE_1_ROUTES <= paths
-    extra = paths - STAGE_1_ROUTES - STAGE_2_ROUTES - WORKFLOW_01_ROUTES
+    extra = paths - STAGE_1_ROUTES - STAGE_2_ROUTES - WORKFLOW_01_ROUTES - INTERVIEW_ROUTES
     assert {p for p in extra if not p.startswith("/api/v1/reports/annual")} == {"/api/v1/search/candidates"}
 
 

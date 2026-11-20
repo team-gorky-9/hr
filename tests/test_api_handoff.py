@@ -17,6 +17,7 @@ from app.db import repository as repo
 from app.db.enums import (
     ApplicationSource,
     FeedbackOutcome,
+    AnswerSource,
     InterviewKind,
     QuestionAuthor,
     ReserveStatus,
@@ -28,8 +29,6 @@ from app.db.models import (
     DepartmentFeedback,
     HandoffAttempt,
     HandoffDeadlineExtension,
-    Interview,
-    InterviewQuestion,
     ProductionCalendarDay,
     ReserveEntry,
     SourceDocument,
@@ -80,33 +79,28 @@ def test_handoff_summary_preview_creates_zero_waits_and_excludes_pii(session, cl
         comment=f"Перезвонить кандидату на {PII['phone']}",
     ).status_code == 201
 
-    interview = Interview(
-        application_id=app_id,
-        kind=InterviewKind.PHONE,
-        summary=f"Связались по почте {PII['email']}",
+    # Встреча, гайд и ответы — через хранение interview-01: вопросы версии гайда, ответы ревизиями.
+    interview = repo.open_interview(session, app_id, InterviewKind.PHONE)
+    interview.summary = f"Связались по почте {PII['email']}"
+    guide, _ = repo.save_interview_guide(
+        session, interview=interview, base_assessment_id=built["assessment_id"], profile_id=built["profile_id"],
+        rubric_version=None, prompt_version="guide-v1", model_calls=1, uncovered_gaps=[], request_id=uuid.uuid4(),
+        created_by_user_id=_user(session, "hr_demo").id,
+        questions=[
+            {"kind": "clarification", "sort_order": 1, "gap": "длительность коммерческого опыта",
+             "gap_ref_id": "gap:experience01",
+             "question": "С какого по какой месяц длился проект и в каком качестве вы работали?",
+             "author": QuestionAuthor.MODEL, "sources": []},
+            {"kind": "clarification", "sort_order": 2, "gap": "связь", "gap_ref_id": "gap:contact0001",
+             "question": "Удобный способ связи?", "author": QuestionAuthor.HUMAN, "sources": []},
+        ],
     )
-    session.add(interview)
-    session.flush()
-    session.add_all(
-        [
-            InterviewQuestion(
-                interview_id=interview.id,
-                gap="длительность коммерческого опыта",
-                question="С какого по какой месяц длился проект и в каком качестве вы работали?",
-                author=QuestionAuthor.MODEL,
-                answer_notes="С 03.2023 по 12.2024 по договору, писал API-тесты",
-                sort_order=1,
-            ),
-            InterviewQuestion(
-                interview_id=interview.id,
-                gap="связь",
-                question="Удобный способ связи?",
-                author=QuestionAuthor.HUMAN,
-                answer_notes=f"Тг: @ivanov_test, {PII['full_name']}",
-                sort_order=2,
-            ),
-        ]
-    )
+    first_q, second_q = repo.guide_questions(session, guide.id)
+    for question, text in ((first_q, "С 03.2023 по 12.2024 по договору, писал API-тесты"),
+                           (second_q, f"Тг: @ivanov_test, {PII['full_name']}")):
+        repo.add_interview_answer(session, interview_id=interview.id, question_id=question.id, text=text,
+                                  source=AnswerSource.PHONE, expected_revision=0, request_id=uuid.uuid4(),
+                                  author_user_id=_user(session, "hr_demo").id)
     session.flush()
 
     first = client.get(f"/api/v1/applications/{app_id}/handoff-summary", headers=HR)

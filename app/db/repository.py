@@ -15,12 +15,14 @@ from pathlib import PurePath
 from typing import Any
 
 from sqlalchemy import func, or_, select, update
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.db import calendar as prod_calendar
 from app.db.enums import (
+    AnswerSource,
     ApplicationSource,
     AuditAction,
     Channel,
@@ -31,6 +33,9 @@ from app.db.enums import (
     FeedbackOutcome,
     FileFormat,
     FormalRequirementKind,
+    InterviewKind,
+    InterviewResult,
+    QuestionAuthor,
     HandoffChannel,
     HandoffStatus,
     ProcessFactStatus,
@@ -54,6 +59,11 @@ from app.db.models import (
     DepartmentFeedback,
     FormalCheck,
     FormalRequirement,
+    Interview,
+    InterviewAnswer,
+    InterviewGuide,
+    InterviewQuestion,
+    InterviewRubricQuestion,
     HandoffAttempt,
     HandoffDeadlineExtension,
     Position,
@@ -87,6 +97,19 @@ class EvidenceError(RepositoryError):
     pass
 
 
+class RuleConflict(RepositoryError):
+    """Нарушено правило, у которого есть код ошибки API (interview.md v0.4, §4).
+
+    code — код из контракта (REVISION_CONFLICT, BASIS_NOT_ALLOWED, …), details — то, что
+    клиенту нужно для следующего шага; данных кандидата в details нет. not_found = True —
+    объект «не найден» в пределах запроса (404), иначе конфликт состояния (409).
+    """
+
+    def __init__(self, code: str, message: str, details: dict[str, Any] | None = None, *, not_found: bool = False):
+        super().__init__(message)
+        self.code = code
+        self.details = details or {}
+        self.not_found = not_found
 class RequestIdReusedError(RepositoryError):
     pass
 
@@ -1310,12 +1333,36 @@ def is_training_assessment(candidate: Candidate, profile: RequirementProfile) ->
     return candidate.is_synthetic or profile.is_synthetic
 
 
+# Какими основаниями человек может подтвердить требование (interview.md v0.4, §4, матрица оснований).
+# Требование «по резюме» (стаж, уровень образования) кадровик закрывает ответом на звонке или документом;
+# документальное — только документом; «только на интервью» — только интервью; тест — тестом.
+_CONFIRM_BASES: dict[VerificationMethod, frozenset[VerificationMethod]] = {
+    VerificationMethod.RESUME: frozenset({VerificationMethod.INTERVIEW, VerificationMethod.DOCUMENTS}),
+    VerificationMethod.DOCUMENTS: frozenset({VerificationMethod.DOCUMENTS}),
+    VerificationMethod.INTERVIEW: frozenset({VerificationMethod.INTERVIEW}),
+    VerificationMethod.TEST: frozenset({VerificationMethod.TEST}),
+}
+
+
+def allowed_bases(verification: VerificationMethod) -> frozenset[VerificationMethod]:
+    """Основания, которыми confirm_formal_check может подтвердить требование с этим verification."""
+    return _CONFIRM_BASES[VerificationMethod(verification)]
+
+
 def is_preliminary(result: CheckResult, basis: VerificationMethod, verification: VerificationMethod) -> bool:
     """Результат предварительный: вывод есть, но сделан не тем способом, которым требование
     подтверждается (контракт оценки п. 4.4). Пример: «Высшее образование» по резюме при
     verification = documents — «по резюме да, нужен документ»; «среднее» по резюме при том же
-    требовании — «по резюме нет, сверить с документом». unknown — не вывод, поэтому не предварительный."""
-    return result != CheckResult.UNKNOWN and basis != verification
+    требовании — «по резюме нет, сверить с документом». unknown — не вывод, поэтому не предварительный.
+
+    [v2.1] Окончательные основания — допустимые для подтверждения (allowed_bases) и вывод модели
+    по резюме у требования verification = resume. Поэтому стаж, подтверждённый ответом на звонке,
+    не предварительный, а устный ответ про диплом — предварительный."""
+    if result == CheckResult.UNKNOWN:
+        return False
+    verification = VerificationMethod(verification)
+    final = allowed_bases(verification) | ({VerificationMethod.RESUME} if verification == VerificationMethod.RESUME else set())
+    return VerificationMethod(basis) not in final
 
 
 def _check_assessment_allowed(candidate: Candidate, profile: RequirementProfile) -> None:
@@ -1425,6 +1472,8 @@ def confirm_formal_check(
     basis: VerificationMethod,
     actor_user_id: uuid.UUID,
     comment: str,
+    answer_id: uuid.UUID | None = None,
+    request_id: uuid.UUID | None = None,
 ) -> Assessment:
     """Человек вносит результат требования по документу, интервью или тесту.
 
@@ -1433,14 +1482,33 @@ def confirm_formal_check(
     остаётся в истории (is_current = false): видно, что было «по резюме», а что — «по документу».
     Цитат резюме у такой строки нет; основание описывает comment («диплом проверен»;
     номера и серии документов не пишутся — это ПДн).
+
+    [v1.9, interview.md v0.4 §4]
+    - basis должен входить в allowed_bases(verification требования), иначе BASIS_NOT_ALLOWED;
+    - answer_id — ответ интервью, на который опирается кадровик: при basis = interview обязателен,
+      должен быть ответом на вопрос отклика этого кандидата, в источниках которого есть это требование;
+      сохраняется в строке требования (source_answer_id);
+    - новая версия ссылается на базовую (base_assessment_id): по ней гайд понимает, что резюме
+      не переоценивали;
+    - request_id: повтор того же подтверждения возвращает уже созданную версию (find_confirmation),
+      а не создаёт вторую.
     """
     if basis == VerificationMethod.RESUME:
         raise RepositoryError("по резюме результат пишет save_assessment; здесь — документ, интервью или тест")
     if not comment.strip():
         raise RepositoryError("не указано, на каком основании подтверждён результат")
+    if request_id is not None:
+        replay = find_confirmation(session, request_id)
+        if replay is not None:
+            _check_confirmation_replay(session, replay, assessment_id, requirement_id, result, basis)
+            return replay
     current = _get(session, Assessment, assessment_id, "оценка")
     if not current.is_current:
-        raise RepositoryError("подтверждать можно только текущую версию оценки")
+        latest = session.scalar(select(Assessment.id).where(
+            Assessment.candidate_id == current.candidate_id, Assessment.profile_id == current.profile_id,
+            Assessment.is_current))
+        raise RuleConflict("ASSESSMENT_NOT_CURRENT", "подтверждать можно только текущую версию оценки",
+                           {"current_assessment_id": str(latest) if latest else None})
     user = _get(session, User, actor_user_id, "пользователь")
     if not user.is_active or user.role not in (UserRole.HR, UserRole.ADMIN):
         raise RepositoryError("подтверждает активный кадровик или администратор")
@@ -1449,7 +1517,19 @@ def confirm_formal_check(
     _check_assessment_allowed(candidate, profile)
     requirements = _profile_requirements(session, profile.id)
     if requirement_id not in requirements:
-        raise RepositoryError(f"требование {requirement_id} не из профиля {profile.id}")
+        raise RuleConflict("REQUIREMENT_NOT_IN_PROFILE", f"требование {requirement_id} не из профиля {profile.id}",
+                           {"requirement_id": str(requirement_id)}, not_found=True)
+    verification = VerificationMethod(requirements[requirement_id].verification)
+    if VerificationMethod(basis) not in allowed_bases(verification):
+        raise RuleConflict(
+            "BASIS_NOT_ALLOWED", "этим основанием требование не подтверждается",
+            {"verification": str(verification), "allowed_bases": sorted(str(b) for b in allowed_bases(verification))},
+        )
+    if basis == VerificationMethod.INTERVIEW and answer_id is None:
+        raise RuleConflict("ANSWER_REQUIRED", "подтверждение по интервью ссылается на записанный ответ",
+                           {"basis": str(basis)})
+    if answer_id is not None:
+        _check_answer_for_requirement(session, answer_id, candidate.id, requirement_id)
 
     rows = [
         FormalCheck(
@@ -1460,6 +1540,7 @@ def confirm_formal_check(
             evidence=old.evidence,
             alternatives=old.alternatives,
             confirmed_by_user_id=old.confirmed_by_user_id,
+            source_answer_id=old.source_answer_id,
         )
         for old in current.formal_checks
         if old.requirement_id != requirement_id
@@ -1473,6 +1554,7 @@ def confirm_formal_check(
             evidence=[],
             alternatives=[],
             confirmed_by_user_id=user.id,
+            source_answer_id=answer_id,
         )
     )
     scores = [
@@ -1482,12 +1564,65 @@ def confirm_formal_check(
         )
         for old in current.competency_scores
     ]
-    return _add_assessment_version(
-        session, candidate.id, profile.id, current.card_id, requirements, rows, scores,
-        model=current.model, prompt_version=current.prompt_version, algorithm_version=current.algorithm_version,
-        calculation_as_of=current.calculation_as_of,
-        overall_score=current.overall_score, summary=current.summary,
-    )
+    savepoint = session.begin_nested()
+    try:
+        created = _add_assessment_version(
+            session, candidate.id, profile.id, current.card_id, requirements, rows, scores,
+            model=current.model, prompt_version=current.prompt_version, algorithm_version=current.algorithm_version,
+            calculation_as_of=current.calculation_as_of,
+            overall_score=current.overall_score, summary=current.summary,
+            base_assessment_id=current.base_id, confirm_request_id=request_id,
+        )
+    except IntegrityError:
+        # Параллельный запрос успел создать следующую версию той же пары: тот же request_id —
+        # это повтор, вернуть его версию; иначе наша версия уже не текущая.
+        savepoint.rollback()
+        if request_id is not None:
+            replay = find_confirmation(session, request_id)
+            if replay is not None:
+                _check_confirmation_replay(session, replay, assessment_id, requirement_id, result, basis)
+                return replay
+        latest = session.scalar(select(Assessment.id).where(
+            Assessment.candidate_id == candidate.id, Assessment.profile_id == profile.id, Assessment.is_current))
+        raise RuleConflict("ASSESSMENT_NOT_CURRENT", "оценку уже изменили: подтверждайте текущую версию",
+                           {"current_assessment_id": str(latest) if latest else None}) from None
+    savepoint.commit()
+    return created
+
+
+def find_confirmation(session: Session, request_id: uuid.UUID) -> Assessment | None:
+    """Версия оценки, созданная подтверждением с этим request_id [v2.1]."""
+    return session.scalar(select(Assessment).where(Assessment.confirm_request_id == request_id))
+
+
+def _check_confirmation_replay(session: Session, replay: Assessment, assessment_id: uuid.UUID, requirement_id: uuid.UUID,
+                               result: CheckResult, basis: VerificationMethod) -> None:
+    """Повтор с тем же request_id должен быть тем же подтверждением: та же исходная версия,
+    требование, результат и основание. Иначе ключ использован для другого действия."""
+    previous = session.scalar(select(Assessment.id).where(
+        Assessment.candidate_id == replay.candidate_id, Assessment.profile_id == replay.profile_id,
+        Assessment.version == replay.version - 1))
+    row = next((c for c in replay.formal_checks if c.requirement_id == requirement_id), None)
+    if previous != assessment_id or row is None or row.result != result or row.basis != basis:
+        raise RuleConflict("REQUEST_ID_REUSED", "этот request_id уже использован для другого подтверждения",
+                           {"assessment_id": str(replay.id)})
+
+
+def _check_answer_for_requirement(session: Session, answer_id: uuid.UUID, candidate_id: uuid.UUID,
+                                  requirement_id: uuid.UUID) -> None:
+    """Ответ — на вопрос отклика этого кандидата, и в источниках вопроса есть это требование."""
+    row = session.execute(
+        select(InterviewQuestion.sources, Application.candidate_id)
+        .join(InterviewAnswer, InterviewAnswer.question_id == InterviewQuestion.id)
+        .join(Interview, Interview.id == InterviewQuestion.interview_id)
+        .join(Application, Application.id == Interview.application_id)
+        .where(InterviewAnswer.id == answer_id)
+    ).one_or_none()
+    if row is None or row.candidate_id != candidate_id or not any(
+        source.get("requirement_id") == str(requirement_id) for source in (row.sources or [])
+    ):
+        raise RuleConflict("ANSWER_NOT_FOR_REQUIREMENT", "ответ не относится к этому требованию кандидата",
+                           {"answer_id": str(answer_id), "requirement_id": str(requirement_id)})
 
 
 def _profile_requirements(session: Session, profile_id: uuid.UUID) -> dict[uuid.UUID, FormalRequirement]:
@@ -1647,3 +1782,309 @@ def _clear_current(session: Session, model, *conditions) -> None:
     иначе сработает уникальный индекс «одна текущая версия»."""
     session.execute(update(model).where(*conditions, model.is_current).values(is_current=False))
     session.flush()
+
+
+# --- Интервью: встреча, версии гайда, рубрика ядра, ответы [v1.9, interview.md v0.4 §4–5] ---
+
+def open_interview(session: Session, application_id: uuid.UUID, kind: InterviewKind) -> Interview:
+    """Открытая встреча (result = pending) этого вида у отклика; нет — создать.
+
+    Два одновременных первых запроса: вставка идёт с ON CONFLICT DO NOTHING по частичному
+    уникальному индексу uq_interviews_open, поэтому оба получают одну встречу, а не ошибку."""
+    _get(session, Application, application_id, "отклик")
+    session.execute(
+        pg_insert(Interview)
+        .values(id=uuid.uuid4(), application_id=application_id, kind=InterviewKind(kind), result=InterviewResult.PENDING)
+        .on_conflict_do_nothing(index_elements=["application_id", "kind"], index_where=Interview.result == "pending")
+    )
+    return session.scalar(
+        select(Interview).where(
+            Interview.application_id == application_id, Interview.kind == InterviewKind(kind),
+            Interview.result == InterviewResult.PENDING,
+        )
+    )
+
+
+def latest_interview(session: Session, application_id: uuid.UUID, kind: InterviewKind) -> Interview | None:
+    """Последняя встреча этого вида у отклика: открытая, а если её нет — последняя завершённая."""
+    return session.scalar(
+        select(Interview)
+        .where(Interview.application_id == application_id, Interview.kind == InterviewKind(kind))
+        .order_by((Interview.result == InterviewResult.PENDING).desc(), Interview.created_at.desc(), Interview.id)
+        .limit(1)
+    )
+
+
+def latest_guide(session: Session, interview_id: uuid.UUID) -> InterviewGuide | None:
+    return session.scalar(
+        select(InterviewGuide).where(InterviewGuide.interview_id == interview_id)
+        .order_by(InterviewGuide.guide_version.desc()).limit(1)
+    )
+
+
+def get_guide_version(session: Session, interview_id: uuid.UUID, guide_version: int) -> InterviewGuide | None:
+    return session.scalar(
+        select(InterviewGuide).where(
+            InterviewGuide.interview_id == interview_id, InterviewGuide.guide_version == guide_version)
+    )
+
+
+def guide_questions(session: Session, guide_id: uuid.UUID) -> list[InterviewQuestion]:
+    return list(session.scalars(
+        select(InterviewQuestion).where(InterviewQuestion.guide_id == guide_id)
+        .order_by(InterviewQuestion.kind, InterviewQuestion.sort_order, InterviewQuestion.id)
+    ))
+
+
+def rubric_for_profile(session: Session, profile_id: uuid.UUID) -> dict[str, InterviewRubricQuestion]:
+    """Вопросы ядра версии профиля по ключу строки."""
+    return {r.row_key: r for r in session.scalars(
+        select(InterviewRubricQuestion).where(InterviewRubricQuestion.profile_id == profile_id))}
+
+
+def save_rubric_questions(
+    session: Session, profile_id: uuid.UUID, items: Sequence[dict[str, Any]]
+) -> dict[str, InterviewRubricQuestion]:
+    """Сохранить сгенерированные вопросы ядра версии профиля и вернуть всю рубрику профиля.
+
+    items: [{"row_key", "requirement_id" | "indicator_key", "question", "criterion"}].
+    Строка, которую уже записал параллельный запрос (или утвердил человек), не перезаписывается:
+    INSERT … ON CONFLICT DO NOTHING по (profile_id, row_key), затем перечтение. Так все кандидаты
+    одной версии профиля получают одно ядро."""
+    for item in items:
+        session.execute(
+            pg_insert(InterviewRubricQuestion)
+            .values(
+                id=uuid.uuid4(), profile_id=profile_id, row_key=item["row_key"],
+                requirement_id=item.get("requirement_id"), indicator_key=item.get("indicator_key"),
+                question=item["question"], criterion=item["criterion"], author=QuestionAuthor.MODEL,
+            )
+            .on_conflict_do_nothing(constraint="uq_interview_rubric_questions_row")
+        )
+    session.flush()
+    return rubric_for_profile(session, profile_id)
+
+
+def rubric_fingerprint(rows: Iterable[InterviewRubricQuestion]) -> str | None:
+    """Отпечаток строк рубрики, вошедших в гайд: меняется, если строку утвердили или исправили.
+    Нет строк ядра — None."""
+    parts = sorted(f"{r.row_key}:{r.version}:{r.status}" for r in rows)
+    if not parts:
+        return None
+    return hashlib.sha256("|".join(parts).encode()).hexdigest()[:16]
+
+
+def find_guide_by_request(session: Session, request_id: uuid.UUID) -> InterviewGuide | None:
+    return session.scalar(select(InterviewGuide).where(InterviewGuide.request_id == request_id))
+
+
+def check_guide_request(session: Session, guide: InterviewGuide, application_id: uuid.UUID,
+                        kind: InterviewKind) -> None:
+    """Повтор с тем же request_id — для того же отклика и вида встречи; иначе ключ занят."""
+    interview = session.get(Interview, guide.interview_id)
+    if interview.application_id != application_id or interview.kind != InterviewKind(kind):
+        raise RuleConflict("REQUEST_ID_REUSED", "этот request_id уже использован для другого гайда",
+                           {"guide_id": str(guide.id)})
+
+
+def save_interview_guide(
+    session: Session,
+    *,
+    interview: Interview,
+    base_assessment_id: uuid.UUID,
+    profile_id: uuid.UUID,
+    rubric_version: str | None,
+    prompt_version: str,
+    model_calls: int,
+    uncovered_gaps: list[dict[str, Any]],
+    request_id: uuid.UUID,
+    created_by_user_id: uuid.UUID,
+    questions: Sequence[dict[str, Any]],
+) -> tuple[InterviewGuide, bool]:
+    """Записать новую версию гайда встречи. Вернуть (гайд, создан ли новый).
+
+    questions: [{"kind", "sort_order", "question", "criterion", "author", "gap", "gap_ref_id",
+    "sources", "requirement_id", "indicator_key", "competency_id", "rubric_question_id"}].
+    Ответы не копируются: вопрос с тем же gap_ref_id (уточнение) или той же строкой рубрики (ядро),
+    что и в прошлой версии, получает carried_from_question_id и при чтении показывает прежний ответ.
+
+    Гонка: два запроса с разными request_id вычислят один номер версии — вторую вставку отклонит
+    UNIQUE(interview_id, guide_version), и функция вернёт гайд первого (created = False)."""
+    replay = find_guide_by_request(session, request_id)
+    if replay is not None:
+        check_guide_request(session, replay, interview.application_id, interview.kind)
+        return replay, False
+
+    previous = latest_guide(session, interview.id)
+    carried: dict[tuple[str, Any], uuid.UUID] = {}
+    if previous is not None:
+        for old in guide_questions(session, previous.id):
+            key = ("core", old.rubric_question_id) if old.rubric_question_id else ("gap", old.gap_ref_id)
+            if key[1] is not None:
+                carried[key] = old.id
+
+    guide = InterviewGuide(
+        interview_id=interview.id,
+        guide_version=(previous.guide_version + 1) if previous else 1,
+        assessment_id=base_assessment_id,
+        profile_id=profile_id,
+        rubric_version=rubric_version,
+        prompt_version=prompt_version,
+        model_calls=model_calls,
+        uncovered_gaps=uncovered_gaps,
+        request_id=request_id,
+        created_by_user_id=created_by_user_id,
+    )
+    savepoint = session.begin_nested()
+    try:
+        session.add(guide)
+        session.flush()
+        for item in questions:
+            rubric_id = item.get("rubric_question_id")
+            key = ("core", rubric_id) if rubric_id else ("gap", item.get("gap_ref_id"))
+            session.add(InterviewQuestion(
+                interview_id=interview.id,
+                guide_id=guide.id,
+                kind=item["kind"],
+                sort_order=item["sort_order"],
+                question=item["question"],
+                criterion=item.get("criterion"),
+                author=QuestionAuthor(item.get("author", QuestionAuthor.MODEL)),
+                gap=item.get("gap"),
+                gap_ref_id=item.get("gap_ref_id"),
+                sources=item.get("sources") or [],
+                requirement_id=item.get("requirement_id"),
+                indicator_key=item.get("indicator_key"),
+                competency_id=item.get("competency_id"),
+                rubric_question_id=rubric_id,
+                carried_from_question_id=carried.get(key),
+            ))
+        session.flush()
+    except IntegrityError:
+        savepoint.rollback()
+        replay = find_guide_by_request(session, request_id)
+        if replay is not None:
+            return replay, False
+        winner = latest_guide(session, interview.id)
+        if winner is None:
+            raise
+        return winner, False
+    savepoint.commit()
+    return guide, True
+
+
+def question_answers(session: Session, question_id: uuid.UUID) -> list[InterviewAnswer]:
+    """Все ревизии ответа на вопрос по возрастанию."""
+    return list(session.scalars(
+        select(InterviewAnswer).where(InterviewAnswer.question_id == question_id).order_by(InterviewAnswer.revision)
+    ))
+
+
+def visible_answer(session: Session, question: InterviewQuestion) -> tuple[InterviewAnswer | None, bool]:
+    """Ответ, который показывает вопрос: последняя своя ревизия, иначе — перенесённый из того же
+    вопроса прошлой версии гайда (по цепочке carried_from_question_id). Вернуть (ответ, перенесён ли)."""
+    own = session.scalar(
+        select(InterviewAnswer).where(InterviewAnswer.question_id == question.id)
+        .order_by(InterviewAnswer.revision.desc()).limit(1)
+    )
+    if own is not None:
+        return own, False
+    source_id = question.carried_from_question_id
+    seen: set[uuid.UUID] = set()
+    while source_id is not None and source_id not in seen:
+        seen.add(source_id)
+        answer = session.scalar(
+            select(InterviewAnswer).where(InterviewAnswer.question_id == source_id)
+            .order_by(InterviewAnswer.revision.desc()).limit(1)
+        )
+        if answer is not None:
+            return answer, True
+        source_id = session.scalar(
+            select(InterviewQuestion.carried_from_question_id).where(InterviewQuestion.id == source_id))
+    return None, False
+
+
+def add_interview_answer(
+    session: Session,
+    *,
+    interview_id: uuid.UUID,
+    question_id: uuid.UUID,
+    text: str,
+    source: AnswerSource,
+    expected_revision: int,
+    request_id: uuid.UUID,
+    author_user_id: uuid.UUID,
+) -> tuple[InterviewAnswer, bool]:
+    """Записать ответ кандидата новой ревизией. Вернуть (ответ, создан ли новый).
+
+    Порядок (interview.md v0.4 §4): повтор по request_id → принадлежность вопроса встрече →
+    вопрос из последней версии гайда → ожидаемая ревизия → вставка. Отказ любой проверки — до записи.
+    Первая ревизия перенесённого вопроса ссылается (previous_answer_id) на ответ прежнего вопроса."""
+    if source == AnswerSource.UNKNOWN:
+        raise RepositoryError("источник unknown бывает только у ответов, перенесённых миграцией")
+    text = text.strip()
+    if not text:
+        raise RepositoryError("пустой ответ")
+
+    replay = session.scalar(select(InterviewAnswer).where(InterviewAnswer.request_id == request_id))
+    if replay is not None:
+        if replay.question_id != question_id or replay.text != text or replay.source != AnswerSource(source):
+            raise RuleConflict("REQUEST_ID_REUSED", "этот request_id уже использован для другого ответа",
+                               {"answer_id": str(replay.id)})
+        return replay, False
+
+    question = session.scalar(
+        select(InterviewQuestion).where(InterviewQuestion.id == question_id, InterviewQuestion.interview_id == interview_id)
+    )
+    if question is None:
+        raise RuleConflict("QUESTION_NOT_FOUND", "вопрос не из этого интервью",
+                           {"interview_id": str(interview_id), "question_id": str(question_id)}, not_found=True)
+    user = _get(session, User, author_user_id, "пользователь")
+    if not user.is_active:
+        raise RepositoryError("ответ записывает активный пользователь")
+    newest = latest_guide(session, interview_id)
+    if newest is not None and newest.id != question.guide_id:
+        raise RuleConflict("GUIDE_SUPERSEDED", "гайд перегенерирован: отвечайте в последней версии",
+                           {"guide_version": newest.guide_version})
+
+    current = session.scalar(
+        select(InterviewAnswer).where(InterviewAnswer.question_id == question.id)
+        .order_by(InterviewAnswer.revision.desc()).limit(1)
+    )
+    current_revision = current.revision if current else 0
+    if expected_revision != current_revision:
+        raise RuleConflict("REVISION_CONFLICT", "ответ уже изменили: перечитайте вопрос",
+                           {"current_revision": current_revision,
+                            "current_answer_id": str(current.id) if current else None})
+    previous = current
+    if previous is None:
+        previous, _ = visible_answer(session, question)
+
+    answer = InterviewAnswer(
+        question_id=question.id,
+        revision=current_revision + 1,
+        text=text,
+        source=AnswerSource(source),
+        author_user_id=user.id,
+        previous_answer_id=previous.id if previous else None,
+        request_id=request_id,
+    )
+    savepoint = session.begin_nested()
+    try:
+        session.add(answer)
+        session.flush()
+    except IntegrityError:
+        # Параллельный запрос записал ту же ревизию: повтор того же request_id или конфликт правки.
+        savepoint.rollback()
+        replay = session.scalar(select(InterviewAnswer).where(InterviewAnswer.request_id == request_id))
+        if replay is not None:
+            return replay, False
+        winner = session.scalar(
+            select(InterviewAnswer).where(InterviewAnswer.question_id == question.id)
+            .order_by(InterviewAnswer.revision.desc()).limit(1)
+        )
+        raise RuleConflict("REVISION_CONFLICT", "ответ уже изменили: перечитайте вопрос",
+                           {"current_revision": winner.revision if winner else 0,
+                            "current_answer_id": str(winner.id) if winner else None}) from None
+    savepoint.commit()
+    return answer, True

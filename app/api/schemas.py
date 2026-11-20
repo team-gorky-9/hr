@@ -748,3 +748,130 @@ class HandoffListOut(BaseModel):
 
 
 StageMoveOut.model_rebuild()
+
+
+# --- Гайд интервью и ответы (interview.md v0.4, задача interview-01) ----------------
+
+class InterviewKindIn(StrEnum):
+    PHONE = "phone"
+    DEPARTMENT = "department"
+
+
+class AnswerSourceIn(StrEnum):
+    """Источник ответа через API; unknown бывает только у перенесённых миграцией."""
+    PHONE = "phone"
+    IN_PERSON = "in_person"
+    WRITTEN = "written"
+
+
+class ConfirmBasisIn(StrEnum):
+    """Основание подтверждения человеком; resume пишет только оценщик."""
+    DOCUMENTS = "documents"
+    INTERVIEW = "interview"
+    TEST = "test"
+
+
+class InterviewUserOut(BaseModel):
+    user_id: uuid.UUID
+    login: str
+
+
+class InterviewGuideIn(BaseModel):
+    kind: InterviewKindIn = InterviewKindIn.PHONE
+    regenerate: bool = False
+    request_id: uuid.UUID
+
+
+class CriterionOut(BaseModel):
+    good_answer: str | None = None
+    insufficient_answer: str | None = None
+
+
+class AnswerOut(BaseModel):
+    answer_id: uuid.UUID
+    question_id: uuid.UUID
+    revision: int
+    text: str
+    source: str
+    author: InterviewUserOut | None = None   # null — ответ перенесён из старых заметок, автор не зафиксирован
+    created_at: datetime
+    previous_answer_id: uuid.UUID | None = None
+    carried_over: bool = False
+
+
+class ResolvedByOut(BaseModel):
+    assessment_id: uuid.UUID
+    assessment_version: int
+    requirement_id: uuid.UUID
+    result: CheckResult
+    basis: VerificationMethod
+    confirmed_by: InterviewUserOut | None = None
+
+
+class InterviewQuestionOut(BaseModel):
+    question_id: uuid.UUID
+    kind: str
+    sort_order: int
+    question: str
+    criterion: CriterionOut | None = None
+    author: str
+    gap: str | None = None
+    gap_ref_id: str | None = None
+    rubric_question_id: uuid.UUID | None = None
+    sources: list[dict[str, Any]] = Field(default_factory=list)
+    status: Literal["open", "answered", "resolved"]
+    resolved_by: ResolvedByOut | None = None
+    carried_from_question_id: uuid.UUID | None = None
+    answer: AnswerOut | None = None
+
+
+class DocumentRequestOut(BaseModel):
+    requirement_id: uuid.UUID
+    requirement_key: str
+    title: str
+    reason: str | None = None
+
+
+class InterviewGuideOut(BaseModel):
+    interview_id: uuid.UUID
+    guide_id: uuid.UUID
+    application_id: uuid.UUID
+    kind: str
+    guide_version: int
+    is_training: bool
+    assessment_id: uuid.UUID | None = None       # базовая оценка, по которой собран гайд
+    assessment_version: int | None = None
+    current_assessment_id: uuid.UUID | None = None
+    profile_id: uuid.UUID | None = None
+    profile_version: int | None = None
+    rubric_status: Literal["draft", "approved"] | None = None
+    is_stale: bool
+    stale_reason: Literal["assessment_changed", "assessment_stale", "profile_changed", "rubric_changed"] | None = None
+    prompt_version: str | None = None
+    model_calls: int
+    created_at: datetime
+    created_by: InterviewUserOut | None = None
+    core: list[InterviewQuestionOut]
+    clarifications: list[InterviewQuestionOut]
+    document_requests: list[DocumentRequestOut]
+    uncovered_gaps: list[dict[str, Any]]
+
+
+class AnswerIn(BaseModel):
+    text: str = Field(min_length=1, max_length=4000)
+    source: AnswerSourceIn
+    expected_revision: int = Field(ge=0)
+    request_id: uuid.UUID
+
+
+class AnswerListOut(BaseModel):
+    question_id: uuid.UUID
+    items: list[AnswerOut]
+
+
+class ConfirmIn(BaseModel):
+    result: CheckResult
+    basis: ConfirmBasisIn
+    comment: str = Field(min_length=1)
+    answer_id: uuid.UUID | None = None
+    request_id: uuid.UUID

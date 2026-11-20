@@ -1,7 +1,7 @@
 # Контракт гайда интервью и ответов
 
-**Версия:** v0.4 · **проект на согласовании; хранение, права и HTTP подтверждены Денисом** (Илья предлагает, Денис подтверждает хранение, права и HTTP; Давид — рубрику; Ася — DTO экрана). v0.2 — правки Дениса в §4–5: встреча и версия гайда разделены, базовая оценка для устаревания, матрица оснований `confirm`, `request_id` у подтверждения, права по ролям, коды ошибок по `api.md`, миграция 0006; пометка [Денис]. v0.3 — статус вопроса `answered` для строк, которые `confirm` не закрывает (Илья). v0.4 — Денис подтверждает хранение, права и HTTP (§4–5) с правками: миграция `0007` и БД v1.9 (номер `0006` и v1.8 занял backend-02), роль `department` до workflow-01 получает 403, гонка создания встречи, ревизии перенесённого ответа, `ON DELETE NO ACTION` у `source_answer_id`, основание `resume` в матрице, чтение для сборки гайда может держать соединение на время вызова модели. Хранение и HTTP по §4–5 пишутся; рубрику (Давид) и DTO экрана (Ася) подтверждают они.
-**Постановка:** `interview-01` в штабе (`hq/tasks/interview-01-ilya-denis-guide-and-answers.md`). **Опирается на:** [database.md](database.md) v1.8 (оценки, `competency_scores.details`, `confirm_formal_check`; v1.7 — §18, v1.8 — §19 backend-02), [assessment.md](assessment.md) v0.3, [api.md](api.md) v0.4.
+**Версия:** v0.4 · **проект на согласовании; хранение, права и HTTP подтверждены Денисом** (Илья предлагает, Денис подтверждает хранение, права и HTTP; Давид — рубрику; Ася — DTO экрана). v0.2 — правки Дениса в §4–5: встреча и версия гайда разделены, базовая оценка для устаревания, матрица оснований `confirm`, `request_id` у подтверждения, права по ролям, коды ошибок по `api.md`, миграция 0006; пометка [Денис]. v0.3 — статус вопроса `answered` для строк, которые `confirm` не закрывает (Илья). v0.4 — Денис подтверждает хранение, права и HTTP (§4–5) с правками: миграция `0009` и БД v2.1 (номера `0006`–`0008` заняли backend-02, requirements-03 и workflow-01), роль `department` до workflow-01 получает 403, гонка создания встречи, ревизии перенесённого ответа, `ON DELETE NO ACTION` у `source_answer_id`, основание `resume` в матрице, чтение для сборки гайда может держать соединение на время вызова модели. Хранение и HTTP по §4–5 пишутся; рубрику (Давид) и DTO экрана (Ася) подтверждают они.
+**Постановка:** `interview-01` в штабе (`hq/tasks/interview-01-ilya-denis-guide-and-answers.md`). **Опирается на:** [database.md](database.md) v2.0 (оценки, `competency_scores.details`, `confirm_formal_check`; v1.7 — §18, v1.8 — §19 backend-02), [assessment.md](assessment.md) v0.3, [api.md](api.md) v0.6.
 **Пометки происхождения:** [задача] — из постановки `interview-01`; [иссл.] — из `research/notes/problem-mechanisms-screening-and-interview.md` штаба; [предл.] — предложение Ильи, требует подтверждения.
 
 ## 1. Что получает кадровик
@@ -179,7 +179,7 @@
 
 - Вызывает `confirm_formal_check`; ответ `201` — новая версия оценки в формате `AssessmentOut` ([api.md](api.md)).
 - `assessment_id` служит и оптимистической блокировкой: подтверждать можно только текущую версию, иначе `409 ASSESSMENT_NOT_CURRENT` с `details.current_assessment_id`. Два кадровика, подтверждающие одновременно, не перезапишут друг друга молча.
-- `request_id` [Денис]: без него двойное нажатие создаёт две версии оценки. Повтор возвращает ту же версию (`200`).
+- `request_id` [Денис]: без него двойное нажатие создаёт две версии оценки. Повтор возвращает ту же версию (`200`). Хранится в `assessments.confirm_request_id` (§5) [Денис, v0.4]. Тот же `request_id` с другой оценкой, требованием или результатом → `409 REQUEST_ID_REUSED`.
 - `comment` обязателен и непуст (так проверяет функция).
 - **Допустимое основание** зависит от `verification` требования. Предложение Ильи («`interview` только при `verification = interview`») не закрывает контрольный пример: в `python-dev.v5` и учебном профиле стаж — `verification = resume`, `check_stage = screening`, и ответ на уточняющий вопрос про стаж нельзя было бы внести вообще, а `documents` дал бы `is_preliminary = true`. Вместо этого [Денис, предл.; итоговую матрицу подтверждают Маша и Давид с HR, задача п. «Предметное согласование»]:
 
@@ -211,20 +211,20 @@
 | `409 ASSESSMENT_CHANGED` | оценка сменилась, пока шёл вызов модели | повторить запрос |
 | `503 LLM_UNAVAILABLE` | модель недоступна, а она нужна (есть пробелы или нет рубрики ядра) | ранее сохранённый гайд с ответами остаётся доступен по `GET`; новый не создан |
 
-## 5. Хранение — миграция 0007 (часть Дениса)
+## 5. Хранение — миграция 0009 (часть Дениса)
 
-База — [database.md](database.md) v1.8 на `main`: миграции `0005` (v1.7, профили и оценки) и `0006_reserve_periods` (v1.8, backend-02). Миграция гайда — `0007` с `down_revision = '0006'`, описание — database.md v1.9 [Денис, v0.4; в v0.2–v0.3 здесь стоял номер `0006`, его занял backend-02].
+База — [database.md](database.md) v2.0 на `main`: миграции `0007_posting_sources` (v1.9, requirements-03) и `0008` (v2.0, workflow-01). Миграция гайда — `0009` с `down_revision = '0008'`, описание — database.md v2.1, раздел 22 [Денис, v0.4; в v0.2–v0.3 здесь стоял номер `0006`, затем `0007`; номера заняли backend-02, requirements-03 и workflow-01].
 
 Сейчас есть `interviews` (встреча) и `interview_questions` (`interview_id`, `competency_id`, `gap`, `question`, `author`, `answer_notes`, `score`, `sort_order`). Изменения [Денис, предл.]:
 
 | Таблица | Изменение |
 |---|---|
-| `interview_guides` (новая) | `id`, `interview_id` FK, `guide_version`, `assessment_id` FK (базовая оценка сборки), `profile_id` FK, `rubric_version`, `prompt_version`, `model_calls`, `uncovered_gaps` jsonb, `request_id` UNIQUE, `is_migrated`, `created_by_user_id`, `created_at`; UNIQUE(`interview_id`, `guide_version`); CHECK: `assessment_id IS NULL` только при `is_migrated` |
+| `interview_guides` (новая) | `id`, `interview_id` FK, `guide_version`, `assessment_id` FK ON DELETE CASCADE (базовая оценка сборки), `profile_id` FK ON DELETE CASCADE [Денис, v0.4: без CASCADE удаление кандидата падало — ссылка из гайда на оценку проверялась раньше, чем каскад от отклика доходил до гайда], `rubric_version`, `prompt_version`, `model_calls`, `uncovered_gaps` jsonb, `request_id` UNIQUE, `is_migrated`, `created_by_user_id`, `created_at`; UNIQUE(`interview_id`, `guide_version`); CHECK: `assessment_id IS NULL` только при `is_migrated` |
 | `interviews` | частичный UNIQUE(`application_id`, `kind`) WHERE `result = 'pending'` — одна открытая встреча на тип |
 | `interview_questions` | `guide_id` FK (NOT NULL после переноса), `kind` (`core` / `clarification`), `gap_ref_id`, `sources` jsonb, `criterion` jsonb, `requirement_id` FK null, `indicator_key` null, `rubric_question_id` FK null, `carried_from_question_id` FK null; UNIQUE(`guide_id`, `gap_ref_id`) WHERE `gap_ref_id IS NOT NULL`; CHECK: `kind = 'core'` ⇔ `rubric_question_id IS NOT NULL` и `gap_ref_id IS NULL`. `interview_id` остаётся для обратной совместимости и маршрута ответа. `gap` хранит заголовок пробела |
 | `interview_answers` (новая) | `id`, `question_id` FK, `revision` (≥ 1), `text`, `source` (`phone` / `in_person` / `written` / `unknown`), `author_user_id` FK null, `previous_answer_id` FK null, `request_id` UNIQUE null, `created_at`; UNIQUE(`question_id`, `revision`); CHECK: `author_user_id IS NULL` и `request_id IS NULL` только при `source = 'unknown'`. Строки только добавляются |
 | `interview_rubric_questions` (новая) | `id`, `profile_id` FK, `row_key`, `requirement_id` FK null, `indicator_key` null (ровно одно из двух), `question`, `criterion` jsonb, `author`, `status` (`draft` / `approved`), `version`, `approved_by_user_id` null, `approved_at` null; UNIQUE(`profile_id`, `row_key`). Первую генерацию ядра двумя запросами одновременно разрешает `INSERT … ON CONFLICT DO NOTHING` с перечтением. Маршрут утверждения рубрики в этот контракт не входит: до решения §7 — скрипт, как утверждение профиля |
-| `assessments` | `base_assessment_id` FK null: `null` у версии из `save_assessment`; у версии из `confirm_formal_check` — базовая версия, от которой она произошла (копируется по цепочке) |
+| `assessments` | `base_assessment_id` FK null: `null` у версии из `save_assessment`; у версии из `confirm_formal_check` — базовая версия, от которой она произошла (копируется по цепочке). `confirm_request_id` uuid UNIQUE null — `request_id` подтверждения, создавшего эту версию [Денис, v0.4]; CHECK: не `null` только вместе с `base_assessment_id` |
 | `formal_checks` | `source_answer_id` FK `interview_answers` null, ON DELETE NO ACTION; CHECK: не `null` только при `basis <> 'resume'`; при копировании строк в новую версию копируется |
 | запросы документов | не храним: вычисляются из текущей оценки при чтении |
 
@@ -235,7 +235,7 @@
 - непустой `answer_notes` переносится в `interview_answers` ревизией 1 с `source = unknown`, `author_user_id = null`; экран показывает «происхождение неизвестно» [задача]. Ответ получает `answer_id`, поэтому на него можно сослаться в `confirm`. Колонка `answer_notes` после переноса не пишется и удаляется в следующей версии;
 - `score` в контракт не входит: колонка остаётся, API её не возвращает, судьба решается со сводкой руководителю.
 
-**Функции `app/db/repository.py`** (сигнатуры уточню в database.md v1.9 вместе с миграцией): `create_interview_guide(...)`, `get_interview_guide(...)`, `add_interview_answer(..., expected_revision, request_id)`, `confirm_formal_check(..., answer_id=None)` с матрицей оснований из §4, `is_preliminary(...)` по той же матрице.
+**Функции `app/db/repository.py`** (сигнатуры — database.md v2.1, раздел 22): `create_interview_guide(...)`, `get_interview_guide(...)`, `add_interview_answer(..., expected_revision, request_id)`, `confirm_formal_check(..., answer_id=None)` с матрицей оснований из §4, `is_preliminary(...)` по той же матрице.
 
 ## 6. Контрольный пример (критерии приёмки `interview-01`)
 
