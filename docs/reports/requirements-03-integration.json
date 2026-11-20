@@ -1,0 +1,164 @@
+{
+  "schema_version": "requirements03-checks/1.0",
+  "commands": [
+    {
+      "name": "upgrade",
+      "arguments": [
+        "alembic",
+        "upgrade",
+        "head"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "check-before",
+      "arguments": [
+        "alembic",
+        "check"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "downgrade",
+      "arguments": [
+        "alembic",
+        "downgrade",
+        "base"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "reupgrade",
+      "arguments": [
+        "alembic",
+        "upgrade",
+        "head"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "check-after",
+      "arguments": [
+        "alembic",
+        "check"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "seed",
+      "arguments": [
+        "app.db.seed"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "import-first",
+      "arguments": [
+        "app.ingest",
+        "--input",
+        "fixtures/stage_0a",
+        "--mapping",
+        "fixtures/stage_0a/mapping.json"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "import-repeat",
+      "arguments": [
+        "app.ingest",
+        "--input",
+        "fixtures/stage_0a",
+        "--mapping",
+        "fixtures/stage_0a/mapping.json"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "resolve-without-approved",
+      "arguments": [
+        "app.postings",
+        "resolve",
+        "--application-id",
+        "f6fb2148-33b0-4ebe-808a-ada0ab0a9276"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "approve-training-profile",
+      "arguments": [
+        "app.requirements",
+        "load",
+        "fixtures/requirement_profiles/py-9001.draft.json",
+        "--approve",
+        "--approver",
+        "hr_demo",
+        "--basis",
+        "Synthetic requirements-03 integration check",
+        "--commit"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "resolve-approved",
+      "arguments": [
+        "app.postings",
+        "resolve",
+        "--application-id",
+        "f6fb2148-33b0-4ebe-808a-ada0ab0a9276"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "snapshot",
+      "arguments": [
+        "app.postings",
+        "snapshot",
+        "--application-id",
+        "f6fb2148-33b0-4ebe-808a-ada0ab0a9276"
+      ],
+      "exit_code": 0
+    },
+    {
+      "name": "read-snapshot",
+      "arguments": [
+        "app.postings",
+        "read-snapshot",
+        "--snapshot-id",
+        "0b06a0a7-41ef-429e-96ef-ea2c26fde77b"
+      ],
+      "exit_code": 0
+    }
+  ],
+  "import-first": {
+    "total": 4,
+    "imported": 2,
+    "application_added": 0,
+    "duplicate_skipped": 0,
+    "excluded_non_resume": 1,
+    "conflict": 0,
+    "quarantined": 1,
+    "error": 0
+  },
+  "import-repeat": {
+    "total": 4,
+    "imported": 0,
+    "application_added": 0,
+    "duplicate_skipped": 2,
+    "excluded_non_resume": 1,
+    "conflict": 0,
+    "quarantined": 1,
+    "error": 0
+  },
+  "response_count": 2,
+  "provenance_count": 2,
+  "postgresql": "PostgreSQL 16.15, compiled by Visual C++ build 1944, 64-bit",
+  "pgvector": "0.8.6",
+  "migration": "0007_posting_sources",
+  "ordinary_cli_http_passed": true,
+  "frozen_snapshot_roundtrip_passed": true,
+  "registry_version": "v1",
+  "registry_hash": "c062437c206e3be984754618783dd82c08204eb7252c6a3a9319a643ebef0a97",
+  "profile_id": "dceab8bb-3c0b-4ea4-a0d5-3f0e7a7f53bb",
+  "profile_version": 1,
+  "snapshot_hash": "342de58c2d52a8c791de1853808fee83a801f017371ab296c588a91f325ca81d"
+}

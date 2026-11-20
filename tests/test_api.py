@@ -24,6 +24,7 @@ from app.main import create_app
 from app.schemas.assessment import AlternativeResultIn, CompetencyScoreIn, FormalCheckIn
 from app.schemas.card import CandidateCard, Evidence
 from tests import factories as f
+from tests.posting_helpers import confirm_response, posting_registry  # noqa: F401 (fixture)
 from tests.test_assessment_fixtures_db import FIXTURE, _load_profile, _load_texts, _remap
 
 CASES = {case["id"]: case for case in FIXTURE["cases"]}
@@ -40,7 +41,7 @@ RAW_MARKER = "RAW-ONLY-MARKER"  # есть только в source_documents.raw_
 
 
 @pytest.fixture
-def client(session: Session) -> Iterator[TestClient]:
+def client(session: Session, posting_registry) -> Iterator[TestClient]:
     app = create_app()
     app.dependency_overrides[get_session] = lambda: session
     with TestClient(app) as test_client:
@@ -55,7 +56,8 @@ def _add_pii(session: Session, candidate_id: uuid.UUID) -> None:
     session.flush()
 
 
-def build_case(session: Session, case_id: str, *, approve: bool = True, assess: bool = True) -> dict:
+def build_case(session: Session, case_id: str, *, approve: bool = True, assess: bool = True,
+               confirm: bool = True) -> dict:
     """Учебный py-9001 из набора: кандидат, отклик на python-dev, учебный профиль, карточка, оценка."""
     case = CASES[case_id]
     ids = _load_texts(session, case)
@@ -66,6 +68,8 @@ def build_case(session: Session, case_id: str, *, approve: bool = True, assess: 
     application = repo.create_application(
         session, candidate_id=candidate_id, source=ApplicationSource.RESPONSE, vacancy_id=f.vacancy(session).id
     )
+    if confirm:
+        confirm_response(session, application, "python-dev")
     if approve:
         f.approve(session, session.get(RequirementProfile, profile_id))
     result = {"ids": ids, "candidate_id": candidate_id, "application_id": application.id, "profile_id": profile_id}
@@ -128,6 +132,9 @@ STAGE_1_ROUTES = {
     "/api/v1/applications/{application_id}",
     "/api/v1/applications/{application_id}/comparison",
     "/api/v1/candidate-texts/{candidate_text_id}",
+    "/api/v1/applications/{application_id}/posting-resolution",
+    "/api/v1/posting-snapshots",
+    "/api/v1/posting-snapshots/{snapshot_id}",
 }
 
 # Маршруты backend-02 (api.md раздел 3); состав и методы проверяет tests/test_api_workflow.py.
@@ -215,6 +222,18 @@ def test_not_assessed_is_not_unknown(session, client):
     assert body["assessment_status"] == "not_assessed" and body["assessment"] is None
 
 
+def test_unproven_original_does_not_inherit_imported_python_profile(session, client):
+    built = build_case(session, "C1-unknown", confirm=False)
+    [item] = training_list(client)["items"]
+    assert item["assessment_status"] == "mapping_required"
+    assert item["formal_result"] is None
+    body = detail(client, built["application_id"])
+    assert body["assessment_status"] == "mapping_required" and body["assessment"] is None
+    resolution = client.get(f"/api/v1/applications/{built['application_id']}/posting-resolution").json()
+    assert resolution["ready"] is False and resolution["mapping"]["decision_state"] == "needs_review"
+    assert resolution["profile_id"] is None
+
+
 def test_no_approved_profile_when_profile_is_draft(session, client):
     """N7-подобный случай: профиль-черновик не действует, даже если по нему есть оценка."""
     built = build_case(session, "C1-unknown", approve=False)
@@ -259,8 +278,9 @@ def test_stale_when_approved_profile_changed(session, client):
 def test_training_candidate_is_hidden_from_working_contour(session, client):
     build_case(session, "C1-unknown")
     real = f.make_candidate(session, "py-0001")
-    repo.create_application(session, candidate_id=real.id, source=ApplicationSource.RESPONSE,
-                            vacancy_id=f.vacancy(session).id)
+    response = repo.create_application(session, candidate_id=real.id, source=ApplicationSource.RESPONSE,
+                                       vacancy_id=f.vacancy(session).id)
+    confirm_response(session, response, "python-dev")
     vacancy_id = _python_vacancy_id(client)
 
     working = client.get(f"/api/v1/vacancies/{vacancy_id}/applications").json()

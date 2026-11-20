@@ -19,6 +19,7 @@ from app.db import repository as repo
 from app.db.enums import ApplicationSource, Channel, DocumentKind, FileFormat
 from app.db.models import Application, Assessment, CandidateCard, Position, Vacancy
 from tests.factories import approve
+from tests.posting_helpers import confirm_response
 
 FIXTURE = load(FIXTURES_DIR / "py-9001.json")
 BASE = "Написал API-тесты для сервиса заявок."
@@ -34,7 +35,7 @@ def second_fixture():
 
 
 @pytest.fixture
-def setup(session):
+def setup(session, tmp_path, monkeypatch):
     python = create_fixture_profile(session, FIXTURE)
     hr = create_fixture_profile(session, second_fixture())
     approve(session, python)
@@ -47,6 +48,9 @@ def setup(session):
     vacancy = session.scalar(select(Vacancy).join(Position).where(Position.code == "python-dev"))
     application = repo.create_application(session, candidate_id=candidate.id, source=ApplicationSource.RESPONSE,
                                           vacancy_id=vacancy.id)
+    registry_dir = tmp_path / "postings"
+    monkeypatch.setenv("POSTING_REGISTRY_DIR", str(registry_dir))
+    confirm_response(session, application, "python-dev", registry_dir=registry_dir)
     session.flush()
     return candidate, application, python, hr
 
@@ -155,11 +159,16 @@ def test_no_approved_profiles_gives_empty_reason(session):
     assert payload["items"] == [] and payload["empty_reason"] == "no_approved_profiles"
 
 
-def test_concurrent_write_is_retried_once_and_counts_add_up():
-    """Конфликт уникального индекса текущей оценки: повтор берёт готовую оценку. Без базы."""
-    import uuid
+def test_concurrent_write_is_retried_once_and_counts_add_up(session, setup):
+    """Повтор пары после конфликта сохраняет реальные проверки профиля и контура."""
+    from threading import Lock
 
-    pairs = [Pair(uuid.uuid4(), f"c{n}", uuid.uuid4(), "python-dev", "comparison", None) for n in range(3)]
+    from tests.factories import make_candidate
+
+    _, _, profile, _ = setup
+    candidates = [make_candidate(session, f"c{n}", is_synthetic=True) for n in range(3)]
+    pairs = [Pair(candidate.id, candidate.code, profile.id, "python-dev", "comparison", None)
+             for candidate in candidates]
     attempts: dict[str, int] = {}
 
     def fake_run_one(factory_, llm, *, candidate_code, **kw):
@@ -168,6 +177,16 @@ def test_concurrent_write_is_retried_once_and_counts_add_up():
             raise IntegrityError("insert", {}, Exception("uq_assessments_current"))
         return {"status": "ok", "reused": candidate_code == "c1", "assessment_id": "a", "formal_result": "met"}
 
-    report = run_cross_batch(None, pairs, run_one=fake_run_one, llm_factory=lambda: None, technical=True,
+    # Workers remain concurrent; their read-only preflight sessions serialize on
+    # this fixture's single rollback connection. Production uses independent ones.
+    connection_lock = Lock()
+    make_session = factory(session)
+
+    @contextmanager
+    def serialized_session():
+        with connection_lock, make_session() as db:
+            yield db
+
+    report = run_cross_batch(serialized_session, pairs, run_one=fake_run_one, llm_factory=lambda: None, technical=True,
                              as_of=AS_OF, workers=3)
     assert report["counts"] == {"assessed": 2, "reused": 1} and attempts["c1"] == 2

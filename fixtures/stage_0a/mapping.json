@@ -22,5 +22,6 @@
       "file_format": "hh_docx",
       "synthetic": true
     }
-  ]
+  ],
+  "dataset_id": "stage0a-training"
 }

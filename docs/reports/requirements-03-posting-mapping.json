@@ -1,0 +1,87 @@
+{
+  "schema_version": "posting-runtime-verification/1.0",
+  "scope": "Pure posting resolution over real response records; no DB import, profile selection or candidate scoring",
+  "archive_sha256": "801efb82667a63d5d2370e6d39b00c74bea5069a3643472d41f476348a559baf",
+  "dataset_id": "kadry-2026",
+  "dataset_sha256": "53c7b6d1918b96c106d99371f9e942b2e8720f164ce85cf4fde6fb275c998548",
+  "input_file_count": 1739,
+  "registry_version": "v1",
+  "registry_hash": "c062437c206e3be984754618783dd82c08204eb7252c6a3a9319a643ebef0a97",
+  "real_hr": {
+    "response_document_count": 287,
+    "named_document_count": 242,
+    "missing_publication_count": 45,
+    "confirmed_count": 0,
+    "needs_review_count": 287,
+    "no_matching_position_count": 0,
+    "excluded_hr_consultant_pair_count": 21,
+    "reasons": {
+      "awaiting_hr": 242,
+      "missing_posting": 45
+    },
+    "publications": {
+      "(нет подвала)": 45,
+      "Консультант отдела документационного обеспечения департамента обеспечения деятельности главы города": 4,
+      "Консультант отдела кадровой работы": 122,
+      "Консультант отдела муниципальной службы": 9,
+      "Консультант отдела по работе с обращениями граждан и предпринимателей": 28,
+      "Консультант отдела профессионального развития": 58,
+      "Начальник отдела внутреннего финансового контроля, аудита и закупок": 20,
+      "Сметчик": 1
+    },
+    "external_history_record_count": 24,
+    "files_with_external_history": 4,
+    "missing_publication_files_with_external_history": 3
+  },
+  "it_folder_checks": [
+    {
+      "decision_id": "kadry-frontend-dev",
+      "position_code": "frontend-dev",
+      "titleless_state": "confirmed",
+      "named_state": "confirmed",
+      "foreign_dataset_state": "needs_review",
+      "foreign_dataset_reason": "missing_posting"
+    },
+    {
+      "decision_id": "kadry-junior-python-dev",
+      "position_code": "junior-python-dev",
+      "titleless_state": "confirmed",
+      "named_state": "confirmed",
+      "foreign_dataset_state": "needs_review",
+      "foreign_dataset_reason": "missing_posting"
+    },
+    {
+      "decision_id": "kadry-junior-ux-ui",
+      "position_code": "junior-ux-ui",
+      "titleless_state": "confirmed",
+      "named_state": "confirmed",
+      "foreign_dataset_state": "needs_review",
+      "foreign_dataset_reason": "missing_posting"
+    },
+    {
+      "decision_id": "kadry-python-dev",
+      "position_code": "python-dev",
+      "titleless_state": "confirmed",
+      "named_state": "confirmed",
+      "foreign_dataset_state": "needs_review",
+      "foreign_dataset_reason": "missing_posting"
+    },
+    {
+      "decision_id": "kadry-qa-manual",
+      "position_code": "qa-manual",
+      "titleless_state": "confirmed",
+      "named_state": "confirmed",
+      "foreign_dataset_state": "needs_review",
+      "foreign_dataset_reason": "missing_posting"
+    }
+  ],
+  "boundary_checks": {
+    "unknown_publication": "unknown_publication",
+    "missing_posting": "missing_posting",
+    "missing_context": "missing_context"
+  },
+  "model_calls": 0,
+  "database_writes": 0,
+  "original_documents_written": 0,
+  "result": "passed"
+}
