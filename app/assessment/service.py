@@ -13,7 +13,7 @@ import json
 import re
 import uuid
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 from sqlalchemy.orm import Session
@@ -126,7 +126,7 @@ def assess_candidate(
     text = repo.get_current_text(session, candidate_id)
     if text is None:
         raise AssessmentDomainError("no_clean_text", "у кандидата нет очищенного текста")
-    as_of = as_of or date.today().strftime("%Y-%m")
+    as_of = as_of or datetime.now(UTC).strftime("%Y-%m")
     if not _AS_OF.match(as_of):
         raise AssessmentDomainError("bad_as_of", f"as_of должен быть 'ГГГГ-ММ', получено {as_of!r}")
     card_row = _card_for_text(session, candidate_id=candidate_id, text=text, card_id=card_id, llm=llm)
@@ -156,22 +156,22 @@ def assess_candidate(
     return assessment.id
 
 
-def _check_mode(profile: RequirementProfile, mode: Mode, *, candidate=None) -> None:
+def _check_mode(profile: RequirementProfile, mode: Mode, *, candidate: Candidate) -> None:
+    if mode not in ('operational', 'technical'):
+        raise AssessmentDomainError("bad_mode", f"неизвестный режим {mode!r}")
     if profile.status == RequirementStatus.ARCHIVED:
-        raise AssessmentDomainError("profile_not_approved", "профиль в архиве")
+        raise AssessmentDomainError("profile_archived", "профиль в архиве")
     if mode == "operational":
+        if candidate.is_synthetic:
+            raise AssessmentDomainError('training_candidate', 'рабочий режим требует реального кандидата')
         if profile.is_synthetic or profile.status != RequirementStatus.APPROVED:
             raise AssessmentDomainError(
                 "profile_not_approved",
                 "рабочая оценка — только по утверждённому реальному профилю; учебный профиль — в режиме technical",
             )
-        if candidate is not None and candidate.is_synthetic:
-            raise AssessmentDomainError('candidate_contour', 'рабочий режим требует реального кандидата')
     elif mode == "technical":
-        if candidate is not None and not candidate.is_synthetic:
-            raise AssessmentDomainError('candidate_contour', 'технический режим требует учебного кандидата')
-    else:
-        raise AssessmentDomainError("bad_mode", f"неизвестный режим {mode!r}")
+        if not candidate.is_synthetic:
+            raise AssessmentDomainError('technical_mode_real_candidate', 'технический режим требует учебного кандидата')
 
 
 def _card_for_text(session: Session, *, candidate_id: uuid.UUID, text: CandidateText,

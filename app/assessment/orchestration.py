@@ -4,7 +4,7 @@ Transaction ownership stays with caller. A skipped application is an audited res
 never a negative candidate assessment. Explicit comparison never creates an application.
 """
 import uuid
-from datetime import date
+from datetime import UTC, datetime
 from typing import Literal
 
 from sqlalchemy import select
@@ -47,7 +47,7 @@ def assess_in_context(session, *, candidate_id, profile_id, llm, mode='operation
     # Validate every rule even if applicability would skip this application.
     for row in profile.formal_requirements:
         parse_rule(row.key, row.kind, row.params, row.verification)
-    as_of = as_of or date.today().strftime('%Y-%m')
+    as_of = as_of or datetime.now(UTC).strftime('%Y-%m')
     if not _AS_OF.fullmatch(as_of):
         raise AssessmentDomainError('bad_as_of', 'as_of должен быть ГГГГ-ММ')
     position = session.get(Position, profile.position_id)

@@ -22,7 +22,7 @@
 1. **Слепой вход.** В модель уходит только `candidate_texts.text` — никогда `source_documents.raw_text` и `candidate_pii`.
 2. **Режим и статус профиля** (п. 1.1).
 3. **Единая версия текста.** Все `Evidence` оценки ссылаются на тот же `candidate_text_id`, из которого построена `CandidateCard`. Эта версия текста должна быть текущей на момент расчёта. Иначе `stale_text_version`.
-4. **Позиции цитат считает код, а не модель.** В схеме ответа модели поле `quote` (и при повторах — короткий контекст) стоит **строго до** `result`/вердикта. Код находит `start`/`end` в кодовых точках Unicode через карту обратной проекции `norm_to_orig` (допускает мягкую нормализацию `ё→е`, `\xa0`, тире `–/—`, кавычек при поиске, но сохраняет в `Evidence.quote` точный оригинальный срез `text[start:end]`) и проверяет `text[start:end] == quote`. Неоднозначное вхождение отклоняется.
+4. **Позиции цитат считает код, а не модель.** Модель возвращает текст цитаты и при повторах — короткий контекст; координаты из ответа модели не принимаются. Код находит `start`/`end` в кодовых точках Unicode через карту обратной проекции `norm_to_orig` (допускает мягкую нормализацию `ё→е`, `\xa0`, тире `–/—`, кавычек при поиске, но сохраняет в `Evidence.quote` точный оригинальный срез `text[start:end]`) и проверяет `text[start:end] == quote`. При нескольких совпадениях код использует контекст; если он не устранил неоднозначность, выбирается первое вхождение с признаком `ambiguous_location` там, где формат результата его поддерживает. Сам по себе повтор цитаты не понижает вывод; это текущее поведение resolver, а не гарантия однозначности.
 5. **Нет годной цитаты — нет подтверждённого факта.** `met`/`not_met` без годной цитаты понижается до `unknown` с причиной `missing_evidence` или `invalid_evidence`. Свидетельство индикатора без цитаты не засчитывается. Исключение: в источнике нет порога (п. 4.3) — тогда правило не создаётся, и проверять нечего.
 6. **Итог `formal_result` считает код:** `not_met` > `unknown` > `met` по обязательным требованиям с `check_stage = screening`. Компетенции и желательные требования его не меняют.
 7. **Сбой модели безопасен.** Таймаут, сетевая ошибка или невалидный JSON после повтора → `LLMUnavailableError` / `LLMInvalidResponseError`. Фиктивная оценка не создаётся, этап отклика не меняется, в `audit_log` пишется `llm_call` без текста резюме и ключей.
@@ -32,8 +32,8 @@
 
 | Режим | Какой профиль допускается | Что видит кадровик | Иначе |
 |---|---|---|---|
-| `operational` (по умолчанию) | реальный approved; кандидат только реальный | рабочая оценка в явно заданном контексте | `profile_not_approved` или `candidate_contour` |
-| `technical` | кандидат только учебный; профиль по умолчанию учебный approved, явно по ID — любой неархивный | учебная оценка | реальный кандидат → `candidate_contour`; archived запрещён |
+| `operational` (по умолчанию) | реальный approved; кандидат только реальный | рабочая оценка в явно заданном контексте | `profile_not_approved` или `training_candidate` |
+| `technical` | кандидат только учебный; профиль по умолчанию учебный approved, явно по ID — любой неархивный | учебная оценка | реальный кандидат → `technical_mode_real_candidate`; archived → `profile_archived` |
 
 Технический режим нужен для `py-9001`. Сохранённая оценка по учебному профилю распознаётся через `requirement_profiles.is_synthetic`. **API не показывает её в рабочих списках как рекомендацию.**
 
@@ -88,7 +88,7 @@ def assess_candidate(session, *, candidate_id: uuid.UUID, profile_id: uuid.UUID,
 
 | Ошибка | `reason` | Оценка создаётся? |
 |---|---|---|
-| `AssessmentDomainError` | `profile_not_approved`, `candidate_contour`, `stale_card`, `no_clean_text`, `application_owner`, `not_primary_application`, `bad_as_of` | нет |
+| `AssessmentDomainError` | `profile_not_approved`, `training_candidate`, `technical_mode_real_candidate`, `profile_archived`, `stale_card`, `no_clean_text`, `application_owner`, `not_primary_application`, `bad_as_of` | нет |
 | `RuleUnsupportedError` | `rule_unsupported`: неизвестная `schema_version` или ключ `params`, неизвестный `kind` | нет: оценка по профилю не создаётся вовсе, чтобы не получить молчаливый `unknown` |
 | `LLMUnavailableError` | сеть, таймаут, HTTP 5xx/429 | нет |
 | `LLMInvalidResponseError` | JSON не прошёл схему после повтора | нет |
@@ -159,7 +159,7 @@ uv run python -m app.assessment batch --position-code python-dev          # Эт
 | 1. Пробел | `Написал API-тесты для сервиса заявок.` | `experience_years = null`, `missing` ∋ «длительность коммерческого опыта»; требование `unknown` без цитат; индикатор подтверждён цитатой `0..37`, `level = null`; `formal_result = unknown` |
 | 2. Выполнено | + `\nОбщий коммерческий опыт — 3 года.` | `met` с цитатой `38..71`, `basis = resume`; индикатор — цитата `0..37`; `formal_result = met` |
 | 3. Не выполнено | + `\nОбщий коммерческий опыт — 1 год.` | `not_met` с цитатой `38..70`; индикатор подтверждён; `formal_result = not_met` |
-| 4. Режим | тот же профиль в `operational` | `AssessmentDomainError(profile_not_approved)`, записи нет |
+| 4. Режим | учебный кандидат в `operational` | `AssessmentDomainError(training_candidate)`, записи нет; для реального кандидата по учебному профилю — `profile_not_approved` |
 | 5. Выдуманная цитата | базовый текст, модель вернула `quote="Руководил отделом"` | вывод → `unknown` / свидетельство не засчитано; `EvidenceError` в БД не доходит |
 | 6. Сбой модели | `FakeLLMClient` бросает таймаут | `LLMUnavailableError`, оценки нет, этап отклика `new` |
 | 7. Устаревшая версия | цитата из прошлой версии текста | `stale_text_version` → вывод не подтверждён |

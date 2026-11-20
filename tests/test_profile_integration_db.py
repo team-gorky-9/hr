@@ -93,7 +93,7 @@ def test_contours_checked_before_any_model_call(session):
     llm = FakeLLMClient(lambda *args: {})
     with pytest.raises(AssessmentDomainError) as error:
         assess_candidate(session, candidate_id=real.id, profile_id=profile.id, llm=llm, mode='technical')
-    assert error.value.reason == 'candidate_contour'
+    assert error.value.reason == 'technical_mode_real_candidate'
     assert llm.prompts == []
 
 

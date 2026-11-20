@@ -24,19 +24,20 @@ from app.db.enums import (
 )
 from app.db.models import Assessment, AuditLog, Position, Vacancy
 from app.schemas.card import evidence_matches
+from tests.factories import approve
 
 FIXTURE = load(FIXTURES_DIR / "py-9001.json")
 BASE = "Написал API-тесты для сервиса заявок."
 IND = FIXTURE["profile"]["competencies"][0]["indicators"][0]["key"]
 
 
-def make_candidate(session, text: str, code: str = "py-9001"):
+def make_candidate(session, text: str, code: str = "py-9001", *, synthetic: bool = True):
     document, _ = repo.add_source_document(
         session, kind=DocumentKind.RESUME, channel=Channel.HH_RU, file_format=FileFormat.TXT,
         original_path=f"Синтетика/{code}.txt", raw_text=f"{code}\n{text}",
     )
     return repo.create_candidate(session, code=code, source_document_id=document.id,
-                                 redacted_text=text, redaction_method="test", is_synthetic=True)
+                                 redacted_text=text, redaction_method="test", is_synthetic=synthetic)
 
 
 def model(statement=None, indicator_quote=BASE, *, periods=(), alternatives=(), fail=None):
@@ -113,13 +114,39 @@ def test_one_year_is_not_met_and_competency_does_not_compensate(session, profile
 
 # --- Сценарий 4: режим -------------------------------------------------------------------
 
-def test_operational_mode_refuses_synthetic_profile(session, profile):
+@pytest.mark.parametrize(("synthetic", "mode", "reason"), [
+    (False, "operational", "profile_not_approved"),        # реальный кандидат × учебный профиль
+    (True, "operational", "training_candidate"),           # учебный кандидат в рабочем режиме
+    (False, "technical", "technical_mode_real_candidate"),  # реальный кандидат в техническом режиме
+])
+def test_mode_follows_candidate_and_profile_contours(session, profile, synthetic, mode, reason):
+    candidate = make_candidate(session, BASE, synthetic=synthetic)
+    llm = FakeLLMClient(model())
+    with pytest.raises(AssessmentDomainError) as error:
+        assess_candidate(session, candidate_id=candidate.id, profile_id=profile.id, llm=llm, mode=mode)
+    assert error.value.reason == reason
+    assert llm.calls == [] and session.scalar(select(func.count()).select_from(Assessment)) == 0
+
+
+def test_archived_profile_is_refused_in_any_mode(session, profile):
+    from app.db.enums import RequirementStatus
+
+    profile.status = RequirementStatus.ARCHIVED
+    session.flush()
     candidate = make_candidate(session, BASE)
     with pytest.raises(AssessmentDomainError) as error:
         assess_candidate(session, candidate_id=candidate.id, profile_id=profile.id,
-                         llm=FakeLLMClient(model()), mode="operational")
-    assert error.value.reason == "profile_not_approved"
-    assert session.scalar(select(func.count()).select_from(Assessment)) == 0
+                         llm=FakeLLMClient(model()), mode="technical")
+    assert error.value.reason == "profile_archived"
+
+
+def test_operational_real_candidate_by_approved_real_profile(session):
+    profile = create_fixture_profile(session, FIXTURE, synthetic=False)
+    approve(session, profile)
+    candidate = make_candidate(session, BASE, synthetic=False)
+    assessment_id = assess_candidate(session, candidate_id=candidate.id, profile_id=profile.id,
+                                     llm=FakeLLMClient(model()), mode="operational", as_of="2026-11")
+    assert session.get(Assessment, assessment_id).formal_result == CheckResult.UNKNOWN
 
 
 # --- Сценарий 5: выдуманная цитата ------------------------------------------------------------
@@ -185,12 +212,17 @@ def test_prompt_injection_cannot_produce_met(session, profile):
 
 # --- Сценарий 9: неизвестное правило ----------------------------------------------------------------
 
-def test_unknown_rule_version_creates_nothing_and_skips_model(session):
-    profile = create_fixture_profile(session, FIXTURE)
-    # New loader rejects this. Simulate an unsupported legacy rule already in storage.
-    profile.formal_requirements[0].params = {
-        "schema_version": "99.0", "scope": "total_commercial", "minimum_defined": True, "min_months": 24}
+def with_params(session, profile, params):
+    """Загрузчик и create_requirement_profile уже не пропускают неизвестный формат (БД v1.5).
+    Оценщик всё равно защищён: подменяем params в готовом профиле, как в старых данных."""
+    profile.formal_requirements[0].params = params
     session.flush()
+    return profile
+
+
+def test_unknown_rule_version_creates_nothing_and_skips_model(session, profile):
+    profile = with_params(session, profile, {
+        "schema_version": "99.0", "scope": "total_commercial", "minimum_defined": True, "min_months": 24})
     candidate = make_candidate(session, BASE)
     llm = FakeLLMClient(model())
     with pytest.raises(RuleUnsupportedError):
@@ -198,15 +230,14 @@ def test_unknown_rule_version_creates_nothing_and_skips_model(session):
     assert llm.calls == [] and session.scalar(select(func.count()).select_from(Assessment)) == 0
 
 
-def test_unknown_params_key_is_rule_unsupported(session):
-    profile = create_fixture_profile(session, FIXTURE)
-    profile.formal_requirements[0].params = {
-        "schema_version": "0.1", "scope": "total_commercial", "minimum_defined": True, "min_months": 24, "min_years": 2}
-    session.flush()
+def test_unknown_params_key_is_rule_unsupported(session, profile):
+    profile = with_params(session, profile, {
+        "schema_version": "0.1", "scope": "total_commercial", "minimum_defined": True, "min_months": 24, "min_years": 2})
     candidate = make_candidate(session, BASE)
+    llm = FakeLLMClient(model())
     with pytest.raises(RuleUnsupportedError):
-        assess_candidate(session, candidate_id=candidate.id, profile_id=profile.id,
-                         llm=FakeLLMClient(model()), mode="technical")
+        assess_candidate(session, candidate_id=candidate.id, profile_id=profile.id, llm=llm, mode="technical")
+    assert llm.calls == []
 
 
 # --- Стаж по периодам, слепой вход, журнал ------------------------------------------------------------
@@ -292,16 +323,20 @@ NO_RETRAIN = "Профессиональной переподготовки по
 
 
 def test_retraining_met_is_preliminary_when_documents_needed(session):
+    """БД v1.5: met по резюме при verification = documents сохраняется как met,
+    база помечает его is_preliminary («по резюме да, нужен документ»)."""
     profile = education_profile(session)
     llm = FakeLLMClient(edu_model(("confirmed", ECON), ("refuted", ECON), ("confirmed", RETRAIN)))
     _, assessment = run(session, profile, ECON + " " + RETRAIN, llm)
     level, field = assessment.formal_checks
-    assert level.result == CheckResult.MET
-    info = details(field.explanation)
-    assert field.result == CheckResult.MET and field.is_preliminary and info["needs"] == "documents"
-    assert field.evidence and assessment.formal_result == CheckResult.MET
-    assert assessment.formal_preliminary
-    assert len(field.alternatives) == 2
+    assert level.result == CheckResult.MET and not level.is_preliminary
+    assert field.result == CheckResult.MET and field.is_preliminary
+    assert details(field.explanation)["needs"] == "documents" and field.evidence
+    assert assessment.formal_result == CheckResult.MET and assessment.formal_preliminary
+    # У каждой альтернативы свой результат и свои цитаты — в базе, а не только в объяснении.
+    alternatives = {a["key"]: a for a in field.alternatives}
+    assert alternatives["t.field.alt1"]["result"] == "not_met" and alternatives["t.field.alt2"]["result"] == "met"
+    assert alternatives["t.field.alt2"]["evidence"][0]["quote"] == RETRAIN
     score = details(assessment.competency_scores[0].explanation)
     assert score["on_interview"] == 1 and score["mandatory"]["total"] == 0
 

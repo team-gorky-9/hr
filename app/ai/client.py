@@ -118,6 +118,20 @@ class OpenAICompatClient:
     def model_name(self, role: ModelRole) -> str:
         return self.config.model_for(role)
 
+    def _detail(self, error) -> str:
+        """Текст ошибки провайдера (без ключа, не длиннее 300 символов) — чтобы понять причину 401/403/404."""
+        body = getattr(error, "body", None)
+        text = ""
+        if isinstance(body, dict):
+            inner = body.get("error", body)
+            text = inner.get("message") if isinstance(inner, dict) else str(inner)
+        text = str(text or getattr(error, "message", "") or "")
+        key = self.config.yandex_api_key.get_secret_value() if self.config.yandex_api_key else ""
+        if key:
+            text = text.replace(key, "***")
+        text = " ".join(text.split())[:300]
+        return f" — {text}" if text else ""
+
     def complete_structured(self, system_prompt, user_prompt, response_model, *, model_role, prompt_version=""):
         info = CallInfo(role=model_role, model=self.model_name(model_role), prompt_version=prompt_version,
                         schema=response_model.__name__)
@@ -137,7 +151,7 @@ class OpenAICompatClient:
                         # Провайдер не принял response_format — дальше просим JSON инструкцией.
                         self._mode = "prompt_json"
                         continue
-                    raise LLMUnavailableError(f"провайдер отклонил запрос: HTTP {error.status_code}") from None
+                    raise LLMUnavailableError(f"провайдер отклонил запрос: HTTP {error.status_code}{self._detail(error)}") from None
                 except (self._openai.APITimeoutError, self._openai.APIConnectionError,
                         self._openai.RateLimitError, self._openai.InternalServerError) as error:
                     if transient_left > 0:
@@ -146,7 +160,7 @@ class OpenAICompatClient:
                         continue
                     raise LLMUnavailableError(f"модель недоступна: {type(error).__name__}") from None
                 except self._openai.APIStatusError as error:
-                    raise LLMUnavailableError(f"модель недоступна: HTTP {error.status_code}") from None
+                    raise LLMUnavailableError(f"модель недоступна: HTTP {error.status_code}{self._detail(error)}") from None
                 if usage is not None:
                     info.prompt_tokens = getattr(usage, "prompt_tokens", None)
                     info.completion_tokens = getattr(usage, "completion_tokens", None)
