@@ -231,3 +231,18 @@ def test_cli_requires_position_when_candidate_has_several_assessments(session, m
     assert json.loads(capsys.readouterr().out)["assessment_id"] == str(first)
     assert cli.main(["--assessment-id", str(first), "--no-core"]) == 0
     assert json.loads(capsys.readouterr().out)["assessment_id"] == str(first)
+
+
+def test_many_silent_indicators_are_split_into_short_questions_mandatory_first():
+    """13 навыков ДК консультанта в одном вопросе модель обрезала; теперь не больше трёх на вопрос."""
+    keys = [f"k{n}" for n in range(7)]
+    comp = NS(id=uuid.uuid4(), name="ДК", sort_order=0, indicators=[
+        indicator(k, mandatory=(n != 0), order=n) for n, k in enumerate(keys)])
+    score = NS(competency_id=comp.id, details={"indicators": [], "groups": []})
+    plan = assemble_gaps(NS(formal_requirements=[], competencies=[comp]),
+                         NS(formal_checks=[], competency_scores=[score]), [])
+    sizes = [len(g.sources) for g in plan.selected]
+    assert sizes == [3, 3, 1]
+    assert [g.priority for g in plan.selected] == [2, 2, 4]  # необязательный k0 — в последнем
+    assert plan.selected[-1].sources[0]["key"] == "k0"
+    assert len({g.gap_ref_id for g in plan.selected}) == 3

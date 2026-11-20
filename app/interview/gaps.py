@@ -19,6 +19,9 @@ MISSING_TO_KIND = {
 }
 
 DEFAULT_BUDGET = 6
+# Сколько навыков одной компетенции спрашивать одним вопросом. Больше — вопрос не умещается в 300
+# символов, модель обрезает его или дробит на ответы с одним ключом (найдено на консультанте: 13 ДК).
+UNITS_PER_GAP = 3
 
 
 @dataclass
@@ -27,7 +30,7 @@ class Gap:
     gap_ref_id: str
     title: str
     priority: int                       # 1 — обязательное требование … 4 — только желательные индикаторы
-    order: tuple[int, int]              # порядок строк профиля внутри приоритета
+    order: tuple[int, ...]              # порядок строк профиля внутри приоритета (и часть компетенции)
     sources: list[dict[str, Any]] = field(default_factory=list)
     acceptance: list[dict[str, Any]] = field(default_factory=list)   # критерии исходных строк
     known_quotes: list[str] = field(default_factory=list)            # что уже найдено в резюме
@@ -127,14 +130,17 @@ def _competency_gaps(competency, score) -> list[Gap]:
         if status == "no_info":
             silent.setdefault(unit, []).append(indicator)
 
-    if silent:
-        indicators = [i for unit in silent.values() for i in unit]
+    # Обязательные навыки — в первые вопросы; не больше UNITS_PER_GAP навыков на вопрос.
+    units = sorted(silent.items(), key=lambda unit: not any(i.is_mandatory for i in unit[1]))
+    for part, start in enumerate(range(0, len(units), UNITS_PER_GAP)):
+        chunk = dict(units[start:start + UNITS_PER_GAP])
+        indicators = [i for unit in chunk.values() for i in unit]
         mandatory = any(i.is_mandatory for i in indicators)
         result.append(Gap(
-            gap_ref_id=gap_ref_id(silent.keys()),
+            gap_ref_id=gap_ref_id(chunk.keys()),
             title=f"{competency.name}: нет сведений — " + "; ".join(dict.fromkeys(i.text for i in indicators)),
             priority=2 if mandatory else 4,
-            order=(1, competency.sort_order),
+            order=(1, competency.sort_order, part),
             sources=[{"type": "indicator", "competency_id": str(competency.id), "key": i.key, "status": "no_info"}
                      for i in indicators],
             acceptance=[{"row": i.key, "text": i.text, **(i.acceptance or {})} for i in indicators],
