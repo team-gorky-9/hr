@@ -1,0 +1,19 @@
+{
+  "application_ref": {
+    "system": "legacy-hr",
+    "id": "00000000-0000-4000-8000-000000000801"
+  },
+  "candidate_ref": {
+    "system": "legacy-hr",
+    "id": "00000000-0000-4000-8000-000000000901",
+    "display_name": "Марина Учебная"
+  },
+  "organization_id": "00000000-0000-4000-8000-000000000001",
+  "department_id": "00000000-0000-4000-8000-000000000011",
+  "position_code": "economist-training",
+  "outcome": "hired",
+  "decided_at": "2026-11-21T10:00:00+03:00",
+  "decided_by_actor_id": "00000000-0000-4000-8000-000000000101",
+  "decision_basis": "Учебный положительный результат",
+  "is_synthetic": true
+}
