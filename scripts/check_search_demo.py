@@ -45,8 +45,8 @@ def check(client: httpx.Client, *, probe_semantic: bool) -> dict:
                "exact": exact_hit["candidate_code"], "filters": structured["candidate_code"],
                "empty": True, "bad_request": 422, "denied": 401}
     if probe_semantic:
-        probe = post(query="электронная маршрутизация жалоб населения", limit=50)
-        matches = [item for item in probe["items"] if item["match_kind"] in ("semantic", "hybrid")]
+        probe = post(query="классификация писем населения и переадресация по ведомствам", limit=50)
+        matches = [item for item in probe["items"] if item["match_kind"] == "semantic"]
         assert probe["mode"] == "hybrid" and probe["semantic_status"] == "ready"
         assert any(item["candidate_code"] == "search-9013" for item in matches), (
             "Измерительный запрос не дошёл до search-9013. Проверьте индексацию и порог смоука.",
