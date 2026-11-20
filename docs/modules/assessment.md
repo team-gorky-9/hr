@@ -1,8 +1,33 @@
 # Модуль «Оценка»
 
-Оценка кандидата по утверждённому профилю требований: карточка → формальные проверки и компетенции с цитатами → итог. Код — `app/assessment/`. Хранение — функции `save_assessment` и `add_candidate_card` модуля БД.
+Оценка кандидата по профилю требований: карточка → формальные проверки и компетенции с цитатами → итог. Код — `app/ai/` (модель) и `app/assessment/` (оценивание). Хранение — `add_candidate_card` и `save_assessment` модуля БД. Контракт — [assessment.md](../contracts/assessment.md) v0.2.
 
-**Статус:** этап 0б. Есть правила доверия к выводу (`verification.py`) и контрольный набор (`fixtures/assessment/`). Вызова модели, промптов и сервиса оценивания пока нет — это этап 1.
+**Статус:** этап 1 (`ai-01`). Работают извлечение карточки, оценивание по `params` пакета 0.2, режимы `operational`/`technical`, CLI. Офлайн-тесты на `FakeLLMClient`; живой прогон на YandexGPT — по инструкции ниже.
+
+## Как устроен путь одного кандидата
+
+1. `extract_candidate_card` — очищенный текст в `<resume_text>` → модель (роль `extract`) → `CandidateCard` → `add_candidate_card`.
+2. `assess_candidate` проверяет режим (`operational` — утверждённый реальный профиль, `technical` — только учебный) и разбирает `params` (`rules.py`). Неизвестная версия или ключ — `RuleUnsupportedError` до вызова модели.
+3. Один вызов на формальные требования (`FormalExtraction`: периоды с видом записи, фраза о стаже, статусы альтернатив образования — всё с цитатами) и по одному на каждую компетенцию с индикаторами разбора резюме (`CompetencyExtraction`).
+4. Код: позиция каждой цитаты (`evidence.py`), стаж с границами `[L, U]` (`experience.py`), итог по альтернативам, понижение неподтверждённого (`verification.py`), правило «по резюме не закрывается» — `met` при `verification ≠ resume` сохраняется как `unknown` с пометкой `claimed: met`.
+5. Компетенции: `level = null`, в `explanation` — счётчики «подтверждено X из Y» отдельно для обязательных и желательных, индикаторы интервью и исключённые — отдельными числами.
+6. `save_assessment`; вызовы модели — в `audit_log` (`llm_call`) без текста резюме и ключей.
+
+`explanation` формальной проверки и компетенции — строка `[resume] {JSON}`: основание, итог альтернатив, месяцы `months_low/high`, `gap`, `conflict`, `divergence`, `claimed`, счётчики. Когда у БД появятся поля, их переносят из этого JSON без изменения логики.
+
+## Модель (`app/ai/`)
+
+`LLMConfig` читает `.env` (см. `.env.example`). `OpenAICompatClient` ходит в YandexGPT через `openai` SDK (`base_url` + `project` = каталог): сначала `response_format=json_schema`, при отказе провайдера — JSON по инструкции (режим запоминается); один повтор при таймауте/429/5xx; одна просьба исправить невалидный JSON. `FakeLLMClient` — для тестов.
+
+## Запуск
+
+```bash
+uv run python -m app.ingest --input fixtures/stage_0a --mapping fixtures/stage_0a/mapping.json   # py-9001 в базе
+uv run python -m scripts.load_synthetic_profile                                                   # учебный профиль
+uv run python -m app.assessment run --candidate-code py-9001 --position-code python-dev --technical --as-of 2025-11
+```
+
+`--as-of` — месяц, до которого считается «по настоящее время». Дата резюме в архиве не хранится; без параметра берётся текущий месяц, и стаж на текущем месте может оказаться больше, чем было на момент отклика. Расхождение с фразой «Опыт работы: N» помечается `divergence`.
 
 ## Правила доверия к выводу (`app/assessment/verification.py`)
 
