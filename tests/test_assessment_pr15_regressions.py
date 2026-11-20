@@ -39,6 +39,12 @@ def evaluate(case_id, text_value, response):
     'Нет проблем с опытом работы.',
     'Опыт работы не отсутствует.',
     'Опыт работы неизвестен и диплома нет.',
+    'В резюме опыта нет.',
+    'В анкете опыта нет.',
+    'В описании опыта нет.',
+    'В тестировании ПО опыт не указан.',
+    'В тестировании недостатка опыта нет.',
+    'В тестировании проблем с наличием опыта нет.',
 ])
 def test_unrelated_negation_does_not_refute_experience(quote):
     result = evaluate('py-relevant-unknown', quote, {'no_experience_quote': quote})
@@ -51,6 +57,8 @@ def test_unrelated_negation_does_not_refute_experience(quote):
     'Не имею коммерческого опыта.', 'Опыт работы отсутствует.',
     'Опыта разработки на Python и работы с данными у меня нет.',
     'Отсутствует опыт работы.', 'Опыт работы: нет.',
+    'В тестировании ПО опыта нет.',
+    'По разработке интерфейсов опыта нет.',
 ])
 def test_explicit_experience_negation_still_refutes(quote):
     result = evaluate('py-relevant-unknown', quote, {'no_experience_quote': quote})

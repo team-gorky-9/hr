@@ -357,6 +357,12 @@ _NO_EXPERIENCE = re.compile(
     r"|^(?:у меня\s+)?(?:(?:коммерческий|коммерческого|релевантный|релевантного)\s+)?"
     r"(?:опыт|опыта)\s+(?:[\w+#/-]+\s+){0,10}(?:нет|отсутствует)\b",
 )
+_SCOPED_NO_EXPERIENCE = re.compile(
+    r"^(?:в|по)\s+(?:[\w+#/-]+\s+){1,6}(?:опыт|опыта)\s+(?:нет|отсутствует)\b"
+)
+_SCOPED_EXPERIENCE_AMBIGUITY = re.compile(
+    r"\b(?:резюме|анкет\w*|описани\w*|нехватк\w*|недостатк\w*|проблем\w*|сомнен\w*)\b"
+)
 
 
 def _explicit_no_experience(quote: str) -> bool:
@@ -369,6 +375,11 @@ def _explicit_no_experience(quote: str) -> bool:
             continue
         clause = re.sub(r"\s*[:—–]\s*", " ", clause)
         if _NO_EXPERIENCE.search(clause.strip(" \t:—-«»\"")):
+            return True
+        # A leading area is still an explicit denial: «В тестировании ПО опыта нет».
+        # Absence in a document or absence of a problem is not absence of experience.
+        if (_SCOPED_NO_EXPERIENCE.search(clause.strip(" \t:—-«»\""))
+                and not _SCOPED_EXPERIENCE_AMBIGUITY.search(clause)):
             return True
     return False
 
