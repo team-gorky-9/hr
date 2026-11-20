@@ -1,0 +1,88 @@
+{
+  "date": "2026-11-20",
+  "base_commit": "42ef73842931db8d3e53dd11f020f2e62a27ef4a",
+  "tested_commit": "61c1957d36d72e47665e7293f9607e6c45dd39c1",
+  "branch": "feature/requirements-01-profile-loader",
+  "latest_fetched_main": "42ef73842931db8d3e53dd11f020f2e62a27ef4a",
+  "uncommitted_implementation": false,
+  "sha256_normalization": "LF",
+  "file_sha256": {
+    "app/assessment/counters.py": "722775c70aaf095b0cc345c3a496d2a2ac6f25afe8b8103e7ee3af1cfb6ad792",
+    "app/db/repository.py": "a78036a6c926ddb4f2f4b14c669f5648db564d35a1064abfcf31bc3022c21b20",
+    "app/requirements/__init__.py": "4d651d2dfb85d2a658281eb607498c4d38c25e794f70a414a4a39250e77bdfa7",
+    "app/requirements/__main__.py": "935a1c1166b0c1ea35a82256345000bf2c73ded718d77773bc27a71ecce28f7d",
+    "app/requirements/cli.py": "8c38e22d694e72e29ff9b2a367c47f25fd5ff1298a881e6bc778b8bebd9efd2d",
+    "app/requirements/errors.py": "f157b12b8c38bcbf265b3c931e784aac1074d5c5e6cfa3adb7c39a1a4d180d49",
+    "app/requirements/package.py": "f30ecf8a02abb9fcd41d92f9931ebddc69c816dffd54164bd0b518ca44b342c1",
+    "app/requirements/schemas.py": "89f15c7462ad72e77061c36aab51a01593c2b9e13bd8cdcdab8cb60c6edca608",
+    "app/requirements/service.py": "7b33980d1df03dd7d1f5fb0c1a77fae5c15050b2072c6f8bd1b0f376c593a3a2",
+    "app/schemas/requirement_groups.py": "8882374e6976e7cf884298f18b70ffd76611f99879d12f4492e27c6f18e0de85",
+    "fixtures/requirement_profiles/py-9001.draft.json": "0f3dee6c515832da395735cca988b7ad18b489460accd6e50d592c3201c86526",
+    "scripts/verify_requirements_loader.py": "bf3d87f01f954e8a57b8d2e53a390a83e694dc1df72cf988e1a3311c2364bf9c",
+    "tests/test_requirements_public.py": "8f4fb1f1b97d2c4156a9df1f0ddd0e58f04421531329b8599e0c72c2c6a7e475"
+  },
+  "code_fingerprint": "55cd00c7e98f74cce983a9d988b43eabcec1339d3e71db16a3119a8ec7c7b9bb",
+  "pytest_output": "........................................................................ [ 10%]\n........................................................................ [ 21%]\n........................................................................ [ 31%]\n........................................................................ [ 42%]\n........................................................................ [ 52%]\n........................................................................ [ 63%]\n........................................................................ [ 73%]\n.........................................................s.............. [ 84%]\n..................................................................... [ 94%]\n........................................                                 [100%]\n=========================== short test summary info ===========================\nSKIPPED [1] tests\\test_reporting_management_api.py:220: Node.js is required to exercise the JavaScript SDK\n684 passed, 1 skipped, 3 subtests passed in 45.52s\n",
+  "real_package": {
+    "persisted": false,
+    "original_documents": 4,
+    "legacy_row_equivalence": true,
+    "profiles": [
+      {
+        "profile_id": "c0bb36b2-b4a1-44a7-bf1b-a194c381be1c",
+        "position_id": "50c41c4c-bd23-440b-8e1a-5e6b3d33da26",
+        "version": 4,
+        "status": "draft",
+        "is_synthetic": false,
+        "formal_requirements": 2,
+        "competencies": 5,
+        "indicators": 54
+      },
+      {
+        "profile_id": "f969bbed-24ae-42e9-9005-8dc31a4cbc4a",
+        "position_id": "b610dff5-003a-4d89-be18-a1914a65385c",
+        "version": 5,
+        "status": "draft",
+        "is_synthetic": false,
+        "formal_requirements": 2,
+        "competencies": 8,
+        "indicators": 53
+      },
+      {
+        "profile_id": "b9865655-ba1f-46d8-a830-3ebcf500b8c9",
+        "position_id": "b610dff5-003a-4d89-be18-a1914a65385c",
+        "version": 2,
+        "status": "draft",
+        "is_synthetic": true,
+        "formal_requirements": 1,
+        "competencies": 1,
+        "indicators": 1
+      }
+    ],
+    "review_fields": {
+      "mandatory_basis": 111,
+      "interpretation_status": 124,
+      "evidence_channels": 111,
+      "issues": 124,
+      "aggregation_method": 14,
+      "context_note": 13,
+      "acceptance": 13,
+      "collection": 107,
+      "exclude_duplicate_weight": 30,
+      "grouping_status": 75,
+      "verification_note": 3,
+      "split_candidates": 1,
+      "source_notes": 14,
+      "related_indicators": 1,
+      "duplicates_keys": 1,
+      "score": 1
+    },
+    "postgresql": "16.15",
+    "pgvector": "0.8.6"
+  },
+  "run_summary": {
+    "product": "C:\\Users\\admin\\Desktop\\Хакатон\\hackaton\\worktrees\\hr-requirements-01",
+    "exit_code": 0,
+    "log": "C:\\Users\\admin\\Desktop\\Хакатон\\hackaton\\worktrees\\requirements01-checks-1z1hb9_o\\pytest.log"
+  }
+}

@@ -83,4 +83,4 @@ uv run python -m scripts.verify_requirement_profiles --card-schemas
 uv run python -m scripts.verify_requirements_loader --source-root "<КОРЕНЬ_ИСХОДНИКОВ>"
 ```
 
-Последний скрипт проверяет настоящие байты и эквивалентность прежнему преобразованию, печатает счётчики и версии PostgreSQL/pgvector, всегда откатывает транзакцию. Результаты и ограничения конкретного запуска — [отчёт requirements-01](../reports/requirements-01-loader.md).
+Последний скрипт проверяет настоящие байты и эквивалентность прежнему преобразованию, печатает счётчики и версии PostgreSQL/pgvector, всегда откатывает транзакцию. Результаты и ограничения актуального запуска — [интеграционный отчёт requirements-01](../reports/requirements-01-integration.md).
