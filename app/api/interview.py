@@ -4,7 +4,7 @@
 хранения — app/db/repository.py. Здесь — то, что добавляет HTTP:
 - права: все маршруты — кадровик или администратор (StaffUser). Роль department получает 403,
   пока workflow-01 не введёт назначение получателя (v0.4, §4 «Кто что может»);
-- какая оценка у отклика — та же, что в карточке (resolve_states + применимость), и коды ошибок;
+- какая оценка у отклика — та же, что в карточке (цель из реестра публикаций + resolve_states), и коды ошибок;
 - транзакции POST гайда: сборка и вызов модели в сессии только для чтения, затем отдельная короткая
   транзакция записи с перепроверкой оценки (409 ASSESSMENT_CHANGED). Сессия чтения держит
   соединение пула на время вызова модели — это допущение v0.4;
@@ -34,7 +34,7 @@ from app.api.schemas import (
     InterviewUserOut,
     ResolvedByOut,
 )
-from app.api.services import application_state, assessment_out
+from app.api.services import assessment_out
 from app.api.workflow import get_application_or_404, require_working_application
 from app.assessment.service import record_llm_calls
 from app.assessment.state import AssessmentState, AssessmentStatus, resolve_states
@@ -59,6 +59,7 @@ from app.interview import build_guide
 from app.interview.gaps import assemble_gaps
 from app.interview.generate import GUIDE_PROMPT_VERSION, QuestionItem
 from app.interview.service import GuideError
+from app.postings.service import resolve_application, resolved_state
 
 
 def get_llm_client() -> LLMClient:
@@ -87,17 +88,16 @@ class ApplicationContext:
 
 
 def application_context(session: Session, application: Application) -> ApplicationContext:
+    """Профиль и оценка отклика — тем же путём, что карточка (services.get_application):
+    подтверждённая цель отклика из реестра публикаций (requirements-03) → утверждённый профиль
+    должности в контуре кандидата → resolve_states. Неготовая цель даёт not_applicable,
+    mapping_required или no_approved_profile."""
     candidate = session.get(Candidate, application.candidate_id)
     vacancy = session.get(Vacancy, application.vacancy_id) if application.vacancy_id else None
     position = session.get(Position, vacancy.position_id) if vacancy else None
-    if position is None:
-        return ApplicationContext(application, candidate, None, AssessmentState(AssessmentStatus.NO_APPROVED_PROFILE))
-    profile = repo.get_approved_profile(session, position.id, synthetic=candidate.is_synthetic)
-    if profile is None:
-        state = AssessmentState(AssessmentStatus.NO_APPROVED_PROFILE)
-    else:
-        state = resolve_states(session, [candidate.id], profile, position.id, candidate.is_synthetic)[candidate.id]
-    state, _ = application_state(state, position.code, application.posting_title)
+    resolution = resolve_application(session, application.id)
+    state = resolved_state(session, resolution, imported_position_code=position.code if position else None)
+    profile = session.get(RequirementProfile, resolution.profile_id) if resolution.profile_id else None
     return ApplicationContext(application, candidate, profile, state)
 
 

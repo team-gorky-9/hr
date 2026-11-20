@@ -26,6 +26,7 @@ from app.db.enums import (
 )
 from app.db.models import Assessment, Candidate, FormalCheck, InterviewAnswer, InterviewGuide, InterviewQuestion
 from tests import factories as f
+from tests.posting_helpers import confirm_response, posting_registry  # noqa: F401 (фикстура)
 from tests.test_api import client  # noqa: F401  (фикстура)
 
 HR = {"X-User-Login": "hr_demo"}
@@ -101,6 +102,7 @@ def case(session, profile, code, *, statement=None):
     assessment_id = assess(session, profile, candidate, statement=statement)
     application = repo.create_application(session, candidate_id=candidate.id, source=ApplicationSource.RESPONSE,
                                           vacancy_id=f.vacancy(session).id)
+    confirm_response(session, application, "python-dev")  # цель отклика подтверждена в реестре публикаций
     session.commit()
     return {"candidate": candidate, "application_id": application.id, "assessment_id": assessment_id}
 
@@ -412,7 +414,14 @@ def test_guide_errors(session, client, use_llm):  # noqa: F811
     candidate = _candidate(session, "py-9070", BASE)
     application = repo.create_application(session, candidate_id=candidate.id, source=ApplicationSource.RESPONSE,
                                           vacancy_id=f.vacancy(session).id)
+    # Цель второго отклика в реестре публикаций не подтверждена — гайда нет, как и оценки в карточке.
+    unresolved = repo.create_application(session, candidate_id=_candidate(session, "py-9071", BASE).id,
+                                         source=ApplicationSource.RESPONSE, vacancy_id=f.vacancy(session).id,
+                                         posting_title="Неизвестная публикация")
+    confirm_response(session, application, "python-dev")
     session.commit()
+    mapping = post_guide(client, unresolved.id)
+    assert (mapping.status_code, code(mapping)) == (409, "MAPPING_REQUIRED")
     not_assessed = post_guide(client, application.id)
     assert (not_assessed.status_code, code(not_assessed)) == (409, "ASSESSMENT_REQUIRED")
     absent = get_guide(client, application.id)
@@ -429,7 +438,7 @@ def test_guide_errors(session, client, use_llm):  # noqa: F811
 
 # --- Хранение -----------------------------------------------------------------------------------
 
-def test_open_interview_is_one_per_application_and_kind(session):
+def test_open_interview_is_one_per_application_and_kind(session, posting_registry):  # noqa: F811
     profile = training_profile(session)
     data = case(session, profile, "py-9080")
     first = repo.open_interview(session, data["application_id"], "phone")

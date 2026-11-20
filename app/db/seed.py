@@ -3,12 +3,13 @@
 Запуск: uv run python -m app.db.seed
 """
 from dataclasses import dataclass
+from datetime import date
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.enums import Channel, RejectionSide, UserRole
-from app.db.models import Position, RejectionReason, SelectionStage, User, Vacancy
+from app.db.models import Position, ProductionCalendarDay, RejectionReason, SelectionStage, User, Vacancy
 
 # Этапы из процесса «как есть» в кейсе. Резерв — не этап (см. ReserveEntry).
 STAGES: list[tuple[str, str, bool]] = [
@@ -109,6 +110,8 @@ DEMO_USERS: list[tuple[str, str, UserRole, str | None]] = [
     ("hr_demo", "Кадровик (учётка стенда)", UserRole.HR, None),
     ("dept_demo", "Представитель департамента (учётка стенда)", UserRole.DEPARTMENT,
      "Департамент-заказчик (учебный)"),
+    ("dept2_demo", "Представитель второго департамента (учётка стенда)", UserRole.DEPARTMENT,
+     "Департамент финансов (учебный)"),
     ("admin_demo", "Администратор (учётка стенда)", UserRole.ADMIN, None),
 ]
 
@@ -126,10 +129,62 @@ def seed_demo_users(session: Session) -> None:
     session.flush()
 
 
+# Производственный календарь РФ (ст. 112 ТК РФ и постановления Правительства о переносе выходных):
+# false — нерабочий праздничный или перенесённый выходной день; true — рабочая суббота/воскресенье.
+# На 2027 учтены официальные праздники ст. 112 ТК РФ и переносы совпавших выходных дней; при публикации
+# нового постановления о переносах HR/администратор обновляет таблицу production_calendar_days.
+PRODUCTION_CALENDAR_DAYS: list[tuple[date, bool, str]] = [
+    # 2025 (ПП РФ от 04.10.2024 № 1335)
+    *[(date(2025, 1, d), False, "Новогодние каникулы и Рождество") for d in range(1, 9)],
+    (date(2025, 2, 23), False, "День защитника Отечества"),
+    (date(2025, 3, 8), False, "Международный женский день"),
+    (date(2025, 5, 1), False, "Праздник Весны и Труда"),
+    (date(2025, 5, 2), False, "Перенос выходного с 4 января"),
+    (date(2025, 5, 8), False, "Перенос выходного с 23 февраля"),
+    (date(2025, 5, 9), False, "День Победы"),
+    (date(2025, 6, 12), False, "День России"),
+    (date(2025, 6, 13), False, "Перенос выходного с 8 марта"),
+    (date(2025, 11, 1), True, "Перенесённый рабочий день (суббота)"),
+    (date(2025, 11, 3), False, "Перенос выходного с 1 ноября"),
+    (date(2025, 11, 4), False, "День народного единства"),
+    (date(2025, 12, 31), False, "Перенос выходного с 5 января"),
+    # 2026 (ПП РФ от 24.09.2025 № 1466)
+    *[(date(2026, 1, d), False, "Новогодние каникулы и Рождество") for d in range(1, 9)],
+    (date(2026, 1, 9), False, "Перенос выходного с 3 января"),
+    (date(2026, 2, 23), False, "День защитника Отечества"),
+    (date(2026, 3, 8), False, "Международный женский день"),
+    (date(2026, 3, 9), False, "Перенос выходного с 8 марта"),
+    (date(2026, 5, 1), False, "Праздник Весны и Труда"),
+    (date(2026, 5, 9), False, "День Победы"),
+    (date(2026, 5, 11), False, "Перенос выходного с 9 мая"),
+    (date(2026, 6, 12), False, "День России"),
+    (date(2026, 11, 4), False, "День народного единства"),
+    (date(2026, 12, 31), False, "Перенос выходного с 4 января"),
+    # 2027 (ст. 112 ТК РФ)
+    *[(date(2027, 1, d), False, "Новогодние каникулы и Рождество") for d in range(1, 9)],
+    (date(2027, 2, 23), False, "День защитника Отечества"),
+    (date(2027, 3, 8), False, "Международный женский день"),
+    (date(2027, 5, 1), False, "Праздник Весны и Труда"),
+    (date(2027, 5, 3), False, "Перенос выходного с 1 мая"),
+    (date(2027, 5, 9), False, "День Победы"),
+    (date(2027, 5, 10), False, "Перенос выходного с 9 мая"),
+    (date(2027, 6, 12), False, "День России"),
+    (date(2027, 6, 14), False, "Перенос выходного с 12 июня"),
+    (date(2027, 11, 4), False, "День народного единства"),
+]
+
+
+def seed_production_calendar(session: Session) -> None:
+    for day, is_working, title in PRODUCTION_CALENDAR_DAYS:
+        session.merge(ProductionCalendarDay(day=day, is_working_day=is_working, title=title))
+    session.flush()
+
+
 def seed_all(session: Session) -> None:
     seed_reference_data(session)
     seed_positions(session)
     seed_demo_users(session)
+    seed_production_calendar(session)
 
 
 if __name__ == "__main__":

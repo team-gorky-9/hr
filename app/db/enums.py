@@ -147,21 +147,21 @@ class QuestionAuthor(StrEnum):
 
 
 class InterviewQuestionKind(StrEnum):
-    """Вид вопроса гайда [v1.9]."""
+    """Вид вопроса гайда [v2.1]."""
     CORE = "core"                    # общее ядро должности: одинаково для всех кандидатов версии профиля
     CLARIFICATION = "clarification"  # уточнение по пробелу именно этого кандидата
 
 
 class AnswerSource(StrEnum):
-    """Откуда ответ кандидата [v1.9]."""
+    """Откуда ответ кандидата [v2.1]."""
     PHONE = "phone"
     IN_PERSON = "in_person"
     WRITTEN = "written"
-    UNKNOWN = "unknown"  # только перенос старых answer_notes миграцией 0007; через API не передаётся
+    UNKNOWN = "unknown"  # только перенос старых answer_notes миграцией 0009; через API не передаётся
 
 
 class RubricStatus(StrEnum):
-    """Статус вопроса рубрики ядра [v1.9]."""
+    """Статус вопроса рубрики ядра [v2.1]."""
     DRAFT = "draft"
     APPROVED = "approved"
 
@@ -170,6 +170,38 @@ class FeedbackOutcome(StrEnum):
     PENDING = "pending"
     FIT = "fit"
     NOT_FIT = "not_fit"
+
+
+class HandoffChannel(StrEnum):
+    """Способ передачи сводки в департамент или получения ответа (workflow-01)."""
+    CABINET = "cabinet"
+    PHONE = "phone"
+    SED = "sed"
+    EMAIL = "email"
+    IN_PERSON = "in_person"
+    OTHER = "other"
+
+
+class HandoffStatus(StrEnum):
+    """Состояние конкретной попытки передачи отклика получателю."""
+    AWAITING_RESPONSE = "awaiting_response"
+    RESPONDED = "responded"
+    CLOSED_WITHOUT_RESPONSE = "closed_without_response"
+
+
+class ProcessFactStatus(StrEnum):
+    """Наблюдаемый факт процесса на стороне департамента: «да / нет / не сообщено»."""
+    YES = "yes"
+    NO = "no"
+    NOT_REPORTED = "not_reported"
+
+
+class DeadlineExtensionReason(StrEnum):
+    """Причина переноса срока ответа департамента (workflow-01)."""
+    ILLNESS = "illness"
+    VACATION = "vacation"
+    BUSINESS_TRIP = "business_trip"
+    OTHER = "other"
 
 
 class ReserveStatus(StrEnum):

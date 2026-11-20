@@ -28,10 +28,14 @@ from app.db.base import Base, created_at_column, str_enum, uuid_pk
 from app.db.enums import (
     AnswerSource,
     ApplicationSource,
+    DeadlineExtensionReason,
     FeedbackOutcome,
+    HandoffChannel,
+    HandoffStatus,
     InterviewKind,
     InterviewQuestionKind,
     InterviewResult,
+    ProcessFactStatus,
     QuestionAuthor,
     RejectionSide,
     ReserveStatus,
@@ -169,7 +173,7 @@ class Interview(Base):
     )
 
     __table_args__ = (
-        # [v1.9] Одна открытая встреча на пару (отклик, вид). Гайд — отдельная запись
+        # [v2.1] Одна открытая встреча на пару (отклик, вид). Гайд — отдельная запись
         # (interview_guides): перегенерация не создаёт ещё один «звонок» в отчётах.
         Index(
             "uq_interviews_open",
@@ -182,7 +186,7 @@ class Interview(Base):
 
 
 class InterviewGuide(Base):
-    """Версия гайда к встрече [v1.9]: снимок вопросов, собранных по одной базовой оценке.
+    """Версия гайда к встрече [v2.1]: снимок вопросов, собранных по одной базовой оценке.
 
     Перегенерация создаёт новую версию той же встречи; прежняя читается по номеру.
     """
@@ -203,7 +207,7 @@ class InterviewGuide(Base):
     # Пробелы сверх бюджета и не сгенерированные: [{"gap_ref_id", "title", "reason"}].
     uncovered_gaps: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list, server_default="[]")
     request_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), unique=True)
-    # Версия создана миграцией 0007 из старых interviews: оценки, по которой собрана, нет.
+    # Версия создана миграцией 0009 из старых interviews: оценки, по которой собрана, нет.
     is_migrated: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     created_at: Mapped[datetime] = created_at_column()
@@ -222,7 +226,7 @@ class InterviewGuide(Base):
 
 
 class InterviewRubricQuestion(Base):
-    """Вопрос общего ядра для строки профиля этапа interview [v1.9].
+    """Вопрос общего ядра для строки профиля этапа interview [v2.1].
 
     Генерируется один раз на версию профиля, поэтому у всех кандидатов одинаков.
     Ровно одна ссылка: на формальное требование или на ключ индикатора компетенции.
@@ -260,9 +264,9 @@ class InterviewQuestion(Base):
     """Вопрос интервью. Привязан к компетенции или к пробелу в резюме, чтобы
     разных кандидатов проверяли по одним критериям.
 
-    [v1.9] Вопрос принадлежит версии гайда (guide_id). Вопрос ядра ссылается на строку рубрики,
+    [v2.1] Вопрос принадлежит версии гайда (guide_id). Вопрос ядра ссылается на строку рубрики,
     уточнение — на пробел (gap_ref_id). Ответы — в interview_answers с ревизиями;
-    answer_notes больше не пишется (перенесён миграцией 0007).
+    answer_notes больше не пишется (перенесён миграцией 0009).
     """
     __tablename__ = "interview_questions"
 
@@ -313,7 +317,7 @@ class InterviewQuestion(Base):
 
 
 class InterviewAnswer(Base):
-    """Ревизия ответа кандидата на вопрос [v1.9]. Строки только добавляются:
+    """Ревизия ответа кандидата на вопрос [v2.1]. Строки только добавляются:
     исправление — новая ревизия, прежняя читается."""
     __tablename__ = "interview_answers"
 
@@ -340,6 +344,114 @@ class InterviewAnswer(Base):
     )
 
 
+class ProductionCalendarDay(Base):
+    """Переопределения рабочих/нерабочих дней производственного календаря РФ (праздники и рабочие субботы)."""
+    __tablename__ = "production_calendar_days"
+
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    is_working_day: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    title: Mapped[str | None] = mapped_column(String(256))
+
+
+class HandoffAttempt(Base):
+    """Конкретная передача отклика получателю с замороженным снимком сводки и ожиданием ответа (workflow-01)."""
+    __tablename__ = "handoff_attempts"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    application_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("applications.id", ondelete="CASCADE"), index=True
+    )
+    stage_event_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("stage_events.id", ondelete="SET NULL")
+    )
+    recipient_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), index=True
+    )
+    recipient_name: Mapped[str] = mapped_column(String(256))
+    recipient_department: Mapped[str] = mapped_column(String(512))
+    channel: Mapped[HandoffChannel] = mapped_column(str_enum(HandoffChannel, "channel"))
+    handed_off_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    initial_due_date: Mapped[date] = mapped_column(Date)
+    due_date: Mapped[date] = mapped_column(Date)
+    reminder_date: Mapped[date] = mapped_column(Date)
+    deadline_business_days: Mapped[int] = mapped_column(SmallInteger, default=10, server_default="10")
+    reminder_business_day: Mapped[int] = mapped_column(SmallInteger, default=7, server_default="7")
+    extensions_count: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = created_at_column()
+    summary_revision: Mapped[str] = mapped_column(String(64))
+    summary_snapshot: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    status: Mapped[HandoffStatus] = mapped_column(
+        str_enum(HandoffStatus, "status"),
+        default=HandoffStatus.AWAITING_RESPONSE,
+        server_default="awaiting_response",
+    )
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    close_reason: Mapped[str | None] = mapped_column(String(128))
+    closed_by_stage_event_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("stage_events.id", ondelete="SET NULL")
+    )
+    request_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+
+    __table_args__ = (
+        Index(
+            "uq_handoff_attempts_request_id",
+            "request_id",
+            unique=True,
+            postgresql_where=sa_text("request_id IS NOT NULL"),
+        ),
+        Index(
+            "ix_handoff_attempts_open_status",
+            "status",
+            "recipient_department",
+            postgresql_where=sa_text("status = 'awaiting_response'"),
+        ),
+    )
+
+
+class HandoffDeadlineExtension(Base):
+    """Запись переноса срока ответа департамента кадровиком (исходный срок сохраняется на попытке)."""
+    __tablename__ = "handoff_deadline_extensions"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    attempt_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("handoff_attempts.id", ondelete="CASCADE"), index=True
+    )
+    seq: Mapped[int] = mapped_column(SmallInteger)
+    previous_due_date: Mapped[date] = mapped_column(Date)
+    new_due_date: Mapped[date] = mapped_column(Date)
+    previous_reminder_date: Mapped[date] = mapped_column(Date)
+    new_reminder_date: Mapped[date] = mapped_column(Date)
+    was_overdue: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    reason_code: Mapped[DeadlineExtensionReason] = mapped_column(
+        str_enum(DeadlineExtensionReason, "reason_code")
+    )
+    comment: Mapped[str | None] = mapped_column(Text)
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    request_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    created_at: Mapped[datetime] = created_at_column()
+
+    __table_args__ = (
+        CheckConstraint("seq >= 1", name="seq_positive"),
+        Index(
+            "uq_handoff_deadline_extensions_attempt_seq",
+            "attempt_id",
+            "seq",
+            unique=True,
+        ),
+        Index(
+            "uq_handoff_deadline_extensions_request_id",
+            "request_id",
+            unique=True,
+            postgresql_where=sa_text("request_id IS NOT NULL"),
+        ),
+    )
+
+
 class DepartmentFeedback(Base):
     """Итог рассмотрения кандидата департаментом — то, что сейчас теряется (проблема 6 кейса)."""
     __tablename__ = "department_feedback"
@@ -347,6 +459,23 @@ class DepartmentFeedback(Base):
     id: Mapped[uuid.UUID] = uuid_pk()
     application_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("applications.id", ondelete="CASCADE"), index=True
+    )
+    attempt_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("handoff_attempts.id", ondelete="CASCADE"), index=True
+    )
+    supersedes_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("department_feedback.id", ondelete="RESTRICT")
+    )
+    revision: Mapped[int] = mapped_column(SmallInteger, default=1, server_default="1")
+    contact_status: Mapped[ProcessFactStatus] = mapped_column(
+        str_enum(ProcessFactStatus, "contact_status"),
+        default=ProcessFactStatus.NOT_REPORTED,
+        server_default="not_reported",
+    )
+    interview_status: Mapped[ProcessFactStatus] = mapped_column(
+        str_enum(ProcessFactStatus, "interview_status"),
+        default=ProcessFactStatus.NOT_REPORTED,
+        server_default="not_reported",
     )
     interview_held: Mapped[bool | None] = mapped_column(Boolean)
     outcome: Mapped[FeedbackOutcome] = mapped_column(
@@ -362,10 +491,42 @@ class DepartmentFeedback(Base):
     rejection_reason_code: Mapped[str | None] = mapped_column(ForeignKey("rejection_reasons.code"))
     keep_in_reserve: Mapped[bool | None] = mapped_column(Boolean)
     comment: Mapped[str | None] = mapped_column(Text)
+    response_channel: Mapped[HandoffChannel | None] = mapped_column(
+        str_enum(HandoffChannel, "response_channel")
+    )
+    reported_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    reported_by_name: Mapped[str | None] = mapped_column(String(256))
+    reported_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     author_user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )
+    request_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     received_at: Mapped[datetime] = created_at_column()
+
+    __table_args__ = (
+        CheckConstraint("revision >= 1", name="revision_positive"),
+        Index(
+            "uq_department_feedback_supersedes_id",
+            "supersedes_id",
+            unique=True,
+            postgresql_where=sa_text("supersedes_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_department_feedback_attempt_revision",
+            "attempt_id",
+            "revision",
+            unique=True,
+            postgresql_where=sa_text("attempt_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_department_feedback_request_id",
+            "request_id",
+            unique=True,
+            postgresql_where=sa_text("request_id IS NOT NULL"),
+        ),
+    )
 
 
 class ReserveEntry(Base):

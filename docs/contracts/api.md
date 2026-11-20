@@ -1,8 +1,14 @@
 # Контракт: HTTP API (`app/api/`)
 
-**Версия:** 0.5 (проект: interview-01, раздел 4, поверх v0.4 backend-02) · **Дата:** 2026-11-20 · **Владелец:** Денис · **Потребители:** фронтенд (Ася), `qa-01`/`qa-02` (Родион), `search-01` (правило действующего резерва). Дополнение разрешено Давидом в составе интеграционного плана; согласование коллегами не приписывается.
+**Дополнение v0.6 (`interview-01`):** раздел 4 — гайд интервью, ревизии ответов, подтверждение требования по матрице оснований ([interview.md](interview.md) v0.4).
 
-Опирается на [database.md](database.md) v1.8 и [assessment.md](assessment.md) v0.3.
+**Дополнение v0.5 (`requirements-03` + `workflow-01` поверх `backend-02` v0.4):**
+- `requirements-03`: `posting_resolution` в списке/карточке, confirmed-цель вместо предположения по папке, RESPONSE-only списки, маршруты разрешения публикации и снимков T-13 (`GET /applications/{id}/posting-resolution`, `POST/GET /posting-snapshots`). [Точный контракт и совместимость legacy applicability](posting-position-register.md#http-и-совместимость). Реализация полного объёма поручена Давиду; подтверждения HR не подразумеваются.
+- `workflow-01`: предпросмотр сводки, транзакционная передача в `POST /stage` (`sent_to_department`), повторная передача (`POST /handoffs`), очередь ожиданий со сроком и переносом срока (`GET /handoffs`, `POST .../deadline`), версионный отзыв (`POST/GET /feedback`), реальный блок `open_waits` в воронке и область доступа роли `department` ([workflow.md](workflow.md)).
+
+**Версия:** 0.5 (`requirements-03` + `workflow-01` поверх `backend-02` v0.4) · **Дата:** 2026-11-20 · **Владелец:** Денис · **Потребители:** фронтенд (Ася), Илья (`interview-01`), Родион (`qa-01`/`qa-02`), `search-01` (правило действующего резерва). Дополнение `requirements-03` разрешено Давидом в составе интеграционного плана; согласование коллегами не приписывается.
+
+Опирается на [database.md](database.md) v2.0 (разделы 19–21), [assessment.md](assessment.md) v0.3, [workflow.md](workflow.md) v0.2 и [posting-position-register.md](posting-position-register.md#http-и-совместимость).
 
 ## Дополнение v0.3: применимость и подробные счётчики
 
@@ -23,7 +29,9 @@ AssessmentOut дополнен algorithm_version, calculation_as_of и competenc
 - учебная авторизация стенда — заголовок `X-User-Login` (п. 1.2), коды `401`/`403`;
 - действия и счётчики — только для откликов `source = response` (п. 1.3);
 - в контракт внесены поля, которые были описаны только в `docs/modules/api.md`: `stale_reason`, `formal_checks[].key`, `candidate.is_training`, `candidate-texts.is_training`, `vacancy = null`;
-- **не входит:** передача руководителю, ответ департамента и ожидания (`workflow-01`), гайд интервью (`interview-01`), поиск (`search-01`). Раскрытия ПДн в MVP нет (hr#14).
+- **не входит:** гайд интервью (`interview-01`), поиск (`search-01` — вынесен в [search.md](search.md)). Раскрытия ПДн в MVP нет (hr#14).
+- **Дополнение v0.5 (`workflow-01`):** см. [workflow.md](workflow.md) — предпросмотр сводки (`GET /handoff-summary`), транзакционная передача в `POST /stage` (`sent_to_department`), повторная передача (`POST /handoffs`), очередь ожиданий (`GET /handoffs`), версионный отзыв (`POST/GET /feedback`), реальный блок `open_waits` в воронке (с фильтром `department`) и ограниченный доступ роли `department` к назначенным ей откликам, снимкам и текстам цитат.
+- **Терминология рабочего резерва (интервью HR 20.11):** сущность `reserve_entries` и маршруты `/reserve` в пользовательском интерфейсе и демо называются **«База резюме»** / **«Пул кандидатов»** (а не «кадровый резерв», который в администрации означает формальный конкурс).
 
 ## 1. Общие соглашения
 
@@ -56,13 +64,29 @@ AssessmentOut дополнен algorithm_version, calculation_as_of и competenc
 
 - Маршруты чтения раздела 2 заголовков не требуют.
 - Все маршруты раздела 3 (и чтение, и запись) требуют заголовок `X-User-Login: <логин>`. API находит активного пользователя в `users` и берёт роль из базы (клиент роль не присылает). Пользователь пишется в журналы: `stage_events.actor_user_id`, `reserve_entries.added_by_user_id` и `ended_by_user_id`.
-- Учётки стенда загружает `python -m app.db.seed`: `hr_demo` (роль `hr`), `dept_demo` (`department`), `admin_demo` (`admin`). Пароля нет: это подпись действия, а не защита. В рабочей эксплуатации её заменит вход через систему учётных записей администрации.
+- Учётки стенда загружает `python -m app.db.seed`: `hr_demo` (роль `hr`), `dept_demo` и `dept2_demo` (`department`), `admin_demo` (`admin`). Пароля нет: это подпись действия, а не защита. В рабочей эксплуатации её заменит вход через систему учётных записей администрации.
 - Нет заголовка → `401 USER_REQUIRED`; логин неизвестен или отключён → `401 UNKNOWN_USER`; роль не подходит → `403 FORBIDDEN_ROLE` с `details.role` и `details.allowed_roles`.
 
 | Маршруты | Роли |
 |---|---|
-| весь раздел 3: справочники, история и перевод этапа, кросс-оценки, резерв, воронка | `hr`, `admin` |
-| `department` | `403` на весь раздел 3, пока не согласована область доступа по подразделениям |
+| справочники, история и перевод этапа, кросс-оценки, дополнительная передача, перенос срока передачи, резерв, воронка, снимки публикаций (`/posting-snapshots*`) | `hr`, `admin` |
+| сводка передачи, очередь передач, отзывы департамента ([workflow.md](workflow.md)), карточка отклика, разрешение публикации (`/posting-resolution` — только чтение без `department`), текст переданного отклика | `hr`, `admin`, назначенный `department` (чужое → `403 FORBIDDEN_SCOPE`, `/posting-resolution` для `department` → `403 FORBIDDEN_ROLE`) |
+| общие списки (`/vacancies*`, `/comparison`, `/posting-resolution`), администрирование этапов/резерва, создание передач и перенос срока | `department` получает `403 FORBIDDEN_ROLE` |
+
+#### Область доступа роли `department` (`workflow-01`, стык для `interview-01`)
+
+Роль `department` не имеет доступа ко всей базе откликов и видит только конкретные передачи, адресованные ей в `handoff_attempts`:
+
+- **Правило назначения отклика:** пользователь с ролью `department` допущен к `application_id` тогда и только тогда, когда в таблице `handoff_attempts` существует запись с `application_id = application_id` и `recipient_user_id = user.id` (`repo.has_department_application_access(session, user.id, application_id)`).
+- **Правило доступа к тексту резюме:** для `GET /api/v1/candidate-texts/{candidate_text_id}` пользователь `department` допущен тогда и только тогда, когда `candidate_text_id` присутствует в `summary_snapshot["referenced_text_ids"]` хотя бы одной назначенной ему попытки передачи (`repo.has_department_text_access(session, user.id, candidate_text_id)`).
+- **Правило доступа к попытке и отзывам:** `GET /api/v1/handoffs/{attempt_id}` и `POST /api/v1/applications/{id}/feedback` проверяют `attempt.recipient_user_id == user.id`; `GET /api/v1/handoffs` при вызове под ролью `department` автоматически фильтруется по `recipient_user_id = user.id` (и возвращает `403 FORBIDDEN_SCOPE` при явной передаче чужого `recipient_user_id`); `GET /api/v1/applications/{id}/handoffs` и `GET /api/v1/applications/{id}/feedback` отдают только попытки/отзывы, относящиеся к передачам этого пользователя; `GET /api/v1/applications/{id}/handoff-summary` возвращает замороженный снимок (`from_snapshot = true`) последней назначенной этому пользователю попытки.
+- **Коды отказов и порядок проверок:**
+  - Если маршрут запрещён роли целиком (всё из `StaffUser` или `auth.ensure_not_department(user)`) → `403 FORBIDDEN_ROLE`.
+  - Если для роли `department` запрашивается неназначенный `application_id` / `attempt_id` / `candidate_text_id` (в том числе несуществующий UUID) → `403 FORBIDDEN_SCOPE` (до проверки `404`, чтобы нельзя было перебирать чужие идентификаторы).
+- **Публичные точки переиспользования в `app/api/auth.py` и `app/db/repository.py`:**
+  - `auth.AuthenticatedUser` (`current_user`, требует `X-User-Login`), `auth.OptionalUser` (`optional_user`, проверяет заголовок при наличии), `auth.StaffUser` (`require_role(UserRole.HR, UserRole.ADMIN)`), `auth.ensure_not_department(user)`.
+  - `repo.has_department_application_access(session, user_id, application_id) -> bool` и `repo.has_department_text_access(session, user_id, candidate_text_id) -> bool`.
+- **Подключение `interview-01` после слияния `hr#27`:** чтение гайда интервью (`GET /api/v1/applications/{id}/interview-guide`) может использовать `AuthenticatedUser` + `repo.has_department_application_access(session, user.id, application_id)` (при `False` возвращать `403 FORBIDDEN_SCOPE`), а создание/редактирование гайда и запись ответов (`POST`/`PATCH`) остаются под `StaffUser` (`hr`, `admin`).
 
 ### 1.3. Рабочие и внешние отклики [v0.4]
 
@@ -327,7 +351,7 @@ AssessmentOut дополнен algorithm_version, calculation_as_of и competenc
            "details": {"current_stage_code": "rejected", "to_stage_code": "screening"}}}
 ```
 
-Переход в `sent_to_department` пока выполняется этим маршрутом без регистрации передачи. По постановке он должен идти одной транзакцией с регистрацией передачи из `workflow-01`; связка добавляется в `workflow-01`.
+Перевод в `sent_to_department` выполняется одной транзакцией вместе с регистрацией попытки передачи (обязательный блок `handoff`, подробнее — [workflow.md](workflow.md)). Без `handoff` возвращается `422 HANDOFF_REQUIRED`. При уходе с этапа передачи (кроме `department_interview`) открытые ожидания переводятся в `closed_without_response`.
 
 ### 3.3. Кросс-оценки по другим должностям
 
@@ -427,7 +451,7 @@ AssessmentOut дополнен algorithm_version, calculation_as_of и competenc
 
 ### 3.5. Воронка
 
-`GET /api/v1/analytics/funnel?contour=&vacancy_id=&position_id=&period_from=&period_to=` — счётчики по фактическим записям базы. Выборка — отклики `source = response` на вакансии платформы от кандидатов выбранного контура.
+`GET /api/v1/analytics/funnel?contour=&vacancy_id=&position_id=&period_from=&period_to=&department=` — счётчики по фактическим записям базы. Выборка — отклики `source = response` на вакансии платформы от кандидатов выбранного контура (опциональный `department` фильтрует открытые ожидания `open_waits`).
 
 ```json
 {
@@ -450,23 +474,36 @@ AssessmentOut дополнен algorithm_version, calculation_as_of и competenc
      "reason_title": "Причина не указана", "side": null, "count": 1}
   ],
   "closures_without_reason": 1,
-  "open_waits": null
+  "open_waits": {
+    "total": 1,
+    "unique_applications": 1,
+    "due_soon_total": 0,
+    "overdue_total": 0,
+    "extended_total": 0,
+    "max_wait_hours": 12.5,
+    "median_wait_hours": 12.5,
+    "by_department": [
+      {"department": "Департамент-заказчик (учебный)", "total": 1, "unique_applications": 1,
+       "due_soon_total": 0, "overdue_total": 0, "extended_total": 0,
+       "max_wait_hours": 12.5, "median_wait_hours": 12.5}
+    ]
+  }
 }
 ```
 - `as_of` — момент среза.
 - `stages` — все этапы справочника, в том числе с нулями. `current_count` — уникальные отклики, которые сейчас на этапе; `reached_count` — отклики, у которых есть переход на этап.
 - `closures` — решения о закрытии (переходы в `hired`, `rejected`, `withdrawn`) с причиной. Период задают даты включительно; сутки считаются по `timezone` (Нижний Новгород, МСК). Без дат — за всё время. Исторические отказы без причины — строки с `reason_code = null`, их сумма — в `closures_without_reason`.
-- `open_waits` — открытые ожидания ответа и их длительность по передачам `workflow-01`. До `workflow-01` всегда `null`.
+- `open_waits` — открытые ожидания ответа (`status = awaiting_response` в `handoff_attempts`), число передач в статусе «скоро срок» (`due_soon_total`), просроченных (`overdue_total`), перенесённых (`extended_total`) и длительность ожидания в часах на `as_of` с разбивкой по подразделениям. При отсутствии ожиданий возвращает нули (`total: 0`, `by_department: []`).
 - Ошибки: `404 VACANCY_NOT_FOUND`, `404 POSITION_NOT_FOUND`, `422 INVALID_PERIOD` (`period_from` позже `period_to`).
 - Годовой отчёт (`/api/v1/reports/annual/…`, `reporting.md`) строится из выгрузки и базу не читает. Эта воронка — оперативный срез живых записей.
 
-### 3.6. Запланировано
+### 3.6. Запланировано и связанные контракты
 
-- Переход в `sent_to_department` вместе с регистрацией передачи, ответ департамента, ожидания в воронке — `workflow-01`.
-- `POST /api/v1/search/candidates` с фильтром действующего резерва — `search-01`.
-- Права роли `department` в своей области — после согласования области доступа.
+- Разрешение публикаций и снимки `T-13` (`requirements-03`) — [posting-position-register.md](posting-position-register.md#http-и-совместимость).
+- Передача руководителю, очередь ожиданий, сроки/переносы, версионный ответ департамента и права `department` — [workflow.md](workflow.md).
+- `POST /api/v1/search/candidates` с фильтром действующего резерва — `search-01` ([search.md](search.md)).
 
-## 4. Гайд интервью, ответы, подтверждение требования [v0.5, interview-01]
+## 4. Гайд интервью, ответы, подтверждение требования [v0.6, interview-01]
 
 Полный контракт — [interview.md](interview.md) v0.4 §4: тела запросов, `InterviewGuideOut`, `InterviewQuestionOut`, статусы вопросов, матрица оснований. Здесь — маршруты, права и коды ошибок в общем формате п. 1.
 

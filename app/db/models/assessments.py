@@ -52,11 +52,11 @@ class Assessment(Base):
     # Итоговый балл 0–100 по компетенциям; пусто, если оценить нельзя.
     overall_score: Mapped[int | None] = mapped_column(SmallInteger)
     summary: Mapped[str | None] = mapped_column(Text)
-    # [v1.9] Версия из confirm_formal_check ссылается на базовую — последнюю версию save_assessment
+    # [v2.1] Версия из confirm_formal_check ссылается на базовую — последнюю версию save_assessment
     # (вывод модели по резюме). У версии из save_assessment — пусто. По базовой оценке гайд интервью
     # понимает, переоценивали ли резюме: подтверждение требования гайд не устаревает.
     base_assessment_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("assessments.id"))
-    # [v1.9] request_id подтверждения, создавшего эту версию: повтор запроса возвращает её же.
+    # [v2.1] request_id подтверждения, создавшего эту версию: повтор запроса возвращает её же.
     confirm_request_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), unique=True)
     created_at: Mapped[datetime] = created_at_column()
 
@@ -122,7 +122,7 @@ class FormalCheck(Base):
     confirmed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="RESTRICT")
     )
-    # [v1.9] Ответ интервью, на который опирался кадровик при подтверждении. NO ACTION, а не RESTRICT:
+    # [v2.1] Ответ интервью, на который опирался кадровик при подтверждении. NO ACTION, а не RESTRICT:
     # при удалении кандидата ответы (через отклик) и строки оценки удаляются одним оператором,
     # и проверка ссылки в конце оператора их пропускает.
     source_answer_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("interview_answers.id"))

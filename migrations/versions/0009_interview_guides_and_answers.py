@@ -1,6 +1,6 @@
 """interview guides, answer revisions, core rubric, confirm with answer
 
-Контракт БД v1.9 (раздел 20), контракт гайда interview.md v0.4 §5, задача interview-01:
+Контракт БД v2.1 (раздел 22), контракт гайда interview.md v0.4 §5, задача interview-01:
 - interview_guides — версии гайда к встрече; встреча (interviews) остаётся одной на звонок,
   поэтому перегенерация гайда не создаёт ещё одну запись в отчётах о звонках;
 - interviews: одна открытая встреча (result = pending) на пару (отклик, вид);
@@ -12,13 +12,16 @@
   и ключ повтора подтверждения;
 - formal_checks.source_answer_id — на какой ответ опирался кадровик.
 
+Номер 0009: в ветке задачи миграция была 0007; после слияния requirements-03 (0007_posting_sources)
+и workflow-01 (0008) она идёт следом за 0008.
+
 Перенос: каждая прежняя встреча получает гайд версии 1 без оценки (is_migrated), её вопросы
 привязываются к нему, непустой answer_notes становится ревизией 1 с source = unknown.
 Прежние версии оценки из confirm_formal_check получают ссылку на ближайшую предыдущую
 версию той же пары, записанную моделью (все строки basis = resume).
 
-Revision ID: 0007
-Revises: 0006
+Revision ID: 0009
+Revises: 0008
 Create Date: 2026-11-20
 """
 from collections.abc import Sequence
@@ -27,8 +30,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = '0007'
-down_revision: str | None = '0006'
+revision: str = '0009'
+down_revision: str | None = '0008'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

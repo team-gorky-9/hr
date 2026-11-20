@@ -33,6 +33,7 @@ from app.schemas.assessment import CompetencyScoreIn
 from app.schemas.card import Evidence
 from app.schemas.requirements import CompetencyIn, IndicatorIn
 from tests import factories as f
+from tests.posting_helpers import posting_registry  # noqa: F401 (fixture used by imported client)
 from tests.test_api import PII, build_case, client  # noqa: F401  (client — фикстура)
 from tests.test_assessment_fixtures_db import _load_profile
 
@@ -52,10 +53,26 @@ def history(client, application_id) -> dict:
     return response.json()
 
 
+def handoff_payload(client, application_id, headers=HR, **extra) -> dict:
+    """Сформировать блок передачи по актуальному summary_revision для перевода в sent_to_department."""
+    summary = client.get(f"/api/v1/applications/{application_id}/handoff-summary", headers=headers)
+    assert summary.status_code == 200, summary.text
+    return {
+        "recipient_name": "Руководитель департамента",
+        "recipient_department": "Департамент-заказчик (учебный)",
+        "channel": "sed",
+        "summary_revision": summary.json()["summary_revision"],
+        "request_id": str(uuid.uuid4()),
+        **extra,
+    }
+
+
 def move(client, application_id, to_stage, headers=HR, expected_seq=None, **body):
     """Перевод этапа так, как это делает форма: expected_seq — из последней прочитанной истории."""
     if expected_seq is None:
         expected_seq = history(client, application_id)["last_seq"]
+    if to_stage == "sent_to_department" and "handoff" not in body:
+        body["handoff"] = handoff_payload(client, application_id)
     return client.post(f"/api/v1/applications/{application_id}/stage", headers=headers,
                        json={"to_stage_code": to_stage, "expected_seq": expected_seq, **body})
 
@@ -250,7 +267,7 @@ def test_reserve_rules(session, client):
     assert area.status_code == 201 and area.json()["entry"]["position_id"] is None
 
 
-def test_reserve_last_allowed_day_expiry_and_new_period(session):
+def test_reserve_last_allowed_day_expiry_and_new_period(session, posting_registry):
     """Запись видна в последний разрешённый день, после срока пропадает; новый период — своё происхождение."""
     built = build_case(session, "C1-unknown")
     candidate_id, pos = built["candidate_id"], f.position(session)
@@ -329,7 +346,9 @@ def test_funnel_counts_match_records(session, client):
     assert stages["rejected"] == (1, 1) and stages["withdrawn"] == (1, 1) and stages["hired"] == (0, 0)
     closures = {(c["stage_code"], c["reason_code"]): c["count"] for c in funnel["closures"]}
     assert closures == {("rejected", "experience"): 1, ("withdrawn", "no_response"): 1}
-    assert funnel["closures_without_reason"] == 0 and funnel["open_waits"] is None
+    assert funnel["closures_without_reason"] == 0
+    assert funnel["open_waits"]["total"] == 1
+    assert funnel["open_waits"]["unique_applications"] == 1
     assert funnel["timezone"] == "Europe/Moscow"
 
     assert client.get("/api/v1/analytics/funnel", headers=HR).json()["total_applications"] == 6
@@ -467,7 +486,7 @@ def test_cross_assessments_mark_each_vacancy_of_position(session, client):
     [item] = body["items"]
     linked = {v["vacancy_id"]: (v["application_id"], v["application_source"]) for v in item["vacancies"]}
     assert linked == {str(f.vacancy(session).id): (str(built["application_id"]), "response"),
-                      str(second.id): (str(manual.id), "manual"), str(third.id): (None, None)}
+                      str(second.id): (None, None), str(third.id): (None, None)}
     assert item["is_source_position"] is True
     assert {a["application_id"] for a in body["applications"]} == {str(built["application_id"]), str(manual.id)}
 
@@ -512,7 +531,12 @@ def test_stage_2_responses_do_not_leak_pii(session, client):
 
 def test_demo_users_are_seeded(session):
     roles = dict(session.execute(select(User.login, User.role).where(User.login.like("%_demo"))).all())
-    assert roles == {"hr_demo": UserRole.HR, "dept_demo": UserRole.DEPARTMENT, "admin_demo": UserRole.ADMIN}
+    assert roles == {
+        "hr_demo": UserRole.HR,
+        "dept_demo": UserRole.DEPARTMENT,
+        "dept2_demo": UserRole.DEPARTMENT,
+        "admin_demo": UserRole.ADMIN,
+    }
 
 
 def test_openapi_has_stage_2_routes_and_no_pii_route(client):
@@ -527,10 +551,16 @@ def test_openapi_has_stage_2_routes_and_no_pii_route(client):
         "/api/v1/reserve/{reserve_id}/withdraw": {"post"},
         "/api/v1/positions/{position_id}/reserve": {"get"},
         "/api/v1/analytics/funnel": {"get"},
+        "/api/v1/applications/{application_id}/handoff-summary": {"get"},
+        "/api/v1/applications/{application_id}/handoffs": {"get", "post"},
+        "/api/v1/applications/{application_id}/handoffs/{attempt_id}/deadline": {"post"},
+        "/api/v1/handoffs": {"get"},
+        "/api/v1/handoffs/{attempt_id}": {"get"},
+        "/api/v1/applications/{application_id}/feedback": {"get", "post"},
     }
     for path, methods in expected.items():
         assert set(paths[path]) == methods, path
-    assert not [p for p in paths if any(word in p for word in ("pii", "handoff", "feedback"))]
+    assert not [p for p in paths if "pii" in p]
     # Маршруты интервью — только из interview-01 (interview.md v0.4).
     assert {p for p in paths if "interview" in p} == {
         "/api/v1/applications/{application_id}/interview-guide",

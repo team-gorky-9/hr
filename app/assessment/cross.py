@@ -26,6 +26,7 @@ from app.assessment.prompts import ASSESS_PROMPT_VERSION
 from app.assessment.state import assessment_texts, evidence_with_utf16, resolve_states
 from app.assessment.version import ALGORITHM_VERSION
 from app.db import repository as repo
+from app.db.enums import AuditAction
 from app.db.models import (
     Application,
     Assessment,
@@ -37,6 +38,8 @@ from app.db.models import (
     RequirementProfile,
     Vacancy,
 )
+from app.postings.registry import Registry, get_default_registry
+from app.postings.service import resolve_application
 
 RESPONSE = "response"  # прямой отклик; source=history — исторический факт, не основание primary
 
@@ -76,12 +79,13 @@ def select_pairs(session: Session, *, technical: bool, candidate_codes: Iterable
     codes = list(candidate_codes or [])
     if codes:
         query = query.where(Candidate.code.in_(codes))
-    if source_position_code:
-        query = query.where(Candidate.id.in_(
-            select(Application.candidate_id).join(Vacancy, Vacancy.id == Application.vacancy_id)
-            .join(Position, Position.id == Vacancy.position_id)
-            .where(Position.code == source_position_code, Application.source == RESPONSE)))
     candidates = list(session.scalars(query.distinct()))
+    registry = get_default_registry()
+    originals = {candidate.id: _response_applications(session, candidate.id, registry=registry)
+                 for candidate in candidates}
+    if source_position_code:
+        position_id = session.scalar(select(Position.id).where(Position.code == source_position_code))
+        candidates = [candidate for candidate in candidates if position_id in originals[candidate.id]]
     if limit:
         candidates = candidates[:limit]
     found = {c.code for c in candidates}
@@ -89,7 +93,7 @@ def select_pairs(session: Session, *, technical: bool, candidate_codes: Iterable
     positions = {p.id: session.get(Position, p.position_id).code for p in profiles}
     pairs: list[Pair] = []
     for candidate in candidates:
-        own = _response_applications(session, candidate.id)  # position_id → application_id
+        own = originals[candidate.id]  # resolved position_id → response application_id
         for profile in profiles:
             application_id = own.get(profile.position_id)
             pairs.append(Pair(candidate.id, candidate.code, profile.id, positions[profile.id],
@@ -101,14 +105,26 @@ def select_pairs(session: Session, *, technical: bool, candidate_codes: Iterable
     return pairs, explained
 
 
-def _response_applications(session: Session, candidate_id: uuid.UUID) -> dict[uuid.UUID, uuid.UUID]:
-    rows = session.execute(
-        select(Vacancy.position_id, Application.id).join(Vacancy, Vacancy.id == Application.vacancy_id)
+def _response_applications(session: Session, candidate_id: uuid.UUID, *,
+                           registry: Registry | None = None) -> dict[uuid.UUID, uuid.UUID]:
+    registry = registry or get_default_registry()
+    rows = session.scalars(
+        select(Application.id)
         .where(Application.candidate_id == candidate_id, Application.source == RESPONSE)
         .order_by(Application.created_at, Application.id))
     result: dict[uuid.UUID, uuid.UUID] = {}
-    for position_id, application_id in rows:
-        result.setdefault(position_id, application_id)  # первый прямой отклик на должность
+    ready: set[uuid.UUID] = set()
+    for application_id in rows:
+        resolution = resolve_application(session, application_id, registry=registry)
+        position_id = resolution.position_id
+        if resolution.mapping.decision_state != "confirmed" or position_id is None:
+            continue
+        # An unresolved earlier response never conceals a later confirmed one.
+        # Prefer a usable approved profile when selecting among original responses.
+        if position_id not in result or (resolution.ready and position_id not in ready):
+            result[position_id] = application_id
+        if resolution.ready:
+            ready.add(position_id)
     return result
 
 
@@ -165,13 +181,54 @@ def _run_pair(session_factory, pair: Pair, *, run_one: RunOne, llm, technical: b
     base = {"candidate_code": pair.candidate_code, "position_code": pair.position_code,
             "profile_id": str(pair.profile_id), "purpose": pair.purpose,
             "application_id": str(pair.application_id) if pair.application_id else None}
-    if skip_existing:
-        with session_factory() as session:
-            current = reusable_assessment(session, candidate_id=pair.candidate_id, profile_id=pair.profile_id,
-                                          as_of=as_of)
-            if current is not None:
-                return base | {"outcome": "skipped_current", "assessment_id": str(current.id),
-                               "formal_result": current.formal_result.value}
+    # Pair selection is a snapshot. Recheck both purposes before either our cache
+    # or orchestration's cache: an explicit comparison still requires a current
+    # approved profile from the batch's chosen contour.
+    with session_factory() as session:
+        reason = None
+        resolution = None
+        if pair.purpose == "primary":
+            application = session.get(Application, pair.application_id) if pair.application_id else None
+            resolution = resolve_application(session, application.id) if application is not None else None
+            if application is None or application.source != RESPONSE:
+                reason = "not_primary_application"
+            elif application.candidate_id != pair.candidate_id:
+                reason = "application_owner"
+            elif resolution.is_training != technical:
+                reason = "contour_mismatch"
+            elif not resolution.ready:
+                reason = resolution.reason
+            elif resolution.profile_id != pair.profile_id:
+                reason = "profile_changed"
+        candidate = session.get(Candidate, pair.candidate_id)
+        profile = session.get(RequirementProfile, pair.profile_id)
+        approved = repo.get_approved_profile(session, profile.position_id, synthetic=technical) if profile else None
+        if reason is None:
+            if candidate is None or profile is None:
+                reason = "not_found"
+            elif candidate.code != pair.candidate_code:
+                reason = "candidate_mismatch"
+            elif candidate.is_synthetic != technical or profile.is_synthetic != technical:
+                reason = "contour_mismatch"
+            elif approved is None:
+                reason = "no_approved_profile"
+            elif approved.id != profile.id:
+                reason = "profile_changed"
+        if reason is not None:
+            skipped = base | {"outcome": "skipped_context", "status": "skipped", "reason": reason}
+            repo.write_audit(session, action=AuditAction.OTHER, entity_type="cross_pair_skipped",
+                entity_id=str(uuid.uuid4()), details=skipped | {
+                    "candidate_id": str(pair.candidate_id), "as_of": as_of,
+                    "profile_status": _value(profile.status) if profile else None,
+                    "current_approved_profile_id": str(approved.id) if approved else None,
+                    "resolution": resolution.model_dump(mode="json") if resolution else None})
+            session.commit()
+            return skipped
+        current = reusable_assessment(session, candidate_id=pair.candidate_id, profile_id=pair.profile_id,
+                                      as_of=as_of) if skip_existing else None
+        if current is not None:
+            return base | {"outcome": "skipped_current", "assessment_id": str(current.id),
+                           "formal_result": current.formal_result.value}
     for attempt in (1, 2):
         try:
             result = run_one(session_factory, llm, candidate_code=pair.candidate_code, profile_id=pair.profile_id,
@@ -214,10 +271,10 @@ def cross_assessments(session: Session, candidate_id: uuid.UUID, *,
         .outerjoin(Position, Position.id == Vacancy.position_id)
         .where(Application.candidate_id == candidate_id).order_by(Application.created_at, Application.id)))
     profiles, _ = approved_profiles(session, technical=candidate.is_synthetic)
-    own_positions = {v.position_id for a, v, p in applications if v is not None and _value(a.source) == RESPONSE}
+    own_positions = set(_response_applications(session, candidate_id))
     by_vacancy: dict[uuid.UUID, Application] = {}
     for application, vacancy, _ in applications:
-        if vacancy is not None:
+        if vacancy is not None and _value(application.source) == RESPONSE:
             by_vacancy.setdefault(vacancy.id, application)
 
     items = []

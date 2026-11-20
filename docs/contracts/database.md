@@ -1,6 +1,10 @@
 # Контракт: база данных
 
-**Дополнение v1.9 (interview-01):** миграция `0007`, раздел 20 — версии гайда интервью, ревизии ответов, рубрика ядра, базовая оценка и ответ в подтверждении требования. Ждёт утверждения.
+**Дополнение v2.1 (interview-01):** миграция `0009` поверх `0008`, раздел 22 — версии гайда интервью, ревизии ответов, рубрика ядра, базовая оценка и ответ в подтверждении требования. Ждёт утверждения.
+
+**Дополнение v2.0 (workflow-01):** миграция `0008` поверх `0007_posting_sources`, раздел 21 — `production_calendar_days`, `handoff_attempts`, `handoff_deadline_extensions` и расширение `department_feedback`.
+
+**Дополнение v1.9 (requirements-03):** миграция `0007_posting_sources` после `0006`, неизменяемое происхождение конкретного отклика в `application_posting_sources`; снимки выборки через существующий AuditLog. [Поля, ограничения, переход старых данных](posting-position-register.md#происхождение-импорта). Реализация в пределах полной задачи Давида, без приписывания согласия коллег.
 
 **Дополнение v1.8 (backend-02):** миграция `0006`, раздел 19 — периоды кадрового резерва, одна действующая запись на цель, статус `expired`. Ждёт утверждения.
 
@@ -708,9 +712,28 @@ save_assessment проверяет полный набор ключей screenin
 
 **Как проверено:** `test_models_match_migrations`; тесты резерва в `tests/test_selection.py` и `tests/test_api_workflow.py`. Среди них последний день срока, новый период после истечения, отзыв и детерминированная гонка двух транзакций на настоящей PostgreSQL. Вторая транзакция ждёт индекс, получает конфликт и возвращает запись первой.
 
-## 20. Гайд интервью, ревизии ответов, рубрика ядра · v1.9 (20.11.2026, ждёт утверждения)
+## 20. Происхождение отклика и снимки · v1.9 (`requirements-03`)
 
-Задача interview-01, контракт [interview.md](interview.md) v0.4 §5 (хранение, права и HTTP подтвердил Денис). Миграция `0007` поверх `0006`. Номер может сдвинуться (`0008`/`0009`), если раньше вольются ветки workflow-01 и requirements-03, где тоже `0007`.
+Миграция `0007_posting_sources` поверх `0006` добавляет неизменяемую таблицу `application_posting_sources` для фиксации происхождения конкретного отклика; снимки выборки T-13 сохраняются через существующий `AuditLog`. Подробная схема, ограничения и переход старых данных — в [posting-position-register.md](posting-position-register.md#происхождение-импорта).
+
+## 21. Передача получателю, сроки ответа, производственный календарь и ответы департамента · v2.0 (`workflow-01`, 20.11.2026)
+
+Миграция `0008` поверх `0007_posting_sources` (последующая ветка `interview-01` наследует от `0008`):
+
+| Таблица | Изменение | Зачем |
+|---|---|---|
+| `production_calendar_days` (новая) | `day` (date PK), `is_working_day` (boolean NOT NULL), `title` | Производственный календарь РФ (праздники и перенесённые выходные/рабочие субботы; предзаполняется `seed_production_calendar` на 2025–2027) |
+| `handoff_attempts` (новая) | `id`, `application_id`, `stage_event_id`, `recipient_user_id`, `recipient_name`, `recipient_department`, `channel`, `handed_off_at`, `initial_due_date`, `due_date`, `reminder_date`, `deadline_business_days`, `reminder_business_day`, `extensions_count`, `created_by_user_id`, `summary_revision`, `summary_snapshot` (JSONB), `status` (`awaiting_response` / `responded` / `closed_without_response`), `closed_at`, `close_reason`, `closed_by_stage_event_id`, `request_id` (частичный UNIQUE) | Адресная передача с замороженным снимком сводки, зафиксированными на передаче сроком/днём напоминания (10/7 рабочих дней) и отдельным ожиданием по каждой попытке; повтор с тем же `request_id` идемпотентен |
+| `handoff_deadline_extensions` (новая) | `id`, `attempt_id` (FK `handoff_attempts`, CASCADE), `seq` (`>= 1`, UNIQUE `(attempt_id, seq)`), `previous_due_date`, `new_due_date`, `previous_reminder_date`, `new_reminder_date`, `was_overdue`, `reason_code` (`illness` / `vacation` / `business_trip` / `other`), `comment`, `actor_user_id`, `request_id` (частичный UNIQUE), `created_at` | История переносов срока ответа кадровиком без потери исходного срока `initial_due_date` и факта предшествующей просрочки |
+| `department_feedback` | `attempt_id` (FK `handoff_attempts`, CASCADE), `supersedes_id` (FK `department_feedback`, RESTRICT, частичный UNIQUE `WHERE supersedes_id IS NOT NULL`), `revision` (`>= 1`, UNIQUE `(attempt_id, revision)`), `contact_status` / `interview_status` (`yes` / `no` / `not_reported`), `response_channel`, `reported_by_user_id`, `reported_by_name`, `reported_at`, `request_id` (частичный UNIQUE) | Привязка ответа к попытке и цепочка исправлений без затирания прежних записей; частичный UNIQUE гарантирует защиту от гонки при одновременном исправлении одной версии; legacy-строки без `attempt_id` читаются с пометкой `origin_unrecorded = true` |
+
+**Новые функции доступа (`app/db/repository.py` и `app/db/calendar.py`):** `create_handoff_attempt`, `extend_handoff_deadline`, `close_open_handoffs_for_application`, `record_handoff_feedback`, `has_department_application_access`, `has_department_text_access`, расчёт рабочих дней `add_business_days` / `subtract_business_days` / `business_days_diff`.
+
+**Как проверено:** `alembic upgrade head`, `downgrade 0007_posting_sources`, `upgrade head`, `alembic check`; тесты `tests/test_api_handoff.py` на PostgreSQL, включая реальные параллельные гонки исправления отзыва и переноса срока.
+
+## 22. Гайд интервью, ревизии ответов, рубрика ядра · v2.1 (20.11.2026, ждёт утверждения)
+
+Задача interview-01, контракт [interview.md](interview.md) v0.4 §5 (хранение, права и HTTP подтвердил Денис). Миграция `0009` поверх `0008` (workflow-01). В ветке задачи она была `0007`; номер сдвинут после слияния requirements-03 (`0007_posting_sources`) и workflow-01 (`0008`).
 
 | Изменение | Зачем |
 |---|---|
@@ -740,8 +763,9 @@ save_assessment проверяет полный набор ключей screenin
 - **Ася:** DTO гайда и ответов — `api.md` §4.
 - **Родион (qa):** `hr_dev` и стенд — `alembic upgrade head`.
 - **Отчёты о звонках:** одна встреча на звонок, как раньше.
+- **workflow-01 (сводка передачи):** `app/api/handoff.py` берёт вопросы последней версии гайда встречи и последнюю ревизию ответа (`visible_answer`), а не `answer_notes`. Фильтр ПДн и контактов тот же.
 
 **Как проверено:**
 - `test_models_match_migrations`;
 - `tests/test_api_interview.py` на PostgreSQL;
-- скрипт штаба `hq/work/2026-11-20-interview-01-storage-http/check_migration_0007.py`: перенос встречи, заметки и базовой оценки, откат, повторный подъём, `alembic check`.
+- скрипт штаба `hq/work/2026-11-20-interview-01-storage-http/check_migration_0009.py`: перенос встречи, заметки и базовой оценки, откат, повторный подъём, `alembic check`.
