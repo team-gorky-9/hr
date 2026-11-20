@@ -1,4 +1,4 @@
-"""Чтение данных для маршрутов Этапа 1.
+"""Чтение данных для маршрутов Этапа 1 (оценку в DTO собирает и кросс-подбор Этапа 2).
 
 Здесь вся логика API: какой профиль действует, какой статус у оценки, как пересчитать
 границы цитат для браузера. Маршруты (routes.py) только принимают параметры и отдают
@@ -133,7 +133,7 @@ def get_comparison(session: Session, application_id: uuid.UUID, profile_id: uuid
         posting_title=application.posting_title, target_position_code=position.code, profile_id=profile.id,
         applicability=resolve_applicability(position.code, application.posting_title),
         assessment_status=state.status,
-        assessment=_assessment_out(session, candidate, state) if state.assessment else None)
+        assessment=assessment_out(session, candidate, state) if state.assessment else None)
 
 
 def resolve_states(
@@ -393,11 +393,11 @@ def get_application(session: Session, application_id: uuid.UUID) -> ApplicationD
             card=card_out,
         ),
         assessment_status=state.status,
-        assessment=_assessment_out(session, candidate, state) if state.assessment else None,
+        assessment=assessment_out(session, candidate, state) if state.assessment else None,
     )
 
 
-def _assessment_out(session: Session, candidate: Candidate, state: AssessmentState) -> AssessmentOut:
+def assessment_out(session: Session, candidate: Candidate, state: AssessmentState) -> AssessmentOut:
     assessment = session.scalar(
         select(Assessment)
         .where(Assessment.id == state.assessment.id)

@@ -228,7 +228,10 @@ class ReserveEntry(Base):
     source_application_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("applications.id", ondelete="SET NULL")
     )
+    # Обоснование профессиональной пригодности: почему человек нужен в резерве.
     reason: Mapped[str | None] = mapped_column(Text)
+    # Основание повторного контакта: когда и зачем к нему вернуться [v1.8].
+    contact_basis: Mapped[str | None] = mapped_column(Text)
     status: Mapped[ReserveStatus] = mapped_column(
         str_enum(ReserveStatus, "status"), default=ReserveStatus.ACTIVE, server_default="active"
     )
@@ -237,6 +240,12 @@ class ReserveEntry(Base):
     )
     added_at: Mapped[datetime] = created_at_column()
     valid_until: Mapped[date | None] = mapped_column(Date)
+    # Как закончился период резерва: отзыв основания или истечение срока [v1.8].
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    end_reason: Mapped[str | None] = mapped_column(Text)
+    ended_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
 
     candidate: Mapped[Candidate] = relationship()
 
@@ -244,5 +253,21 @@ class ReserveEntry(Base):
         CheckConstraint(
             "position_id IS NOT NULL OR competency_area IS NOT NULL",
             name="has_target",
+        ),
+        # Одна активная запись на кандидата и цель [v1.8]. Цель — должность, если она указана,
+        # иначе направление. Индексы держат правило и при двух одновременных запросах.
+        Index(
+            "uq_reserve_active_position",
+            "candidate_id",
+            "position_id",
+            unique=True,
+            postgresql_where=sa_text("status = 'active' AND position_id IS NOT NULL"),
+        ),
+        Index(
+            "uq_reserve_active_area",
+            "candidate_id",
+            "competency_area",
+            unique=True,
+            postgresql_where=sa_text("status = 'active' AND position_id IS NULL"),
         ),
     )

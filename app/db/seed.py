@@ -7,8 +7,8 @@ from dataclasses import dataclass
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.enums import Channel, RejectionSide
-from app.db.models import Position, RejectionReason, SelectionStage, Vacancy
+from app.db.enums import Channel, RejectionSide, UserRole
+from app.db.models import Position, RejectionReason, SelectionStage, User, Vacancy
 
 # Этапы из процесса «как есть» в кейсе. Резерв — не этап (см. ReserveEntry).
 STAGES: list[tuple[str, str, bool]] = [
@@ -103,9 +103,33 @@ def seed_positions(session: Session) -> None:
     session.flush()
 
 
+# Учётки стенда для учебной авторизации API (заголовок X-User-Login, api.md п. 1.2).
+# Пароля нет: это подпись действия в журналах, а не защита.
+DEMO_USERS: list[tuple[str, str, UserRole, str | None]] = [
+    ("hr_demo", "Кадровик (учётка стенда)", UserRole.HR, None),
+    ("dept_demo", "Представитель департамента (учётка стенда)", UserRole.DEPARTMENT,
+     "Департамент-заказчик (учебный)"),
+    ("admin_demo", "Администратор (учётка стенда)", UserRole.ADMIN, None),
+]
+
+
+def seed_demo_users(session: Session) -> None:
+    for login, full_name, role, department in DEMO_USERS:
+        user = session.scalar(select(User).where(User.login == login))
+        if user is None:
+            user = User(login=login)
+            session.add(user)
+        user.full_name = full_name
+        user.role = role
+        user.department = department
+        user.is_active = True
+    session.flush()
+
+
 def seed_all(session: Session) -> None:
     seed_reference_data(session)
     seed_positions(session)
+    seed_demo_users(session)
 
 
 if __name__ == "__main__":
@@ -119,4 +143,4 @@ if __name__ == "__main__":
         seed_all(session)
         session.commit()
     print(f"Справочники загружены: этапов {len(STAGES)}, причин отказа {len(REJECTION_REASONS)}, "
-          f"должностей {len(POSITIONS)}")
+          f"должностей {len(POSITIONS)}, учёток стенда {len(DEMO_USERS)}")

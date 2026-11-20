@@ -1,7 +1,8 @@
 """Проверка API чтения на базе из .env (DATABASE_URL), например на импортированном архиве.
 
-Обходит все маршруты Этапа 1 в обоих контурах: списки по каждой вакансии, карточки
-откликов, очищенные тексты. Для каждого ответа ищет в нём значения ПДн этого же
+Обходит все маршруты чтения в обоих контурах: списки по каждой вакансии, карточки
+откликов, очищенные тексты, а также маршруты чтения Этапа 2 (api.md v0.3): история этапов,
+кросс-оценки, резерв, воронка (заголовок X-User-Login: hr_demo из seed). Для каждого ответа ищет в нём значения ПДн этого же
 кандидата из candidate_pii (ФИО, телефон, email, ссылки, дата рождения). Город и
 гражданство не ищутся: по контракту БД v1.2 они остаются в очищенном тексте.
 
@@ -25,7 +26,9 @@ from app.db.models import Candidate, CandidatePii  # noqa: E402
 from app.db.session import SessionLocal  # noqa: E402
 from app.main import app  # noqa: E402
 
-FORBIDDEN_KEYS = ("raw_text", "full_name", "birth_date", '"phone"', '"email"')
+# Ключи с двоеточием: значение "phone" (вид интервью) — не поле ПДн.
+HEADERS = {"X-User-Login": "hr_demo"}  # маршрутам Этапа 2 нужен пользователь стенда; Этапу 1 заголовок не мешает
+FORBIDDEN_KEYS = ('"raw_text":', '"full_name":', '"birth_date":', '"phone":', '"email":')
 
 
 def pii_values(pii: CandidatePii) -> list[str]:
@@ -53,11 +56,11 @@ def main() -> int:
     client = TestClient(app)
     findings: list[str] = []
     checked = 0
-    timings: dict[str, list[float]] = {"list": [], "detail": [], "text": []}
+    timings: dict[str, list[float]] = {"list": [], "detail": [], "text": [], "stage2": []}
 
     def get(kind: str, url: str, **params) -> dict:
         started = time.perf_counter()
-        response = client.get(url, params=params)
+        response = client.get(url, params=params, headers=HEADERS)
         timings[kind].append(time.perf_counter() - started)
         if response.status_code != 200:
             raise SystemExit(f"{url}: HTTP {response.status_code} {response.text[:300]}")
@@ -76,6 +79,7 @@ def main() -> int:
             for item in listing["items"]:
                 statuses[item["assessment_status"]] = statuses.get(item["assessment_status"], 0) + 1
             print(f"[{contour}] {vacancy['position_code']:<16} откликов {listing['total']:>4}  статусы {statuses}")
+            get("stage2", f"/api/v1/positions/{vacancy['position_id']}/reserve", contour=contour)
             for item in listing["items"]:
                 if args.limit is not None and checked >= args.limit:
                     break
@@ -87,8 +91,17 @@ def main() -> int:
                 if card["candidate"]["current_text_id"]:
                     text = get("text", f"/api/v1/candidate-texts/{card['candidate']['current_text_id']}")
                     bodies.append(json.dumps(text, ensure_ascii=False))
+                application_url = f"/api/v1/applications/{item['application_id']}"
+                bodies.append(json.dumps(get("stage2", f"{application_url}/history"), ensure_ascii=False))
+                cross = get("stage2", f"/api/v1/candidates/{item['candidate_id']}/cross-assessments")
+                bodies.append(json.dumps(cross, ensure_ascii=False))
                 if any(value in body for value in own_pii for body in bodies):
                     findings.append(f"{item['candidate_code']}: значение ПДн в ответе")
+
+    for contour in ("working", "training"):
+        funnel = get("stage2", "/api/v1/analytics/funnel", contour=contour)
+        current = {s["code"]: s["current_count"] for s in funnel["stages"] if s["current_count"]}
+        print(f"[{contour}] воронка: откликов {funnel['total_applications']}, по этапам {current}")
 
     def stat(kind: str) -> str:
         values = sorted(timings[kind])
@@ -97,7 +110,7 @@ def main() -> int:
         return f"n={len(values)}, медиана {values[len(values) // 2] * 1000:.0f} мс, макс {values[-1] * 1000:.0f} мс"
 
     print(f"Проверено карточек откликов: {checked}")
-    print(f"Время: списки {stat('list')}; карточки {stat('detail')}; тексты {stat('text')}")
+    print(f"Время: списки {stat('list')}; карточки {stat('detail')}; тексты {stat('text')}; Этап 2 {stat('stage2')}")
     print(f"Находок: {len(findings)}")
     for finding in findings[:50]:
         print("  ", finding)
