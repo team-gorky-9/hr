@@ -11,13 +11,14 @@ import uuid
 from collections import defaultdict
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.errors import ApiError, not_found
 from app.assessment.applicability import resolve_applicability
+from app.assessment.ranking import rank, rank_input
 from app.postings.service import resolve_application, resolved_state, compatibility_applicability
 from app.postings import service as postings
 # Правила актуальности оценки и границ цитат живут в слое оценки и общие с кросс-оценкой ai-02.
@@ -176,7 +177,11 @@ class ApplicationFilters:
 
 
 def list_applications(
-    session: Session, vacancy_id: uuid.UUID, contour: Contour, filters: ApplicationFilters
+    session: Session,
+    vacancy_id: uuid.UUID,
+    contour: Contour,
+    filters: ApplicationFilters,
+    sort: Literal["fit", "date"] = "date",
 ) -> ApplicationListOut:
     vacancy = session.get(Vacancy, vacancy_id)
     if vacancy is None:
@@ -200,15 +205,74 @@ def list_applications(
     cards = _current_cards(session, candidate_ids)
     registry = postings.get_default_registry()
 
-    items = []
+    # 1. Цель и оценка каждого отклика — через реестр публикаций (requirements-03): профиль у каждого
+    #    отклика свой, а не один на вакансию. Неготовая цель (mapping_required, no_approved_profile,
+    #    not_applicable) даёт статус без оценки, и светофор относит такой отклик к ⚪.
+    resolved = []
     counts = dict(confirmed=0, mismatch=0, unresolved=0, not_covered=0)
     for application, candidate, stage in rows:
         resolution = resolve_application(session, application.id, registry=registry)
         state = resolved_state(session, resolution, imported_position_code=position.code)
         mapping = compatibility_applicability(resolution, position.code)
         counts[mapping.status if mapping else 'not_covered'] += 1
-        assessment = state.assessment
+        resolved.append((application, candidate, stage, resolution, state, mapping))
+
+    # 2. Оценки и их профили для светофора — двумя запросами на всю вакансию.
+    assessment_ids = {state.assessment.id for *_, state, _ in resolved if state.assessment is not None}
+    assessments_by_id: dict[uuid.UUID, Assessment] = {}
+    profiles_by_id: dict[uuid.UUID, RequirementProfile] = {}
+    if assessment_ids:
+        assessments_by_id = {
+            a.id: a
+            for a in session.scalars(
+                select(Assessment)
+                .where(Assessment.id.in_(assessment_ids))
+                .options(
+                    selectinload(Assessment.formal_checks),
+                    selectinload(Assessment.competency_scores),
+                )
+            )
+        }
+        profile_ids = {a.profile_id for a in assessments_by_id.values()}
+        if profile_ids:
+            profiles_by_id = {
+                p.id: p
+                for p in session.scalars(
+                    select(RequirementProfile)
+                    .where(RequirementProfile.id.in_(profile_ids))
+                    .options(
+                        selectinload(RequirementProfile.formal_requirements),
+                        selectinload(RequirementProfile.competencies),
+                    )
+                )
+            }
+
+    # 3. Светофор: профиль — тот, по которому оценён именно этот отклик.
+    row_entries = []
+    rank_inputs = []
+    for application, candidate, stage, resolution, state, mapping in resolved:
+        loaded_assessment = assessments_by_id.get(state.assessment.id) if state.assessment else None
+        assessment_profile = profiles_by_id.get(loaded_assessment.profile_id) if loaded_assessment else None
+        rank_inputs.append(
+            rank_input(
+                key=application.id,
+                candidate_code=candidate.code,
+                assessment_status=state.status,
+                applied_at=application.applied_at,
+                assessment=loaded_assessment,
+                profile=assessment_profile,
+            )
+        )
+        row_entries.append((application, candidate, stage, resolution, state, mapping, loaded_assessment))
+
+    ranked = rank(rank_inputs)
+    rank_by_app = {r.key: r for r in ranked}
+    fit_order = {r.key: idx for idx, r in enumerate(ranked)}
+
+    items = []
+    for application, candidate, stage, resolution, state, mapping, assessment in row_entries:
         card = cards.get(candidate.id)
+        ranked_item = rank_by_app[application.id]
         item = ApplicationListItemOut(
             posting_title=application.posting_title, target_position_code=resolution.position_code, applicability=mapping,
             posting_resolution=resolution,
@@ -225,9 +289,14 @@ def list_applications(
             formal_preliminary=assessment.formal_preliminary if assessment else None,
             overall_score=assessment.overall_score if assessment else None,
             missing_count=card.missing_count if card else None,
+            rank_group=ranked_item.group,
+            rank_position=ranked_item.position,
+            rank_reason=ranked_item.reason,
         )
         if _matches(item, filters):
             items.append(item)
+    if sort == "fit":
+        items.sort(key=lambda item: fit_order[item.application_id])
     return ApplicationListOut(vacancy_id=vacancy.id, total=len(items), items=items, imported_count=len(rows),
                               **{f'{key}_count': value for key, value in counts.items()})
 

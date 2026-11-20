@@ -99,6 +99,9 @@ class ApplicationListItemOut(BaseModel):
     formal_preliminary: bool | None
     overall_score: int | None
     missing_count: int | None
+    rank_group: Literal["ready", "clarify", "not_met", "needs_action"]
+    rank_position: int | None = None
+    rank_reason: str
 
 
 class ApplicationListOut(BaseModel):

@@ -101,6 +101,7 @@ def list_applications(
     formal_preliminary: bool | None = None,
     assessment_status: AssessmentStatus | None = None,
     applicability: Literal['confirmed', 'mismatch', 'unresolved', 'not_covered'] | None = None,
+    sort: Literal['fit', 'date'] = 'date',
     user: OptionalUser = None,
 ):
     auth.ensure_not_department(user)
@@ -111,7 +112,7 @@ def list_applications(
         formal_preliminary=formal_preliminary,
         assessment_status=assessment_status,
     )
-    return services.list_applications(session, vacancy_id, contour, filters)
+    return services.list_applications(session, vacancy_id, contour, filters, sort=sort)
 
 
 @router.get("/applications/{application_id}", response_model=ApplicationDetailOut)
