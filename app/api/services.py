@@ -11,13 +11,14 @@ import uuid
 from collections import defaultdict
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.api.errors import ApiError, not_found
 from app.assessment.applicability import resolve_applicability
+from app.assessment.ranking import rank, rank_input
 # Правила актуальности оценки и границ цитат живут в слое оценки и общие с кросс-оценкой ai-02.
 from app.assessment.state import AssessmentState, assessment_texts, evidence_with_utf16, resolve_states  # noqa: F401
 from app.assessment.verification import utf16_offsets
@@ -171,7 +172,11 @@ class ApplicationFilters:
 
 
 def list_applications(
-    session: Session, vacancy_id: uuid.UUID, contour: Contour, filters: ApplicationFilters
+    session: Session,
+    vacancy_id: uuid.UUID,
+    contour: Contour,
+    filters: ApplicationFilters,
+    sort: Literal["fit", "date"] = "date",
 ) -> ApplicationListOut:
     vacancy = session.get(Vacancy, vacancy_id)
     if vacancy is None:
@@ -195,13 +200,63 @@ def list_applications(
     states = resolve_states(session, candidate_ids, profile, vacancy.position_id, synthetic)
     cards = _current_cards(session, candidate_ids)
 
-    items = []
+    assessment_ids = {s.assessment.id for s in states.values() if s.assessment is not None}
+    assessments_by_id: dict[uuid.UUID, Assessment] = {}
+    profiles_by_id: dict[uuid.UUID, RequirementProfile] = {}
+    if assessment_ids:
+        assessments_by_id = {
+            a.id: a
+            for a in session.scalars(
+                select(Assessment)
+                .where(Assessment.id.in_(assessment_ids))
+                .options(
+                    selectinload(Assessment.formal_checks),
+                    selectinload(Assessment.competency_scores),
+                )
+            )
+        }
+        profile_ids = {a.profile_id for a in assessments_by_id.values()}
+        if profile_ids:
+            profiles_by_id = {
+                p.id: p
+                for p in session.scalars(
+                    select(RequirementProfile)
+                    .where(RequirementProfile.id.in_(profile_ids))
+                    .options(
+                        selectinload(RequirementProfile.formal_requirements),
+                        selectinload(RequirementProfile.competencies),
+                    )
+                )
+            }
+
+    row_entries = []
+    rank_inputs = []
     counts = dict(confirmed=0, mismatch=0, unresolved=0, not_covered=0)
     for application, candidate, stage in rows:
         state, mapping = application_state(states[candidate.id], position.code, application.posting_title)
         counts[mapping.status if mapping else 'not_covered'] += 1
-        assessment = state.assessment
+        loaded_assessment = assessments_by_id.get(state.assessment.id) if state.assessment else None
+        assessment_profile = profiles_by_id.get(loaded_assessment.profile_id) if loaded_assessment else None
+        rank_inputs.append(
+            rank_input(
+                key=application.id,
+                candidate_code=candidate.code,
+                assessment_status=state.status,
+                applied_at=application.applied_at,
+                assessment=loaded_assessment,
+                profile=assessment_profile,
+            )
+        )
+        row_entries.append((application, candidate, stage, state, mapping, loaded_assessment))
+
+    ranked = rank(rank_inputs)
+    rank_by_app = {r.key: r for r in ranked}
+    fit_order = {r.key: idx for idx, r in enumerate(ranked)}
+
+    items = []
+    for application, candidate, stage, state, mapping, assessment in row_entries:
         card = cards.get(candidate.id)
+        ranked_item = rank_by_app[application.id]
         item = ApplicationListItemOut(
             posting_title=application.posting_title, target_position_code=position.code, applicability=mapping,
             application_id=application.id,
@@ -217,9 +272,14 @@ def list_applications(
             formal_preliminary=assessment.formal_preliminary if assessment else None,
             overall_score=assessment.overall_score if assessment else None,
             missing_count=card.missing_count if card else None,
+            rank_group=ranked_item.group,
+            rank_position=ranked_item.position,
+            rank_reason=ranked_item.reason,
         )
         if _matches(item, filters):
             items.append(item)
+    if sort == "fit":
+        items.sort(key=lambda item: fit_order[item.application_id])
     return ApplicationListOut(vacancy_id=vacancy.id, total=len(items), items=items, imported_count=len(rows),
                               **{f'{key}_count': value for key, value in counts.items()})
 

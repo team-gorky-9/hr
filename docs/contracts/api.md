@@ -97,7 +97,7 @@ AssessmentOut дополнен algorithm_version, calculation_as_of и competenc
 Пример показан для `contour=training` (учебный профиль `py-9001`). Если у должности нет утверждённого профиля в запрошенном контуре: `approved_profile_id = null`, `approved_profile_version = null` (интерфейс явно показывает «Утверждённый профиль требований недоступен»). `applications_count` считает отклики кандидатов того же контура.
 
 ### 2.2. `GET /api/v1/vacancies/{vacancy_id}/applications`
-Список откликов выбранной вакансии. Query-параметры (опциональные): `contour` (`working` по умолчанию | `training`), `stage_code`, `formal_result` (`met` | `not_met` | `unknown`), `formal_preliminary` (`true` | `false`), `assessment_status` (`ready` | `not_assessed` | `stale` | `no_approved_profile`). В элементе списка добавлены `is_training` и `formal_preliminary` («допуск выполнен по резюме, нужен документ»).
+Список откликов выбранной вакансии. Query-параметры (опциональные): `contour` (`working` по умолчанию | `training`), `stage_code`, `formal_result` (`met` | `not_met` | `unknown`), `formal_preliminary` (`true` | `false`), `assessment_status` (`ready` | `not_assessed` | `stale` | `no_approved_profile`), `sort` (`date` по умолчанию | `fit` — светофор и порядок по соответствию). В элементе списка добавлены `is_training`, `formal_preliminary` («допуск выполнен по резюме, нужен документ») и поля светофора (`app/assessment/ranking.py`): `rank_group` (`ready` | `clarify` | `not_met` | `needs_action`), `rank_position` (место внутри всей вакансии `1..N`, для `needs_action` всегда `null`; вычисляется до фильтров), `rank_reason`.
 
 **Ответ `200 OK`** (пустой список при отсутствии откликов: `{"vacancy_id": "...", "total": 0, "items": []}`):
 ```json
@@ -117,7 +117,10 @@ AssessmentOut дополнен algorithm_version, calculation_as_of и competenc
       "assessment_status": "ready",
       "formal_result": "unknown",
       "overall_score": 85,
-      "missing_count": 1
+      "missing_count": 1,
+      "rank_group": "clarify",
+      "rank_position": 1,
+      "rank_reason": "1 вопрос к уточнению: длительность коммерческого опыта"
     }
   ]
 }

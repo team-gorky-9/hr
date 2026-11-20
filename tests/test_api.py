@@ -4,6 +4,7 @@
 получает ту же сессию через подмену зависимости get_session. Сценарии py-9001 берутся
 из общего контрольного набора fixtures/assessment/py-9001.json — того же, что у оценки.
 """
+from datetime import date
 import json
 import uuid
 from collections.abc import Iterator
@@ -366,6 +367,73 @@ def test_empty_application_list(client):
     assert body == {"vacancy_id": vacancy_id, "total": 0, "items": [],
                     "imported_count": 0, "confirmed_count": 0, "mismatch_count": 0,
                     "unresolved_count": 0, "not_covered_count": 0}
+
+
+def test_vacancy_applications_traffic_light_ranking_and_sort(session, client):
+    """Светофор и порядок откликов: группы ready/clarify/not_met/needs_action, sort=date|fit и стабильное место при фильтрах."""
+    vac = f.vacancy(session, "python-dev")
+    profile = f.approve(session, f.make_profile(session, position_code="python-dev", is_synthetic=True))
+    edu_level = next(r for r in profile.formal_requirements if r.key == "t.education.level")
+    text = "Высшее образование."
+
+    def add_app(code: str, applied: date, check_result: CheckResult | None = None, *, make_stale: bool = False):
+        cand = f.make_candidate(session, code, text=text, is_synthetic=True)
+        app = repo.create_application(
+            session, candidate_id=cand.id, source=ApplicationSource.RESPONSE, vacancy_id=vac.id, applied_at=applied
+        )
+        if check_result is not None:
+            card = f.add_card(session, cand, skills=[])
+            text_id = repo.get_current_text(session, cand.id).id
+            start = text.index("Высшее")
+            ev = [Evidence(candidate_text_id=text_id, quote="Высшее", start=start, end=start + len("Высшее"))] if check_result != CheckResult.UNKNOWN else []
+            repo.save_assessment(
+                session, candidate_id=cand.id, profile_id=profile.id, card_id=card.id, model="test",
+                algorithm_version=ALGORITHM_VERSION, prompt_version=ASSESS_PROMPT_VERSION,
+                formal_checks=[FormalCheckIn(requirement_id=edu_level.id, result=check_result, evidence=ev)],
+                competency_scores=[],
+            )
+            if make_stale:
+                repo.add_candidate_text(session, cand.id, text="Обновлённый текст.", redaction_method="test-v2")
+        return app
+
+    add_app("py-ready", date(2026, 11, 10), CheckResult.MET)
+    add_app("py-clarify", date(2026, 11, 16), CheckResult.UNKNOWN)
+    add_app("py-unassessed", date(2026, 11, 17), None)
+    add_app("py-not-met", date(2026, 11, 18), CheckResult.NOT_MET)
+    add_app("py-stale", date(2026, 11, 20), CheckResult.MET, make_stale=True)
+
+    # По умолчанию sort=date: порядок по дате убыванию, но места и причины светофора уже посчитаны.
+    by_date = training_list(client)
+    assert [i["candidate_code"] for i in by_date["items"]] == [
+        "py-stale", "py-not-met", "py-unassessed", "py-clarify", "py-ready"
+    ]
+    ranks_by_code = {
+        i["candidate_code"]: (i["rank_group"], i["rank_position"], i["rank_reason"])
+        for i in by_date["items"]
+    }
+    assert ranks_by_code["py-ready"][:2] == ("ready", 1)
+    assert "Все обязательные подтверждены" in ranks_by_code["py-ready"][2]
+    assert ranks_by_code["py-clarify"][:2] == ("clarify", 2)
+    assert "Высшее образование" in ranks_by_code["py-clarify"][2]
+    assert ranks_by_code["py-not-met"][:2] == ("not_met", 3)
+    assert ranks_by_code["py-not-met"][2] == "Не проходит: Высшее образование"
+    assert ranks_by_code["py-unassessed"] == ("needs_action", None, "Нужна оценка: отклик ещё не оценивался")
+    assert ranks_by_code["py-stale"] == ("needs_action", None, "Нужна переоценка: резюме, профиль или алгоритм изменились")
+
+    # Явный sort=fit: зелёные -> жёлтые -> красные -> серые (на одном уровне даты более ранний сначала).
+    by_fit = training_list(client, sort="fit")
+    assert [i["candidate_code"] for i in by_fit["items"]] == [
+        "py-ready", "py-clarify", "py-not-met", "py-unassessed", "py-stale"
+    ]
+    assert [i["rank_position"] for i in by_fit["items"]] == [1, 2, 3, None, None]
+
+    # Фильтр сохраняет честное место внутри всей вакансии.
+    filtered = training_list(client, formal_result="not_met", sort="fit")
+    assert [i["candidate_code"] for i in filtered["items"]] == ["py-not-met"]
+    assert filtered["items"][0]["rank_position"] == 3
+
+    bad_sort = client.get(f"/api/v1/vacancies/{vac.id}/applications", params={"contour": "training", "sort": "unknown"})
+    assert bad_sort.status_code == 422 and bad_sort.json()["error"]["code"] == "VALIDATION_ERROR"
 
 
 # --- Ошибки --------------------------------------------------------------------
