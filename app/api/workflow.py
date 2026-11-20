@@ -23,8 +23,6 @@ from app.assessment import cross
 from app.api.errors import ApiError, not_found
 from app.api.schemas import (
     Contour,
-    CrossApplicationOut,
-    CrossAssessmentItemOut,
     CrossAssessmentListOut,
     FunnelClosureOut,
     FunnelOut,
@@ -253,33 +251,22 @@ _FORMAL_RANK = {"met": 0, "unknown": 1, "not_met": 2}
 def cross_assessments(session: Session, candidate_id: uuid.UUID) -> CrossAssessmentListOut:
     """Оценки кандидата по всем утверждённым профилям его контура.
 
-    Данные собирает модель чтения ai-02 (app.assessment.cross.cross_assessments): контур по кандидату,
-    актуальность, цитаты. API отвечает только за права (маршрут), 404 и DTO: раскладывает отклики
-    кандидата по должностям и упорядочивает строки — сначала оценённые (met → unknown → not_met),
+    Все данные собирает модель чтения ai-02 (app.assessment.cross.cross_assessments): профили контура,
+    актуальность по общему правилу app.assessment.state, вакансии и отклики, цитаты. API отвечает
+    только за права (маршрут), 404 и порядок строк: сначала оценённые (met → unknown → not_met),
     затем не оценённые. Чтение ничего не создаёт.
     """
     data = cross.cross_assessments(session, candidate_id)
     if data.get("empty_reason") == "candidate_not_found":
         raise not_found("CANDIDATE_NOT_FOUND", "Кандидат не найден", candidate_id=candidate_id)
-    applications = [CrossApplicationOut.model_validate(a) for a in data["applications"]]
-    items = []
-    for item in data["items"]:
-        items.append(CrossAssessmentItemOut(
-            **{k: item[k] for k in ("position_code", "position_title", "profile_id", "profile_version",
-                                    "is_source_position", "assessment_status", "stale_reason", "assessment")},
-            is_training=data["is_training"],
-            applications=[a for a in applications if a.position_code == item["position_code"]],
-        ))
-    items.sort(key=lambda i: (
+    result = CrossAssessmentListOut.model_validate({k: v for k, v in data.items() if k != "context_application_id"})
+    result.items.sort(key=lambda i: (
         i.assessment is None,
         _FORMAL_RANK.get(str(i.assessment.formal_result) if i.assessment else "", 3),
+        -(i.assessment.overall_score if i.assessment and i.assessment.overall_score is not None else -1),
         i.position_code,
     ))
-    return CrossAssessmentListOut(
-        candidate_id=data["candidate_id"], candidate_code=data["candidate_code"], is_training=data["is_training"],
-        current_text_id=data["current_text_id"], applications=applications, items=items,
-        empty_reason=data["empty_reason"],
-    )
+    return result
 
 
 # --- Кадровый резерв -----------------------------------------------------------------

@@ -24,7 +24,9 @@ from app.assessment.version import ALGORITHM_VERSION
 from app.api.schemas import Contour, ReserveIn
 from app.db import repository as repo
 from app.db.enums import ApplicationSource, Channel, ReserveStatus, RowOrigin, UserRole, VerificationMethod
-from app.db.models import Application, Candidate, ReserveEntry, SourceDocument, StageEvent, User, Vacancy
+from app.db.models import (
+    Application, Assessment, Candidate, RequirementProfile, ReserveEntry, SourceDocument, StageEvent, User, Vacancy,
+)
 from app.db.session import get_session
 from app.main import create_app
 from app.schemas.assessment import CompetencyScoreIn
@@ -32,6 +34,7 @@ from app.schemas.card import Evidence
 from app.schemas.requirements import CompetencyIn, IndicatorIn
 from tests import factories as f
 from tests.test_api import PII, build_case, client  # noqa: F401  (client — фикстура)
+from tests.test_assessment_fixtures_db import _load_profile
 
 HR = {"X-User-Login": "hr_demo"}
 DEPT = {"X-User-Login": "dept_demo"}
@@ -422,14 +425,19 @@ def test_cross_assessments_over_all_approved_profiles(session, client):
 
     qa_item = by_code["qa-manual"]
     assert qa_item["assessment_status"] == "ready" and qa_item["is_training"] is True
-    assert qa_item["is_source_position"] is False and qa_item["applications"] == []
+    assert qa_item["is_source_position"] is False
+    assert [v["application_id"] for v in qa_item["vacancies"]] == [None]
+    assert qa_item["position_id"] == str(f.position(session, "qa-manual").id)
     [competency] = qa_item["assessment"]["competencies"]
+    assert (competency["code"], competency["name"], competency["level"]) == ("API_TEST", "Тестирование API", 90)
     [evidence] = competency["evidence"]
     assert evidence["quote"] == quote and evidence["candidate_text_id"] == str(text.id)  # цитата ведёт к своей версии
     assert (evidence["utf16_start"], evidence["utf16_end"]) == (0, len(quote))
     python_item = by_code["python-dev"]
     assert python_item["is_source_position"] is True
-    assert [a["application_id"] for a in python_item["applications"]] == [str(built["application_id"])]
+    [python_vacancy] = python_item["vacancies"]
+    assert python_vacancy["application_id"] == str(built["application_id"])
+    assert python_vacancy["application_stage_code"] == "new"
     assert python_item["assessment"]["formal_result"] == "unknown"
 
     assert session.scalar(select(func.count()).select_from(Application)) == applications_before
@@ -444,21 +452,48 @@ def test_cross_assessments_empty_is_not_error(session, client):
     assert response.json()["items"] == [] and response.json()["empty_reason"] == "no_approved_profiles"
 
 
-def test_cross_assessments_show_each_application_with_its_vacancy(session, client):
-    """Отклики кандидата раскладываются по должностям с вакансией и источником; history не делает
-    должность «своей». Вакансии должности без отклика модель чтения ai-02 не отдаёт (открытый вопрос)."""
+def test_cross_assessments_mark_each_vacancy_of_position(session, client):
+    """У должности две вакансии: отклик показан только у своей, вторая — без отклика; history
+    и manual не делают должность «своей» (is_source_position)."""
     built = build_case(session, "C1-unknown")
     candidate = session.get(Candidate, built["candidate_id"])
     second = Vacancy(position_id=f.position(session).id, channel=Channel.CITY_SITE, title="Python-разработчик (сайт)")
-    session.add(second)
+    third = Vacancy(position_id=f.position(session).id, channel=Channel.EMAIL, title="Python-разработчик (почта)")
+    session.add_all([second, third])
     session.flush()
     manual = repo.create_application(session, candidate_id=candidate.id, source=ApplicationSource.MANUAL,
                                      vacancy_id=second.id)
     body = client.get(f"/api/v1/candidates/{built['candidate_id']}/cross-assessments", headers=HR).json()
     [item] = body["items"]
-    linked = {a["vacancy_id"]: a["source"] for a in item["applications"]}
-    assert linked == {str(f.vacancy(session).id): "response", str(second.id): "manual"}
+    linked = {v["vacancy_id"]: (v["application_id"], v["application_source"]) for v in item["vacancies"]}
+    assert linked == {str(f.vacancy(session).id): (str(built["application_id"]), "response"),
+                      str(second.id): (str(manual.id), "manual"), str(third.id): (None, None)}
+    assert item["is_source_position"] is True
     assert {a["application_id"] for a in body["applications"]} == {str(built["application_id"]), str(manual.id)}
+
+
+def test_cross_and_application_list_agree_on_stale_status(session, client):
+    """Одно правило актуальности: оценка со старой версией промпта устарела и в списке, и в рекомендациях."""
+    built = build_case(session, "C1-unknown")
+    assessment = session.get(Assessment, built["assessment_id"])
+    assessment.prompt_version = "old-prompt"
+    session.flush()
+    listed = client.get(f"/api/v1/vacancies/{f.vacancy(session).id}/applications",
+                        params={"contour": "training"}).json()["items"][0]
+    [item] = client.get(f"/api/v1/candidates/{built['candidate_id']}/cross-assessments", headers=HR).json()["items"]
+    assert (listed["assessment_status"], item["assessment_status"], item["stale_reason"]) == (
+        "stale", "stale", "algorithm_changed")
+
+
+def test_cross_quotes_of_previous_text_version_have_utf16(session, client):
+    """Цитата устаревшей оценки ссылается на прежнюю версию текста, и границы UTF-16 считаются по ней."""
+    built = build_case(session, "C5-non-bmp")  # эмодзи перед цитатой: UTF-16 сдвинут на 1
+    repo.add_candidate_text(session, built["candidate_id"], text="Новая очистка.", redaction_method="test-v2")
+    [item] = client.get(f"/api/v1/candidates/{built['candidate_id']}/cross-assessments", headers=HR).json()["items"]
+    assert item["stale_reason"] == "text_changed"
+    [evidence] = item["assessment"]["competencies"][0]["evidence"]
+    assert evidence["candidate_text_id"] == str(built["text_id"])
+    assert (evidence["utf16_start"], evidence["utf16_end"]) == (evidence["start"] + 1, evidence["end"] + 1)
 
 
 # --- Без ПДн и состав OpenAPI ----------------------------------------------------------
@@ -643,3 +678,16 @@ def test_second_reserve_insert_waits_on_unique_index_and_returns_winner(engine, 
     thread.join(timeout=30)
     entry_id, created = result["value"]
     assert created is False and entry_id == winner_id
+
+
+def test_cross_shows_profile_changed_with_old_profile_rows(session, client):
+    """Утверждена новая версия профиля: рекомендация показывает прежнюю оценку как stale/profile_changed
+    со строками её собственной (прежней) версии профиля — так же, как список откликов."""
+    built = build_case(session, "C1-unknown")
+    new_profile_id, _ = _load_profile(session)
+    f.approve(session, session.get(RequirementProfile, new_profile_id))
+    [item] = client.get(f"/api/v1/candidates/{built['candidate_id']}/cross-assessments", headers=HR).json()["items"]
+    assert (item["assessment_status"], item["stale_reason"]) == ("stale", "profile_changed")
+    assert item["profile_id"] == str(new_profile_id)
+    assert item["assessment"]["profile_id"] == str(built["profile_id"])
+    assert item["assessment"]["formal_checks"]  # строки прежней версии профиля на месте

@@ -66,13 +66,15 @@ uv run python -m app.assessment batch --all-approved --position-code hr-consulta
 - **Повтор.** Оценка пары переиспользуется при совпадении версий текста, алгоритма (включает версии промптов), промпта и `as_of`. С `--skip-existing` такие пары пропускаются без записи и без вызова модели. Если параллельный запуск уже записал пару, повтор берёт готовую оценку: одна текущая оценка на пару гарантируется уникальным индексом.
 - **Отчёт:** `people`, `pairs`, `counts` по исходам (`assessed`, `reused`, `skipped_current`, `skipped_context`, `error`) — сумма равна числу пар. В `explained` — должности без утверждённого профиля и коды не того контура. Пара с ошибкой доступна для повтора.
 
-Чтение для API — `cross_assessments(session, candidate_id, application_id=None)`; маршрут `GET /api/v1/candidates/{candidate_id}/cross-assessments` подключает модуль API. По каждой должности контура возвращается:
-- версия профиля и признак `is_source_position`;
-- `assessment_status` (`ready` / `stale` + `stale_reason` / `not_assessed`);
-- формальный итог, предварительность и пробелы;
-- проверки и компетенции с цитатами: `start/end` и `utf16_start/utf16_end`; у цитаты из прежней версии текста `utf16_*` пустые.
+Чтение для API — `cross_assessments(session, candidate_id, application_id=None)`; маршрут `GET /api/v1/candidates/{candidate_id}/cross-assessments` подключает модуль API (backend-02) без своей логики. По каждой должности контура возвращается:
+- должность (`position_id`, код, название, `is_municipal_service`), утверждённый профиль и его версия, `is_training`, признак `is_source_position` (прямой отклик `response` на вакансию должности);
+- `vacancies` — все вакансии должности, у каждой отклик кандидата (`application_id`, `source`, этап) или `null`;
+- `assessment_status` и `stale_reason` — по общему правилу `app.assessment.state.resolve_states`, тому же, что у списка откликов: `text_changed`, `algorithm_changed` (алгоритм или промпт), `profile_changed`;
+- оценка: профиль самой оценки (при `profile_changed` — прежняя версия), формальный итог, предварительность, `overall_score`, пробелы, проверки и компетенции (код, название, ранг, целевой уровень, `level`, счётчики) с цитатами. У цитаты `start/end` и `utf16_start/utf16_end` по тексту, на который она ссылается, в том числе прежней версии (`state.evidence_with_utf16`).
 
-Кроме того, ответ содержит отклики кандидата по UUID. Если утверждённых профилей нет — `items = []` и `empty_reason = no_approved_profiles`.
+Кроме того, ответ содержит отклики кандидата с этапом. Если утверждённых профилей нет — `items = []` и `empty_reason = no_approved_profiles`.
+
+`app/assessment/state.py` — общие правила для API и кросс-оценки: статусы оценки, `resolve_states`, сбор текстов цитат и границы UTF-16. Раньше у API и у кросс-оценки были свои копии, и статус одной пары мог различаться.
 
 ## Запуск и проверка
 

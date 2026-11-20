@@ -8,6 +8,8 @@ from datetime import date, datetime
 from enum import StrEnum
 from typing import Any, Literal
 from app.assessment.applicability import Applicability
+# Статусы оценки — общие с моделью чтения кросс-оценок (app.assessment.state).
+from app.assessment.state import AssessmentStatus, StaleReason  # noqa: F401
 from app.schemas.competency_details import CompetencyDetails, IndicatorResult, ProfileCounters
 
 from pydantic import BaseModel, Field
@@ -31,21 +33,6 @@ class Contour(StrEnum):
     """Какие данные показывать (api.md п. 1, v0.2): рабочие — по умолчанию, учебные — явно."""
     WORKING = "working"
     TRAINING = "training"
-
-
-class AssessmentStatus(StrEnum):
-    NOT_APPLICABLE = 'not_applicable'
-    MAPPING_REQUIRED = 'mapping_required'
-    READY = "ready"                              # актуальная оценка по текущему тексту и утверждённому профилю
-    STALE = "stale"                              # оценка есть, но текст или утверждённый профиль сменились
-    NOT_ASSESSED = "not_assessed"                # утверждённый профиль есть, оценки нет
-    NO_APPROVED_PROFILE = "no_approved_profile"  # у должности нет утверждённого профиля в этом контуре
-
-
-class StaleReason(StrEnum):
-    ALGORITHM_CHANGED = 'algorithm_changed'
-    TEXT_CHANGED = "text_changed"        # оценка по прежней версии очищенного текста
-    PROFILE_CHANGED = "profile_changed"  # оценка по прежней версии профиля требований
 
 
 # --- Общие --------------------------------------------------------------------
@@ -331,9 +318,8 @@ class CrossEvidenceOut(BaseModel):
     quote: str
     start: int
     end: int
-    # null — цитата из прежней версии текста (модель чтения ai-02 считает UTF-16 только по текущей).
-    utf16_start: int | None
-    utf16_end: int | None
+    utf16_start: int  # по тексту, на который ссылается цитата (в том числе прежней версии)
+    utf16_end: int
 
 
 class CrossFormalCheckOut(BaseModel):
@@ -349,6 +335,13 @@ class CrossFormalCheckOut(BaseModel):
 
 class CrossCompetencyOut(BaseModel):
     competency_id: uuid.UUID
+    code: str
+    name: str
+    rank: CompetencyRank | None
+    target_level_min: int | None
+    target_level_max: int | None
+    level: int | None
+    explanation: str | None
     mandatory: dict[str, Any] | None  # счётчики confirmed/contradicted/no_info/total из details
     desired: dict[str, Any] | None
     evidence: list[CrossEvidenceOut]
@@ -357,8 +350,11 @@ class CrossCompetencyOut(BaseModel):
 class CrossAssessmentOut(BaseModel):
     assessment_id: uuid.UUID
     version: int
+    profile_id: uuid.UUID       # профиль самой оценки (при profile_changed — прежняя версия)
+    profile_version: int
     formal_result: CheckResult
     formal_preliminary: bool
+    overall_score: int | None
     summary: str | None
     gaps: list[str]  # требования этапа screening с результатом unknown
     formal_checks: list[CrossFormalCheckOut]
@@ -371,18 +367,31 @@ class CrossApplicationOut(BaseModel):
     position_code: str | None
     source: ApplicationSource
     posting_title: str | None
+    current_stage_code: str
+
+
+class CrossVacancyOut(BaseModel):
+    """Вакансия должности и отклик кандидата на неё, если есть."""
+    vacancy_id: uuid.UUID
+    title: str
+    channel: Channel
+    status: VacancyStatus
+    application_id: uuid.UUID | None
+    application_source: ApplicationSource | None
+    application_stage_code: str | None
 
 
 class CrossAssessmentItemOut(BaseModel):
+    position_id: uuid.UUID
     position_code: str
     position_title: str
-    profile_id: uuid.UUID
+    is_municipal_service: bool
+    profile_id: uuid.UUID       # утверждённый сейчас профиль должности
     profile_version: int
     is_training: bool
     # Есть ли у кандидата прямой отклик (source = response) на вакансию этой должности.
     is_source_position: bool
-    # Все отклики кандидата на вакансии этой должности, с вакансией и источником.
-    applications: list[CrossApplicationOut]
+    vacancies: list[CrossVacancyOut]
     assessment_status: AssessmentStatus
     stale_reason: StaleReason | None
     assessment: CrossAssessmentOut | None

@@ -331,7 +331,7 @@ AssessmentOut дополнен algorithm_version, calculation_as_of и competenc
 
 ### 3.3. Кросс-оценки по другим должностям
 
-`GET /api/v1/candidates/{candidate_id}/cross-assessments` — оценки кандидата по всем должностям, у которых есть утверждённый профиль в контуре кандидата. Данные собирает модель чтения ai-02 `app.assessment.cross.cross_assessments` (владелец — Илья). API добавляет права (п. 1.2), `404` и порядок строк. Чтение не создаёт ни оценок, ни откликов. Явное сравнение одного отклика с выбранным профилем — `GET /applications/{id}/comparison` (дополнение v0.3).
+`GET /api/v1/candidates/{candidate_id}/cross-assessments` — оценки кандидата по всем должностям, у которых есть утверждённый профиль в контуре кандидата. Данные собирает модель чтения ai-02 `app.assessment.cross.cross_assessments` (владелец — Илья). API добавляет права (п. 1.2), `404` и порядок строк. Актуальность и цитаты считаются общими правилами `app.assessment.state`, теми же, что в п. 2.2–2.3, поэтому статус пары в списке откликов и здесь совпадает. Чтение не создаёт ни оценок, ни откликов. Явное сравнение одного отклика с выбранным профилем — `GET /applications/{id}/comparison` (дополнение v0.3).
 
 ```json
 {
@@ -341,19 +341,26 @@ AssessmentOut дополнен algorithm_version, calculation_as_of и competenc
   "current_text_id": "fc616e86-…",
   "applications": [
     {"application_id": "8ca4a29c-…", "vacancy_id": "…", "position_code": "python-dev",
-     "source": "response", "posting_title": null}
+     "source": "response", "posting_title": null, "current_stage_code": "new"}
   ],
   "items": [
     {
-      "position_code": "qa-manual", "position_title": "QA Engineer (Manual)",
-      "profile_id": "…", "profile_version": 1, "is_training": true,
-      "is_source_position": false, "applications": [],
+      "position_id": "…", "position_code": "qa-manual", "position_title": "QA Engineer (Manual)",
+      "is_municipal_service": false, "profile_id": "…", "profile_version": 1, "is_training": true,
+      "is_source_position": false,
+      "vacancies": [
+        {"vacancy_id": "…", "title": "QA Engineer (Manual)", "channel": "hh_ru", "status": "open",
+         "application_id": null, "application_source": null, "application_stage_code": null}
+      ],
       "assessment_status": "ready", "stale_reason": null,
       "assessment": {
-        "assessment_id": "…", "version": 1, "formal_result": "met", "formal_preliminary": false,
+        "assessment_id": "…", "version": 1, "profile_id": "…", "profile_version": 1,
+        "formal_result": "met", "formal_preliminary": false, "overall_score": 90,
         "summary": null, "gaps": [], "formal_checks": [],
         "competencies": [
-          {"competency_id": "…", "mandatory": null, "desired": null,
+          {"competency_id": "…", "code": "API_TEST", "name": "Тестирование API", "rank": null,
+           "target_level_min": 60, "target_level_max": 100, "level": 90, "explanation": "пишет API-тесты",
+           "mandatory": null, "desired": null,
            "evidence": [{"candidate_text_id": "fc616e86-…", "quote": "Написал API-тесты",
                          "start": 0, "end": 17, "utf16_start": 0, "utf16_end": 17}]}
         ]
@@ -363,19 +370,14 @@ AssessmentOut дополнен algorithm_version, calculation_as_of и competenc
   "empty_reason": null
 }
 ```
-- `is_source_position` — у кандидата есть прямой отклик (`response`) на вакансию этой должности. `applications` в строке — все его отклики на вакансии должности, с `vacancy_id` и `source`.
+- `vacancies` — все вакансии должности; у каждой отклик кандидата (`application_id`, `application_source`, `application_stage_code`) или `null`. `is_source_position` — есть прямой отклик `response` хотя бы на одну из них. `position_id` нужен для `POST /reserve` из строки рекомендации.
+- `profile_id`/`profile_version` строки — утверждённый сейчас профиль. Внутри `assessment` — профиль самой оценки: при `profile_changed` это прежняя версия, и строки проверок взяты из неё.
 - `formal_checks[]`: `requirement_key`, `description`, `is_mandatory`, `check_stage`, `result`, `basis`, `is_preliminary`, `evidence`. `gaps` — требования этапа `screening` с `unknown`.
-- `assessment_status`: `ready`, `stale` (`stale_reason`: `text_changed`, `algorithm_changed`), `not_assessed`. У цитат прежней версии текста `utf16_start`/`utf16_end` равны `null`; `candidate_text_id` указывает на свою версию.
-- Порядок: сначала оценённые — `met`, `unknown`, `not_met`, затем `not_assessed`, внутри по коду должности.
+- `assessment_status`: `ready`, `stale` (`stale_reason`: `text_changed`, `algorithm_changed` — алгоритм или промпт, `profile_changed`), `not_assessed`.
+- Цитаты: `candidate_text_id` указывает на свою версию текста, `utf16_start`/`utf16_end` считаются по ней.
+- `level` и `overall_score` новый оценщик (БД v1.7) оставляет `null`; заполнены у оценок, где их записали.
+- Порядок: сначала оценённые — `met`, `unknown`, `not_met`, внутри по `overall_score` по убыванию; затем `not_assessed`.
 - Пустой результат — `200`, `items: []`, `empty_reason: "no_approved_profiles"`. Неизвестный кандидат — `404 CANDIDATE_NOT_FOUND`.
-
-**Чего нет в модели чтения ai-02 относительно постановки backend-02 (согласовать с Ильёй):**
-1. Вакансии должности без отклика кандидата: постановка требует признак отклика «для конкретной вакансии, если на должность несколько вакансий». Сейчас видны только вакансии, на которые отклик есть.
-2. Этап отклика (`current_stage_code`) в `applications`.
-3. `position_id` и `is_municipal_service`: без `position_id` интерфейс не может сразу предложить резерв на должность из строки рекомендации.
-4. Код, название и целевой уровень компетенции в `competencies` (есть только `competency_id`); `level` и `overall_score`.
-5. Признак `stale` по `prompt_version` и `profile_changed`: список откликов (`resolve_states`) их учитывает, модель чтения — нет. Статус одной пары может различаться в списке и в рекомендациях.
-6. Границы UTF-16 для цитат из прежней версии текста (`null`), тогда как карточка отклика (п. 2.3) считает их по тексту цитаты.
 
 ### 3.4. Кадровый резерв
 
