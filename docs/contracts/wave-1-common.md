@@ -36,7 +36,9 @@
 
 ## Файлы на сервере
 
-Каждый владелец реализует POST /documents (multipart file и kind, возвращает 201 document), GET /documents/{id} (метаданные), GET /documents/{id}/content (поток оригинала). document содержит id, organization_id, kind, original_name, media_type, size_bytes, sha256, revision, uploaded_by. Метаданные в БД, байты в собственном FILE_ROOT. Серверный путь формируется по ID; original_name — подпись, никогда путь. MIME и размер проверяются, превышение настроенного лимита даёт 413 FILE_TOO_LARGE. FILE_MAX_BYTES задаётся средой, стартовое значение 20 MiB — стендовый параметр.
+Этот раздел реализуют владельцы файлов **Hiring и Requirements**. Workforce в первой волне хранит ссылки document_ref и реквизиты оснований; файловые POST/GET /documents, FILE_ROOT и обработка загрузок в его поставку не входят. При необходимости проверки оригинала кадровик обращается к владельцу документа через согласованный внешний канал.
+
+Hiring и Requirements реализуют POST /documents (multipart file и kind, возвращает 201 document), GET /documents/{id} (метаданные), GET /documents/{id}/content (поток оригинала). document содержит id, organization_id, kind, original_name, media_type, size_bytes, sha256, revision, uploaded_by. Метаданные в БД, байты в собственном FILE_ROOT. Серверный путь формируется по ID; original_name — подпись, никогда путь. MIME и размер проверяются, превышение настроенного лимита даёт 413 FILE_TOO_LARGE. FILE_MAX_BYTES задаётся средой, стартовое значение 20 MiB — стендовый параметр.
 
 Загрузка создаёт новую неизменяемую версию-объект; исправленный документ имеет новый ID. Повтор с прежним ключом возвращает тот же объект. Файл полностью сохраняется до доступности записи; незавершённый временный файл недоступен через API. Повтор/сбой проверяются, очистка сирот не удаляет связанный документ. Скачивание проверяет право по организации и связанному делу. Точная политика конкретных документов уточнена в сервисных контрактах. Перезапуск контейнера сохраняет том.
 
@@ -50,15 +52,18 @@ Envelope содержит event_id UUID, event_type, schema_version="1.0", produ
 
 Transient-сбой приводит к отложенному повтору с конечным числом попыток и ручным повтором POST /deliveries/{event_id}/retry. Базовые задержки и лимит конфигурируемы; инструкции содержат фактические значения. Невалидная версия/схема отправляется в w1.<consumer>.dead с причиной. Неподходящая организация/неожиданный producer отклоняются. Запоздалая ревизия отмечается stale и не откатывает факт. Равная ревизия с другим содержимым требует сверки и не заменяет текущую запись.
 
-## Три общих сообщения
+## Общие сообщения
 
 | event_type / producer | Payload | Потребитель |
 |---|---|---|
 | employment.ready / hiring | case_id, application_ref, person_ref, department_id, position_code, starts_on, basis {document_ref,reference,issued_on}, confirmed_by_actor_id | workforce создаёт intake, HR проверяет личность и регистрирует назначение |
 | assignment.registered / workforce | intake_id, source_case_id, source_case_revision, source_event_id, employee_id, assignment_id, department_id, position_code, starts_on, revision | hiring отмечает кадровую передачу зарегистрированной |
+| assignment.review-resolved / workforce | intake_id, source_case_id, source_case_revision, source_event_id, employee_id, assignment_id, department_id, position_code, starts_on, revision, resolution:"corrected"|"kept_existing", reason, reviewed_by_actor_id | hiring завершает проверку конкретного исправления и показывает фактически сохранённое назначение |
 | requirements.approved / requirements | profile_id, position_code, profile_version, contour, approved_by_actor_id, approval_basis, source_document_ids | Пока демонстрационный получатель и будущий подбор. API самого сервиса даёт профиль по ID |
 
 person_ref — {system:"legacy-hr",id:UUID,display_name:string}; он обозначает кандидатскую запись. application_ref — {system:"legacy-hr",id:UUID}. document_ref — {service:"hiring",id:UUID}; байты документа в сообщение не вкладываются. Выдача документа другому сервису требует разрешённого внутреннего чтения; в первой волне Workforce получает реквизиты основания и при необходимости запрашивает уполномоченного регистратора, а не автоматически скачивает файл чужого сервиса.
+
+assignment.review-resolved завершает пересмотр существующего назначения. Его correlation_id повторяет correlation_id исправленного employment.ready, а source_event_id/source_case_revision указывают именно на эту принятую передачу. starts_on, department_id, position_code и revision показывают действительную кадровую запись после решения. Схема новых сообщений остаётся 1.0; тип review-resolved добавлен отдельно от прежнего assignment.registered. Hiring подписывается на оба типа. Новый пример и два альтернативных результата находятся в [corrections.json](../../fixtures/wave-1/corrections.json).
 
 Каждый автор проверяет свои сообщения на [events.json](../../fixtures/wave-1/events.json). Это общая семантика обмена. Примеры содержат учебные ID. Локальный тестовый получатель публикует/читает эти сообщения через настоящий RabbitMQ, а не только вызывает функцию памяти.
 
