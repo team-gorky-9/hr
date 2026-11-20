@@ -1,1 +1,1 @@
-ALGORITHM_VERSION = 'assessment-2.0'
+ALGORITHM_VERSION = 'assessment-2.0.1'

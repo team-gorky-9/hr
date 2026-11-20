@@ -1,7 +1,7 @@
 """Что модель возвращает при оценке. Статусы и цитаты — от модели, итог и числа — от кода."""
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class _Strict(BaseModel):
@@ -42,6 +42,14 @@ class AlternativeItem(_Strict):
                     "no_info — сведений нет (молчание резюме — это no_info, а не refuted)")
     quote: str | None = None
     context_before: str | None = None
+
+    @field_validator('status', mode='before')
+    @classmethod
+    def normalize_unknown_status(cls, value: object) -> object:
+        # YandexGPT can use the final-result vocabulary in this extraction field.
+        # Only this absence-of-information alias is equivalent; all other invalid
+        # statuses still fail the Literal check. Never rewrite quotes or keys.
+        return 'no_info' if value == 'unknown' else value
 
 
 class FormalExtraction(_Strict):

@@ -121,3 +121,50 @@ def test_provider_message_is_shown_and_key_is_masked():
         call(llm)
     assert "403" in str(error.value) and "Permission denied" in str(error.value)
     assert "topsecretkey" not in str(error.value)
+
+
+def test_live_unknown_alternative_status_reaches_evaluator_as_no_info():
+    """Captured YandexGPT reply for 'Учусь в вузе': unknown is absence, never a fact."""
+    from pathlib import Path
+    from app.assessment.prompts import ASSESS_PROMPT_VERSION
+    from app.assessment.rules import parse_rule
+    from app.assessment.service import _assess_formal
+    from scripts.profile_case_inputs import CASES, case_profile
+
+    raw = (Path(__file__).parent / 'fixtures/formal-extraction-unknown-status.txt').read_text(encoding='utf-8')
+    llm = client(raw, raw, llm_structured_mode='prompt_json')
+    case = next(c for c in CASES if c['id'] == 'py-education-unknown')
+    profile, text = case_profile(case)
+    rules = {r.key: parse_rule(r.key, r.kind, r.params, r.verification) for r in profile.formal_requirements}
+    drafts = _assess_formal(profile, rules, text, llm, ASSESS_PROMPT_VERSION, '2026-11')
+    education = next(d for d in drafts if d.requirement.key == 'py.education')
+    assert education.result == 'unknown'
+    assert {a.key: a.result.value for a in education.alternatives} == {
+        'py.education.alt1': 'unknown', 'py.education.alt2': 'unknown',
+    }
+    assert education.evidence == []
+    assert llm.calls[0].attempts == 1
+
+
+@pytest.mark.parametrize('status', [None, '', 'met', 'unrecognized'])
+def test_unrecognized_alternative_status_is_not_silently_unknown(status):
+    import json
+    from app.assessment.llm_schemas import FormalExtraction
+
+    raw = json.dumps({'alternatives': [{'alternative_key': 'py.education.alt1', 'status': status}]})
+    llm = client(raw, raw)
+    with pytest.raises(LLMInvalidResponseError):
+        call(llm, FormalExtraction)
+    assert llm.calls[0].status == 'invalid_response'
+    assert llm.calls[0].attempts == 2
+
+
+def test_unknown_alias_is_serialized_canonically_without_rewriting_quotes():
+    from app.assessment.llm_schemas import FormalExtraction
+
+    raw = '{"alternatives":[{"alternative_key":"py.education.alt1","status":"unknown","quote":"unknown"}]}'
+    result = call(client(raw, raw), FormalExtraction)
+    alternative = result.model_dump()['alternatives'][0]
+    assert alternative['status'] == 'no_info'
+    assert alternative['alternative_key'] == 'py.education.alt1'
+    assert alternative['quote'] == 'unknown'
