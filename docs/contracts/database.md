@@ -705,3 +705,16 @@ save_assessment проверяет полный набор ключей screenin
 - **Илья:** не затронут.
 
 **Как проверено:** `test_models_match_migrations`; тесты резерва в `tests/test_selection.py` и `tests/test_api_workflow.py`. Среди них последний день срока, новый период после истечения, отзыв и детерминированная гонка двух транзакций на настоящей PostgreSQL. Вторая транзакция ждёт индекс, получает конфликт и возвращает запись первой.
+
+## 20. Передача получателю и версионные ответы департамента (`workflow-01`, 20.11.2026)
+
+Миграция `0007` поверх `0006` (при более раннем влитии `interview-01` с `0007` перенумеровывается в `0008`):
+
+| Таблица | Изменение | Зачем |
+|---|---|---|
+| `handoff_attempts` (новая) | `id`, `application_id`, `stage_event_id`, `recipient_user_id`, `recipient_name`, `recipient_department`, `channel`, `handed_off_at`, `created_by_user_id`, `summary_revision`, `summary_snapshot` (JSONB), `status` (`awaiting_response` / `responded` / `closed_without_response`), `closed_at`, `close_reason`, `closed_by_stage_event_id`, `request_id` (частичный UNIQUE) | Адресная передача с замороженным снимком сводки и отдельным состоянием ожидания по каждой попытке; повтор с тем же `request_id` идемпотентен |
+| `department_feedback` | `attempt_id` (FK `handoff_attempts`, CASCADE), `supersedes_id` (FK `department_feedback`, RESTRICT, частичный UNIQUE `WHERE supersedes_id IS NOT NULL`), `revision` (`>= 1`, UNIQUE `(attempt_id, revision)`), `contact_status` / `interview_status` (`yes` / `no` / `not_reported`), `response_channel`, `reported_by_user_id`, `reported_by_name`, `reported_at`, `request_id` (частичный UNIQUE) | Привязка ответа к попытке и цепочка исправлений без затирания прежних записей; частичный UNIQUE гарантирует защиту от гонки при одновременном исправлении одной версии; legacy-строки без `attempt_id` читаются с пометкой `origin_unrecorded = true` |
+
+**Новые функции доступа (`app/db/repository.py`):** `create_handoff_attempt`, `close_open_handoffs_for_application`, `record_handoff_feedback`, `has_department_application_access`, `has_department_text_access`.
+
+**Как проверено:** `alembic upgrade head`, `downgrade 0006`, `upgrade head`, `alembic check`; тесты `tests/test_api_handoff.py` на PostgreSQL, включая реальную параллельную гонку двух исправлений с одним `supersedes_id`.

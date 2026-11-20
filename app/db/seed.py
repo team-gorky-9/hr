@@ -109,6 +109,8 @@ DEMO_USERS: list[tuple[str, str, UserRole, str | None]] = [
     ("hr_demo", "Кадровик (учётка стенда)", UserRole.HR, None),
     ("dept_demo", "Представитель департамента (учётка стенда)", UserRole.DEPARTMENT,
      "Департамент-заказчик (учебный)"),
+    ("dept2_demo", "Представитель второго департамента (учётка стенда)", UserRole.DEPARTMENT,
+     "Департамент финансов (учебный)"),
     ("admin_demo", "Администратор (учётка стенда)", UserRole.ADMIN, None),
 ]
 

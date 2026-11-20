@@ -28,6 +28,9 @@ from app.db.enums import (
     FeedbackOutcome,
     FileFormat,
     FormalRequirementKind,
+    HandoffChannel,
+    HandoffStatus,
+    ProcessFactStatus,
     RequirementStatus,
     ReserveStatus,
     UserRole,
@@ -48,6 +51,7 @@ from app.db.models import (
     DepartmentFeedback,
     FormalCheck,
     FormalRequirement,
+    HandoffAttempt,
     Position,
     ProfileSource,
     RejectionReason,
@@ -77,6 +81,17 @@ class StageTransitionError(RepositoryError):
 
 class EvidenceError(RepositoryError):
     pass
+
+
+class RequestIdReusedError(RepositoryError):
+    pass
+
+
+class FeedbackConflictError(RepositoryError):
+    def __init__(self, message: str, *, current_feedback_id: uuid.UUID, current_revision: int):
+        super().__init__(message)
+        self.current_feedback_id = current_feedback_id
+        self.current_revision = current_revision
 
 
 def _get(session: Session, model, row_id: uuid.UUID, label: str):
@@ -437,6 +452,8 @@ def record_department_feedback(
     *,
     outcome: FeedbackOutcome,
     interview_held: bool | None = None,
+    interview_status: ProcessFactStatus | None = None,
+    contact_status: ProcessFactStatus = ProcessFactStatus.NOT_REPORTED,
     confirmed_competencies: Sequence[str] = (),
     gaps: str | None = None,
     rejection_reason_code: str | None = None,
@@ -449,9 +466,18 @@ def record_department_feedback(
     application = _get(session, Application, application_id, "отклик")
     if rejection_reason_code is not None and session.get(RejectionReason, rejection_reason_code) is None:
         raise RepositoryError(f"нет причины отказа «{rejection_reason_code}»")
+    if interview_status is None:
+        if interview_held is True:
+            interview_status = ProcessFactStatus.YES
+        elif interview_held is False:
+            interview_status = ProcessFactStatus.NO
+        else:
+            interview_status = ProcessFactStatus.NOT_REPORTED
     feedback = DepartmentFeedback(
         application_id=application.id,
         interview_held=interview_held,
+        interview_status=interview_status,
+        contact_status=contact_status,
         outcome=outcome,
         confirmed_competencies=list(confirmed_competencies),
         gaps=gaps,
@@ -463,6 +489,362 @@ def record_department_feedback(
     session.add(feedback)
     session.flush()
     return feedback
+
+
+def _handoff_matches(
+    existing: HandoffAttempt,
+    *,
+    application_id: uuid.UUID,
+    recipient_user_id: uuid.UUID | None,
+    recipient_name: str,
+    recipient_department: str,
+    channel: HandoffChannel,
+    summary_revision: str,
+) -> bool:
+    return (
+        existing.application_id == application_id
+        and existing.recipient_user_id == recipient_user_id
+        and existing.recipient_name == recipient_name
+        and existing.recipient_department == recipient_department
+        and existing.channel == channel
+        and existing.summary_revision == summary_revision
+    )
+
+
+def create_handoff_attempt(
+    session: Session,
+    *,
+    application_id: uuid.UUID,
+    stage_event_id: uuid.UUID | None,
+    recipient_user_id: uuid.UUID | None,
+    recipient_name: str,
+    recipient_department: str,
+    channel: HandoffChannel,
+    handed_off_at: datetime,
+    created_by_user_id: uuid.UUID | None,
+    summary_revision: str,
+    summary_snapshot: dict[str, Any],
+    request_id: uuid.UUID | None = None,
+) -> tuple[HandoffAttempt, bool]:
+    """Создать попытку передачи отклика получателю с замороженным снимком сводки.
+
+    Повтор с тем же request_id и теми же полями возвращает существующую попытку (created = False);
+    использование того же request_id для другой передачи отклоняется RequestIdReusedError.
+    """
+    _get(session, Application, application_id, "отклик")
+    if request_id is not None:
+        existing = session.scalar(select(HandoffAttempt).where(HandoffAttempt.request_id == request_id))
+        if existing is not None:
+            if _handoff_matches(
+                existing,
+                application_id=application_id,
+                recipient_user_id=recipient_user_id,
+                recipient_name=recipient_name,
+                recipient_department=recipient_department,
+                channel=channel,
+                summary_revision=summary_revision,
+            ):
+                return existing, False
+            raise RequestIdReusedError("request_id уже использован для другой передачи")
+
+    attempt = HandoffAttempt(
+        application_id=application_id,
+        stage_event_id=stage_event_id,
+        recipient_user_id=recipient_user_id,
+        recipient_name=recipient_name,
+        recipient_department=recipient_department,
+        channel=channel,
+        handed_off_at=handed_off_at,
+        created_by_user_id=created_by_user_id,
+        summary_revision=summary_revision,
+        summary_snapshot=summary_snapshot,
+        status=HandoffStatus.AWAITING_RESPONSE,
+        request_id=request_id,
+    )
+    savepoint = session.begin_nested()
+    try:
+        session.add(attempt)
+        session.flush()
+    except IntegrityError:
+        savepoint.rollback()
+        if request_id is not None:
+            existing = session.scalar(select(HandoffAttempt).where(HandoffAttempt.request_id == request_id))
+            if existing is not None:
+                if _handoff_matches(
+                    existing,
+                    application_id=application_id,
+                    recipient_user_id=recipient_user_id,
+                    recipient_name=recipient_name,
+                    recipient_department=recipient_department,
+                    channel=channel,
+                    summary_revision=summary_revision,
+                ):
+                    return existing, False
+                raise RequestIdReusedError("request_id уже использован для другой передачи")
+        raise
+    savepoint.commit()
+    session.refresh(attempt)
+    return attempt, True
+
+
+def close_open_handoffs_for_application(
+    session: Session,
+    application_id: uuid.UUID,
+    *,
+    closed_at: datetime,
+    close_reason: str,
+    stage_event_id: uuid.UUID | None,
+) -> int:
+    """Закрыть все незавершённые ожидания отклика при уходе с этапа передачи."""
+    open_attempts = list(
+        session.scalars(
+            select(HandoffAttempt).where(
+                HandoffAttempt.application_id == application_id,
+                HandoffAttempt.status == HandoffStatus.AWAITING_RESPONSE,
+            )
+        )
+    )
+    for attempt in open_attempts:
+        attempt.status = HandoffStatus.CLOSED_WITHOUT_RESPONSE
+        attempt.closed_at = closed_at
+        attempt.close_reason = close_reason
+        attempt.closed_by_stage_event_id = stage_event_id
+    if open_attempts:
+        session.flush()
+    return len(open_attempts)
+
+
+def _feedback_matches(
+    existing: DepartmentFeedback,
+    *,
+    application_id: uuid.UUID,
+    attempt_id: uuid.UUID,
+    supersedes_id: uuid.UUID | None,
+    outcome: FeedbackOutcome,
+    contact_status: ProcessFactStatus,
+    interview_status: ProcessFactStatus,
+    rejection_reason_code: str | None,
+    keep_in_reserve: bool | None,
+    comment: str | None,
+    gaps: str | None,
+    confirmed_competencies: Sequence[str],
+    response_channel: HandoffChannel | None,
+    reported_by_user_id: uuid.UUID | None,
+    reported_by_name: str | None,
+) -> bool:
+    return (
+        existing.application_id == application_id
+        and existing.attempt_id == attempt_id
+        and existing.supersedes_id == supersedes_id
+        and existing.outcome == outcome
+        and existing.contact_status == contact_status
+        and existing.interview_status == interview_status
+        and existing.rejection_reason_code == rejection_reason_code
+        and existing.keep_in_reserve == keep_in_reserve
+        and existing.comment == comment
+        and existing.gaps == gaps
+        and list(existing.confirmed_competencies or []) == list(confirmed_competencies)
+        and existing.response_channel == response_channel
+        and existing.reported_by_user_id == reported_by_user_id
+        and existing.reported_by_name == reported_by_name
+    )
+
+
+def record_handoff_feedback(
+    session: Session,
+    *,
+    application_id: uuid.UUID,
+    attempt_id: uuid.UUID,
+    outcome: FeedbackOutcome,
+    contact_status: ProcessFactStatus,
+    interview_status: ProcessFactStatus,
+    confirmed_competencies: Sequence[str] = (),
+    gaps: str | None = None,
+    rejection_reason_code: str | None = None,
+    keep_in_reserve: bool | None = None,
+    comment: str | None = None,
+    response_channel: HandoffChannel | None = None,
+    reported_by_user_id: uuid.UUID | None = None,
+    reported_by_name: str | None = None,
+    reported_at: datetime | None = None,
+    author_user_id: uuid.UUID | None = None,
+    supersedes_id: uuid.UUID | None = None,
+    request_id: uuid.UUID | None = None,
+) -> tuple[DepartmentFeedback, bool]:
+    """Записать ответ департамента или его исправление по конкретной попытке передачи.
+
+    Управляет статусом ожидания только этой попытки. Этап отклика и резерв не меняет.
+    """
+    application = _get(session, Application, application_id, "отклик")
+    if rejection_reason_code is not None and session.get(RejectionReason, rejection_reason_code) is None:
+        raise RepositoryError(f"нет причины отказа «{rejection_reason_code}»")
+
+    competencies_list = list(confirmed_competencies)
+    if request_id is not None:
+        existing = session.scalar(select(DepartmentFeedback).where(DepartmentFeedback.request_id == request_id))
+        if existing is not None:
+            if _feedback_matches(
+                existing,
+                application_id=application_id,
+                attempt_id=attempt_id,
+                supersedes_id=supersedes_id,
+                outcome=outcome,
+                contact_status=contact_status,
+                interview_status=interview_status,
+                rejection_reason_code=rejection_reason_code,
+                keep_in_reserve=keep_in_reserve,
+                comment=comment,
+                gaps=gaps,
+                confirmed_competencies=competencies_list,
+                response_channel=response_channel,
+                reported_by_user_id=reported_by_user_id,
+                reported_by_name=reported_by_name,
+            ):
+                return existing, False
+            raise RequestIdReusedError("request_id уже использован для другого отзыва")
+
+    # Блокируем попытку передачи, чтобы две конкурирующие правки одной версии не прошли вместе.
+    attempt = session.get(HandoffAttempt, attempt_id, with_for_update=True)
+    if attempt is None:
+        raise RepositoryError(f"нет передачи с id {attempt_id}")
+    if attempt.application_id != application.id:
+        raise RepositoryError("передача относится к другому отклику")
+
+    existing_rows = list(
+        session.scalars(
+            select(DepartmentFeedback)
+            .where(DepartmentFeedback.attempt_id == attempt.id)
+            .order_by(DepartmentFeedback.revision)
+        )
+    )
+    if supersedes_id is None:
+        if existing_rows:
+            latest = existing_rows[-1]
+            raise FeedbackConflictError(
+                "по этой передаче уже записан отзыв: для исправления укажите supersedes_id текущей версии",
+                current_feedback_id=latest.id,
+                current_revision=latest.revision,
+            )
+        revision = 1
+    else:
+        prev = next((row for row in existing_rows if row.id == supersedes_id), None)
+        if prev is None:
+            raise RepositoryError("исправляемый отзыв не относится к этой передаче или не найден")
+        if any(row.supersedes_id == prev.id for row in existing_rows):
+            latest = existing_rows[-1]
+            raise FeedbackConflictError(
+                "указанная версия отзыва уже исправлена",
+                current_feedback_id=latest.id,
+                current_revision=latest.revision,
+            )
+        revision = prev.revision + 1
+
+    interview_held = (
+        True
+        if interview_status == ProcessFactStatus.YES
+        else False
+        if interview_status == ProcessFactStatus.NO
+        else None
+    )
+    feedback = DepartmentFeedback(
+        application_id=application.id,
+        attempt_id=attempt.id,
+        supersedes_id=supersedes_id,
+        revision=revision,
+        contact_status=contact_status,
+        interview_status=interview_status,
+        interview_held=interview_held,
+        outcome=outcome,
+        confirmed_competencies=competencies_list,
+        gaps=gaps,
+        rejection_reason_code=rejection_reason_code,
+        keep_in_reserve=keep_in_reserve,
+        comment=comment,
+        response_channel=response_channel,
+        reported_by_user_id=reported_by_user_id,
+        reported_by_name=reported_by_name,
+        reported_at=reported_at,
+        author_user_id=author_user_id,
+        request_id=request_id,
+    )
+    savepoint = session.begin_nested()
+    try:
+        session.add(feedback)
+        session.flush()
+    except IntegrityError:
+        savepoint.rollback()
+        if request_id is not None:
+            existing = session.scalar(select(DepartmentFeedback).where(DepartmentFeedback.request_id == request_id))
+            if existing is not None:
+                if _feedback_matches(
+                    existing,
+                    application_id=application_id,
+                    attempt_id=attempt_id,
+                    supersedes_id=supersedes_id,
+                    outcome=outcome,
+                    contact_status=contact_status,
+                    interview_status=interview_status,
+                    rejection_reason_code=rejection_reason_code,
+                    keep_in_reserve=keep_in_reserve,
+                    comment=comment,
+                    gaps=gaps,
+                    confirmed_competencies=competencies_list,
+                    response_channel=response_channel,
+                    reported_by_user_id=reported_by_user_id,
+                    reported_by_name=reported_by_name,
+                ):
+                    return existing, False
+                raise RequestIdReusedError("request_id уже использован для другого отзыва")
+        latest = session.scalar(
+            select(DepartmentFeedback)
+            .where(DepartmentFeedback.attempt_id == attempt.id)
+            .order_by(DepartmentFeedback.revision.desc())
+        )
+        if latest is not None:
+            raise FeedbackConflictError(
+                "отзыв уже изменён другим запросом",
+                current_feedback_id=latest.id,
+                current_revision=latest.revision,
+            )
+        raise
+    savepoint.commit()
+    session.refresh(feedback)
+
+    if outcome in (FeedbackOutcome.FIT, FeedbackOutcome.NOT_FIT):
+        if attempt.status == HandoffStatus.AWAITING_RESPONSE:
+            attempt.status = HandoffStatus.RESPONDED
+            attempt.closed_at = feedback.received_at
+            attempt.close_reason = f"feedback:{outcome.value}"
+        elif attempt.status == HandoffStatus.RESPONDED:
+            attempt.close_reason = f"feedback:{outcome.value}"
+    elif outcome == FeedbackOutcome.PENDING and attempt.status == HandoffStatus.RESPONDED:
+        if application.current_stage_code in ("sent_to_department", "department_interview"):
+            attempt.status = HandoffStatus.AWAITING_RESPONSE
+            attempt.closed_at = None
+            attempt.close_reason = None
+    session.flush()
+    return feedback, True
+
+
+def has_department_application_access(session: Session, user_id: uuid.UUID, application_id: uuid.UUID) -> bool:
+    """Назначен ли сотрудник департамента получателем хотя бы одной передачи по этому отклику."""
+    return (
+        session.scalar(
+            select(HandoffAttempt.id)
+            .where(HandoffAttempt.application_id == application_id, HandoffAttempt.recipient_user_id == user_id)
+            .limit(1)
+        )
+        is not None
+    )
+
+
+def has_department_text_access(session: Session, user_id: uuid.UUID, candidate_text_id: uuid.UUID) -> bool:
+    """Упомянут ли очищенный текст в снимке сводки, переданном этому сотруднику департамента."""
+    target = str(candidate_text_id)
+    snapshots = session.scalars(
+        select(HandoffAttempt.summary_snapshot).where(HandoffAttempt.recipient_user_id == user_id)
+    )
+    return any(target in (snap.get("referenced_text_ids") or ()) for snap in snapshots if snap)
 
 
 # --- Кадровый резерв ---------------------------------------------------------

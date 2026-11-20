@@ -143,13 +143,21 @@ STAGE_2_ROUTES = {
     "/api/v1/analytics/funnel",
 }
 
+WORKFLOW_01_ROUTES = {
+    "/api/v1/applications/{application_id}/handoff-summary",
+    "/api/v1/applications/{application_id}/handoffs",
+    "/api/v1/handoffs",
+    "/api/v1/handoffs/{attempt_id}",
+    "/api/v1/applications/{application_id}/feedback",
+}
+
 
 def test_openapi_has_all_stage_1_routes(client):
-    """Маршруты чтения этапа 1 на месте, а лишних нет: кроме них — маршруты backend-02, поиск
-    и годовой отчёт (hr#16, проверяется в test_reporting.py). Новый модуль маршрутов добавляет сюда свой префикс."""
+    """Маршруты чтения этапа 1 на месте, а лишних нет: кроме них — маршруты backend-02,
+    workflow-01, поиск и годовой отчёт (hr#16). Новый модуль маршрутов добавляет сюда свой префикс."""
     paths = set(client.get("/openapi.json").json()["paths"])
     assert STAGE_1_ROUTES <= paths
-    extra = paths - STAGE_1_ROUTES - STAGE_2_ROUTES
+    extra = paths - STAGE_1_ROUTES - STAGE_2_ROUTES - WORKFLOW_01_ROUTES
     assert {p for p in extra if not p.startswith("/api/v1/reports/annual")} == {"/api/v1/search/candidates"}
 
 

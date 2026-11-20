@@ -167,12 +167,13 @@ def _event_out(
     )
 
 
-def move_stage(session: Session, application_id: uuid.UUID, body: StageMoveIn, user: User) -> StageMoveOut:
+def move_stage(session: Session, application_id: uuid.UUID, body: StageMoveIn, user: User) -> tuple[StageMoveOut, bool]:
     """Ручной перевод этапа кадровиком.
 
     Порядок проверок:
     1. Ввод (422): неизвестный этап или причина; причина не к отказу; для перехода в
-       «Отказ»/«Кандидат отказался» причина обязательна.
+       «Отказ»/«Кандидат отказался» причина обязательна; при переходе в sent_to_department
+       обязателен блок handoff (а для остальных этапов он запрещён).
     2. Строка отклика блокируется (SELECT … FOR UPDATE), и последний seq истории сравнивается
        с expected_seq формы. Не совпал — форма устарела (вторая вкладка уже перевела отклик):
        409 STALE_STAGE_FORM. Блокировка держится до commit, поэтому из двух одновременных
@@ -196,6 +197,23 @@ def move_stage(session: Session, application_id: uuid.UUID, body: StageMoveIn, u
         raise ApiError(422, "REJECTION_REASON_REQUIRED",
                        "Для отказа или отказа кандидата укажите причину из справочника",
                        {"to_stage_code": target.code})
+    if target.code == "sent_to_department":
+        if body.handoff is None:
+            raise ApiError(
+                422,
+                "HANDOFF_REQUIRED",
+                "Для перевода на этап «Передан в департамент» укажите получателя и версию сводки (handoff)",
+                {"to_stage_code": target.code},
+            )
+        from app.api import handoff
+        return handoff.move_to_sent_with_handoff(session, application, body, user)
+    if body.handoff is not None:
+        raise ApiError(
+            422,
+            "HANDOFF_NOT_ALLOWED",
+            "Блок handoff указывается только при переводе на этап «Передан в департамент»",
+            {"to_stage_code": target.code},
+        )
 
     session.refresh(application, with_for_update=True)
     current_seq = last_seq(session, application.id)
@@ -219,13 +237,24 @@ def move_stage(session: Session, application_id: uuid.UUID, body: StageMoveIn, u
         # Текст правила из репозитория: по-русски и без данных кандидата.
         raise ApiError(409, "STAGE_TRANSITION_CONFLICT", _sentence(str(error)),
                        {"current_stage_code": current_code, "to_stage_code": target.code}) from error
+    if target.code != "department_interview":
+        repo.close_open_handoffs_for_application(
+            session,
+            application.id,
+            closed_at=event.created_at,
+            close_reason=f"stage_moved:{target.code}",
+            stage_event_id=event.id,
+        )
     session.commit()
 
     stages = _stages(session)
-    return StageMoveOut(
-        application_id=application.id,
-        stage=stage_out(stages[application.current_stage_code]),
-        event=_event_out(event, stages, _reasons(session), {user.id: user}),
+    return (
+        StageMoveOut(
+            application_id=application.id,
+            stage=stage_out(stages[application.current_stage_code]),
+            event=_event_out(event, stages, _reasons(session), {user.id: user}),
+        ),
+        True,
     )
 
 
@@ -407,6 +436,7 @@ def funnel(
     position_id: uuid.UUID | None,
     period_from: date | None,
     period_to: date | None,
+    department: str | None = None,
 ) -> FunnelOut:
     """Сводка для руководителя по фактическим записям базы.
 
@@ -417,7 +447,7 @@ def funnel(
       reached_count — разные отклики, у которых есть переход на этап (stage_events);
     - closures: решения о закрытии (переход в «Принят», «Отказ», «Кандидат отказался»)
       за период по времени события, с причиной; без причины — отдельная строка «не указана»;
-    - open_waits: ожидания ответа считает workflow-01 по передачам; до него — null.
+    - open_waits: открытые ожидания ответа и длительность по передачам (workflow-01), с фильтром по department.
     """
     if vacancy_id is not None and session.get(Vacancy, vacancy_id) is None:
         raise not_found("VACANCY_NOT_FOUND", "Вакансия не найдена", vacancy_id=vacancy_id)
@@ -486,6 +516,8 @@ def funnel(
         ))
     closures.sort(key=lambda c: (stage_by_code[c.stage_code].sort_order, c.reason_code is None, c.reason_code or ""))
 
+    from app.api import handoff
+
     return FunnelOut(
         as_of=as_of,
         contour=contour,
@@ -498,5 +530,5 @@ def funnel(
         stages=stages,
         closures=closures,
         closures_without_reason=sum(c.count for c in closures if c.reason_code is None and c.stage_code != "hired"),
-        open_waits=None,
+        open_waits=handoff.funnel_open_waits(session, scope_ids, as_of=as_of, department=department),
     )

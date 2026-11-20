@@ -15,11 +15,27 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.api import services, workflow
-from app.api.auth import StaffUser
+from app.api import auth, handoff, services, workflow
+from app.api.auth import AuthenticatedUser, OptionalUser, StaffUser
+from app.api.errors import ApiError
 from app.api.schemas import (
+    ApplicationDetailOut,
+    ApplicationListOut,
+    AssessmentStatus,
+    CandidateTextOut,
+    ComparisonOut,
+    Contour,
     CrossAssessmentListOut,
     FunnelOut,
+    HandoffAttemptDetailOut,
+    HandoffCreateIn,
+    HandoffCreatedOut,
+    HandoffFeedbackCreatedOut,
+    HandoffFeedbackIn,
+    HandoffFeedbackListOut,
+    HandoffListOut,
+    HandoffSummaryOut,
+    HealthOut,
     RejectionReasonListOut,
     ReserveCreatedOut,
     ReserveEntryOut,
@@ -30,16 +46,10 @@ from app.api.schemas import (
     StageMoveIn,
     StageMoveOut,
     StageRefListOut,
-    ApplicationDetailOut,
-    ComparisonOut,
-    ApplicationListOut,
-    AssessmentStatus,
-    CandidateTextOut,
-    Contour,
-    HealthOut,
     VacancyListOut,
 )
-from app.db.enums import CheckResult
+from app.db import repository as repo
+from app.db.enums import CheckResult, HandoffStatus, UserRole
 from app.db.session import get_session
 
 router = APIRouter(prefix="/api/v1")
@@ -61,7 +71,8 @@ def health(session: SessionDep):
 
 
 @router.get("/vacancies", response_model=VacancyListOut)
-def list_vacancies(session: SessionDep, contour: ContourQuery = Contour.WORKING):
+def list_vacancies(session: SessionDep, contour: ContourQuery = Contour.WORKING, user: OptionalUser = None):
+    auth.ensure_not_department(user)
     return services.list_vacancies(session, contour)
 
 
@@ -75,7 +86,9 @@ def list_applications(
     formal_preliminary: bool | None = None,
     assessment_status: AssessmentStatus | None = None,
     applicability: Literal['confirmed', 'mismatch', 'unresolved', 'not_covered'] | None = None,
+    user: OptionalUser = None,
 ):
+    auth.ensure_not_department(user)
     filters = services.ApplicationFilters(
         applicability=applicability,
         stage_code=stage_code,
@@ -87,17 +100,39 @@ def list_applications(
 
 
 @router.get("/applications/{application_id}", response_model=ApplicationDetailOut)
-def get_application(application_id: uuid.UUID, session: SessionDep):
+def get_application(application_id: uuid.UUID, session: SessionDep, user: OptionalUser = None):
+    if user is not None and user.role == UserRole.DEPARTMENT:
+        if not repo.has_department_application_access(session, user.id, application_id):
+            raise ApiError(
+                403,
+                "FORBIDDEN_SCOPE",
+                "Доступ к карточке отклика разрешён только назначенному получателю",
+                {"application_id": str(application_id)},
+            )
     return services.get_application(session, application_id)
 
 
 @router.get('/applications/{application_id}/comparison', response_model=ComparisonOut)
-def get_comparison(application_id: uuid.UUID, profile_id: uuid.UUID, session: SessionDep):
+def get_comparison(
+    application_id: uuid.UUID,
+    profile_id: uuid.UUID,
+    session: SessionDep,
+    user: OptionalUser = None,
+):
+    auth.ensure_not_department(user)
     return services.get_comparison(session, application_id, profile_id)
 
 
 @router.get("/candidate-texts/{candidate_text_id}", response_model=CandidateTextOut)
-def get_candidate_text(candidate_text_id: uuid.UUID, session: SessionDep):
+def get_candidate_text(candidate_text_id: uuid.UUID, session: SessionDep, user: OptionalUser = None):
+    if user is not None and user.role == UserRole.DEPARTMENT:
+        if not repo.has_department_text_access(session, user.id, candidate_text_id):
+            raise ApiError(
+                403,
+                "FORBIDDEN_SCOPE",
+                "Доступ к тексту кандидата разрешён только для переданного вам отклика",
+                {"candidate_text_id": str(candidate_text_id)},
+            )
     return services.get_candidate_text(session, candidate_text_id)
 
 
@@ -117,8 +152,17 @@ def list_rejection_reasons(session: SessionDep, user: StaffUser):
 
 
 @router.post("/applications/{application_id}/stage", response_model=StageMoveOut, status_code=201)
-def move_stage(application_id: uuid.UUID, body: StageMoveIn, session: SessionDep, user: StaffUser):
-    return workflow.move_stage(session, application_id, body, user)
+def move_stage(
+    application_id: uuid.UUID,
+    body: StageMoveIn,
+    session: SessionDep,
+    user: StaffUser,
+    response: Response,
+):
+    result, created = workflow.move_stage(session, application_id, body, user)
+    if not created:
+        response.status_code = 200
+    return result
 
 
 @router.get("/applications/{application_id}/history", response_model=StageHistoryOut)
@@ -159,5 +203,88 @@ def get_funnel(
     position_id: uuid.UUID | None = None,
     period_from: Annotated[date | None, Query(description="Начало периода закрытий, включительно (МСК)")] = None,
     period_to: Annotated[date | None, Query(description="Конец периода закрытий, включительно (МСК)")] = None,
+    department: str | None = None,
 ):
-    return workflow.funnel(session, contour, vacancy_id, position_id, period_from, period_to)
+    return workflow.funnel(session, contour, vacancy_id, position_id, period_from, period_to, department=department)
+
+
+# =============================================================================
+# Этап 2б: передача руководителю, очередь ожиданий, ответ департамента (workflow-01)
+# =============================================================================
+
+@router.get("/applications/{application_id}/handoff-summary", response_model=HandoffSummaryOut)
+def get_handoff_summary(application_id: uuid.UUID, session: SessionDep, user: AuthenticatedUser):
+    return handoff.get_handoff_summary(session, application_id, user)
+
+
+@router.post("/applications/{application_id}/handoffs", response_model=HandoffCreatedOut, status_code=201)
+def create_handoff(
+    application_id: uuid.UUID,
+    body: HandoffCreateIn,
+    session: SessionDep,
+    user: StaffUser,
+    response: Response,
+):
+    result = handoff.create_additional_handoff(session, application_id, body, user)
+    if not result.created:
+        response.status_code = 200
+    return result
+
+
+@router.get("/applications/{application_id}/handoffs", response_model=HandoffListOut)
+def list_application_handoffs(application_id: uuid.UUID, session: SessionDep, user: AuthenticatedUser):
+    return handoff.list_application_handoffs(session, application_id, user)
+
+
+@router.get("/handoffs", response_model=HandoffListOut)
+def list_handoffs(
+    session: SessionDep,
+    user: AuthenticatedUser,
+    contour: ContourQuery = Contour.WORKING,
+    status: HandoffStatus | None = None,
+    department: str | None = None,
+    recipient_user_id: uuid.UUID | None = None,
+    actor_login: str | None = None,
+    vacancy_id: uuid.UUID | None = None,
+    position_id: uuid.UUID | None = None,
+):
+    return handoff.list_handoffs(
+        session,
+        user,
+        contour=contour,
+        status=status,
+        department=department,
+        recipient_user_id=recipient_user_id,
+        actor_login=actor_login,
+        vacancy_id=vacancy_id,
+        position_id=position_id,
+    )
+
+
+@router.get("/handoffs/{attempt_id}", response_model=HandoffAttemptDetailOut)
+def get_handoff_detail(attempt_id: uuid.UUID, session: SessionDep, user: AuthenticatedUser):
+    return handoff.get_handoff_detail(session, attempt_id, user)
+
+
+@router.post("/applications/{application_id}/feedback", response_model=HandoffFeedbackCreatedOut, status_code=201)
+def record_feedback(
+    application_id: uuid.UUID,
+    body: HandoffFeedbackIn,
+    session: SessionDep,
+    user: AuthenticatedUser,
+    response: Response,
+):
+    result = handoff.record_feedback(session, application_id, body, user)
+    if not result.created:
+        response.status_code = 200
+    return result
+
+
+@router.get("/applications/{application_id}/feedback", response_model=HandoffFeedbackListOut)
+def list_feedback(
+    application_id: uuid.UUID,
+    session: SessionDep,
+    user: AuthenticatedUser,
+    attempt_id: uuid.UUID | None = None,
+):
+    return handoff.list_feedback(session, application_id, user, attempt_id=attempt_id)

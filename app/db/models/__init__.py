@@ -15,6 +15,7 @@ from app.db.models.search import Embedding
 from app.db.models.selection import (
     Application,
     DepartmentFeedback,
+    HandoffAttempt,
     Interview,
     InterviewQuestion,
     RejectionReason,
@@ -41,6 +42,7 @@ __all__ = [
     "Embedding",
     "FormalCheck",
     "FormalRequirement",
+    "HandoffAttempt",
     "Interview",
     "InterviewQuestion",
     "Position",

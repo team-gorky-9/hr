@@ -2,7 +2,7 @@
 
 Отдаёт фронтенду вакансии, отклики, оценки и очищенные тексты (Этап 1, только чтение) и ведёт действия кадровика (Этап 2, backend-02): перевод этапов с историей, кросс-оценки, кадровый резерв, воронка. Персональные данные кандидатов не отдаёт ни один маршрут.
 
-Контракт: [api.md](../contracts/api.md) v0.4. Опирается на [database.md](../contracts/database.md) v1.8 (резерв — раздел 19): контуры п. 2.6.1, цитаты п. 2.11, внешние отклики п. 4.5. Владелец — Денис. Потребители — фронтенд (Ася) и сквозная сборка `qa-01`.
+Контракт: [api.md](../contracts/api.md) v0.5, [workflow.md](../contracts/workflow.md) v0.1. Опирается на [database.md](../contracts/database.md) v1.8 и раздел 20: контуры п. 2.6.1, цитаты п. 2.11, внешние отклики п. 4.5. Владелец — Денис. Потребители — фронтенд (Ася) и сквозная сборка `qa-01`.
 
 ## Запуск
 
@@ -48,25 +48,35 @@ uv run uvicorn app.main:app --reload
 | `POST /api/v1/reserve` | включение в резерв; `201` новая запись, `200` + `created: false` — действующая прежняя |
 | `POST /api/v1/reserve/{id}/withdraw` | отзыв основания резерва |
 | `GET /api/v1/positions/{id}/reserve?contour=` | действующий резерв на должность |
-| `GET /api/v1/analytics/funnel?contour=&vacancy_id=&position_id=&period_from=&period_to=` | воронка: этапы сейчас, закрытия за период |
+| `GET /api/v1/analytics/funnel?contour=&vacancy_id=&position_id=&period_from=&period_to=&department=` | воронка: этапы сейчас, закрытия за период, открытые ожидания `open_waits` |
 
-Передача руководителю и ответ департамента — `workflow-01`, гайд интервью — `interview-01`. Задел этих частей сохранён в локальной ветке `wip/workflow-01-interview-01-groundwork`.
+## Маршруты Этапа 2б (workflow-01)
+
+| Маршрут | Что делает |
+|---|---|
+| `GET /api/v1/applications/{id}/handoff-summary` | сводка JSON + Markdown без ПДн и заметок с контактами (`from_snapshot = true` для `department`) |
+| `POST /api/v1/applications/{id}/handoffs` | дополнительная передача другому получателю на этапе `sent_to_department` / `department_interview` |
+| `GET /api/v1/applications/{id}/handoffs`, `GET /api/v1/handoffs`, `GET /api/v1/handoffs/{attempt_id}` | очередь передач и просмотр замороженного снимка с историей отзывов |
+| `POST /api/v1/applications/{id}/feedback`, `GET /api/v1/applications/{id}/feedback` | регистрация и версионные исправления ответа департамента (`supersedes_id`) |
+
+Гайд интервью — `interview-01`.
 
 ## Как устроено
 
 ```
 app/main.py           create_app(): CORS, обработчики ошибок, роутеры (API и годовой отчёт)
-app/api/routes.py     маршруты: разбор параметров → вызов services / workflow
+app/api/routes.py     маршруты: разбор параметров → вызов services / workflow / handoff
 app/api/services.py   чтение Этапа 1: статус оценки, сборка AssessmentOut, границы цитат UTF-16, comparison
-app/api/workflow.py   backend-02: этапы, история, кросс-оценки, резерв, воронка
-app/api/auth.py       учебная авторизация: пользователь из X-User-Login, проверка роли
+app/api/workflow.py   backend-02: этапы, история, кросс-оценки, резерв (база резюме), воронка
+app/api/handoff.py    workflow-01: очищенная сводка, попытки передачи, очередь, доступ department, отзывы
+app/api/auth.py       учебная авторизация: X-User-Login (OptionalUser / AuthenticatedUser / StaffUser)
 app/api/schemas.py    DTO запросов и ответов (они же схема OpenAPI)
 app/api/errors.py     ApiError и единый формат {"error": {code, message, details}}
 ```
 
 ### Кто действует (учебная авторизация)
 
-`auth.current_user` читает `X-User-Login`, находит активного пользователя в `users`, роль берёт из базы. `require_role(...)` — зависимость FastAPI, которая отвечает `403 FORBIDDEN_ROLE`. Учётки стенда `hr_demo`, `dept_demo`, `admin_demo` создаёт `seed_demo_users()` в `app/db/seed.py`. Это подпись действия в журналах, а не защита: пароля нет. Маршруты Этапа 1 пользователя не требуют. Маршруты backend-02 требуют, в том числе на чтение: область доступа департамента не согласована, поэтому `department` по прямому ID ничего не получает.
+`auth.current_user` читает `X-User-Login`, находит активного пользователя в `users`, роль берёт из базы. `require_role(...)` — зависимость FastAPI, которая отвечает `403 FORBIDDEN_ROLE`. Учётки стенда `hr_demo`, `dept_demo`, `dept2_demo`, `admin_demo` создаёт `seed_demo_users()` в `app/db/seed.py`. Это подпись действия в журналах, а не защита: пароля нет. Маршруты Этапа 1 без заголовка доступны для обратной совместимости, а при переданной роли `department` проверяют область доступа к переданному отклику и тексту цитат из снимка (`403 FORBIDDEN_SCOPE`). Маршруты Этапа 2 требуют заголовок всегда.
 
 ### Транзакции записи
 
@@ -86,7 +96,7 @@ app/api/errors.py     ApiError и единый формат {"error": {code, mes
 
 ### Воронка
 
-Выборка — отклики `source = response` на вакансии платформы от кандидатов контура, с фильтром по вакансии или должности. `current_count` — `GROUP BY current_stage_code`; `reached_count` — разные `application_id` в `stage_events` по `to_stage_code`. Закрытия — события перехода в `hired`/`rejected`/`withdrawn` за период: даты включительно, сутки по `Europe/Moscow`, полуинтервал `[начало from; начало дня после to)`. Без причины — строка `reason_code = null`. `open_waits` — `null` до `workflow-01`. Годовой отчёт `app/reporting` строится из выгрузки без базы, поэтому эта воронка его подсчёты не повторяет.
+Выборка — отклики `source = response` на вакансии платформы от кандидатов контура, с фильтром по вакансии или должности. `current_count` — `GROUP BY current_stage_code`; `reached_count` — разные `application_id` в `stage_events` по `to_stage_code`. Закрытия — события перехода в `hired`/`rejected`/`withdrawn` за период: даты включительно, сутки по `Europe/Moscow`, полуинтервал `[начало from; начало дня после to)`. Без причины — строка `reason_code = null`. `open_waits` считает открытые попытки `handoff_attempts` (`status = awaiting_response`) и длительность ожидания на `as_of` (с опциональным фильтром `department`). Годовой отчёт `app/reporting` строится из выгрузки без базы, поэтому эта воронка его подсчёты не повторяет.
 
 ### Кросс-оценки
 
