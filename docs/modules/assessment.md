@@ -1,6 +1,6 @@
 # Модуль оценки
 
-Для команд утверждения ниже заранее нужен существующий активный HR/admin. Seed загружает справочники, но не создаёт `hr-demo`; укажите логин кадровика своей среды. Скрипт не создаёт пользователей и не меняет роли. Новый маршрут загрузки и утверждения — [модуль requirements](requirements.md).
+Для команд утверждения ниже заранее нужен существующий активный HR/admin. Актуальный seed создаёт учётку стенда `hr_demo` (с подчёркиванием); в рабочей среде укажите логин уполномоченного кадровика. Сам скрипт утверждения не создаёт пользователей и не меняет роли. Новый маршрут загрузки и утверждения — [модуль requirements](requirements.md).
 
 Контракт: [assessment v0.3](../contracts/assessment.md). Интеграция `feature/profile-assessment-integration`: main fc61d26 + профили 905ea9b + ai-01 c94285e. [Проверки и ограничения](../reports/profile-assessment-integration.md).
 
@@ -37,7 +37,7 @@ uv run python -m app.db.seed                                                    
 uv run python -m app.ingest --input fixtures/stage_0a --mapping fixtures/stage_0a/mapping.json   # 3. py-9001 (учебный)
 uv run python -m scripts.load_synthetic_profile                                      # 4. учебный профиль — черновик
 uv run python -m scripts.approve_profile --position-code python-dev --synthetic \
-    --approver hr-demo --basis "учебный профиль для qa-01" --commit                  # 5. утверждение кадровиком
+    --approver hr_demo --basis "учебный профиль для qa-01" --commit                  # 5. утверждение кадровиком
 APP=$(docker compose exec -T db psql -U hr -d hr -Atc \
   "select a.id from applications a join candidates c on c.id = a.candidate_id where c.code = 'py-9001' and a.source = 'response'")
 uv run python -m app.assessment run --candidate-code py-9001 --position-code python-dev \

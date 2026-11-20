@@ -81,6 +81,15 @@ def test_cli_help_and_bad_json_work_without_database(tmp_path):
     assert 'Traceback' not in result.stderr
 
 
+def test_invalid_source_path_is_domain_error_without_database(tmp_path):
+    api = public()
+    from app.requirements.package import validate_sources
+    manifest = {'documents': [{'id': 'di', 'path': 'bad\u0000.txt', 'sha256': '0' * 64,
+                               'kind': 'job_description', 'paragraphs': {}}]}
+    with pytest.raises(api.RequirementError):
+        validate_sources(manifest, tmp_path)
+
+
 def test_lifecycle_keeps_contours_and_caller_transaction(session):
     api = public()
     user = f.make_user(session)
@@ -126,6 +135,9 @@ def test_cli_load_is_atomic_and_explicit(session, monkeypatch, tmp_path, capsys,
     from app.db import session as db_session
     user = f.make_user(session, role=role)
     session.commit()
+    def user_snapshot():
+        return set(session.execute(select(User.id, User.login, User.role, User.is_active, User.full_name)).all())
+    users_before = user_snapshot()
     monkeypatch.setattr(db_session, 'SessionLocal', lambda: nullcontext(session))
     path = tmp_path / 'draft.json'
     path.write_text(json.dumps(draft()), encoding='utf-8')
@@ -141,7 +153,7 @@ def test_cli_load_is_atomic_and_explicit(session, monkeypatch, tmp_path, capsys,
     assert len(rows) == (1 if want == 'loaded' else 0)
     if rows:
         assert rows[0].status == (RequirementStatus.APPROVED if approve else RequirementStatus.DRAFT)
-    assert len(session.scalars(select(User)).all()) == 1
+    assert user_snapshot() == users_before
 
 
 def package_inputs(tmp_path):

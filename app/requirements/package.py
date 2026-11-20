@@ -10,7 +10,7 @@ import zipfile
 
 from app.db import repository as repo
 from app.db.enums import Channel, DocumentKind, FileFormat
-from .errors import RequirementError, invalid
+from .errors import RequirementError
 from .schemas import check_scalar_types, validate_draft
 from .service import atomic, create_validated, lock_position
 
@@ -81,7 +81,8 @@ def validate_sources(manifest, source_root):
         keys(item, set('id path sha256 kind version_note paragraphs revision'.split()),
              {'id', 'path', 'sha256', 'kind', 'paragraphs'}, 'documents')
         require(isinstance(item['id'], str) and item['id'] and item['id'] not in documents, path='documents.id')
-        require(isinstance(item['path'], str) and not PureWindowsPath(item['path']).drive, path='documents.path')
+        require(isinstance(item['path'], str) and '\0' not in item['path']
+                and not PureWindowsPath(item['path']).drive, path='documents.path')
         path = (root / item['path']).resolve()
         require(path.is_relative_to(root) and path != root and '..' not in Path(item['path']).parts,
                 'source_mismatch', 'documents.path')
