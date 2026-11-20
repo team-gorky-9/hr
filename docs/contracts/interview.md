@@ -1,6 +1,6 @@
 # Контракт гайда интервью и ответов
 
-**Версия:** v0.1 · **проект на согласовании** (Илья предлагает, Денис подтверждает хранение, права и HTTP; Давид — рубрику; Ася — DTO экрана). До подтверждения код по этому файлу не пишется.
+**Версия:** v0.2 · **проект на согласовании** (Илья предлагает, Денис подтверждает хранение, права и HTTP; Давид — рубрику; Ася — DTO экрана). v0.2 — правки Дениса в §4–5: встреча и версия гайда разделены, базовая оценка для устаревания, матрица оснований `confirm`, `request_id` у подтверждения, права по ролям, коды ошибок по `api.md`, миграция 0006; пометка [Денис]. До подтверждения код по этому файлу не пишется.
 **Постановка:** `interview-01` в штабе (`hq/tasks/interview-01-guide-and-answers.md`). **Опирается на:** [database.md](database.md) v1.7 (оценки, `competency_scores.details`, `confirm_formal_check`), [assessment.md](assessment.md) v0.3, [api.md](api.md) v0.3.
 **Пометки происхождения:** [задача] — из постановки `interview-01`; [иссл.] — из `research/notes/problem-mechanisms-screening-and-interview.md` штаба; [предл.] — предложение Ильи, требует подтверждения.
 
@@ -47,30 +47,55 @@
 
 ## 4. HTTP
 
+Общие соглашения — [api.md](api.md) §1: формат ошибки `{"error": {"code", "message", "details"}}`, коды ошибок в `UPPER_SNAKE_CASE`. Маршруты записи требуют заголовок `X-User-Login` (учебная авторизация `backend-02`): без него или с неизвестным логином — `401 USER_REQUIRED` / `UNKNOWN_USER`, роль без допуска — `403 FORBIDDEN_ROLE`. [Денис: согласовано с `app/api/auth.py` ветки `backend-02`]
+
+**Кто что может** [Денис, предл.; формулировки допуска подтверждают Маша и Давид с HR]:
+
+| Действие | `hr` | `admin` | `department` |
+|---|---|---|---|
+| сформировать / перечитать гайд | да | да | только `GET` гайда `kind=department` |
+| записать ответ, `kind=phone` | да | да | нет |
+| записать ответ, `kind=department` | да | да | да |
+| подтвердить требование | да | да | нет (так проверяет и `confirm_formal_check`) |
+
+**Интервью и гайд — разные записи** [Денис]. `interviews` — это встреча (кто, когда, итог `result`), её считают отчёты о звонках. Гайд — набор вопросов к встрече, у одной встречи может быть несколько версий гайда. Если хранить версию гайда строкой `interviews`, каждое `regenerate` создавало бы ещё один «звонок» в отчётности, а `held_at` / `result` расходились бы по версиям. Поэтому:
+
+- на пару (отклик, `kind`) открыта не больше чем одна встреча с `result = pending`; `POST` гайда находит её или создаёт;
+- версии гайда — строки `interview_guides` этой встречи (§5);
+- после записи итога встречи (`result ≠ pending`) следующий `POST` открывает новую встречу.
+
 ### `POST /api/v1/applications/{application_id}/interview-guide`
 
 Тело: `{"kind": "phone", "regenerate": false, "request_id": "<uuid>"}`.
 
 - `kind`: `phone` | `department` [задача: «раздельные сессии нужны, если участники и время различаются»].
-- Повтор с тем же `request_id` возвращает ранее созданный гайд.
-- `regenerate = true` создаёт новую версию гайда при новой оценке; ответы переносятся по `gap_ref_id` и ключу строки ядра.
+- Гайда у открытой встречи ещё нет → создаётся версия 1: `201`.
+- Гайд есть, `regenerate = false` → возвращается последняя версия без вызова модели: `200`.
+- `regenerate = true`:
+  - основание не изменилось (та же базовая оценка, версия профиля и рубрики, см. «Устаревание») → возвращается текущая версия, `model_calls = 0`: `200`;
+  - основание изменилось → новая версия `guide_version + 1`: `201`. Ответы не копируются: новый вопрос с тем же `gap_ref_id` или той же строкой ядра ссылается на прежний (`carried_from_question_id`) и показывает его последний ответ с `carried_over = true`.
+- Повтор с тем же `request_id` возвращает результат первого запроса (тот же гайд и тот же статус). Тот же `request_id` с другим `application_id` или `kind` → `409 REQUEST_ID_REUSED`.
+- Два параллельных `POST` с разными `request_id`: вторую вставку отклоняет `UNIQUE(interview_id, guide_version)`, сервер перечитывает и возвращает гайд первого запроса (`200`). Вторая версия не появляется.
+- **Транзакция и вызов модели** [Денис]. Сборка пробелов и вызов модели идут **вне** транзакции записи. Затем короткая транзакция: проверить, что текущая оценка пары и рубрика те же, что при сборке, и записать гайд. Если за время вызова оценка сменилась → `409 ASSESSMENT_CHANGED`, клиент повторяет запрос. Так соединение с БД не держится десятки секунд, а гайд не записывается по устаревшей оценке.
 
-Ответ `200` — `InterviewGuideOut`.
+Ответ — `InterviewGuideOut`.
 
-### `GET /api/v1/applications/{application_id}/interview-guide?kind=phone`
+### `GET /api/v1/applications/{application_id}/interview-guide?kind=phone[&guide_version=N]`
 
-Последний гайд или `404 guide_not_found`. Повторное чтение возвращает тот же набор и порядок.
+Без `guide_version` — последняя версия гайда последней встречи этого `kind`. Нет гайда → `404 GUIDE_NOT_FOUND`. Повторное чтение возвращает тот же набор и порядок вопросов. Чтение не вызывает модель и не пишет в БД.
 
 ### `InterviewGuideOut`
 
 ```json
 {
-  "interview_id": "uuid", "application_id": "uuid", "kind": "phone", "guide_version": 1,
+  "interview_id": "uuid", "guide_id": "uuid", "application_id": "uuid", "kind": "phone", "guide_version": 1,
   "is_training": true,
-  "assessment_id": "uuid", "assessment_version": 1, "profile_id": "uuid", "profile_version": 1,
+  "assessment_id": "uuid", "assessment_version": 1, "current_assessment_id": "uuid",
+  "profile_id": "uuid", "profile_version": 1,
   "rubric_status": "draft",
   "is_stale": false, "stale_reason": null,
   "prompt_version": "guide-v1", "model_calls": 1, "created_at": "2026-11-20T15:00:00+03:00",
+  "created_by": {"user_id": "uuid", "login": "hr_demo"},
   "core": [ "InterviewQuestionOut" ],
   "clarifications": [ "InterviewQuestionOut" ],
   "document_requests": [ {"requirement_id": "uuid", "requirement_key": "py.education", "title": "Диплом о высшем образовании", "reason": "по резюме: Высшее, Прикладная информатика; подтверждается документом"} ],
@@ -78,7 +103,20 @@
 }
 ```
 
-`stale_reason`: `assessment_changed` (у пары появилась новая оценка) | `profile_changed` | `rubric_changed`. Устаревший гайд читается по своей версии; ответы в нём не теряются.
+**Что снимок, а что считается при чтении** [Денис]:
+
+- снимок версии гайда: `core`, `clarifications` (текст, критерий, `sources`), `uncovered_gaps`, `assessment_id` — оценка, по которой собраны пробелы;
+- считается при каждом `GET` по **текущей** оценке пары: `current_assessment_id`, `is_stale` / `stale_reason`, `document_requests`, `status` вопросов (ниже). Поэтому после подтверждения требования гайд не надо перегенерировать: вопрос показывает, что требование закрыто.
+
+**Устаревание.** `confirm_formal_check` тоже создаёт новую версию оценки. Если считать любую новую версию «оценка изменилась», гайд устаревал бы после каждого подтверждения из самого гайда. Поэтому сравнивается **базовая** оценка — последняя версия, записанная `save_assessment` (вывод модели по резюме); версии из `confirm_formal_check` ссылаются на неё (`assessments.base_assessment_id`, §5).
+
+`stale_reason`:
+- `assessment_changed` — у пары новая базовая оценка (переоценка резюме);
+- `assessment_stale` — сама текущая оценка устарела по правилам [api.md](api.md) (`stale_reason` оценки: текст, профиль, `algorithm_changed`);
+- `profile_changed` — у вакансии утверждена другая версия профиля;
+- `rubric_changed` — после создания гайда утверждена или изменена рубрика ядра.
+
+Устаревший гайд читается по своей версии, ответы в нём не теряются. Писать ответы можно только в последнюю версию гайда (см. ниже).
 
 ### `InterviewQuestionOut`
 
@@ -96,74 +134,115 @@
     {"type": "formal_check", "requirement_id": "uuid", "key": "py-train/requirement/experience-commercial-24m", "result": "unknown"},
     {"type": "card_missing", "value": "длительность коммерческого опыта"}
   ],
+  "status": "open",
+  "resolved_by": null,
+  "carried_from_question_id": null,
   "answer": null
 }
 ```
 
-У вопроса ядра `kind = "core"`, `gap_ref_id = null`, в `sources` — строка профиля (`type = "profile_row"`, `key`, `competency_id`).
+- `status` [Денис]: `open` — требования из `sources` в текущей оценке всё ещё `unknown` / без свидетельства; `resolved` — по всем требованиям из `sources` есть результат с `basis ≠ resume`; тогда `resolved_by = {"assessment_id", "assessment_version", "requirement_id", "result", "basis", "confirmed_by": {"user_id", "login"}}`. Для вопроса ядра — по той же строке профиля.
+- `answer` — последняя ревизия: `AnswerOut` (ниже) или `null`; у перенесённого ответа дополнительно `carried_over: true`.
+- У вопроса ядра `kind = "core"`, `gap_ref_id = null`, в `sources` — строка профиля (`type = "profile_row"`, `key`, `requirement_id` или `indicator_key`, `competency_id`) и `rubric_question_id`.
 
 ### `POST /api/v1/interviews/{interview_id}/questions/{question_id}/answers`
 
 Тело: `{"text": "С 03.2023 по 12.2024 по договору, писал API-тесты", "source": "phone", "expected_revision": 0, "request_id": "<uuid>"}`.
 
-- `source`: `phone` | `in_person` | `written`.
-- Ответ `201` — `AnswerOut`: `{answer_id, revision, text, source, author: {user_id, login}, created_at, previous_answer_id}`.
+- `source`: `phone` | `in_person` | `written`. Значение `unknown` — только у ответов, перенесённых миграцией из `answer_notes`; через API его не передают.
+- `text`: непустой, не длиннее 4000 символов. В текст не пишут номера документов и контакты — это ПДн; сводка руководителю показывает ответы только после той же очистки, что и резюме [Денис, предл.].
+- `expected_revision` — номер последней ревизии, которую видел клиент; `0`, если ответа ещё нет. Ревизии нумеруются с 1.
+- Ответ `201` — `AnswerOut`: `{answer_id, question_id, revision, text, source, author: {user_id, login}, created_at, previous_answer_id}`. `previous_answer_id` — ревизия, которую исправили (`null` у первой); это та же цепочка, что и `revision`, оставлена для удобства чтения истории.
+- `GET /api/v1/interviews/{interview_id}/questions/{question_id}/answers` — все ревизии по возрастанию [Денис: история нужна экрану и сводке, в гайде только последняя].
 - Исправление создаёт новую ревизию, предыдущая читается.
-- Повтор с тем же `request_id` возвращает ту же запись, второй строки нет.
+- Повтор с тем же `request_id` возвращает ту же запись (`201` → повтор `200`), второй строки нет. Тот же `request_id` с другим текстом или вопросом → `409 REQUEST_ID_REUSED`.
 
 Ошибки:
-- `409 revision_conflict` — `expected_revision` не текущая, нужно перечитать гайд;
-- `404 question_not_found` — вопрос не из этого интервью, сюда же подстановка вопроса чужого отклика;
-- `403 forbidden` — не активный `hr` или `admin`.
+- `409 REVISION_CONFLICT` — `expected_revision` не текущая; `details: {"current_revision": N, "current_answer_id": "uuid"}`, клиент перечитывает и показывает принятый ответ с автором;
+- `409 GUIDE_SUPERSEDED` — вопрос из не последней версии гайда; `details: {"guide_version": N}`;
+- `404 QUESTION_NOT_FOUND` — вопрос не из этого интервью, сюда же подстановка вопроса чужого отклика;
+- `403 FORBIDDEN_ROLE` — роль без допуска к этому `kind` (таблица выше).
+
+Проверки прав и принадлежности выполняются до записи; при отказе строк не появляется.
 
 ### `POST /api/v1/assessments/{assessment_id}/formal-checks/{requirement_id}/confirm`
 
-Тело: `{"result": "met", "basis": "documents", "comment": "Диплом 2015 г. проверен", "answer_id": "uuid|null"}`.
+Тело: `{"result": "met", "basis": "documents", "comment": "Диплом 2015 г. проверен", "answer_id": "uuid|null", "request_id": "<uuid>"}`.
 
-- Вызывает `confirm_formal_check`, ответ — новая версия оценки в формате `api.md`.
-- `basis = interview` разрешён, только если `verification` требования — `interview` [предл.: сейчас `confirm_formal_check` принимает любое основание кроме `resume`]. Устный ответ на звонке по документальному требованию оставляет `is_preliminary` и элемент `document_requests` [задача, п. 4].
-- `answer_id` связывает подтверждение с ответом, на который опирался кадровик.
+- Вызывает `confirm_formal_check`; ответ `201` — новая версия оценки в формате `AssessmentOut` ([api.md](api.md)).
+- `assessment_id` служит и оптимистической блокировкой: подтверждать можно только текущую версию, иначе `409 ASSESSMENT_NOT_CURRENT` с `details.current_assessment_id`. Два кадровика, подтверждающие одновременно, не перезапишут друг друга молча.
+- `request_id` [Денис]: без него двойное нажатие создаёт две версии оценки. Повтор возвращает ту же версию (`200`).
+- `comment` обязателен и непуст (так проверяет функция).
+- **Допустимое основание** зависит от `verification` требования. Предложение Ильи («`interview` только при `verification = interview`») не закрывает контрольный пример: в `python-dev.v5` и учебном профиле стаж — `verification = resume`, `check_stage = screening`, и ответ на уточняющий вопрос про стаж нельзя было бы внести вообще, а `documents` дал бы `is_preliminary = true`. Вместо этого [Денис, предл.; итоговую матрицу подтверждают Маша и Давид с HR, задача п. «Предметное согласование»]:
+
+  | `verification` требования | Допустимый `basis` в `confirm` | `is_preliminary` после подтверждения |
+  |---|---|---|
+  | `resume` (только `screening`) | `interview`, `documents` | `false` |
+  | `documents` (только `screening`) | `documents` | `false` |
+  | `interview` (только `interview`) | `interview` | `false` |
+  | `test` | `test` | `false` |
+
+  Иное основание → `409 BASIS_NOT_ALLOWED`, `details: {"verification", "allowed_bases"}`. Устный ответ по документальному требованию поэтому не подтверждает его: требование остаётся `is_preliminary`, элемент `document_requests` виден [задача, п. 4].
+  Для этого меняются две функции продукта (часть Дениса): `confirm_formal_check` проверяет матрицу; `is_preliminary` считает предварительным результат, основание которого не входит в допустимые для `verification` (сейчас `basis ≠ verification`, и `interview` по требованию `resume` стал бы «предварительным»).
+- `answer_id`:
+  - при `basis = interview` обязателен, при других основаниях необязателен;
+  - ответ должен принадлежать вопросу отклика того же кандидата, а в `sources` этого вопроса должно быть это требование; иначе `409 ANSWER_NOT_FOR_REQUIREMENT`;
+  - сохраняется в строке требования новой версии (`formal_checks.source_answer_id`, §5), поэтому сводка показывает, на какой ответ опирался кадровик.
 - Этап отклика не меняется.
 
 ### Ошибки формирования гайда
 
 | Код | Когда | Кадровик видит |
 |---|---|---|
-| `409 assessment_required` | у отклика нет текущей оценки | «Сначала оцените отклик» |
-| `409 not_applicable` / `mapping_required` | отклик не к этому профилю (`profile-applicability.md`) | статус применимости, гайда нет |
-| `409 assessment_stale` | оценка устарела (`api.md`, `stale_reason`) | «Переоценить» |
-| `503 llm_unavailable` | модель недоступна | ранее сохранённый гайд с ответами остаётся доступен; новый не создан |
+| `409 ASSESSMENT_REQUIRED` | у отклика нет текущей оценки | «Сначала оцените отклик» |
+| `409 NOT_APPLICABLE` / `MAPPING_REQUIRED` | отклик не к этому профилю (`profile-applicability.md`) | статус применимости, гайда нет |
+| `409 ASSESSMENT_STALE` | оценка устарела (`api.md`, `stale_reason`) | «Переоценить» |
+| `409 NO_APPROVED_PROFILE` | у вакансии нет утверждённого профиля нужного контура | «Нет утверждённого профиля» |
+| `409 ASSESSMENT_CHANGED` | оценка сменилась, пока шёл вызов модели | повторить запрос |
+| `503 LLM_UNAVAILABLE` | модель недоступна, а она нужна (есть пробелы или нет рубрики ядра) | ранее сохранённый гайд с ответами остаётся доступен по `GET`; новый не создан |
 
-## 5. Хранение — предложение для Дениса
+## 5. Хранение — миграция 0006 (часть Дениса)
 
-Сейчас есть `interviews` и `interview_questions` (`gap`, `question`, `author`, `answer_notes`, `score`). Для контракта не хватает:
+База — [database.md](database.md) v1.7 и миграция 0005 из `feature/profile-assessment-integration`. Ветка контракта сейчас от `main`, где v1.7 ещё нет: перед слиянием её нужно перебазировать на интеграционную ветку или на `main` после её слияния.
 
-| Что | Предложение [предл.] |
+Сейчас есть `interviews` (встреча) и `interview_questions` (`interview_id`, `competency_id`, `gap`, `question`, `author`, `answer_notes`, `score`, `sort_order`). Изменения [Денис, предл.]:
+
+| Таблица | Изменение |
 |---|---|
-| версия гайда и её основание | `interviews`: `assessment_id`, `profile_id`, `guide_version`, `prompt_version`, `request_id` (уникален) |
-| тип и происхождение вопроса | `interview_questions`: `kind` (`core` / `clarification`), `gap_ref_id`, `sources` jsonb, `criterion` jsonb, `requirement_id` / `indicator_key` null |
-| ответы с историей | новая `interview_answers`: `question_id`, `revision`, `text`, `source`, `author_user_id`, `created_at`, `previous_answer_id`, `request_id` уникален; UNIQUE(`question_id`, `revision`) |
-| рубрика ядра | новая `interview_rubric_questions`: `profile_id`, `row_key`, `question`, `criterion`, `author`, `status` (`draft` / `approved`), `approved_by_user_id`; одна строка на строку профиля |
-| запросы документов | не храним отдельно: вычисляются из текущей оценки при чтении |
+| `interview_guides` (новая) | `id`, `interview_id` FK, `guide_version`, `assessment_id` FK (базовая оценка сборки), `profile_id` FK, `rubric_version`, `prompt_version`, `model_calls`, `uncovered_gaps` jsonb, `request_id` UNIQUE, `is_migrated`, `created_by_user_id`, `created_at`; UNIQUE(`interview_id`, `guide_version`); CHECK: `assessment_id IS NULL` только при `is_migrated` |
+| `interviews` | частичный UNIQUE(`application_id`, `kind`) WHERE `result = 'pending'` — одна открытая встреча на тип |
+| `interview_questions` | `guide_id` FK (NOT NULL после переноса), `kind` (`core` / `clarification`), `gap_ref_id`, `sources` jsonb, `criterion` jsonb, `requirement_id` FK null, `indicator_key` null, `rubric_question_id` FK null, `carried_from_question_id` FK null; UNIQUE(`guide_id`, `gap_ref_id`) WHERE `gap_ref_id IS NOT NULL`; CHECK: `kind = 'core'` ⇔ `rubric_question_id IS NOT NULL` и `gap_ref_id IS NULL`. `interview_id` остаётся для обратной совместимости и маршрута ответа. `gap` хранит заголовок пробела |
+| `interview_answers` (новая) | `id`, `question_id` FK, `revision` (≥ 1), `text`, `source` (`phone` / `in_person` / `written` / `unknown`), `author_user_id` FK null, `previous_answer_id` FK null, `request_id` UNIQUE null, `created_at`; UNIQUE(`question_id`, `revision`); CHECK: `author_user_id IS NULL` и `request_id IS NULL` только при `source = 'unknown'`. Строки только добавляются |
+| `interview_rubric_questions` (новая) | `id`, `profile_id` FK, `row_key`, `requirement_id` FK null, `indicator_key` null (ровно одно из двух), `question`, `criterion` jsonb, `author`, `status` (`draft` / `approved`), `version`, `approved_by_user_id` null, `approved_at` null; UNIQUE(`profile_id`, `row_key`). Первую генерацию ядра двумя запросами одновременно разрешает `INSERT … ON CONFLICT DO NOTHING` с перечтением. Маршрут утверждения рубрики в этот контракт не входит: до решения §7 — скрипт, как утверждение профиля |
+| `assessments` | `base_assessment_id` FK null: `null` у версии из `save_assessment`; у версии из `confirm_formal_check` — базовая версия, от которой она произошла (копируется по цепочке) |
+| `formal_checks` | `source_answer_id` FK `interview_answers` null, ON DELETE RESTRICT; CHECK: не `null` только при `basis <> 'resume'`; при копировании строк в новую версию копируется |
+| запросы документов | не храним: вычисляются из текущей оценки при чтении |
 
-Старые `answer_notes` читаются как ответ ревизии 0 с `source = unknown` и пометкой «происхождение неизвестно» [задача].
+**Перенос старых данных** (в той же миграции):
+- для каждой существующей `interviews` создаётся `interview_guides` версии 1 без оценки (`is_migrated = true`, `assessment_id = null`), вопросы привязываются к ней с `kind = clarification`;
+- непустой `answer_notes` переносится в `interview_answers` ревизией 1 с `source = unknown`, `author_user_id = null`; экран показывает «происхождение неизвестно» [задача]. Ответ получает `answer_id`, поэтому на него можно сослаться в `confirm`. Колонка `answer_notes` после переноса не пишется и удаляется в следующей версии;
+- `score` в контракт не входит: колонка остаётся, API её не возвращает, судьба решается со сводкой руководителю.
+
+**Функции `app/db/repository.py`** (сигнатуры уточню в database.md v1.8 вместе с миграцией): `create_interview_guide(...)`, `get_interview_guide(...)`, `add_interview_answer(..., expected_revision, request_id)`, `confirm_formal_check(..., answer_id=None)` с матрицей оснований из §4, `is_preliminary(...)` по той же матрице.
 
 ## 6. Контрольный пример (критерии приёмки `interview-01`)
 
 1. **`py-9001`, учебный профиль.** Стаж `unknown`, в карточке `missing: ["длительность коммерческого опыта"]`, индикатор API-тестов подтверждён.
    - Ожидание: `clarifications` — **один** вопрос про сроки и характер работы, оба источника в `sources`; `uncovered_gaps = []`, `document_requests = []`, `model_calls = 1`.
    - У учебного профиля нет строк `interview`, поэтому `core = []`.
+   - После ответа «с 03.2023 по 12.2024 по договору» кадровик подтверждает стаж: `confirm` с `basis = interview` и `answer_id` → новая версия оценки, стаж `met`, `is_preliminary = false`. `GET` гайда: `is_stale = false`, вопрос `status = resolved`, `resolved_by.basis = interview`.
 2. **Второй кандидат того же профиля, стаж `met`, индикатор подтверждён.**
    - Ожидание: `clarifications = []`, `model_calls = 0`.
    - `core` совпадает с первым кандидатом побайтно; на профиле с ядром проверяется на Python v5 или консультанте v4.
 3. **Ответ и повтор.**
    - Ответ записывается под вопросом 1.
    - Повтор запроса с тем же `request_id` даёт ту же запись.
-   - Вопрос чужого отклика — `404`.
-   - Параллельная правка той же ревизии — `409`.
+   - Вопрос чужого отклика — `404 QUESTION_NOT_FOUND`; роль `department` по `kind = phone` — `403 FORBIDDEN_ROLE`; в обоих случаях строк не добавилось.
+   - Параллельная правка той же ревизии — `409 REVISION_CONFLICT`, сохранён первый ответ с его автором.
+   - Ответ в версию гайда, вытесненную `regenerate`, — `409 GUIDE_SUPERSEDED`.
 4. **Документальное требование** (образование `is_preliminary`).
    - До звонка — в `document_requests`.
-   - После устного ответа — всё ещё там.
+   - После устного ответа — всё ещё там; `confirm` с `basis = interview` — `409 BASIS_NOT_ALLOWED`.
    - После `confirm` с `basis = documents` — новая версия оценки, `is_preliminary = false`; ответ и прежняя версия читаемы.
 5. **Сбой модели.** При `503` прежний гайд с ответами возвращается по `GET`.
 
@@ -175,3 +254,5 @@
 | Кто утверждает рубрику ядра | Давид, HR | `draft` с пометкой на экране |
 | Бюджет уточнений | HR (звонок 15–40 мин) | 6 |
 | Объединение индикаторов одной компетенции в один вопрос | Илья по живому прогону | объединяем |
+| Матрица допустимых оснований `confirm` (§4), в частности принимает ли HR устный ответ по требованию `verification = resume` | Маша и Давид с HR | предложение Дениса из §4 |
+| Пишет ли департамент ответы в `kind = department` сам или через кадровика | Маша с HR | роль `department` может писать |
