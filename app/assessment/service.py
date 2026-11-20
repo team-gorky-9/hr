@@ -20,6 +20,9 @@ from sqlalchemy.orm import Session
 
 from app.ai.client import LLMClient
 from app.assessment.errors import AssessmentDomainError
+from app.ai.errors import LLMInvalidResponseError
+from app.assessment.counters import aggregate_competency, validate_groups
+from app.assessment.version import ALGORITHM_VERSION
 from app.assessment.evidence import ResolvedQuote, resolve_quote
 from app.assessment.experience import Period, Statement, decide_commercial
 from app.assessment.llm_schemas import CompetencyExtraction, FormalExtraction
@@ -45,17 +48,17 @@ from app.db.enums import AuditAction, CheckResult, RequirementStatus
 from app.db.models import CandidateCard as CardRow
 from app.db.models import (
     CandidateText,
+    Candidate,
     Competency,
     FormalRequirement,
     RequirementProfile,
 )
-from app.schemas.assessment import CompetencyScoreIn, FormalCheckIn
+from app.schemas.assessment import AlternativeResultIn, CompetencyScoreIn, FormalCheckIn
+from app.schemas.competency_details import IndicatorResult
 from app.schemas.card import CandidateCard, Evidence
 
 Mode = Literal["operational", "technical"]
 _AS_OF = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
-# Индикаторы с такой проверкой по резюме не оцениваются: они уходят в вопросы интервью.
-_INTERVIEW_STAGE = {"interview", "test"}
 
 
 # --- Журнал вызовов модели -----------------------------------------------------
@@ -72,7 +75,7 @@ def record_llm_calls(session: Session, llm: LLMClient, candidate_id: uuid.UUID) 
 # --- Карточка ------------------------------------------------------------------
 
 def extract_candidate_card(session: Session, *, candidate_id: uuid.UUID, llm: LLMClient,
-                           prompt_version: str = CARD_PROMPT_VERSION) -> uuid.UUID:
+                           prompt_version: str = CARD_PROMPT_VERSION, record_calls: bool = True) -> uuid.UUID:
     text = repo.get_current_text(session, candidate_id)
     if text is None:
         raise AssessmentDomainError("no_clean_text", "у кандидата нет очищенного текста")
@@ -81,7 +84,8 @@ def extract_candidate_card(session: Session, *, candidate_id: uuid.UUID, llm: LL
     card.pii_hidden = True  # модель видела только очищенный текст
     row = repo.add_candidate_card(session, candidate_id, card, extractor=llm.model_name("extract"),
                                   prompt_version=prompt_version, candidate_text_id=text.id)
-    record_llm_calls(session, llm, candidate_id)
+    if record_calls:
+        record_llm_calls(session, llm, candidate_id)
     return row.id
 
 
@@ -94,6 +98,7 @@ class _CheckDraft:
     result: CheckResult
     evidence: list[Evidence] = field(default_factory=list)
     details: dict[str, Any] = field(default_factory=dict)
+    alternatives: list[AlternativeResultIn] = field(default_factory=list)
 
 
 def assess_candidate(
@@ -110,24 +115,28 @@ def assess_candidate(
     profile = session.get(RequirementProfile, profile_id)
     if profile is None:
         raise AssessmentDomainError("no_profile", f"нет профиля требований {profile_id}")
-    _check_mode(profile, mode)
+    candidate = session.get(Candidate, candidate_id)
+    if candidate is None:
+        raise AssessmentDomainError('no_candidate', 'кандидат не найден')
+    _check_mode(profile, mode, candidate=candidate)
+    validate_groups(profile.competencies)
     # Правила разбираются до вызова модели: неизвестный формат — оценки нет вовсе.
     rules = {r.key: parse_rule(r.key, r.kind, r.params, r.verification) for r in profile.formal_requirements}
 
     text = repo.get_current_text(session, candidate_id)
     if text is None:
         raise AssessmentDomainError("no_clean_text", "у кандидата нет очищенного текста")
-    card_row = _card_for_text(session, candidate_id=candidate_id, text=text, card_id=card_id, llm=llm)
     as_of = as_of or date.today().strftime("%Y-%m")
     if not _AS_OF.match(as_of):
         raise AssessmentDomainError("bad_as_of", f"as_of должен быть 'ГГГГ-ММ', получено {as_of!r}")
+    card_row = _card_for_text(session, candidate_id=candidate_id, text=text, card_id=card_id, llm=llm)
 
     drafts = _assess_formal(profile, rules, text, llm, prompt_version, as_of)
     scores = [_assess_competency(c, text, llm, prompt_version) for c in profile.competencies]
 
     checks = [_to_check_in(d) for d in drafts]
     effective = {d.requirement.id: d.result for d in drafts}
-    mandatory = [r.id for r in profile.formal_requirements if r.is_mandatory]
+    mandatory = [r.id for r in profile.formal_requirements if r.is_mandatory and r.check_stage == 'screening']
     summary = _summary(formal_result(effective, mandatory), drafts)
 
     assessment = repo.save_assessment(
@@ -140,12 +149,14 @@ def assess_candidate(
         competency_scores=scores,
         summary=summary,
         prompt_version=prompt_version,
+        algorithm_version=ALGORITHM_VERSION,
+        calculation_as_of=as_of,
     )
     record_llm_calls(session, llm, candidate_id)
     return assessment.id
 
 
-def _check_mode(profile: RequirementProfile, mode: Mode) -> None:
+def _check_mode(profile: RequirementProfile, mode: Mode, *, candidate=None) -> None:
     if profile.status == RequirementStatus.ARCHIVED:
         raise AssessmentDomainError("profile_not_approved", "профиль в архиве")
     if mode == "operational":
@@ -154,10 +165,11 @@ def _check_mode(profile: RequirementProfile, mode: Mode) -> None:
                 "profile_not_approved",
                 "рабочая оценка — только по утверждённому реальному профилю; учебный профиль — в режиме technical",
             )
+        if candidate is not None and candidate.is_synthetic:
+            raise AssessmentDomainError('candidate_contour', 'рабочий режим требует реального кандидата')
     elif mode == "technical":
-        if not profile.is_synthetic:
-            raise AssessmentDomainError("technical_mode_real_profile",
-                                        "технический режим — только для учебного профиля")
+        if candidate is not None and not candidate.is_synthetic:
+            raise AssessmentDomainError('candidate_contour', 'технический режим требует учебного кандидата')
     else:
         raise AssessmentDomainError("bad_mode", f"неизвестный режим {mode!r}")
 
@@ -175,7 +187,9 @@ def _card_for_text(session: Session, *, candidate_id: uuid.UUID, text: Candidate
         return row
     row = repo.get_current_card(session, candidate_id)
     if row is None or row.candidate_text_id != text.id:
-        new_id = extract_candidate_card(session, candidate_id=candidate_id, llm=llm)
+        # Keep calls until the whole assessment succeeds; a later rollback must not
+        # lose the extraction call before CLI writes its failure audit transaction.
+        new_id = extract_candidate_card(session, candidate_id=candidate_id, llm=llm, record_calls=False)
         row = session.get(CardRow, new_id)
     return row
 
@@ -184,15 +198,20 @@ def _card_for_text(session: Session, *, candidate_id: uuid.UUID, text: Candidate
 
 def _assess_formal(profile: RequirementProfile, rules: dict[str, Rule], text: CandidateText,
                    llm: LLMClient, prompt_version: str, as_of: str) -> list[_CheckDraft]:
-    education = [r for r in rules.values() if isinstance(r, EducationRule)]
-    experience = [r for r in rules.values() if isinstance(r, ExperienceRule)]
+    active = {r.key for r in profile.formal_requirements if r.check_stage == 'screening'}
+    education = [r for r in rules.values() if isinstance(r, EducationRule) and r.key in active]
+    experience = [r for r in rules.values() if isinstance(r, ExperienceRule) and r.key in active]
+    requirements = {r.key: r for r in profile.formal_requirements}
     extraction = FormalExtraction()
     if education or experience:
-        hints = [{"requirement": r.key, "relevant_experience": r.relevance_hint} for r in experience if r.relevance_hint]
+        hints = [{"requirement": r.key, "relevant_experience": r.relevance_hint,
+                  "acceptance": requirements[r.key].acceptance} for r in experience]
         alternatives = [
             {"alternative_key": alt["key"], "requirement": rule.key,
              "condition": {k: v for k, v in alt.items() if k != "key"},
-             "description": _description(profile, rule.key)}
+             "description": _description(profile, rule.key),
+             "acceptance": requirements[rule.key].acceptance,
+             "requires_requirement": rule.requires}
             for rule in education for alt in rule.alternatives
         ]
         extraction = llm.complete_structured(
@@ -201,6 +220,8 @@ def _assess_formal(profile: RequirementProfile, rules: dict[str, Rule], text: Ca
                         alternatives=alternatives),
             FormalExtraction, model_role="assess", prompt_version=prompt_version,
         )
+        _validate_answer_keys([a.alternative_key for a in extraction.alternatives],
+                              {a['key'] for r in education for a in r.alternatives})
 
     drafts: dict[str, _CheckDraft] = {}
     # Сначала требования без зависимостей, затем зависящие (направление после уровня).
@@ -209,12 +230,15 @@ def _assess_formal(profile: RequirementProfile, rules: dict[str, Rule], text: Ca
                                     r.sort_order))
     for requirement in ordered:
         rule = rules[requirement.key]
-        if isinstance(rule, ExperienceRule):
+        if requirement.key not in active:
+            draft = _CheckDraft(requirement, CheckResult.UNKNOWN,
+                                details={'notes': ['проверяется на интервью']})
+        elif isinstance(rule, ExperienceRule):
             draft = _experience_check(requirement, rule, extraction, text, as_of)
         elif isinstance(rule, EducationRule):
             draft = _education_check(requirement, rule, extraction, text)
             dependency = drafts.get(rule.requires) if rule.requires else None
-            if dependency is not None and dependency.result == CheckResult.UNKNOWN and draft.result != CheckResult.NOT_MET:
+            if dependency is not None and dependency.result != CheckResult.MET:
                 draft.result, draft.evidence = CheckResult.UNKNOWN, []
                 draft.details.setdefault("notes", []).append(f"зависит от {rule.requires}: там нет сведений")
         else:
@@ -291,28 +315,36 @@ def _education_check(requirement: FormalRequirement, rule: EducationRule, extrac
     statuses: dict[str, str] = {}
     met_evidence: list[Evidence] = []
     refuted_evidence: list[Evidence] = []
+    alternative_results = []
     for alternative in rule.alternatives:
         answer = answers.get(alternative["key"])
-        found = _resolve(text, answer.quote, answer.context_before) if answer else None
-        if answer and answer.status == "confirmed" and found:
+        fragments = list(answer.quotes) if answer else []
+        if answer and answer.quote:
+            fragments.append(answer)
+        resolved = [_resolve(text, q.quote, q.context_before) for q in fragments]
+        valid = bool(resolved) and all(resolved)
+        quotes = list({(q.evidence.start, q.evidence.end): q.evidence for q in resolved if q}.values())
+        if answer and answer.status == "confirmed" and valid:
             statuses[alternative["key"]] = "met"
-            met_evidence.append(found.evidence)
-        elif answer and answer.status == "refuted" and found:
+            met_evidence.extend(quotes)
+        elif answer and answer.status == "refuted" and valid:
             statuses[alternative["key"]] = "not_met"
-            refuted_evidence.append(found.evidence)
+            refuted_evidence.extend(quotes)
         else:
             statuses[alternative["key"]] = "unknown"
+        alternative_results.append(AlternativeResultIn(key=alternative['key'],
+            result=statuses[alternative['key']], evidence=quotes))
     details = {"rule": requirement.kind, "alternatives": statuses}
     if "met" in statuses.values():
-        return _CheckDraft(requirement, CheckResult.MET, met_evidence, details)
+        return _CheckDraft(requirement, CheckResult.MET, met_evidence, details, alternative_results)
     if statuses and all(s == "not_met" for s in statuses.values()):
-        return _CheckDraft(requirement, CheckResult.NOT_MET, refuted_evidence, details)
+        return _CheckDraft(requirement, CheckResult.NOT_MET, refuted_evidence, details, alternative_results)
     details["gap"] = "образование" if requirement.kind == "education_level" else "направление подготовки"
-    return _CheckDraft(requirement, CheckResult.UNKNOWN, [], details)
+    return _CheckDraft(requirement, CheckResult.UNKNOWN, [], details, alternative_results)
 
 
 def _apply_basis(draft: _CheckDraft) -> _CheckDraft:
-    """Понижение неподтверждённого и правило «по резюме не закрывается» (план ai-01, Р7)."""
+    """Невалидная цитата понижает результат; необходимость документа — только предварительность."""
     confirmation = confirm_result(draft.result, [EvidenceVerdict.OK] * len(draft.evidence))
     if confirmation.issue is not None:
         draft.details["downgraded"] = confirmation.issue.value
@@ -320,9 +352,7 @@ def _apply_basis(draft: _CheckDraft) -> _CheckDraft:
     draft.details["basis"] = "resume"
     verification = draft.requirement.verification
     if draft.result == CheckResult.MET and verification != "resume":
-        # Требование подтверждается документом/интервью: по резюме — только «заявлено».
-        draft.result = CheckResult.UNKNOWN
-        draft.details["claimed"] = "met"
+        draft.details["is_preliminary"] = True
         draft.details["needs"] = str(verification)
     return draft
 
@@ -333,6 +363,7 @@ def _to_check_in(draft: _CheckDraft) -> FormalCheckIn:
         result=draft.result,
         explanation=_explanation(draft.details),
         evidence=draft.evidence,
+        alternatives=draft.alternatives,
     )
 
 
@@ -352,7 +383,7 @@ def _assess_competency(competency: Competency, text: CandidateText, llm: LLMClie
                        prompt_version: str) -> CompetencyScoreIn:
     excluded = [i for i in competency.indicators if i.excluded_from_scoring]
     on_interview = [i for i in competency.indicators
-                    if not i.excluded_from_scoring and str(i.verification) in _INTERVIEW_STAGE]
+                    if not i.excluded_from_scoring and i.check_stage == 'interview']
     screening = [i for i in competency.indicators if i not in excluded and i not in on_interview]
 
     answers = {}
@@ -360,14 +391,16 @@ def _assess_competency(competency: Competency, text: CandidateText, llm: LLMClie
         extraction = llm.complete_structured(
             ASSESS_COMPETENCY_SYSTEM,
             competency_user(text.text, competency=competency.name,
-                            indicators=[{"indicator_key": i.key, "text": i.text} for i in screening]),
+                            indicators=[{"indicator_key": i.key, "text": i.text,
+                                         "acceptance": i.acceptance} for i in screening]),
             CompetencyExtraction, model_role="assess", prompt_version=prompt_version,
         )
+        _validate_answer_keys([a.indicator_key for a in extraction.indicators], {i.key for i in screening})
         answers = {a.indicator_key: a for a in extraction.indicators}
 
-    counters = {"mandatory": _counter(), "desired": _counter()}
     statuses: dict[str, dict[str, Any]] = {}
     evidence: list[Evidence] = []
+    indicator_results = []
     for indicator in screening:
         answer = answers.get(indicator.key)
         found = _resolve(text, answer.quote, answer.context_before) if answer else None
@@ -376,32 +409,30 @@ def _assess_competency(competency: Competency, text: CandidateText, llm: LLMClie
             evidence.append(found.evidence)
         else:
             status = "no_info"
-        bucket = counters["mandatory" if indicator.is_mandatory else "desired"]
-        bucket["total"] += 1
-        bucket[status] += 1
         statuses[indicator.key] = {"status": status}
         if found is not None and found.ambiguous_location:
             statuses[indicator.key]["ambiguous_location"] = True
+        indicator_results.append(IndicatorResult(key=indicator.key, status=status,
+            evidence=[found.evidence] if found else [], ambiguous_location=bool(found and found.ambiguous_location)))
 
-    details = {
-        "basis": "resume",
-        "mandatory": counters["mandatory"],
-        "desired": counters["desired"],
-        "on_interview": len(on_interview),
-        "excluded": len(excluded),
-        "indicators": statuses,
-    }
+    typed = aggregate_competency(competency.indicators, {r.key: r.status for r in indicator_results})
+    typed.indicators = indicator_results
+    details = typed.model_dump(mode='json')
+    # Keep the historical explanation readable; typed data is authoritative.
+    details['indicators'] = statuses
     return CompetencyScoreIn(competency_id=competency.id, level=None,
-                             explanation="[resume] " + json.dumps(details, ensure_ascii=False), evidence=evidence)
+                             explanation="[resume] " + json.dumps(details, ensure_ascii=False), evidence=evidence,
+                             details=typed)
 
 
-def _counter() -> dict[str, int]:
-    return {"confirmed": 0, "contradicted": 0, "no_info": 0, "total": 0}
+def _validate_answer_keys(keys: list[str], expected: set[str]) -> None:
+    if len(keys) != len(set(keys)) or not set(keys) <= expected:
+        raise LLMInvalidResponseError('ответ содержит повторяющийся или неизвестный ключ')
 
 
 def _summary(result: CheckResult, drafts: list[_CheckDraft]) -> str:
     gaps = sorted({d.details["gap"] for d in drafts if d.result == CheckResult.UNKNOWN and d.details.get("gap")})
-    claimed = [d.requirement.description for d in drafts if d.details.get("claimed")]
+    claimed = [d.requirement.description for d in drafts if d.details.get("is_preliminary")]
     parts = [f"Формальные требования: {result.value}."]
     if gaps:
         parts.append("Пробелы: " + ", ".join(gaps) + ".")

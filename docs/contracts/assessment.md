@@ -1,8 +1,8 @@
 # Контракт: модуль извлечения карточки и оценивания (`app/ai/`, `app/assessment/`)
 
-**Версия:** 0.2 (проект к Этапу 1) · **Дата:** 2026-11-20 · **Владелец:** Илья · **Потребители:** HTTP API (`app/api/`), CLI-прогон, модуль интервью (Этап 2б).
+**Версия:** 0.3 (интеграционная ветка) · **Дата:** 2026-11-20 · **Владелец модуля:** Илья. Реализацию интеграции разрешил Давид после архитектурного разбора; это не дополнительное согласование коллегами и не approve профилей.
 
-Опирается на [database.md](database.md) v1.1+ (единый формат профиля, `create_requirement_profile`, `approve_requirement_profile`) и пакет профилей Давида 0.2 (`fixtures/requirement_profiles/`, `params` версии `0.1`). Правила стажа и счётчиков согласованы с Давидом и Родионом 20.11.2026.
+Опирается на [database.md](database.md) v1.7, пакет профилей 0.2 и params 0.1. Основания и альтернативы поддержаны с БД v1.5; typed details, same_as и версия алгоритма добавлены миграцией 0005. Результаты проверки: [отчёт интеграции](../reports/profile-assessment-integration.md).
 
 **Изменения относительно v0.1:**
 - `params` — по пакету Давида, `min_years` убран;
@@ -32,16 +32,21 @@
 
 | Режим | Какой профиль допускается | Что видит кадровик | Иначе |
 |---|---|---|---|
-| `operational` (по умолчанию) | `status = approved` и `is_synthetic = false` | рабочая оценка | `AssessmentDomainError(profile_not_approved)` |
-| `technical` | только `is_synthetic = true`, любой статус | оценка с пометкой «синтетика, не рабочая рекомендация» | реальный профиль в техническом режиме → `AssessmentDomainError(technical_mode_real_profile)` |
+| `operational` (по умолчанию) | реальный approved; кандидат только реальный | рабочая оценка в явно заданном контексте | `profile_not_approved` или `candidate_contour` |
+| `technical` | кандидат только учебный; профиль по умолчанию учебный approved, явно по ID — любой неархивный | учебная оценка | реальный кандидат → `candidate_contour`; archived запрещён |
 
 Технический режим нужен для `py-9001`. Сохранённая оценка по учебному профилю распознаётся через `requirement_profiles.is_synthetic`. **API не показывает её в рабочих списках как рекомендацию.**
 
-> **Согласование с БД v1.5 (предложение Дениса, ждёт подтверждения Ильи).** Учебный профиль теперь утверждается (решение Родиона), но в своём контуре (`database.md` п. 2.6.1): у должности может быть утверждённый рабочий и утверждённый учебный профиль. Поэтому:
-> - профиль выбирать через `get_approved_profile(position_id, synthetic=…)`; рабочий режим — `synthetic=False`;
-> - в `operational` проверять `status = approved` **и** `is_synthetic = false` у профиля **и** `is_synthetic = false` у кандидата; `assessment_refusal` сейчас смотрит только статус;
-> - `technical` допускать, если учебный кандидат **или** учебный профиль: 25 случаев stage-0b-01 проверяют учебными кандидатами правила реальных черновиков; реального кандидата по учебному профилю или черновику база не сохранит (`RepositoryError`);
-> - `check_stage` читать из `formal_requirements` / `competency_indicators`, а не выводить из `verification` или `kind`.
+Выбор по умолчанию: `get_approved_profile(position_id, synthetic=…)`. `check_stage` читается непосредственно у строк. Отказ происходит до извлечения карточки и вызовов модели. Неизвестные правила проверяются на всех этапах, включая interview.
+
+### 1.2. Назначение проверки и применимость
+
+`assess_candidate` считает пару кандидат/профиль. Вход CLI использует `assess_in_context`:
+
+- `purpose=primary` требует ID прямого отклика кандидата на целевую должность. Для hr-consultant общий resolver сначала проверяет posting_title. mismatch/unresolved дают аудированный skipped без вызовов модели и без изменения этапа кандидата.
+- `purpose=comparison` задаётся явно. Можно сравнить кандидата с целевой должностью, сохранив происхождение отклика. Новый отклик не создаётся.
+
+Purpose не заменяет operational/technical. Политика: [profile-applicability.md](profile-applicability.md). Контекст каждого запуска хранится в audit_log отдельно от переиспользуемой оценки. Повторное использование требует совпадения текста, профиля, algorithm_version, prompt_version и as_of.
 
 ## 2. Конфигурация модели (`app/ai/config.py`)
 
@@ -67,13 +72,13 @@
 
 ```python
 def extract_candidate_card(session, *, candidate_id: uuid.UUID, llm: LLMClient,
-                           prompt_version: str = "card-v1") -> uuid.UUID:
+                           prompt_version: str = "card-v2") -> uuid.UUID:
     """Текущий очищенный текст → CandidateCard → repository.add_candidate_card. Возвращает card_id."""
 
 def assess_candidate(session, *, candidate_id: uuid.UUID, profile_id: uuid.UUID, llm: LLMClient,
                      mode: Literal["operational", "technical"] = "operational",
                      card_id: uuid.UUID | None = None, as_of: str | None = None,
-                     prompt_version: str = "assess-v1") -> uuid.UUID:
+                     prompt_version: str = "assess-v2") -> uuid.UUID:
     """Проверяет режим и профиль, правила params и версию текста; оценивает; находит цитаты кодом;
     понижает неподтверждённое; сохраняет через repository.save_assessment. as_of = 'ГГГГ-ММ'
     для текущего места работы (по умолчанию — месяц расчёта)."""
@@ -83,7 +88,7 @@ def assess_candidate(session, *, candidate_id: uuid.UUID, profile_id: uuid.UUID,
 
 | Ошибка | `reason` | Оценка создаётся? |
 |---|---|---|
-| `AssessmentDomainError` | `profile_not_approved`, `technical_mode_real_profile`, `stale_card`, `no_clean_text` | нет |
+| `AssessmentDomainError` | `profile_not_approved`, `candidate_contour`, `stale_card`, `no_clean_text`, `application_owner`, `not_primary_application`, `bad_as_of` | нет |
 | `RuleUnsupportedError` | `rule_unsupported`: неизвестная `schema_version` или ключ `params`, неизвестный `kind` | нет: оценка по профилю не создаётся вовсе, чтобы не получить молчаливый `unknown` |
 | `LLMUnavailableError` | сеть, таймаут, HTTP 5xx/429 | нет |
 | `LLMInvalidResponseError` | JSON не прошёл схему после повтора | нет |
@@ -130,16 +135,16 @@ def assess_candidate(session, *, candidate_id: uuid.UUID, profile_id: uuid.UUID,
   - участники в одной компетенции, с одинаковым `check_stage`, без исключённых;
   - группа обязательна, если обязателен хоть один участник;
   - статус группы: противоречие сильнее подтверждения; противоречие + подтверждение → «противоречит» и ручная сверка; подтверждение + нет сведений → подтверждено.
-- **До отдельного хранения по индикаторам** счётчики и статусы индикаторов пишутся в `competency_scores.explanation` в машиночитаемом виде (JSON-строка `{"mandatory": {"confirmed": X, "total": Y, "contradicted": …}, …}`).
+- **Хранение:** `competency_scores.details` версии 1.0 содержит результаты по ключам, цитаты каждого индикатора, группы, manual_review и счётчики. Repository сверяет ключи, пересчитывает счётчики и проверяет все вложенные цитаты. `explanation` сохраняется для чтения человеком и старых потребителей; новый код не разбирает её как контракт.
 
 ## 5. CLI (Этап 1)
 
 ```bash
-uv run python -m app.assessment run --candidate-code py-9001 --position-code python-dev --technical --as-of 2026-11
+uv run python -m app.assessment run --candidate-code py-9001 --position-code python-dev --technical --purpose comparison --profile-id <draft-profile-uuid> --as-of 2026-11
 uv run python -m app.assessment batch --position-code python-dev          # Этап 2а
 ```
 
-Транзакция на каждого кандидата: ошибка одного не откатывает остальных. Вывод — JSON-сводка: `candidate_code`, `mode`, `status` (`ok` | `domain_error` | `rule_unsupported` | `llm_error`), `card_id`, `assessment_id`, `formal_result`, `error`.
+Транзакция на каждый отклик; batch фильтрует контур кандидата, сохраняет контекст каждого отклика и повторно использует подходящую оценку пары. Для run/primary обязателен `--application-id`. `status=skipped` означает непригодный/неустановленный контекст основного отбора, а не отказ кандидату. Ошибки модели сохраняют журнал вызовов, включая извлечение карточки до сбоя.
 
 ## 6. Сквозной контрольный пример (`py-9001`, режим `technical`)
 

@@ -9,6 +9,7 @@
 """
 import math
 import re
+from datetime import date
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from typing import Literal
@@ -24,9 +25,16 @@ def month_number(year: int, month: int) -> int:
 
 
 def parse_point(value: str | None) -> tuple[int, int | None] | None:
-    """«2024-05» → (2024, 5); «2024» → (2024, None); пусто или мусор → None."""
+    """Preserve year/month precision; full valid card dates count calendar months."""
     if not value:
         return None
+    value = value.strip()
+    if re.fullmatch(r'\d{4}-\d{2}-\d{2}', value):
+        try:
+            point = date.fromisoformat(value)
+        except ValueError:
+            return None
+        return point.year, point.month
     found = _YEAR_MONTH.match(value.strip())
     if not found:
         return None

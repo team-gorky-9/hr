@@ -10,7 +10,7 @@ class _Strict(BaseModel):
 
 class PeriodItem(_Strict):
     """Одно место работы, стажировка или проект — как написано в резюме."""
-    start: str | None = Field(default=None, description="Начало: 'ГГГГ-ММ', например '2024-05'; только год — 'ГГГГ'; нет — null")
+    start: str | None = Field(default=None, description="Начало: 'ГГГГ-ММ-ДД', 'ГГГГ-ММ' или 'ГГГГ', с исходной точностью; нет — null")
     end: str | None = Field(default=None, description="Конец в том же формате; при 'по настоящее время' — null и is_current=true")
     is_current: bool = False
     kind: Literal["work", "contract", "internship", "project", "unknown"] = Field(
@@ -29,7 +29,13 @@ class StatementItem(_Strict):
     quote: str
 
 
+class QuoteItem(_Strict):
+    quote: str
+    context_before: str | None = None
+
+
 class AlternativeItem(_Strict):
+    quotes: list[QuoteItem] = Field(default_factory=list)
     alternative_key: str
     status: Literal["confirmed", "refuted", "no_info"] = Field(
         description="confirmed — в тексте прямо подтверждено; refuted — в тексте прямо опровергнуто; "

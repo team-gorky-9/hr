@@ -36,7 +36,7 @@ def make_candidate(session, text: str, code: str = "py-9001"):
         original_path=f"Синтетика/{code}.txt", raw_text=f"{code}\n{text}",
     )
     return repo.create_candidate(session, code=code, source_document_id=document.id,
-                                 redacted_text=text, redaction_method="test")
+                                 redacted_text=text, redaction_method="test", is_synthetic=True)
 
 
 def model(statement=None, indicator_quote=BASE, *, periods=(), alternatives=(), fail=None):
@@ -186,8 +186,11 @@ def test_prompt_injection_cannot_produce_met(session, profile):
 # --- Сценарий 9: неизвестное правило ----------------------------------------------------------------
 
 def test_unknown_rule_version_creates_nothing_and_skips_model(session):
-    profile = create_fixture_profile(session, FIXTURE, params_override={
-        "schema_version": "99.0", "scope": "total_commercial", "minimum_defined": True, "min_months": 24})
+    profile = create_fixture_profile(session, FIXTURE)
+    # New loader rejects this. Simulate an unsupported legacy rule already in storage.
+    profile.formal_requirements[0].params = {
+        "schema_version": "99.0", "scope": "total_commercial", "minimum_defined": True, "min_months": 24}
+    session.flush()
     candidate = make_candidate(session, BASE)
     llm = FakeLLMClient(model())
     with pytest.raises(RuleUnsupportedError):
@@ -196,8 +199,10 @@ def test_unknown_rule_version_creates_nothing_and_skips_model(session):
 
 
 def test_unknown_params_key_is_rule_unsupported(session):
-    profile = create_fixture_profile(session, FIXTURE, params_override={
-        "schema_version": "0.1", "scope": "total_commercial", "minimum_defined": True, "min_months": 24, "min_years": 2})
+    profile = create_fixture_profile(session, FIXTURE)
+    profile.formal_requirements[0].params = {
+        "schema_version": "0.1", "scope": "total_commercial", "minimum_defined": True, "min_months": 24, "min_years": 2}
+    session.flush()
     candidate = make_candidate(session, BASE)
     with pytest.raises(RuleUnsupportedError):
         assess_candidate(session, candidate_id=candidate.id, profile_id=profile.id,
@@ -286,15 +291,17 @@ RETRAIN = "Профессиональная переподготовка по п
 NO_RETRAIN = "Профессиональной переподготовки по юриспруденции или ГМУ нет."
 
 
-def test_retraining_met_is_only_claimed_when_documents_needed(session):
+def test_retraining_met_is_preliminary_when_documents_needed(session):
     profile = education_profile(session)
     llm = FakeLLMClient(edu_model(("confirmed", ECON), ("refuted", ECON), ("confirmed", RETRAIN)))
     _, assessment = run(session, profile, ECON + " " + RETRAIN, llm)
     level, field = assessment.formal_checks
     assert level.result == CheckResult.MET
     info = details(field.explanation)
-    assert field.result == CheckResult.UNKNOWN and info["claimed"] == "met" and info["needs"] == "documents"
-    assert field.evidence and assessment.formal_result == CheckResult.UNKNOWN
+    assert field.result == CheckResult.MET and field.is_preliminary and info["needs"] == "documents"
+    assert field.evidence and assessment.formal_result == CheckResult.MET
+    assert assessment.formal_preliminary
+    assert len(field.alternatives) == 2
     score = details(assessment.competency_scores[0].explanation)
     assert score["on_interview"] == 1 and score["mandatory"]["total"] == 0
 

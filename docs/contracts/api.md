@@ -1,8 +1,20 @@
 # Контракт: HTTP API (`app/api/`)
 
-**Версия:** 0.2 (проект к Этапу 1 + контур Этапа 2) · **Дата:** 2026-11-20 · **Владелец:** Денис · **Потребители:** фронтенд (`frontend/`, Ася).
+**Версия:** 0.3 (интеграционная ветка) · **Дата:** 2026-11-20 · **Владелец:** Денис · **Потребители:** фронтенд. Дополнение разрешено Давидом в составе интеграционного плана; согласование коллегами не приписывается.
 
-Опирается на [database.md](database.md) v1.5 и [assessment.md](assessment.md) v0.2.
+Опирается на [database.md](database.md) v1.7 и [assessment.md](assessment.md) v0.3.
+
+## Дополнение v0.3: применимость и подробные счётчики
+
+Список и карточка отклика возвращают posting_title, target_position_code и applicability (status/reason/версия и hash политики/входной snapshot). Для hr-consultant решение общего resolver имеет приоритет над сохранённой оценкой пары: mismatch → assessment_status=not_applicable, unresolved → mapping_required; основной assessment и его formal_result/overall_score скрыты. Это не новые CheckResult и не переход этапа отбора. Остальные должности имеют applicability=null (политика не задана), без автоматического confirmed.
+
+GET списка принимает `applicability=confirmed|mismatch|unresolved|not_covered`. По умолчанию показывает все отклики. Ответ содержит imported_count и confirmed_count/mismatch_count/unresolved_count/not_covered_count по всем откликам вакансии выбранного контура до фильтров; total — число отфильтрованных строк. Это не число уникальных людей.
+
+`GET /api/v1/applications/{application_id}/comparison?profile_id=<uuid>` читает явное сравнение, не вызывает модель и не создаёт отклик. Ответ: purpose=comparison, ID исходного отклика/кандидата, posting_title, целевой position_code/profile_id, applicability, assessment_status и assessment. Для реального кандидата допустим только реальный approved, для учебного — любой неархивный профиль. Контекст основного отклика остаётся прежним.
+
+AssessmentOut дополнен algorithm_version, calculation_as_of и competency_summary. Несовпадение algorithm_version даёт stale/algorithm_changed. У competency_scores появляется details с отдельными цитатами каждого индикатора, группами same_as и счётчиками. Вложенные цитаты имеют UTF-16 offsets. competency_summary суммирует обязательные/желательные единицы и отдельные счётчики интервью, исключений и ручной сверки; при неполных/legacy details он null.
+
+Новые значения assessment_status/stale_reason требуют обработки в клиенте с исчерпывающим switch. Изменение фронтенда в этой ветке не выполнялось. Фактические DTO — `app/api/schemas.py`; применимость — [profile-applicability.md](profile-applicability.md).
 
 **Изменения v0.2:** учебный и рабочий контуры (п. 1.1), признаки `is_training`, `is_preliminary`, `formal_preliminary`, основание `basis` и альтернативы в блоке формальных требований.
 

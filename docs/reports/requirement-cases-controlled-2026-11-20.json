@@ -1,0 +1,1421 @@
+{
+  "mode": "controlled",
+  "algorithm_version": "assessment-2.0",
+  "prompt_version": "assess-v2",
+  "fixture_sha256": "9ec1753df3e962945a4241a189ab602cf8c64d4eb0fe960ae3b413f457f4a6d9",
+  "total": 41,
+  "passed": 41,
+  "scope": "target rule only; controlled is not model-quality evidence; no database writes",
+  "results": [
+    {
+      "case_id": "experience-absent",
+      "rule_key": "synthetic.py.experience",
+      "expected": "unknown",
+      "actual": "unknown",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "total_commercial",
+        "min_months": 24,
+        "as_of": "2026-11",
+        "from_periods": "unknown",
+        "from_statement": null,
+        "statement_months": null,
+        "conflict": false,
+        "divergence": false,
+        "notes": [],
+        "months_low": 0,
+        "months_high": null,
+        "gap": "длительность коммерческого опыта",
+        "basis": "resume"
+      },
+      "evidence": [],
+      "model_calls": 1
+    },
+    {
+      "case_id": "experience-three-years",
+      "rule_key": "synthetic.py.experience",
+      "expected": "met",
+      "actual": "met",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "total_commercial",
+        "min_months": 24,
+        "as_of": "2026-11",
+        "from_periods": "unknown",
+        "from_statement": "met",
+        "statement_months": 36,
+        "conflict": false,
+        "divergence": false,
+        "notes": [],
+        "months_low": 0,
+        "months_high": null,
+        "basis": "resume"
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "d8335dd5-c045-5634-87f2-903fc5fdb7dc",
+          "quote": "Написал API-тесты для сервиса заявок.",
+          "start": 0,
+          "end": 37
+        },
+        {
+          "candidate_text_id": "d8335dd5-c045-5634-87f2-903fc5fdb7dc",
+          "quote": "Общий коммерческий опыт — 3 года.",
+          "start": 38,
+          "end": 71
+        }
+      ],
+      "model_calls": 1
+    },
+    {
+      "case_id": "experience-one-year",
+      "rule_key": "synthetic.py.experience",
+      "expected": "not_met",
+      "actual": "not_met",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "total_commercial",
+        "min_months": 24,
+        "as_of": "2026-11",
+        "from_periods": "unknown",
+        "from_statement": "not_met",
+        "statement_months": 12,
+        "conflict": false,
+        "divergence": false,
+        "notes": [],
+        "months_low": 0,
+        "months_high": null,
+        "basis": "resume"
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "b1ec3bc8-cc64-5884-8388-99f551f2f5ae",
+          "quote": "Написал API-тесты для сервиса заявок.",
+          "start": 0,
+          "end": 37
+        },
+        {
+          "candidate_text_id": "b1ec3bc8-cc64-5884-8388-99f551f2f5ae",
+          "quote": "Общий коммерческий опыт — 1 год.",
+          "start": 38,
+          "end": 70
+        }
+      ],
+      "model_calls": 1
+    },
+    {
+      "case_id": "experience-placeholder",
+      "rule_key": "synthetic.py.experience",
+      "expected": "unknown",
+      "actual": "unknown",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "total_commercial",
+        "min_months": 24,
+        "as_of": "2026-11",
+        "from_periods": "unknown",
+        "from_statement": null,
+        "statement_months": null,
+        "conflict": false,
+        "divergence": false,
+        "notes": [],
+        "months_low": 0,
+        "months_high": null,
+        "gap": "длительность коммерческого опыта",
+        "basis": "resume"
+      },
+      "evidence": [],
+      "model_calls": 1
+    },
+    {
+      "case_id": "experience-overlap",
+      "rule_key": "synthetic.py.experience",
+      "expected": "met",
+      "actual": "met",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "total_commercial",
+        "min_months": 24,
+        "as_of": "2026-11",
+        "from_periods": "met",
+        "from_statement": null,
+        "statement_months": null,
+        "conflict": false,
+        "divergence": false,
+        "notes": [],
+        "months_low": 37,
+        "months_high": 37,
+        "basis": "resume"
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "9bd8a854-fe29-5f0f-990d-455e3cc62fd1",
+          "quote": "Коммерческая разработка API: 2021-01–2023-01.",
+          "start": 0,
+          "end": 45
+        },
+        {
+          "candidate_text_id": "9bd8a854-fe29-5f0f-990d-455e3cc62fd1",
+          "quote": "Коммерческая обработка данных: 2022-01–2024-01.",
+          "start": 46,
+          "end": 93
+        }
+      ],
+      "model_calls": 1
+    },
+    {
+      "case_id": "experience-conflict",
+      "rule_key": "synthetic.py.experience",
+      "expected": "unknown",
+      "actual": "unknown",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "total_commercial",
+        "min_months": 24,
+        "as_of": "2026-11",
+        "from_periods": "met",
+        "from_statement": "not_met",
+        "statement_months": 12,
+        "conflict": true,
+        "divergence": false,
+        "notes": [
+          "заявленный стаж и периоды дают разный итог: нужна ручная сверка"
+        ],
+        "months_low": 37,
+        "months_high": 37,
+        "gap": "длительность коммерческого опыта",
+        "basis": "resume"
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "ee3e0d32-4755-5eca-87e9-b5d6cee3d9fb",
+          "quote": "Коммерческая разработка: 2021-01–2024-01.",
+          "start": 33,
+          "end": 74
+        },
+        {
+          "candidate_text_id": "ee3e0d32-4755-5eca-87e9-b5d6cee3d9fb",
+          "quote": "Общий коммерческий опыт — 1 год.",
+          "start": 0,
+          "end": 32
+        }
+      ],
+      "model_calls": 1
+    },
+    {
+      "case_id": "experience-undated",
+      "rule_key": "synthetic.py.experience",
+      "expected": "unknown",
+      "actual": "unknown",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "total_commercial",
+        "min_months": 24,
+        "as_of": "2026-11",
+        "from_periods": "unknown",
+        "from_statement": null,
+        "statement_months": null,
+        "conflict": false,
+        "divergence": false,
+        "notes": [],
+        "months_low": 0,
+        "months_high": null,
+        "gap": "длительность коммерческого опыта",
+        "basis": "resume"
+      },
+      "evidence": [],
+      "model_calls": 1
+    },
+    {
+      "case_id": "hr-level-met",
+      "rule_key": "hr.education.level",
+      "expected": "met",
+      "actual": "met",
+      "passed": true,
+      "alternatives": [
+        {
+          "key": "hr.education.level.alt1",
+          "result": "met",
+          "evidence": [
+            {
+              "candidate_text_id": "84e22131-7158-501f-adce-0bb7620fb6e8",
+              "quote": "Оконченное высшее образование, бакалавр.",
+              "start": 0,
+              "end": 40
+            }
+          ]
+        }
+      ],
+      "details": {
+        "rule": "education_level",
+        "alternatives": {
+          "hr.education.level.alt1": "met"
+        },
+        "basis": "resume",
+        "is_preliminary": true,
+        "needs": "documents"
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "84e22131-7158-501f-adce-0bb7620fb6e8",
+          "quote": "Оконченное высшее образование, бакалавр.",
+          "start": 0,
+          "end": 40
+        }
+      ],
+      "model_calls": 1
+    },
+    {
+      "case_id": "hr-level-no",
+      "rule_key": "hr.education.level",
+      "expected": "not_met",
+      "actual": "not_met",
+      "passed": true,
+      "alternatives": [
+        {
+          "key": "hr.education.level.alt1",
+          "result": "not_met",
+          "evidence": [
+            {
+              "candidate_text_id": "51d426a3-d764-5773-a131-0f6a266b1326",
+              "quote": "Высшего образования нет, в вузе не учусь.",
+              "start": 0,
+              "end": 41
+            }
+          ]
+        }
+      ],
+      "details": {
+        "rule": "education_level",
+        "alternatives": {
+          "hr.education.level.alt1": "not_met"
+        },
+        "basis": "resume"
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "51d426a3-d764-5773-a131-0f6a266b1326",
+          "quote": "Высшего образования нет, в вузе не учусь.",
+          "start": 0,
+          "end": 41
+        }
+      ],
+      "model_calls": 1
+    },
+    {
+      "case_id": "hr-level-unknown",
+      "rule_key": "hr.education.level",
+      "expected": "unknown",
+      "actual": "unknown",
+      "passed": true,
+      "alternatives": [
+        {
+          "key": "hr.education.level.alt1",
+          "result": "unknown",
+          "evidence": [
+            {
+              "candidate_text_id": "a2fa9bcc-9f2e-5589-bcca-71af6c8a88ad",
+              "quote": "Образование: не указано.",
+              "start": 0,
+              "end": 24
+            }
+          ]
+        }
+      ],
+      "details": {
+        "rule": "education_level",
+        "alternatives": {
+          "hr.education.level.alt1": "unknown"
+        },
+        "gap": "образование",
+        "basis": "resume"
+      },
+      "evidence": [],
+      "model_calls": 1
+    },
+    {
+      "case_id": "hr-field-direct",
+      "rule_key": "hr.education.field",
+      "expected": "met",
+      "actual": "met",
+      "passed": true,
+      "alternatives": [
+        {
+          "key": "hr.education.field.alt1",
+          "result": "met",
+          "evidence": [
+            {
+              "candidate_text_id": "1485c523-2af9-5624-9ea0-77573cc567f4",
+              "quote": "Оконченное высшее образование по направлению Государственное и муниципальное управление.",
+              "start": 0,
+              "end": 88
+            }
+          ]
+        },
+        {
+          "key": "hr.education.field.alt2",
+          "result": "unknown",
+          "evidence": [
+            {
+              "candidate_text_id": "1485c523-2af9-5624-9ea0-77573cc567f4",
+              "quote": "Оконченное высшее образование по направлению Государственное и муниципальное управление.",
+              "start": 0,
+              "end": 88
+            }
+          ]
+        }
+      ],
+      "details": {
+        "rule": "education_field",
+        "alternatives": {
+          "hr.education.field.alt1": "met",
+          "hr.education.field.alt2": "unknown"
+        },
+        "basis": "resume",
+        "is_preliminary": true,
+        "needs": "documents"
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "1485c523-2af9-5624-9ea0-77573cc567f4",
+          "quote": "Оконченное высшее образование по направлению Государственное и муниципальное управление.",
+          "start": 0,
+          "end": 88
+        }
+      ],
+      "model_calls": 1
+    },
+    {
+      "case_id": "hr-field-retraining",
+      "rule_key": "hr.education.field",
+      "expected": "met",
+      "actual": "met",
+      "passed": true,
+      "alternatives": [
+        {
+          "key": "hr.education.field.alt1",
+          "result": "not_met",
+          "evidence": [
+            {
+              "candidate_text_id": "afbe69db-b1c2-509f-8fca-a770304d6a08",
+              "quote": "Оконченное высшее образование по экономике.",
+              "start": 0,
+              "end": 43
+            },
+            {
+              "candidate_text_id": "afbe69db-b1c2-509f-8fca-a770304d6a08",
+              "quote": "Профессиональная переподготовка по программе Юриспруденция завершена.",
+              "start": 44,
+              "end": 113
+            }
+          ]
+        },
+        {
+          "key": "hr.education.field.alt2",
+          "result": "met",
+          "evidence": [
+            {
+              "candidate_text_id": "afbe69db-b1c2-509f-8fca-a770304d6a08",
+              "quote": "Оконченное высшее образование по экономике.",
+              "start": 0,
+              "end": 43
+            },
+            {
+              "candidate_text_id": "afbe69db-b1c2-509f-8fca-a770304d6a08",
+              "quote": "Профессиональная переподготовка по программе Юриспруденция завершена.",
+              "start": 44,
+              "end": 113
+            }
+          ]
+        }
+      ],
+      "details": {
+        "rule": "education_field",
+        "alternatives": {
+          "hr.education.field.alt1": "not_met",
+          "hr.education.field.alt2": "met"
+        },
+        "basis": "resume",
+        "is_preliminary": true,
+        "needs": "documents"
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "afbe69db-b1c2-509f-8fca-a770304d6a08",
+          "quote": "Оконченное высшее образование по экономике.",
+          "start": 0,
+          "end": 43
+        },
+        {
+          "candidate_text_id": "afbe69db-b1c2-509f-8fca-a770304d6a08",
+          "quote": "Профессиональная переподготовка по программе Юриспруденция завершена.",
+          "start": 44,
+          "end": 113
+        }
+      ],
+      "model_calls": 1
+    },
+    {
+      "case_id": "hr-field-no",
+      "rule_key": "hr.education.field",
+      "expected": "not_met",
+      "actual": "not_met",
+      "passed": true,
+      "alternatives": [
+        {
+          "key": "hr.education.field.alt1",
+          "result": "not_met",
+          "evidence": [
+            {
+              "candidate_text_id": "071f95b9-1110-5f35-9ee3-e836a3a1ea6f",
+              "quote": "У меня только оконченное высшее образование по экономике.",
+              "start": 0,
+              "end": 57
+            },
+            {
+              "candidate_text_id": "071f95b9-1110-5f35-9ee3-e836a3a1ea6f",
+              "quote": "Профессиональной переподготовки по юриспруденции или ГМУ нет.",
+              "start": 58,
+              "end": 119
+            }
+          ]
+        },
+        {
+          "key": "hr.education.field.alt2",
+          "result": "not_met",
+          "evidence": [
+            {
+              "candidate_text_id": "071f95b9-1110-5f35-9ee3-e836a3a1ea6f",
+              "quote": "У меня только оконченное высшее образование по экономике.",
+              "start": 0,
+              "end": 57
+            },
+            {
+              "candidate_text_id": "071f95b9-1110-5f35-9ee3-e836a3a1ea6f",
+              "quote": "Профессиональной переподготовки по юриспруденции или ГМУ нет.",
+              "start": 58,
+              "end": 119
+            }
+          ]
+        }
+      ],
+      "details": {
+        "rule": "education_field",
+        "alternatives": {
+          "hr.education.field.alt1": "not_met",
+          "hr.education.field.alt2": "not_met"
+        },
+        "basis": "resume"
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "071f95b9-1110-5f35-9ee3-e836a3a1ea6f",
+          "quote": "У меня только оконченное высшее образование по экономике.",
+          "start": 0,
+          "end": 57
+        },
+        {
+          "candidate_text_id": "071f95b9-1110-5f35-9ee3-e836a3a1ea6f",
+          "quote": "Профессиональной переподготовки по юриспруденции или ГМУ нет.",
+          "start": 58,
+          "end": 119
+        },
+        {
+          "candidate_text_id": "071f95b9-1110-5f35-9ee3-e836a3a1ea6f",
+          "quote": "У меня только оконченное высшее образование по экономике.",
+          "start": 0,
+          "end": 57
+        },
+        {
+          "candidate_text_id": "071f95b9-1110-5f35-9ee3-e836a3a1ea6f",
+          "quote": "Профессиональной переподготовки по юриспруденции или ГМУ нет.",
+          "start": 58,
+          "end": 119
+        }
+      ],
+      "model_calls": 1
+    },
+    {
+      "case_id": "hr-field-unknown",
+      "rule_key": "hr.education.field",
+      "expected": "unknown",
+      "actual": "unknown",
+      "passed": true,
+      "alternatives": [
+        {
+          "key": "hr.education.field.alt1",
+          "result": "not_met",
+          "evidence": [
+            {
+              "candidate_text_id": "c92089a1-7177-53b4-8d4c-abe63bda9e24",
+              "quote": "Оконченное высшее образование по экономике.",
+              "start": 0,
+              "end": 43
+            }
+          ]
+        },
+        {
+          "key": "hr.education.field.alt2",
+          "result": "unknown",
+          "evidence": [
+            {
+              "candidate_text_id": "c92089a1-7177-53b4-8d4c-abe63bda9e24",
+              "quote": "Оконченное высшее образование по экономике.",
+              "start": 0,
+              "end": 43
+            }
+          ]
+        }
+      ],
+      "details": {
+        "rule": "education_field",
+        "alternatives": {
+          "hr.education.field.alt1": "not_met",
+          "hr.education.field.alt2": "unknown"
+        },
+        "gap": "направление подготовки",
+        "basis": "resume"
+      },
+      "evidence": [],
+      "model_calls": 1
+    },
+    {
+      "case_id": "py-education-met",
+      "rule_key": "py.education",
+      "expected": "met",
+      "actual": "met",
+      "passed": true,
+      "alternatives": [
+        {
+          "key": "py.education.alt1",
+          "result": "met",
+          "evidence": [
+            {
+              "candidate_text_id": "2efd441b-e3b2-54c8-a098-f65e051b902f",
+              "quote": "Имею оконченное высшее техническое образование.",
+              "start": 0,
+              "end": 47
+            }
+          ]
+        },
+        {
+          "key": "py.education.alt2",
+          "result": "unknown",
+          "evidence": [
+            {
+              "candidate_text_id": "2efd441b-e3b2-54c8-a098-f65e051b902f",
+              "quote": "Имею оконченное высшее техническое образование.",
+              "start": 0,
+              "end": 47
+            }
+          ]
+        }
+      ],
+      "details": {
+        "rule": "education_level",
+        "alternatives": {
+          "py.education.alt1": "met",
+          "py.education.alt2": "unknown"
+        },
+        "basis": "resume",
+        "is_preliminary": true,
+        "needs": "documents"
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "2efd441b-e3b2-54c8-a098-f65e051b902f",
+          "quote": "Имею оконченное высшее техническое образование.",
+          "start": 0,
+          "end": 47
+        }
+      ],
+      "model_calls": 1
+    },
+    {
+      "case_id": "py-education-student",
+      "rule_key": "py.education",
+      "expected": "met",
+      "actual": "met",
+      "passed": true,
+      "alternatives": [
+        {
+          "key": "py.education.alt1",
+          "result": "unknown",
+          "evidence": [
+            {
+              "candidate_text_id": "df0ed74f-5a6b-59a5-91f4-cfb4101ddf66",
+              "quote": "Я студент старших курсов вуза.",
+              "start": 0,
+              "end": 30
+            }
+          ]
+        },
+        {
+          "key": "py.education.alt2",
+          "result": "met",
+          "evidence": [
+            {
+              "candidate_text_id": "df0ed74f-5a6b-59a5-91f4-cfb4101ddf66",
+              "quote": "Я студент старших курсов вуза.",
+              "start": 0,
+              "end": 30
+            }
+          ]
+        }
+      ],
+      "details": {
+        "rule": "education_level",
+        "alternatives": {
+          "py.education.alt1": "unknown",
+          "py.education.alt2": "met"
+        },
+        "basis": "resume",
+        "is_preliminary": true,
+        "needs": "documents"
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "df0ed74f-5a6b-59a5-91f4-cfb4101ddf66",
+          "quote": "Я студент старших курсов вуза.",
+          "start": 0,
+          "end": 30
+        }
+      ],
+      "model_calls": 1
+    },
+    {
+      "case_id": "py-education-no",
+      "rule_key": "py.education",
+      "expected": "not_met",
+      "actual": "not_met",
+      "passed": true,
+      "alternatives": [
+        {
+          "key": "py.education.alt1",
+          "result": "not_met",
+          "evidence": [
+            {
+              "candidate_text_id": "28e19361-82ed-5aa7-972c-f5421eabf53c",
+              "quote": "Высшего образования нет, в вузе не учусь.",
+              "start": 0,
+              "end": 41
+            }
+          ]
+        },
+        {
+          "key": "py.education.alt2",
+          "result": "not_met",
+          "evidence": [
+            {
+              "candidate_text_id": "28e19361-82ed-5aa7-972c-f5421eabf53c",
+              "quote": "Высшего образования нет, в вузе не учусь.",
+              "start": 0,
+              "end": 41
+            }
+          ]
+        }
+      ],
+      "details": {
+        "rule": "education_level",
+        "alternatives": {
+          "py.education.alt1": "not_met",
+          "py.education.alt2": "not_met"
+        },
+        "basis": "resume"
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "28e19361-82ed-5aa7-972c-f5421eabf53c",
+          "quote": "Высшего образования нет, в вузе не учусь.",
+          "start": 0,
+          "end": 41
+        },
+        {
+          "candidate_text_id": "28e19361-82ed-5aa7-972c-f5421eabf53c",
+          "quote": "Высшего образования нет, в вузе не учусь.",
+          "start": 0,
+          "end": 41
+        }
+      ],
+      "model_calls": 1
+    },
+    {
+      "case_id": "py-education-unknown",
+      "rule_key": "py.education",
+      "expected": "unknown",
+      "actual": "unknown",
+      "passed": true,
+      "alternatives": [
+        {
+          "key": "py.education.alt1",
+          "result": "unknown",
+          "evidence": [
+            {
+              "candidate_text_id": "852c7dc4-1886-5dc2-9ccc-079102c3282c",
+              "quote": "Учусь в вузе.",
+              "start": 0,
+              "end": 13
+            }
+          ]
+        },
+        {
+          "key": "py.education.alt2",
+          "result": "unknown",
+          "evidence": [
+            {
+              "candidate_text_id": "852c7dc4-1886-5dc2-9ccc-079102c3282c",
+              "quote": "Учусь в вузе.",
+              "start": 0,
+              "end": 13
+            }
+          ]
+        }
+      ],
+      "details": {
+        "rule": "education_level",
+        "alternatives": {
+          "py.education.alt1": "unknown",
+          "py.education.alt2": "unknown"
+        },
+        "gap": "образование",
+        "basis": "resume"
+      },
+      "evidence": [],
+      "model_calls": 1
+    },
+    {
+      "case_id": "py-education-borderline",
+      "rule_key": "py.education",
+      "expected": "unknown",
+      "actual": "unknown",
+      "passed": true,
+      "alternatives": [
+        {
+          "key": "py.education.alt1",
+          "result": "unknown",
+          "evidence": [
+            {
+              "candidate_text_id": "b74681ff-7275-5e40-85ec-3419e74539e1",
+              "quote": "Окончил вуз по направлению Прикладная информатика в экономике.",
+              "start": 0,
+              "end": 62
+            }
+          ]
+        },
+        {
+          "key": "py.education.alt2",
+          "result": "unknown",
+          "evidence": [
+            {
+              "candidate_text_id": "b74681ff-7275-5e40-85ec-3419e74539e1",
+              "quote": "Окончил вуз по направлению Прикладная информатика в экономике.",
+              "start": 0,
+              "end": 62
+            }
+          ]
+        }
+      ],
+      "details": {
+        "rule": "education_level",
+        "alternatives": {
+          "py.education.alt1": "unknown",
+          "py.education.alt2": "unknown"
+        },
+        "gap": "образование",
+        "basis": "resume"
+      },
+      "evidence": [],
+      "model_calls": 1
+    },
+    {
+      "case_id": "py-relevant-met",
+      "rule_key": "py.experience",
+      "expected": "unknown",
+      "actual": "unknown",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "relevant_role",
+        "gap": "опыт работы",
+        "notes": [],
+        "basis": "resume"
+      },
+      "evidence": [],
+      "model_calls": 1
+    },
+    {
+      "case_id": "py-relevant-no",
+      "rule_key": "py.experience",
+      "expected": "not_met",
+      "actual": "not_met",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "relevant_role",
+        "notes": [],
+        "basis": "resume"
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "87770f78-8876-580f-8962-173a54a96ac0",
+          "quote": "Опыта разработки на Python и работы с данными у меня нет.",
+          "start": 0,
+          "end": 57
+        }
+      ],
+      "model_calls": 1
+    },
+    {
+      "case_id": "py-relevant-unknown",
+      "rule_key": "py.experience",
+      "expected": "unknown",
+      "actual": "unknown",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "relevant_role",
+        "gap": "опыт работы",
+        "notes": [],
+        "basis": "resume"
+      },
+      "evidence": [],
+      "model_calls": 1
+    },
+    {
+      "case_id": "rule-unknown-key",
+      "rule_key": "synthetic.py.experience",
+      "expected": "processing_error",
+      "actual": "processing_error",
+      "passed": true,
+      "model_calls": 0
+    },
+    {
+      "case_id": "rule-unknown-version",
+      "rule_key": "synthetic.py.experience",
+      "expected": "processing_error",
+      "actual": "processing_error",
+      "passed": true,
+      "model_calls": 0
+    },
+    {
+      "case_id": "py-relevant-work-met",
+      "rule_key": "py.experience",
+      "expected": "met",
+      "actual": "met",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "relevant_role",
+        "notes": [],
+        "ambiguous": false,
+        "basis": "resume"
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "8843a3e5-270b-567b-a40b-d4d5737f4263",
+          "quote": "На работе в компании разрабатывал на Python обработку данных и SQL-запросы.",
+          "start": 0,
+          "end": 75
+        }
+      ],
+      "model_calls": 1
+    },
+    {
+      "case_id": "experience-current-below",
+      "rule_key": "synthetic.py.experience",
+      "expected": "not_met",
+      "actual": "not_met",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "total_commercial",
+        "min_months": 24,
+        "as_of": "2026-11",
+        "from_periods": "not_met",
+        "from_statement": null,
+        "statement_months": null,
+        "conflict": false,
+        "divergence": false,
+        "notes": [],
+        "months_low": 23,
+        "months_high": 23,
+        "basis": "resume"
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "0f131778-9c82-5d40-b56c-fadd5d6e43f6",
+          "quote": "Коммерческая работа разработчиком: январь 2025 — по настоящее время.",
+          "start": 0,
+          "end": 68
+        }
+      ],
+      "model_calls": 1
+    },
+    {
+      "case_id": "experience-year-only",
+      "rule_key": "synthetic.py.experience",
+      "expected": "met",
+      "actual": "met",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "total_commercial",
+        "min_months": 24,
+        "as_of": "2026-11",
+        "from_periods": "met",
+        "from_statement": null,
+        "statement_months": null,
+        "conflict": false,
+        "divergence": false,
+        "notes": [],
+        "months_low": 38,
+        "months_high": 60,
+        "basis": "resume"
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "93eaf4fe-b15e-5d1d-9ca5-8673e8a6b57b",
+          "quote": "Коммерческая работа разработчиком: 2019 — 2023.",
+          "start": 0,
+          "end": 47
+        }
+      ],
+      "model_calls": 1
+    },
+    {
+      "case_id": "experience-statement-consistent",
+      "rule_key": "synthetic.py.experience",
+      "expected": "met",
+      "actual": "met",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "total_commercial",
+        "min_months": 24,
+        "as_of": "2026-11",
+        "from_periods": "met",
+        "from_statement": "met",
+        "statement_months": 36,
+        "conflict": false,
+        "divergence": false,
+        "notes": [],
+        "months_low": 36,
+        "months_high": 36,
+        "basis": "resume"
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "65a0a86a-28fa-5a74-b42a-8774f07baf48",
+          "quote": "Коммерческая работа разработчиком: 2021-01–2023-12.",
+          "start": 34,
+          "end": 85
+        },
+        {
+          "candidate_text_id": "65a0a86a-28fa-5a74-b42a-8774f07baf48",
+          "quote": "Общий коммерческий опыт — 3 года.",
+          "start": 0,
+          "end": 33
+        }
+      ],
+      "model_calls": 1
+    },
+    {
+      "case_id": "experience-undated-with-statement",
+      "rule_key": "synthetic.py.experience",
+      "expected": "met",
+      "actual": "met",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "total_commercial",
+        "min_months": 24,
+        "as_of": "2026-11",
+        "from_periods": "unknown",
+        "from_statement": "met",
+        "statement_months": 36,
+        "conflict": false,
+        "divergence": false,
+        "notes": [],
+        "months_low": 0,
+        "months_high": null,
+        "basis": "resume"
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "d63dd706-e2dd-5488-918d-111a621cde8c",
+          "quote": "Коммерческая работа разработчиком; даты не указаны.",
+          "start": 34,
+          "end": 85
+        },
+        {
+          "candidate_text_id": "d63dd706-e2dd-5488-918d-111a621cde8c",
+          "quote": "Общий коммерческий опыт — 3 года.",
+          "start": 0,
+          "end": 33
+        }
+      ],
+      "model_calls": 1
+    },
+    {
+      "case_id": "experience-discrepancy-same-outcome",
+      "rule_key": "synthetic.py.experience",
+      "expected": "met",
+      "actual": "met",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "total_commercial",
+        "min_months": 24,
+        "as_of": "2026-11",
+        "from_periods": "met",
+        "from_statement": "met",
+        "statement_months": 48,
+        "conflict": false,
+        "divergence": true,
+        "notes": [
+          "расхождение: заявление не совпадает с периодами, итог от этого не меняется"
+        ],
+        "months_low": 36,
+        "months_high": 36,
+        "basis": "resume"
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "b50a23c9-143e-5a14-9bc2-e5f8efd3643c",
+          "quote": "Коммерческая работа разработчиком: 2021-01–2023-12.",
+          "start": 34,
+          "end": 85
+        },
+        {
+          "candidate_text_id": "b50a23c9-143e-5a14-9bc2-e5f8efd3643c",
+          "quote": "Общий коммерческий опыт — 4 года.",
+          "start": 0,
+          "end": 33
+        }
+      ],
+      "model_calls": 1
+    },
+    {
+      "case_id": "experience-year-same",
+      "rule_key": "synthetic.py.experience",
+      "expected": "not_met",
+      "actual": "not_met",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "total_commercial",
+        "min_months": 24,
+        "as_of": "2026-11",
+        "from_periods": "not_met",
+        "from_statement": null,
+        "statement_months": null,
+        "conflict": false,
+        "divergence": false,
+        "notes": [],
+        "months_low": 0,
+        "months_high": 12,
+        "basis": "resume"
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "b8d7f656-4670-5c0a-8a6b-306b835f56e3",
+          "quote": "Оплачиваемая работа разработчиком: 2022–2022.",
+          "start": 0,
+          "end": 45
+        }
+      ],
+      "model_calls": 1
+    },
+    {
+      "case_id": "experience-year-duplicate",
+      "rule_key": "synthetic.py.experience",
+      "expected": "not_met",
+      "actual": "not_met",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "total_commercial",
+        "min_months": 24,
+        "as_of": "2026-11",
+        "from_periods": "not_met",
+        "from_statement": null,
+        "statement_months": null,
+        "conflict": false,
+        "divergence": false,
+        "notes": [],
+        "months_low": 0,
+        "months_high": 12,
+        "basis": "resume"
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "3f5ed8e6-d355-5701-83da-0f0805b76d38",
+          "quote": "Оплачиваемая работа разработчиком в компании А: 2022–2022.",
+          "start": 0,
+          "end": 58
+        },
+        {
+          "candidate_text_id": "3f5ed8e6-d355-5701-83da-0f0805b76d38",
+          "quote": "Оплачиваемая работа разработчиком в компании Б: 2022–2022.",
+          "start": 59,
+          "end": 117
+        }
+      ],
+      "model_calls": 1
+    },
+    {
+      "case_id": "experience-year-adjacent",
+      "rule_key": "synthetic.py.experience",
+      "expected": "unknown",
+      "actual": "unknown",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "total_commercial",
+        "min_months": 24,
+        "as_of": "2026-11",
+        "from_periods": "unknown",
+        "from_statement": null,
+        "statement_months": null,
+        "conflict": false,
+        "divergence": false,
+        "notes": [],
+        "months_low": 0,
+        "months_high": 24,
+        "gap": "длительность коммерческого опыта",
+        "basis": "resume"
+      },
+      "evidence": [],
+      "model_calls": 1
+    },
+    {
+      "case_id": "experience-mixed-precision",
+      "rule_key": "synthetic.py.experience",
+      "expected": "unknown",
+      "actual": "unknown",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "total_commercial",
+        "min_months": 24,
+        "as_of": "2026-11",
+        "from_periods": "unknown",
+        "from_statement": null,
+        "statement_months": null,
+        "conflict": false,
+        "divergence": false,
+        "notes": [],
+        "months_low": 19,
+        "months_high": 30,
+        "gap": "длительность коммерческого опыта",
+        "basis": "resume"
+      },
+      "evidence": [],
+      "model_calls": 1
+    },
+    {
+      "case_id": "experience-contract",
+      "rule_key": "synthetic.py.experience",
+      "expected": "met",
+      "actual": "met",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "total_commercial",
+        "min_months": 24,
+        "as_of": "2026-11",
+        "from_periods": "met",
+        "from_statement": null,
+        "statement_months": null,
+        "conflict": false,
+        "divergence": false,
+        "notes": [],
+        "months_low": 36,
+        "months_high": 36,
+        "basis": "resume"
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "0a0b120e-703e-5329-9586-22420f27c2f0",
+          "quote": "Оплачиваемая разработка для работодателя по договору: 2021-01–2023-12.",
+          "start": 0,
+          "end": 70
+        }
+      ],
+      "model_calls": 1
+    },
+    {
+      "case_id": "experience-internship-uncertain",
+      "rule_key": "synthetic.py.experience",
+      "expected": "unknown",
+      "actual": "unknown",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "total_commercial",
+        "min_months": 24,
+        "as_of": "2026-11",
+        "from_periods": "unknown",
+        "from_statement": null,
+        "statement_months": null,
+        "conflict": false,
+        "divergence": false,
+        "notes": [],
+        "months_low": 0,
+        "months_high": 36,
+        "gap": "длительность коммерческого опыта",
+        "basis": "resume"
+      },
+      "evidence": [],
+      "model_calls": 1
+    },
+    {
+      "case_id": "experience-kind-unknown",
+      "rule_key": "synthetic.py.experience",
+      "expected": "unknown",
+      "actual": "unknown",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "total_commercial",
+        "min_months": 24,
+        "as_of": "2026-11",
+        "from_periods": "unknown",
+        "from_statement": null,
+        "statement_months": null,
+        "conflict": false,
+        "divergence": false,
+        "notes": [],
+        "months_low": 0,
+        "months_high": 36,
+        "gap": "длительность коммерческого опыта",
+        "basis": "resume"
+      },
+      "evidence": [],
+      "model_calls": 1
+    },
+    {
+      "case_id": "experience-project-excluded",
+      "rule_key": "synthetic.py.experience",
+      "expected": "not_met",
+      "actual": "not_met",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "total_commercial",
+        "min_months": 24,
+        "as_of": "2026-11",
+        "from_periods": "not_met",
+        "from_statement": null,
+        "statement_months": null,
+        "conflict": false,
+        "divergence": false,
+        "notes": [],
+        "months_low": 12,
+        "months_high": 12,
+        "basis": "resume"
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "b8c898e7-b781-581c-90ea-a1bdccf3726c",
+          "quote": "Оплачиваемая работа разработчиком: 2024-01–2024-12.",
+          "start": 0,
+          "end": 51
+        }
+      ],
+      "model_calls": 1
+    },
+    {
+      "case_id": "experience-internship-upper-below",
+      "rule_key": "synthetic.py.experience",
+      "expected": "not_met",
+      "actual": "not_met",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "total_commercial",
+        "min_months": 24,
+        "as_of": "2026-11",
+        "from_periods": "not_met",
+        "from_statement": null,
+        "statement_months": null,
+        "conflict": false,
+        "divergence": false,
+        "notes": [],
+        "months_low": 0,
+        "months_high": 12,
+        "basis": "resume"
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "5bd74aae-52c7-5f4f-8255-24ffc812e220",
+          "quote": "Стажировка разработчиком: 2024-01–2024-12; оплата не указана.",
+          "start": 0,
+          "end": 61
+        }
+      ],
+      "model_calls": 1
+    },
+    {
+      "case_id": "experience-general-one-year",
+      "rule_key": "synthetic.py.experience",
+      "expected": "not_met",
+      "actual": "not_met",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "total_commercial",
+        "min_months": 24,
+        "as_of": "2026-11",
+        "from_periods": null,
+        "from_statement": "not_met",
+        "statement_months": 12,
+        "conflict": false,
+        "divergence": false,
+        "notes": [],
+        "basis": "resume"
+      },
+      "evidence": [
+        {
+          "candidate_text_id": "b90910ee-73dd-5b01-9091-79f9a92b7c4a",
+          "quote": "Общий опыт — 1 год.",
+          "start": 0,
+          "end": 19
+        }
+      ],
+      "model_calls": 1
+    },
+    {
+      "case_id": "experience-general-three-years",
+      "rule_key": "synthetic.py.experience",
+      "expected": "unknown",
+      "actual": "unknown",
+      "passed": true,
+      "alternatives": [],
+      "details": {
+        "rule": "total_commercial",
+        "min_months": 24,
+        "as_of": "2026-11",
+        "from_periods": null,
+        "from_statement": "unknown",
+        "statement_months": 36,
+        "conflict": false,
+        "divergence": false,
+        "notes": [
+          "заявлен общий опыт без указания, что он коммерческий"
+        ],
+        "gap": "длительность коммерческого опыта",
+        "basis": "resume"
+      },
+      "evidence": [],
+      "model_calls": 1
+    }
+  ]
+}

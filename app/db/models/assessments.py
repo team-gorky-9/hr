@@ -42,6 +42,8 @@ class Assessment(Base):
     is_current: Mapped[bool] = mapped_column(Boolean)
     model: Mapped[str] = mapped_column(String(128))
     prompt_version: Mapped[str | None] = mapped_column(String(64))
+    algorithm_version: Mapped[str | None] = mapped_column(String(64))
+    calculation_as_of: Mapped[str | None] = mapped_column(String(7))
     # Итог по формальным требованиям: не выполнено хотя бы одно обязательное → not_met.
     formal_result: Mapped[CheckResult] = mapped_column(str_enum(CheckResult, "formal_result"))
     # [v1.5] formal_result = met, но хоть одно обязательное требование этапа screening в нём
@@ -134,6 +136,7 @@ class CompetencyScore(Base):
     )
     # 0–100, как эталон в матрице; пусто — в резюме нет сведений, нужно уточнить на интервью.
     level: Mapped[int | None] = mapped_column(SmallInteger)
+    details: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     explanation: Mapped[str | None] = mapped_column(Text)
     evidence: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list, server_default="[]")
 
