@@ -78,7 +78,7 @@ def extract_candidate_card(session, *, candidate_id: uuid.UUID, llm: LLMClient,
 def assess_candidate(session, *, candidate_id: uuid.UUID, profile_id: uuid.UUID, llm: LLMClient,
                      mode: Literal["operational", "technical"] = "operational",
                      card_id: uuid.UUID | None = None, as_of: str | None = None,
-                     prompt_version: str = "assess-v2") -> uuid.UUID:
+                     prompt_version: str = "assess-v3") -> uuid.UUID:
     """Проверяет режим и профиль, правила params и версию текста; оценивает; находит цитаты кодом;
     понижает неподтверждённое; сохраняет через repository.save_assessment. as_of = 'ГГГГ-ММ'
     для текущего места работы (по умолчанию — месяц расчёта)."""

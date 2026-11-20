@@ -1,11 +1,40 @@
 """Что модель возвращает при оценке. Статусы и цитаты — от модели, итог и числа — от кода."""
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    create_model,
+    field_validator,
+    model_validator,
+)
 
 
 class _Strict(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+
+# Модель без json_schema иногда отвечает статусом из смежного словаря. Однозначные синонимы
+# приводим к своим значениям; всё неоднозначное остаётся ошибкой схемы и уходит на исправление.
+_NO_INFO = {"no_info", "unknown", "none", "null", "no info", "not_found", "нет данных", "не указано"}
+_CONFIRMED = {"confirmed", "met", "yes", "true", "подтверждено"}
+_NEGATIVE = {"refuted", "contradicted", "not_met", "no", "false", "опровергнуто"}
+
+
+def _status(value, negative: str):
+    if value is None:
+        return "no_info"
+    if isinstance(value, bool):
+        return "confirmed" if value else negative
+    text = str(value).strip().lower()
+    if text in _NO_INFO:
+        return "no_info"
+    if text in _CONFIRMED:
+        return "confirmed"
+    if text in _NEGATIVE:
+        return negative
+    return value
 
 
 class PeriodItem(_Strict):
@@ -43,6 +72,11 @@ class AlternativeItem(_Strict):
     quote: str | None = None
     context_before: str | None = None
 
+    @field_validator("status", mode="before")
+    @classmethod
+    def _synonyms(cls, value):
+        return _status(value, "refuted")
+
 
 class FormalExtraction(_Strict):
     periods: list[PeriodItem] = Field(default_factory=list)
@@ -58,6 +92,52 @@ class IndicatorItem(_Strict):
     quote: str | None = None
     context_before: str | None = None
 
+    @field_validator("status", mode="before")
+    @classmethod
+    def _synonyms(cls, value):
+        return _status(value, "contradicted")
+
 
 class CompetencyExtraction(_Strict):
     indicators: list[IndicatorItem] = Field(default_factory=list)
+
+
+def _keyed(base: type[BaseModel], field: str, attr: str, expected: set[str]) -> type[BaseModel]:
+    """Та же схема, но ключи ответа сверяются с запрошенными.
+
+    Ошибка ключа — это ValueError при разборе ответа, поэтому клиент один раз просит модель
+    исправить JSON и называет допустимые ключи; только после неудачного исправления —
+    LLMInvalidResponseError (контракт оценки, п. 7). Точный повтор одного ключа с тем же
+    статусом склеивается (остаётся вариант с цитатой); один ключ с разными статусами —
+    ошибка. Если ключей не запрашивали (например, только стаж), лишние элементы отбрасываются.
+    """
+    allowed = ", ".join(sorted(expected))
+
+    def check(self):
+        kept: dict[str, object] = {}
+        for item in getattr(self, field):
+            key = getattr(item, attr)
+            if key not in expected:
+                if not expected:
+                    continue
+                raise ValueError(f"{attr} = {key!r} не запрашивался; допустимы только: {allowed}")
+            first = kept.get(key)
+            if first is None:
+                kept[key] = item
+            elif first.status != item.status:
+                raise ValueError(f"{attr} = {key!r} указан дважды с разными статусами; оставь один элемент")
+            elif not first.quote and item.quote:
+                kept[key] = item
+        object.__setattr__(self, field, list(kept.values()))
+        return self
+
+    return create_model(base.__name__, __base__=base,
+                        __validators__={"_check_keys": model_validator(mode="after")(check)})
+
+
+def keyed_formal(alternative_keys: set[str]) -> type[FormalExtraction]:
+    return _keyed(FormalExtraction, "alternatives", "alternative_key", alternative_keys)
+
+
+def keyed_competency(indicator_keys: set[str]) -> type[CompetencyExtraction]:
+    return _keyed(CompetencyExtraction, "indicators", "indicator_key", indicator_keys)
