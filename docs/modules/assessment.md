@@ -24,6 +24,32 @@
 | app/assessment/counters.py | Группы и счётчики по компетенции/профилю |
 | app/schemas/competency_details.py | Типизированный результат с отдельными цитатами |
 
+## Сквозной прогон `py-9001` (qa-01)
+
+Из чистой базы до оценки, которую читает API. Учебный кандидат и учебный профиль; на шаге 6 нужен ключ YandexGPT в `.env`.
+
+```bash
+docker compose up -d
+uv run alembic upgrade head                                                          # 1. схема
+uv run python -m app.db.seed                                                         # 2. справочники
+uv run python -m app.ingest --input fixtures/stage_0a --mapping fixtures/stage_0a/mapping.json   # 3. py-9001 (учебный)
+uv run python -m scripts.load_synthetic_profile                                      # 4. учебный профиль — черновик
+uv run python -m scripts.approve_profile --position-code python-dev --synthetic \
+    --approver hr-demo --basis "учебный профиль для qa-01" --commit                  # 5. утверждение кадровиком
+APP=$(docker compose exec -T db psql -U hr -d hr -Atc \
+  "select a.id from applications a join candidates c on c.id = a.candidate_id where c.code = 'py-9001' and a.source = 'response'")
+uv run python -m app.assessment run --candidate-code py-9001 --position-code python-dev \
+    --technical --application-id "$APP" --as-of 2025-11                              # 6. оценка по отклику
+uv run uvicorn app.main:app                                                          # 7. API
+curl -s "http://127.0.0.1:8000/api/v1/applications/$APP" | python -m json.tool | head -40
+```
+
+Ожидается: на шаге 6 `status: ok`; в API `assessment_status: ready`, формальная проверка стажа и компетенция с цитатой «Написал API-тесты для сервиса заявок.». Срез `text[utf16_start:utf16_end]` из `GET /api/v1/candidate-texts/{candidate_text_id}` совпадает с `quote`.
+
+- Без шага 5 API отвечает `no_approved_profile`: загрузчик и оценщик профиль не утверждают, это отдельное действие кадровика. `approve_profile` без `--commit` только показывает, что будет утверждено.
+- Повторное утверждение того же контура отправляет прежнюю версию в архив; рабочий контур не меняется.
+- База, импортированная до БД v1.5, считает `py-9001` реальным кандидатом — её нужно пересоздать.
+
 ## Запуск и проверка
 
 После настройки .env и миграций:
