@@ -147,6 +147,40 @@ def test_other_file_with_taken_code_is_conflict(session, package_copy):
     assert counts(session) == before
 
 
+def test_synthetic_files_are_imported_into_training_contour(session):
+    """py-9001 и hr-9001 помечены в mapping как учебные: в рабочие списки они не попадут."""
+    report = load(session)
+    for path in (f"{PYTHON}/py-9001.txt", f"{CONSULTANT}/hr-9001.docx"):
+        item = by_path(report, path)
+        assert item.is_synthetic is True
+        assert session.get(Candidate, item.candidate_id).is_synthetic
+
+
+def test_unmarked_file_is_real(session, tmp_path):
+    root = tmp_path / "package"
+    (root / PYTHON).mkdir(parents=True)
+    shutil.copy(FIXTURES / PYTHON / "py-9001.txt", root / PYTHON / "отклик 5.txt")
+    report = load(session, root, mapping_path=None)
+    item = by_path(report, f"{PYTHON}/отклик 5.txt")
+    assert (item.status, item.is_synthetic) == (ItemStatus.IMPORTED, False)
+
+
+def test_explicit_contour_change_is_conflict(session, package_copy):
+    """Учебный файл, повторно размеченный как реальный, не переводится в рабочий контур."""
+    load(session)
+    mapping = json.loads((package_copy / "mapping.json").read_text(encoding="utf-8"))
+    mapping["entries"][0]["synthetic"] = False
+    (package_copy / "mapping.json").write_text(json.dumps(mapping, ensure_ascii=False), encoding="utf-8")
+    before = counts(session)
+
+    report = load(session, package_copy, package_copy / "mapping.json")
+
+    item = by_path(report, f"{PYTHON}/py-9001.txt")
+    assert (item.status, item.candidate_code) == (ItemStatus.CONFLICT, "py-9001")
+    assert item.reason.startswith("CONTOUR_CONFLICT")
+    assert counts(session) == before
+
+
 def test_different_files_with_same_text_are_both_imported_with_warning(session, tmp_path):
     text = (FIXTURES / PYTHON / "py-9001.txt").read_text(encoding="utf-8")
     (tmp_path / PYTHON).mkdir()

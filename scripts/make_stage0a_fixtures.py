@@ -149,6 +149,7 @@ MAPPING = {
             "channel": "hh_ru",
             "document_kind": "resume",
             "file_format": "hh_txt",
+            "synthetic": True,  # учебный контур: в рабочих списках не показывается
         },
         {
             "source_path": f"{CONSULTANT_FOLDER}/hr-9001.docx",
@@ -157,6 +158,7 @@ MAPPING = {
             "channel": "hh_ru",
             "document_kind": "resume",
             "file_format": "hh_docx",
+            "synthetic": True,
         },
     ]
 }

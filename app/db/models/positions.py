@@ -24,6 +24,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, created_at_column, str_enum, uuid_pk
 from app.db.enums import (
     Channel,
+    CheckStage,
     CompetencyRank,
     FormalRequirementKind,
     RequirementStatus,
@@ -86,8 +87,9 @@ class Vacancy(Base):
 class RequirementProfile(Base):
     """Версия требований к должности: формальные требования + компетенции.
 
-    Модель или человек создаёт черновик, кадровик утверждает. Утверждённой
-    может быть только одна версия на должность; оценки ссылаются на конкретную версию.
+    Модель или человек создаёт черновик, кадровик утверждает. Утверждённой может быть
+    только одна версия на должность в каждом контуре (рабочем и учебном); оценки
+    ссылаются на конкретную версию.
     """
     __tablename__ = "requirement_profiles"
 
@@ -99,7 +101,9 @@ class RequirementProfile(Base):
         default=RequirementStatus.DRAFT,
         server_default="draft",
     )
-    # Учебный профиль с выдуманными данными: его нельзя утвердить.
+    # Контур профиля [v1.5]: false — рабочий, true — учебный (выдуманные правила для проверки системы).
+    # Утверждение, нумерация версий и выбор действующего профиля идут отдельно в каждом контуре.
+    # Ставится при создании и не меняется: смену отклоняет триггер базы (миграция 0003).
     is_synthetic: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     # Кто составил: логин человека или имя модели.
     created_by: Mapped[str] = mapped_column(String(128))
@@ -131,10 +135,12 @@ class RequirementProfile(Base):
     )
 
     __table_args__ = (
-        UniqueConstraint("position_id", "version", name="uq_requirement_profiles_version"),
+        # Версии нумеруются в своём контуре: учебный v2 и рабочий v2 одной должности — разные профили.
+        UniqueConstraint("position_id", "is_synthetic", "version", name="uq_requirement_profiles_version"),
         Index(
             "uq_requirement_profiles_approved",
             "position_id",
+            "is_synthetic",
             unique=True,
             postgresql_where=sa_text("status = 'approved'"),
         ),
@@ -193,6 +199,15 @@ def _row_source_check() -> CheckConstraint:
     )
 
 
+def _check_stage_check() -> CheckConstraint:
+    """На первичном отборе проверяется только то, что видно по резюме или подтверждается
+    документом (предварительно — по резюме). Интервью и тест — не этап screening."""
+    return CheckConstraint(
+        "check_stage = 'interview' OR verification IN ('resume', 'documents')",
+        name="check_stage_verification",
+    )
+
+
 class FormalRequirement(_RowSource, Base):
     """Условие допуска (образование, направление, стаж): выполнено или нет.
     Проверяется отдельно от компетенций и не «добирается» баллами."""
@@ -204,12 +219,16 @@ class FormalRequirement(_RowSource, Base):
     )
     kind: Mapped[FormalRequirementKind] = mapped_column(str_enum(FormalRequirementKind, "kind"))
     description: Mapped[str] = mapped_column(Text)
-    # Машиночитаемые условия, например
-    # {"min_level": "высшее", "fields": ["Юриспруденция", "ГМУ"], "retraining_allowed": true}.
+    # Машиночитаемое правило в формате params 0.1 (app/schemas/requirements.py, контракт п. 3.5), например
+    # {"schema_version": "0.1", "alternatives": [{"key": "hr.education.level.alt1", "level": "высшее"}]}.
     params: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
     # Обязательно по источнику (false — «будет преимуществом»). Входит в итог formal_result.
     is_mandatory: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     verification: Mapped[VerificationMethod] = mapped_column(str_enum(VerificationMethod, "verification"))
+    # На каком этапе проверяется [v1.5]; в итог formal_result входят только строки этапа screening.
+    check_stage: Mapped[CheckStage] = mapped_column(
+        str_enum(CheckStage, "check_stage"), default=CheckStage.SCREENING, server_default="screening"
+    )
     # Что считать выполнением, невыполнением и нехваткой сведений: {"met": …, "not_met": …, "unknown": …, "limit": …}.
     acceptance: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
     sort_order: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
@@ -219,6 +238,7 @@ class FormalRequirement(_RowSource, Base):
     __table_args__ = (
         UniqueConstraint("profile_id", "key", name="uq_formal_requirements_profile_key"),
         _row_source_check(),
+        _check_stage_check(),
     )
 
 
@@ -274,6 +294,9 @@ class CompetencyIndicator(_RowSource, Base):
     # Обязательно или желательно («будет преимуществом» в вакансии).
     is_mandatory: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
     verification: Mapped[VerificationMethod] = mapped_column(str_enum(VerificationMethod, "verification"))
+    check_stage: Mapped[CheckStage] = mapped_column(
+        str_enum(CheckStage, "check_stage"), default=CheckStage.SCREENING, server_default="screening"
+    )
     acceptance: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict, server_default="{}")
     # Строка сохранена ради прослеживаемости, но в оценку не входит (например, право, а не компетенция).
     excluded_from_scoring: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
@@ -284,4 +307,5 @@ class CompetencyIndicator(_RowSource, Base):
     __table_args__ = (
         UniqueConstraint("competency_id", "key", name="uq_competency_indicators_competency_key"),
         _row_source_check(),
+        _check_stage_check(),
     )

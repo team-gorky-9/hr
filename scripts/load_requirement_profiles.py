@@ -4,14 +4,18 @@
 1. Загружает документы из манифеста sources.json в source_documents: байты берёт из папки
    архива «Кадры», сверяет SHA-256 с манифестом, текст собирает из абзацев манифеста.
 2. Для каждого профиля пакета вызывает create_requirement_profile: ключи строк, происхождение,
-   обязательность, способ проверки и критерии выполнения переносятся в базу.
-3. Печатает, сколько строк загружено и какие поля пакета в базу не переносятся
-   (они остаются в пакете для ревью: check_stage, evidence_channels, mandatory_basis…).
+   обязательность, способ и этап проверки (check_stage, v1.5), критерии выполнения и params 0.1
+   переносятся в базу. params проверяются по формату 0.1 при создании профиля.
+3. С --synthetic дополнительно загружает учебный профиль из synthetic/cases.json (is_synthetic = true).
+   Версии нумеруются в своём контуре, поэтому учебный python-dev v2 не конфликтует с рабочим v2.
+4. Печатает, сколько строк загружено и какие поля пакета в базу не переносятся
+   (они остаются в пакете для ревью: evidence_channels, mandatory_basis…).
 
 Всё выполняется в одной транзакции. Без --commit она откатывается: так проверяется,
 что пакет укладывается в схему, без изменения базы.
 
-    uv run python -m scripts.load_requirement_profiles <profiles.draft.json> <sources.json> "<папка Кадры>" [--commit]
+    uv run python -m scripts.load_requirement_profiles <profiles.draft.json> <sources.json> "<папка Кадры>" \
+        [--synthetic <synthetic/cases.json>] [--commit]
 """
 import argparse
 import hashlib
@@ -40,12 +44,12 @@ SUPPORTED_PACKAGE = "requirement-profile-review/0.2"
 IMPORT_BATCH = "requirement-profiles"
 
 # Поля строк пакета, которые переносятся в базу. Остальные перечисляются в отчёте как оставшиеся в пакете.
-FORMAL_FIELDS = {"key", "text", "kind", "params", "is_mandatory", "verification", "origin", "source_refs",
-                 "rationale", "acceptance"}
+FORMAL_FIELDS = {"key", "text", "kind", "params", "is_mandatory", "verification", "check_stage", "origin",
+                 "source_refs", "rationale", "acceptance"}
 COMPETENCY_FIELDS = {"key", "text", "code", "rank", "target_level_min", "target_level_max", "origin",
                      "source_refs", "rationale", "indicators"}
-INDICATOR_FIELDS = {"key", "text", "is_mandatory", "verification", "origin", "source_refs", "rationale",
-                    "acceptance", "excluded_from_scoring", "sort_order"}
+INDICATOR_FIELDS = {"key", "text", "is_mandatory", "verification", "check_stage", "origin", "source_refs",
+                    "rationale", "acceptance", "excluded_from_scoring", "sort_order"}
 
 DOCUMENT_KIND = {
     "job_description": DocumentKind.JOB_DESCRIPTION,
@@ -109,7 +113,7 @@ def build_profile(profile: dict[str, Any], documents: dict[str, Any], skipped: C
         unloaded(row, FORMAL_FIELDS, skipped)
         formal.append(FormalRequirementIn(
             kind=row["kind"], description=row["text"], params=row.get("params") or {},
-            is_mandatory=row["is_mandatory"], verification=row["verification"],
+            is_mandatory=row["is_mandatory"], verification=row["verification"], check_stage=row.get("check_stage"),
             acceptance=row.get("acceptance") or {}, **row_source(row, documents),
         ))
     competencies = []
@@ -121,7 +125,7 @@ def build_profile(profile: dict[str, Any], documents: dict[str, Any], skipped: C
             unloaded(row, INDICATOR_FIELDS, skipped)
             indicators.append(IndicatorIn(
                 text=row["text"], is_mandatory=row["is_mandatory"], verification=row["verification"],
-                acceptance=row.get("acceptance") or {},
+                check_stage=row.get("check_stage"), acceptance=row.get("acceptance") or {},
                 excluded_from_scoring=row.get("excluded_from_scoring", False),
                 **row_source(row, documents),
             ))
@@ -145,6 +149,7 @@ def main() -> None:
     parser.add_argument("package", type=Path, help="profiles.draft.json")
     parser.add_argument("manifest", type=Path, help="sources.json")
     parser.add_argument("kadry_root", type=Path, help="папка «Кадры» распакованного архива")
+    parser.add_argument("--synthetic", type=Path, help="synthetic/cases.json: загрузить и учебный профиль")
     parser.add_argument("--created-by", default="stage-0b-01")
     parser.add_argument("--commit", action="store_true", help="сохранить; без флага транзакция откатывается")
     args = parser.parse_args()
@@ -154,29 +159,42 @@ def main() -> None:
     if package["package_schema"] != SUPPORTED_PACKAGE:
         raise SystemExit(f"формат пакета {package['package_schema']} не поддерживается, ожидается {SUPPORTED_PACKAGE}")
 
+    profiles = list(package["profiles"])
+    if args.synthetic:
+        training = json.loads(args.synthetic.read_text(encoding="utf-8"))["synthetic_profile"]
+        if training.get("is_synthetic") is not True:
+            raise SystemExit("в synthetic/cases.json профиль не помечен is_synthetic = true")
+        profiles.append(training)
+
     skipped: Counter = Counter()
     with SessionLocal() as session:
         documents = load_sources(session, manifest, args.kadry_root)
         print(f"документов: {len(documents)}")
-        for profile in package["profiles"]:
+        for profile in profiles:
             position_id = session.scalar(select(Position.id).where(Position.code == profile["position_code"]))
             if position_id is None:
                 raise SystemExit(f"нет должности {profile['position_code']}: запустите python -m app.db.seed")
+            contour = "учебный" if profile["is_synthetic"] else "рабочий"
             exists = session.scalar(select(RequirementProfile.id).where(
-                RequirementProfile.position_id == position_id, RequirementProfile.version == profile["version"]))
+                RequirementProfile.position_id == position_id,
+                RequirementProfile.is_synthetic == profile["is_synthetic"],
+                RequirementProfile.version == profile["version"]))
             if exists is not None:
-                raise SystemExit(f"{profile['position_code']} v{profile['version']} уже загружен: "
+                raise SystemExit(f"{profile['position_code']} {contour} v{profile['version']} уже загружен: "
                                  "загруженную версию не переписываем, изменения — новой версией пакета")
             loaded = repo.create_requirement_profile(
                 session, position_id=position_id, version=profile["version"], created_by=args.created_by,
-                is_synthetic=profile["is_synthetic"], note=f"{package['package_schema']}, {profile['key']}",
+                is_synthetic=profile["is_synthetic"],
+                note=f"{package['package_schema']}, {profile['key']}",
                 **build_profile(profile, documents, skipped),
             )
             indicators = [i for c in loaded.competencies for i in c.indicators]
+            stages = Counter(r.check_stage.value for r in [*loaded.formal_requirements, *indicators])
             print(
-                f"{profile['position_code']} v{loaded.version} ({loaded.status.value}): "
+                f"{profile['position_code']} {contour} v{loaded.version} ({loaded.status.value}): "
                 f"условий {len(loaded.formal_requirements)}, компетенций {len(loaded.competencies)}, "
-                f"индикаторов {len(indicators)}, из них не в оценке {sum(i.excluded_from_scoring for i in indicators)}"
+                f"индикаторов {len(indicators)}, из них не в оценке {sum(i.excluded_from_scoring for i in indicators)}; "
+                f"этапы проверки: {dict(sorted(stages.items()))}"
             )
         print("поля пакета, оставшиеся только в пакете:",
               ", ".join(f"{name} ({count})" for name, count in sorted(skipped.items())) or "нет")

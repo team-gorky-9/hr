@@ -2,10 +2,10 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 from app.db import repository as repo
-from app.db.enums import CheckResult, RequirementStatus
+from app.db.enums import CheckResult, RequirementStatus, VerificationMethod
 from app.schemas.assessment import CompetencyScoreIn, FormalCheckIn
 from app.schemas.card import Evidence
-from tests.factories import add_card, make_candidate, make_profile
+from tests.factories import add_card, approve, make_candidate, make_profile
 
 TEXT = "Высшее образование, Юриспруденция, 2015. Работал с базами данных и электронной почтой."
 
@@ -16,9 +16,10 @@ def quote(text_row, fragment: str) -> Evidence:
 
 
 def setup(session, code="hr-0200"):
+    """Реальный кандидат и утверждённый рабочий профиль: только так база принимает оценку человека."""
     candidate = make_candidate(session, code, text=TEXT)
     card = add_card(session, candidate, ["Базы данных"])
-    profile = make_profile(session)
+    profile = approve(session, make_profile(session))
     return candidate, card, profile, repo.get_current_text(session, candidate.id)
 
 
@@ -137,8 +138,9 @@ def test_same_competency_twice_is_rejected(session):
         )
 
 
-def test_met_on_requirement_checked_by_documents_is_stored_as_unknown(session):
-    """Направление подготовки подтверждается дипломом: по резюме его не закрываем."""
+def test_met_by_resume_on_documents_requirement_is_preliminary(session):
+    """Направление подтверждается дипломом. По резюме «да» хранится как met с основанием
+    resume — предварительный результат, а не подмена на unknown (решение Родиона, Р4)."""
     candidate, card, profile, text_row = setup(session)
     level_req, field_req = profile.formal_requirements
     field_req.is_mandatory = True
@@ -153,10 +155,16 @@ def test_met_on_requirement_checked_by_documents_is_stored_as_unknown(session):
         ],
         competency_scores=[],
     )
-    stored = {c.requirement_id: c.result for c in assessment.formal_checks}
-    assert stored == {level_req.id: CheckResult.MET, field_req.id: CheckResult.UNKNOWN}
-    assert assessment.formal_result == CheckResult.UNKNOWN
-    assert assessment.formal_checks[1].evidence  # цитата сохраняется как основание для проверки
+    stored = {c.requirement_id: (c.result, c.basis) for c in assessment.formal_checks}
+    assert stored == {level_req.id: (CheckResult.MET, VerificationMethod.RESUME),
+                      field_req.id: (CheckResult.MET, VerificationMethod.RESUME)}
+    assert assessment.formal_result == CheckResult.MET
+    field_check = next(c for c in assessment.formal_checks if c.requirement_id == field_req.id)
+    assert field_check.evidence  # цитата резюме — основание предварительного вывода
+    assert repo.is_preliminary(field_check.result, field_check.basis, field_req.verification)
+    assert field_check.is_preliminary and assessment.formal_preliminary  # хранится для списков
+    level_check = next(c for c in assessment.formal_checks if c.requirement_id == level_req.id)
+    assert not repo.is_preliminary(level_check.result, level_check.basis, level_req.verification)
 
 
 def test_not_met_on_requirement_checked_by_documents_stays(session):

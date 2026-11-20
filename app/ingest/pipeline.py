@@ -88,8 +88,17 @@ def _import_resume(
             return base.model_copy(update={
                 "status": ItemStatus.ERROR, "reason": "ORPHAN_DOCUMENT: резюме сохранено без кандидата",
             })
+        # Признак учебного кандидата не меняется: файл, сохранённый реальным, не станет учебным и наоборот.
+        # Конфликт — только при явном расхождении; без пометки в mapping повтор остаётся в своём контуре.
+        if route.is_synthetic is not None and candidate.is_synthetic != route.is_synthetic:
+            return base.model_copy(update={
+                "status": ItemStatus.CONFLICT, "candidate_code": candidate.code,
+                "reason": "CONTOUR_CONFLICT: те же байты уже сохранены как "
+                          + ("учебный" if candidate.is_synthetic else "реальный") + " кандидат",
+            })
         known = {
             "candidate_code": candidate.code,
+            "is_synthetic": candidate.is_synthetic,
             "candidate_id": candidate.id,
             "candidate_text_id": _current_text_id(session, candidate),
         }
@@ -138,6 +147,7 @@ def _import_resume(
         redaction_method=REDACTION_METHOD,
         headline=redacted.headline,
         pii=redacted.pii,
+        is_synthetic=bool(route.is_synthetic),
     )
     application = repo.create_application(
         session, candidate_id=candidate.id, source=ApplicationSource.RESPONSE, vacancy_id=vacancy.id
@@ -149,6 +159,7 @@ def _import_resume(
     return base.model_copy(update={
         "status": ItemStatus.IMPORTED,
         "candidate_code": candidate.code,
+        "is_synthetic": candidate.is_synthetic,
         "candidate_id": candidate.id,
         "candidate_text_id": _current_text_id(session, candidate),
         "application_id": application.id,
