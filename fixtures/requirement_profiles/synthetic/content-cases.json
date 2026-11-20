@@ -1,0 +1,346 @@
+{
+  "schema_version": "requirement-content-cases/0.1",
+  "profile_versions": {
+    "hr-consultant": 4,
+    "python-dev": 5
+  },
+  "purpose": "Независимые ручные ожидания Р7–Р8. Не карточки извлечения, не результаты модели и не замена прежних 41 случаев.",
+  "cases": [
+    {
+      "id": "content-technical-applied-informatics",
+      "is_synthetic": true,
+      "position_code": "python-dev",
+      "rule_key": "py.education",
+      "check_stage": "screening",
+      "basis": "resume",
+      "text": "Окончил бакалавриат по направлению 09.03.03 «Прикладная информатика».",
+      "evidence": [
+        {
+          "quote": "Окончил бакалавриат по направлению 09.03.03 «Прикладная информатика».",
+          "start": 0,
+          "end": 69
+        }
+      ],
+      "expected": {
+        "result": "met",
+        "included_in_screening": true,
+        "rationale": "Оконченное высшее по явному положительному примеру; по резюме предварительно, требуется документ."
+      }
+    },
+    {
+      "id": "content-technical-ambiguous",
+      "is_synthetic": true,
+      "position_code": "python-dev",
+      "rule_key": "py.education",
+      "check_stage": "screening",
+      "basis": "resume",
+      "text": "В дипломе указано «Экономическая информатика». Код направления не помню.",
+      "evidence": [
+        {
+          "quote": "В дипломе указано «Экономическая информатика». Код направления не помню.",
+          "start": 0,
+          "end": 72
+        }
+      ],
+      "expected": {
+        "result": "unknown",
+        "included_in_screening": true,
+        "rationale": "Не выводить техническую классификацию из одного слова; неизвестно точное соответствие принятому правилу."
+      }
+    },
+    {
+      "id": "content-student-number-only",
+      "is_synthetic": true,
+      "position_code": "python-dev",
+      "rule_key": "py.education",
+      "check_stage": "screening",
+      "basis": "resume",
+      "text": "Высшего образования пока нет. Учусь на третьем курсе вуза.",
+      "evidence": [
+        {
+          "quote": "Высшего образования пока нет. Учусь на третьем курсе вуза.",
+          "start": 0,
+          "end": 58
+        }
+      ],
+      "expected": {
+        "result": "unknown",
+        "included_in_screening": true,
+        "rationale": "Номер курса не определяет senior_student при отсутствии принятого порога; это ограничение правила, не пропуск кандидата."
+      }
+    },
+    {
+      "id": "content-relevant-sql-etl",
+      "is_synthetic": true,
+      "position_code": "python-dev",
+      "rule_key": "py.experience",
+      "check_stage": "screening",
+      "basis": "resume",
+      "text": "Работал инженером данных: разрабатывал SQL-запросы и ETL-процессы. Python не использовал.",
+      "evidence": [
+        {
+          "quote": "Работал инженером данных: разрабатывал SQL-запросы и ETL-процессы. Python не использовал.",
+          "start": 0,
+          "end": 89
+        }
+      ],
+      "expected": {
+        "result": "met",
+        "included_in_screening": true,
+        "rationale": "Релевантная работа с данными подтверждена; Python проверяется отдельно, численного минимума стажа нет."
+      }
+    },
+    {
+      "id": "content-reporting-vague",
+      "is_synthetic": true,
+      "position_code": "python-dev",
+      "rule_key": "py.experience",
+      "check_stage": "screening",
+      "basis": "resume",
+      "text": "На работе составлял отчёты.",
+      "evidence": [
+        {
+          "quote": "На работе составлял отчёты.",
+          "start": 0,
+          "end": 27
+        }
+      ],
+      "expected": {
+        "result": "unknown",
+        "included_in_screening": true,
+        "rationale": "Рабочий контекст есть, но не подтверждены технические обязанности с данными."
+      }
+    },
+    {
+      "id": "content-personal-project",
+      "is_synthetic": true,
+      "position_code": "python-dev",
+      "rule_key": "py.experience",
+      "check_stage": "screening",
+      "basis": "resume",
+      "text": "В личном учебном проекте делал ETL на Python; об опыте работы здесь не рассказываю.",
+      "evidence": [
+        {
+          "quote": "В личном учебном проекте делал ETL на Python; об опыте работы здесь не рассказываю.",
+          "start": 0,
+          "end": 83
+        }
+      ],
+      "expected": {
+        "result": "unknown",
+        "included_in_screening": true,
+        "rationale": "Проект может подтверждать навык, но не свидетельствует ни о наличии, ни об отсутствии релевантной работы."
+      }
+    },
+    {
+      "id": "content-python-practice",
+      "is_synthetic": true,
+      "position_code": "python-dev",
+      "rule_key": "py.di.P106",
+      "check_stage": "screening",
+      "basis": "resume",
+      "text": "Разрабатывал ETL на Python: очищал таблицы и объединял данные с помощью pandas.",
+      "evidence": [
+        {
+          "quote": "Разрабатывал ETL на Python: очищал таблицы и объединял данные с помощью pandas.",
+          "start": 0,
+          "end": 79
+        }
+      ],
+      "expected": {
+        "result": "met",
+        "included_in_screening": true,
+        "rationale": "Конкретное собственное применение языка и библиотеки; глубина знания не оценена."
+      }
+    },
+    {
+      "id": "content-python-learning",
+      "is_synthetic": true,
+      "position_code": "python-dev",
+      "rule_key": "py.di.P106",
+      "check_stage": "screening",
+      "basis": "resume",
+      "text": "Планирую изучать Python и pandas.",
+      "evidence": [
+        {
+          "quote": "Планирую изучать Python и pandas.",
+          "start": 0,
+          "end": 33
+        }
+      ],
+      "expected": {
+        "result": "unknown",
+        "included_in_screening": true,
+        "rationale": "Намерение учиться не подтверждает применение и не является отрицанием навыка."
+      }
+    },
+    {
+      "id": "content-db-list-screening",
+      "is_synthetic": true,
+      "position_code": "python-dev",
+      "rule_key": "py.di.P110",
+      "check_stage": "screening",
+      "basis": "resume",
+      "text": "Использовал SQL и PostgreSQL.",
+      "evidence": [
+        {
+          "quote": "Использовал SQL и PostgreSQL.",
+          "start": 0,
+          "end": 29
+        }
+      ],
+      "expected": {
+        "result": "not_evaluated",
+        "included_in_screening": false,
+        "rationale": "Перечень знаний ДИ относится к interview и не входит в X/Y screening."
+      }
+    },
+    {
+      "id": "content-db-list-incomplete",
+      "is_synthetic": true,
+      "position_code": "python-dev",
+      "rule_key": "py.di.P110",
+      "check_stage": "interview",
+      "basis": "interview",
+      "text": "На вопрос о технологиях из перечня ДИ объяснил SQL и PostgreSQL. Остальные технологии интервьюер не спрашивал.",
+      "evidence": [
+        {
+          "quote": "На вопрос о технологиях из перечня ДИ объяснил SQL и PostgreSQL. Остальные технологии интервьюер не спрашивал.",
+          "start": 0,
+          "end": 110
+        }
+      ],
+      "expected": {
+        "result": "unknown",
+        "included_in_screening": false,
+        "rationale": "Часть перечня подтверждена, остальные части не проверены; нельзя закрыть весь перечень или считать остальные опровергнутыми."
+      }
+    },
+    {
+      "id": "content-rest-stage",
+      "is_synthetic": true,
+      "position_code": "python-dev",
+      "rule_key": "py.posting.08",
+      "check_stage": "screening",
+      "basis": "resume",
+      "text": "Поддерживал REST API сервиса.",
+      "evidence": [
+        {
+          "quote": "Поддерживал REST API сервиса.",
+          "start": 0,
+          "end": 29
+        }
+      ],
+      "expected": {
+        "result": "not_evaluated",
+        "included_in_screening": false,
+        "rationale": "Практика относится к другому индикатору; понимание архитектуры проверяется на интервью."
+      }
+    },
+    {
+      "id": "content-dddm-stage",
+      "is_synthetic": true,
+      "position_code": "python-dev",
+      "rule_key": "py.posting.13",
+      "check_stage": "screening",
+      "basis": "resume",
+      "text": "Составлял отчёты и диаграммы.",
+      "evidence": [
+        {
+          "quote": "Составлял отчёты и диаграммы.",
+          "start": 0,
+          "end": 29
+        }
+      ],
+      "expected": {
+        "result": "not_evaluated",
+        "included_in_screening": false,
+        "rationale": "Понимание DDDM проверяется на интервью, не по одному факту создания отчёта."
+      }
+    },
+    {
+      "id": "content-acts-duplicate",
+      "is_synthetic": true,
+      "position_code": "hr-consultant",
+      "rule_key": "hr.RK.03",
+      "check_stage": "screening",
+      "basis": "resume",
+      "text": "Готовил проекты муниципальных правовых актов по вопросам отдела.",
+      "evidence": [
+        {
+          "quote": "Готовил проекты муниципальных правовых актов по вопросам отдела.",
+          "start": 0,
+          "end": 64
+        }
+      ],
+      "expected": {
+        "result": "not_evaluated",
+        "included_in_screening": false,
+        "rationale": "Способность учитывается в hr.DK.06; RK.03 сохранена как исключённый повтор, без межкомпетентностного same_as."
+      }
+    },
+    {
+      "id": "content-acts-primary",
+      "is_synthetic": true,
+      "position_code": "hr-consultant",
+      "rule_key": "hr.DK.06",
+      "check_stage": "screening",
+      "basis": "resume",
+      "text": "Готовил проекты муниципальных правовых актов по вопросам отдела.",
+      "evidence": [
+        {
+          "quote": "Готовил проекты муниципальных правовых актов по вопросам отдела.",
+          "start": 0,
+          "end": 64
+        }
+      ],
+      "expected": {
+        "result": "met",
+        "included_in_screening": true,
+        "rationale": "Собственный опыт подготовки актов явно заявлен; учитывается один раз по DK.06."
+      }
+    },
+    {
+      "id": "content-personal-no-timing-rubric",
+      "is_synthetic": true,
+      "position_code": "python-dev",
+      "rule_key": "py.di.P207",
+      "check_stage": "interview",
+      "basis": "interview",
+      "text": "Кандидат долго обдумывал ответ. Задание, срок и критерии результата заранее не согласовывались.",
+      "evidence": [
+        {
+          "quote": "Кандидат долго обдумывал ответ. Задание, срок и критерии результата заранее не согласовывались.",
+          "start": 0,
+          "end": 95
+        }
+      ],
+      "expected": {
+        "result": "unknown",
+        "included_in_screening": false,
+        "rationale": "Без условий задания нельзя оценить его выполнение в срок или сделать вывод о скорости мышления."
+      }
+    },
+    {
+      "id": "content-personal-analysis",
+      "is_synthetic": true,
+      "position_code": "python-dev",
+      "rule_key": "py.di.P202",
+      "check_stage": "interview",
+      "basis": "interview",
+      "text": "При падении показателя проверил две гипотезы: неполную выгрузку и ошибку фильтра. Сравнил число строк с источником и пересчитал показатель без фильтра; расхождение возникало только после фильтра.",
+      "evidence": [
+        {
+          "quote": "При падении показателя проверил две гипотезы: неполную выгрузку и ошибку фильтра. Сравнил число строк с источником и пересчитал показатель без фильтра; расхождение возникало только после фильтра.",
+          "start": 0,
+          "end": 195
+        }
+      ],
+      "expected": {
+        "result": "met",
+        "included_in_screening": false,
+        "rationale": "Есть проверяемые гипотезы, выбранные проверки и связь вывода с результатом; оценивается рабочее действие, не диагноз."
+      }
+    }
+  ]
+}

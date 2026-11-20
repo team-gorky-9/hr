@@ -401,6 +401,8 @@ def relevant_profile(session):
          {"no_experience_quote": "Опыта разработки на Python и работы с данными у меня нет."},
          CheckResult.NOT_MET),
         ("Опыт работы: Не указано.", {}, CheckResult.UNKNOWN),
+        # Живой прогон 20.11: модель приняла заглушку за «опыта нет». Код требует прямого отрицания.
+        ("Опыт работы: Не указано.", {"no_experience_quote": "Опыт работы: Не указано."}, CheckResult.UNKNOWN),
     ],
 )
 def test_relevant_role_experience(session, text, answer, expected):
@@ -408,3 +410,49 @@ def test_relevant_role_experience(session, text, answer, expected):
     llm = FakeLLMClient(lambda role, schema, s, u: {} if schema == "CandidateCard" else answer)
     _, assessment = run(session, profile, text, llm)
     assert assessment.formal_checks[0].result == expected
+
+
+def technical_field_profile(session):
+    from app.db.enums import FormalRequirementKind, RowOrigin, VerificationMethod
+    from app.schemas.requirements import CompetencyIn, FormalRequirementIn, IndicatorIn
+
+    team = {"origin": RowOrigin.TEAM, "note": "тест"}
+    position = session.scalar(select(Position).where(Position.code == "python-dev"))
+    return repo.create_requirement_profile(
+        session, position_id=position.id, created_by="test", is_synthetic=True,
+        formal_requirements=[FormalRequirementIn(
+            key="t.edu", kind=FormalRequirementKind.EDUCATION_LEVEL, description="Высшее техническое",
+            params={"schema_version": "0.1", "alternatives": [
+                {"key": "t.edu.alt1", "level": "высшее", "field_group": "technical",
+                 "field_examples": ["Прикладная информатика", "Программная инженерия"]}]},
+            verification=VerificationMethod.RESUME, **team)],
+        competencies=[CompetencyIn(key="t.c", code="T", name="Тест", **team,
+                                   indicators=[IndicatorIn(key="t.c.1", text="x", verification=VerificationMethod.INTERVIEW, **team)])],
+    )
+
+
+@pytest.mark.parametrize(("text", "expected"), [
+    # Живой прогон 20.11 (py-education-borderline): похожее, но более узкое направление — не подтверждение.
+    ("Окончил вуз по направлению Прикладная информатика в экономике.", CheckResult.UNKNOWN),
+    ("Окончил вуз по направлению Прикладная информатика.", CheckResult.MET),
+])
+def test_field_examples_need_the_whole_name(session, text, expected):
+    profile = technical_field_profile(session)
+
+    def respond(role, schema, system, user):
+        if schema == "CandidateCard":
+            return {}
+        return {"alternatives": [{"alternative_key": "t.edu.alt1", "status": "confirmed", "quote": text}]}
+    _, assessment = run(session, profile, text, FakeLLMClient(respond))
+    assert assessment.formal_checks[0].result == expected
+
+
+def test_status_synonyms_are_normalised():
+    from app.assessment.llm_schemas import CompetencyExtraction, FormalExtraction
+
+    formal = FormalExtraction.model_validate({"alternatives": [
+        {"alternative_key": "a", "status": "unknown"}, {"alternative_key": "b", "status": "met"},
+        {"alternative_key": "c", "status": "not_met"}, {"alternative_key": "d", "status": None}]})
+    assert [a.status for a in formal.alternatives] == ["no_info", "confirmed", "refuted", "no_info"]
+    competency = CompetencyExtraction.model_validate({"indicators": [{"indicator_key": "i", "status": "not_met"}]})
+    assert competency.indicators[0].status == "contradicted"

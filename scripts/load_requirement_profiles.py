@@ -49,7 +49,7 @@ FORMAL_FIELDS = {"key", "text", "kind", "params", "is_mandatory", "verification"
 COMPETENCY_FIELDS = {"key", "text", "code", "rank", "target_level_min", "target_level_max", "origin",
                      "source_refs", "rationale", "indicators"}
 INDICATOR_FIELDS = {"key", "text", "is_mandatory", "verification", "check_stage", "origin", "source_refs",
-                    "rationale", "acceptance", "excluded_from_scoring", "sort_order"}
+                    "rationale", "acceptance", "excluded_from_scoring", "sort_order", "same_as"}
 
 DOCUMENT_KIND = {
     "job_description": DocumentKind.JOB_DESCRIPTION,
@@ -126,7 +126,7 @@ def build_profile(profile: dict[str, Any], documents: dict[str, Any], skipped: C
             indicators.append(IndicatorIn(
                 text=row["text"], is_mandatory=row["is_mandatory"], verification=row["verification"],
                 check_stage=row.get("check_stage"), acceptance=row.get("acceptance") or {},
-                excluded_from_scoring=row.get("excluded_from_scoring", False),
+                excluded_from_scoring=row.get("excluded_from_scoring", False), same_as=row.get("same_as"),
                 **row_source(row, documents),
             ))
         competencies.append(CompetencyIn(

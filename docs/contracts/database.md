@@ -1,5 +1,7 @@
 # Контракт: база данных
 
+**Интеграционное дополнение v1.7:** ветка `feature/profile-assessment-integration`, миграция `0005`, раздел 18. Реализацию по архитектурному плану разрешил Давид; исторические статусы утверждения версий ниже не переписываются и согласие коллег не подразумевается.
+
 **Версия:** 1.6 (проект) · **Дата:** 2026-11-20 · **Статус:** v1.0 утверждена Родионом 19.11.2026; v1.1 принята решением Родиона 20.11 (Р1); изменения v1.2 (раздел 13), v1.3 (раздел 14), v1.4 (раздел 15), v1.5 (раздел 16) и v1.6 (раздел 17) ждут утверждения
 **Автор:** Денис (бэкенд и база) · **Реализация:** v1.0 — team-gorky-9/hr#1, миграция `0001`; v1.1 — team-gorky-9/hr#4, миграция `0002`; v1.2 — team-gorky-9/hr#5, без миграции; v1.3 — team-gorky-9/hr#6, без миграции; v1.4 — team-gorky-9/hr#8, без миграции; v1.5 — ветка `feature/profile-contours-and-basis`, миграция `0003`; v1.6 — ветка `feature/ingest-02-full-corpus-and-pii-audit`, миграция `0004`
 
@@ -648,3 +650,24 @@
 - **Ася:** поле «на какую публикацию откликнулся» (после `api.md`).
 
 **Как проверено:** миграция `0004` на `hr_dev` с архивом «Кадры» — вперёд, откат `0004 → 0003`, снова вперёд; `test_models_match_migrations`; тест на отказ базы при повторе внешнего отклика (с датой и без); 290 тестов на PostgreSQL.
+
+## 18. Интеграция оценщика и повторов · v1.7
+
+Миграция 0005 поверх 0004 добавляет nullable поля, не переписывая существующие версии:
+
+| Таблица | Поле | Смысл |
+|---|---|---|
+| competency_indicators | same_as varchar(64) | Общий ключ повторяющихся индикаторов |
+| competency_scores | details JSONB | Типизированный результат версии 1.0; null у прежних оценок |
+| assessments | algorithm_version varchar(64) | Версия правил кода, отдельно от промпта |
+| assessments | calculation_as_of varchar(7) | Месяц расчёта стажа YYYY-MM |
+
+same_as проверяется до создания профиля: одна компетенция, один check_stage, нет excluded_from_scoring. Обязательность участников может различаться, обязательность группы — OR. CHECK в таблице запрещает пустую группу и исключённого участника; межстрочные условия проверяют repository и загрузчик. Полный профиль должен записываться через create_requirement_profile.
+
+details имеет схему `app.schemas.competency_details.CompetencyDetails`: schema_version=1.0, basis=resume, check_stage=screening, indicators (key/status/evidence/ambiguous_location), groups (key/members/is_mandatory/status/manual_review), mandatory/desired (confirmed/contradicted/no_info/total), on_interview и excluded. Группа — одна единица; противоречие сильнее подтверждения, их сочетание требует ручной сверки. Интервью-группы считаются отдельно, в screening X/Y не входят.
+
+save_assessment проверяет полный набор ключей screening-индикаторов, пересчитывает группы/счётчики, проверяет все вложенные цитаты по тексту карточки. Для confirmed/contradicted нужна цитата. level и overall_score оценщик оставляет null. Прежние callers без details поддерживаются; отсутствие старых details не превращается в нулевые счётчики. confirm_formal_check копирует details, algorithm_version и calculation_as_of в новую версию.
+
+Контекст запуска хранится отдельно в audit_log (action=other, entity_type=assessment_run); purpose не записывается как единственное изменяемое свойство Assessment. См. [контракт применимости](profile-applicability.md). Изменение политики влияет на представление отклика, а не переписывает оценки пар.
+
+Реальная проверка миграции 0005: применение/откат/повторное применение на затронутых таблицах PostgreSQL 18 и сохранение legacy-данных. Проверки оценщика/API — на реальной ORM-схеме без embeddings. Полный прогон цепочки 0001–0005 с pgvector остаётся отдельной проверкой; см. [отчёт](../reports/profile-assessment-integration.md).

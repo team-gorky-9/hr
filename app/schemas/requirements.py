@@ -219,6 +219,13 @@ class FormalRequirementIn(_StagedRow):
 class IndicatorIn(_StagedRow):
     text: str = Field(min_length=1)
     excluded_from_scoring: bool = False
+    same_as: RowKey | None = None
+
+    @model_validator(mode="after")
+    def _check_group(self) -> Self:
+        if self.same_as is not None and self.excluded_from_scoring:
+            raise ValueError('same_as cannot contain excluded indicators')
+        return self
 
 
 class CompetencyIn(RowSourceIn):

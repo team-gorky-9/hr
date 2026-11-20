@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.db.enums import CheckResult
 from app.schemas.card import Evidence
 from app.schemas.requirements import RowKey
+from app.schemas.competency_details import CompetencyDetails
 
 
 class _Strict(BaseModel):
@@ -31,6 +32,7 @@ class FormalCheckIn(_Strict):
 
 
 class CompetencyScoreIn(_Strict):
+    details: CompetencyDetails | None = None
     competency_id: uuid.UUID
     level: int | None = Field(default=None, ge=0, le=100)
     explanation: str | None = None

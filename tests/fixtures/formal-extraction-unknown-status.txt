@@ -1,0 +1,21 @@
+```
+{
+  "periods": [],
+  "statement": null,
+  "no_experience_quote": null,
+  "alternatives": [
+    {
+      "quotes": [],
+      "alternative_key": "py.education.alt1",
+      "status": "unknown",
+      "quote": null
+    },
+    {
+      "quotes": [],
+      "alternative_key": "py.education.alt2",
+      "status": "unknown",
+      "quote": "Учусь в вузе."
+    }
+  ]
+}
+```
