@@ -71,6 +71,17 @@ class VerificationMethod(StrEnum):
     TEST = "test"            # практическое задание
 
 
+class CheckStage(StrEnum):
+    """На каком этапе отбора проверяется строка профиля [v1.5].
+
+    `screening` — первичный отбор по резюме: строка входит в итог formal_result и в счётчики.
+    Требование «по документам» тоже проверяется здесь предварительно (basis = resume).
+    `interview` — только на интервью: в итог разбора резюме не входит, уходит в вопросы.
+    """
+    SCREENING = "screening"
+    INTERVIEW = "interview"
+
+
 class RowOrigin(StrEnum):
     """Откуда строка профиля требований."""
     SOURCE = "source"  # перенесена из документа: есть документ, адрес и цитата

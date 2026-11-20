@@ -21,9 +21,11 @@ from app.db.enums import (
     AuditAction,
     Channel,
     CheckResult,
+    CheckStage,
     DocumentKind,
     FeedbackOutcome,
     FileFormat,
+    FormalRequirementKind,
     RequirementStatus,
     ReserveStatus,
     UserRole,
@@ -56,11 +58,11 @@ from app.db.models import (
     Vacancy,
 )
 from app.db.seed import INITIAL_STAGE
-from app.schemas.assessment import CompetencyScoreIn, FormalCheckIn
+from app.schemas.assessment import AlternativeResultIn, CompetencyScoreIn, FormalCheckIn
 from app.schemas.card import CandidateCard as CardSchema
 from app.schemas.card import Evidence, evidence_matches
 from app.schemas.pii import PiiData
-from app.schemas.requirements import CompetencyIn, FormalRequirementIn, ProfileSourceIn
+from app.schemas.requirements import CompetencyIn, FormalRequirementIn, ProfileSourceIn, alternative_keys
 
 
 class RepositoryError(Exception):
@@ -134,13 +136,20 @@ def create_candidate(
     redaction_method: str,
     headline: str | None = None,
     pii: PiiData | None = None,
+    is_synthetic: bool = False,
 ) -> Candidate:
-    """Создать кандидата из резюме: запись кандидата, его ПДн и первую версию очищенного текста."""
+    """Создать кандидата из резюме: запись кандидата, его ПДн и первую версию очищенного текста.
+
+    is_synthetic = True — учебный кандидат (выдуманный текст, py-9001): он в учебном контуре
+    и не попадает в рабочие списки. Признак после создания не меняется.
+    """
     source_document = _get(session, SourceDocument, source_document_id, "исходный документ")
     if source_document.kind != DocumentKind.RESUME:
         raise RepositoryError(f"документ {source_document.original_path} не резюме: {source_document.kind}")
 
-    candidate = Candidate(code=code, source_document_id=source_document.id, headline=headline)
+    candidate = Candidate(
+        code=code, source_document_id=source_document.id, headline=headline, is_synthetic=is_synthetic
+    )
     session.add(candidate)
     session.flush()
     if pii is not None:
@@ -533,7 +542,8 @@ def create_requirement_profile(
 
     Порядок строк сохраняется в sort_order. Документ строки должен быть среди
     источников профиля: так у версии профиля полный и неизменный список документов.
-    Без version берётся следующий номер для должности; повтор номера → IntegrityError.
+    Версии нумеруются отдельно в рабочем и учебном контуре (is_synthetic): без version
+    берётся следующий номер для должности в этом контуре; повтор номера → IntegrityError.
     """
     position = _get(session, Position, position_id, "должность")
     source_ids = [s.source_document_id for s in sources]
@@ -557,9 +567,21 @@ def create_requirement_profile(
     duplicates = sorted({code for code in codes if codes.count(code) > 1})
     if duplicates:
         raise RepositoryError(f"повторяются коды компетенций: {', '.join(duplicates)}")
+    level_keys = {r.key for r in formal_requirements if r.kind == FormalRequirementKind.EDUCATION_LEVEL}
+    for requirement in formal_requirements:
+        required = requirement.params.get("requires_requirement")
+        if required is not None and required not in level_keys:
+            raise RepositoryError(
+                f"требование {requirement.key} ссылается на {required}: в профиле нет такого требования уровня образования"
+            )
 
     if version is None:
-        version = _next_version(session, RequirementProfile.version, RequirementProfile.position_id == position.id)
+        version = _next_version(
+            session,
+            RequirementProfile.version,
+            RequirementProfile.position_id == position.id,
+            RequirementProfile.is_synthetic == is_synthetic,
+        )
     profile = RequirementProfile(
         position_id=position.id,
         version=version,
@@ -604,27 +626,27 @@ def approve_requirement_profile(
     approved_by_user_id: uuid.UUID,
     approval_basis: str,
 ) -> RequirementProfile:
-    """Утвердить черновик. Прежняя утверждённая версия той же должности уходит в архив.
+    """Утвердить черновик. Прежняя утверждённая версия той же должности **в том же контуре**
+    уходит в архив: утверждение учебного профиля не трогает рабочий, и наоборот.
 
-    Утверждает активный пользователь с ролью hr или admin; основание обязательно.
-    Учебный профиль утвердить нельзя.
+    Утверждает активный пользователь с ролью hr или admin; основание обязательно —
+    одинаково для рабочего и учебного профиля, чтобы проверка учебного шла тем же путём.
     """
     profile = _get(session, RequirementProfile, profile_id, "профиль требований")
     user = _get(session, User, approved_by_user_id, "пользователь")
     if profile.status != RequirementStatus.DRAFT:
         raise RepositoryError(f"утвердить можно только черновик, а профиль в статусе «{profile.status.value}»")
-    if profile.is_synthetic:
-        raise RepositoryError("учебный профиль нельзя утвердить")
     if not user.is_active or user.role not in (UserRole.HR, UserRole.ADMIN):
         raise RepositoryError("утверждает активный кадровик или администратор")
     if not approval_basis.strip():
         raise RepositoryError("не указано основание утверждения")
 
-    # Сначала архив, затем утверждение: иначе сработает индекс «одна утверждённая на должность».
+    # Сначала архив, затем утверждение: иначе сработает индекс «одна утверждённая на должность в контуре».
     session.execute(
         update(RequirementProfile)
         .where(
             RequirementProfile.position_id == profile.position_id,
+            RequirementProfile.is_synthetic == profile.is_synthetic,
             RequirementProfile.status == RequirementStatus.APPROVED,
         )
         .values(status=RequirementStatus.ARCHIVED)
@@ -639,7 +661,56 @@ def approve_requirement_profile(
     return profile
 
 
+def get_approved_profile(
+    session: Session, position_id: uuid.UUID, *, synthetic: bool = False
+) -> RequirementProfile | None:
+    """Действующий (утверждённый) профиль должности — единственное место такого выбора.
+
+    По умолчанию — рабочий контур: учебный профиль сюда не попадает, даже если он утверждён.
+    Учебный выбирается только явным synthetic=True (технический прогон, учебный срез API).
+    """
+    return session.scalar(
+        select(RequirementProfile).where(
+            RequirementProfile.position_id == position_id,
+            RequirementProfile.is_synthetic == synthetic,
+            RequirementProfile.status == RequirementStatus.APPROVED,
+        )
+    )
+
+
 # --- Оценка ------------------------------------------------------------------
+
+def is_training_assessment(candidate: Candidate, profile: RequirementProfile) -> bool:
+    """Оценка учебная, если учебный кандидат или профиль. Рабочая рекомендация — только
+    рабочий кандидат × рабочий профиль (а такой профиль save_assessment пускает только утверждённым)."""
+    return candidate.is_synthetic or profile.is_synthetic
+
+
+def is_preliminary(result: CheckResult, basis: VerificationMethod, verification: VerificationMethod) -> bool:
+    """Результат предварительный: вывод есть, но сделан не тем способом, которым требование
+    подтверждается (контракт оценки п. 4.4). Пример: «Высшее образование» по резюме при
+    verification = documents — «по резюме да, нужен документ»; «среднее» по резюме при том же
+    требовании — «по резюме нет, сверить с документом». unknown — не вывод, поэтому не предварительный."""
+    return result != CheckResult.UNKNOWN and basis != verification
+
+
+def _check_assessment_allowed(candidate: Candidate, profile: RequirementProfile) -> None:
+    """Кого по какому профилю можно оценивать — правило держит база, а не только оценщик.
+
+    Реальный кандидат — только по утверждённому рабочему профилю: иначе черновик или
+    учебное правило («стаж ≥ 24 мес.») превратились бы в рабочую рекомендацию о человеке.
+    Учебный кандидат — по любому не архивному профилю: так учебные случаи проверяют и
+    правила реальных профилей.
+    """
+    if profile.status == RequirementStatus.ARCHIVED:
+        raise RepositoryError("профиль в архиве: оценивать нужно по действующей версии требований")
+    if candidate.is_synthetic:
+        return
+    if profile.is_synthetic:
+        raise RepositoryError("реального кандидата нельзя оценивать по учебному профилю")
+    if profile.status != RequirementStatus.APPROVED:
+        raise RepositoryError("реального кандидата оценивают только по утверждённому профилю")
+
 
 def save_assessment(
     session: Session,
@@ -654,24 +725,22 @@ def save_assessment(
     summary: str | None = None,
     prompt_version: str | None = None,
 ) -> Assessment:
-    """Сохранить новую версию оценки кандидата по версии требований.
+    """Сохранить новую версию оценки кандидата по версии требований (вывод модели по резюме).
 
-    Проверяется: требования и компетенции из этого же профиля; каждая цитата стоит
-    ровно на указанном месте в том очищенном тексте, из которого извлечена карточка.
-    Требование, которое подтверждается не резюме, по резюме не закрывается (met → unknown).
-    Итог по формальным требованиям считает код, а не модель: не выполнено обязательное → not_met.
+    Проверяется: кого по какому профилю можно оценивать (контур и статус профиля);
+    требования и компетенции из этого же профиля; каждая цитата стоит ровно на указанном
+    месте в том очищенном тексте, из которого извлечена карточка; альтернативы — все
+    ключи требования, итог строки следует из них. Основание всех строк — resume.
+    Итог по формальным требованиям считает код, а не модель.
     """
     candidate = _get(session, Candidate, candidate_id, "кандидат")
     profile = _get(session, RequirementProfile, profile_id, "профиль требований")
-    if profile.status == RequirementStatus.ARCHIVED:
-        raise RepositoryError("профиль в архиве: оценивать нужно по действующей версии требований")
+    _check_assessment_allowed(candidate, profile)
     card = _get(session, CandidateCard, card_id, "карточка")
     if card.candidate_id != candidate.id:
         raise RepositoryError("карточка принадлежит другому кандидату")
 
-    requirements = {
-        r.id: r for r in session.scalars(select(FormalRequirement).where(FormalRequirement.profile_id == profile.id))
-    }
+    requirements = _profile_requirements(session, profile.id)
     competency_ids = set(session.scalars(select(Competency.id).where(Competency.profile_id == profile.id)))
     # Одно требование или компетенция — одна строка: иначе в оценке окажутся два
     # противоречивых вывода, а formal_result посчитается только по последнему.
@@ -680,56 +749,151 @@ def save_assessment(
     for check in formal_checks:
         if check.requirement_id not in requirements:
             raise RepositoryError(f"требование {check.requirement_id} не из профиля {profile.id}")
+        _check_alternatives(check, requirements[check.requirement_id])
     for score in competency_scores:
         if score.competency_id not in competency_ids:
             raise RepositoryError(f"компетенция {score.competency_id} не из профиля {profile.id}")
 
     all_evidence = [e for item in [*formal_checks, *competency_scores] for e in item.evidence]
+    all_evidence += [e for check in formal_checks for alt in check.alternatives for e in alt.evidence]
     _verify_evidence(session, candidate.id, card.candidate_text_id, all_evidence)
-    results = {c.requirement_id: _stored_result(c, requirements[c.requirement_id]) for c in formal_checks}
 
-    version = _next_version(
-        session,
-        Assessment.version,
-        Assessment.candidate_id == candidate.id,
-        Assessment.profile_id == profile.id,
+    rows = [
+        FormalCheck(
+            requirement_id=check.requirement_id,
+            result=check.result,
+            basis=VerificationMethod.RESUME,
+            explanation=check.explanation,
+            evidence=[e.model_dump(mode="json") for e in check.evidence],
+            alternatives=[a.model_dump(mode="json") for a in check.alternatives],
+        )
+        for check in formal_checks
+    ]
+    scores = [
+        CompetencyScore(
+            competency_id=score.competency_id,
+            level=score.level,
+            explanation=score.explanation,
+            evidence=[e.model_dump(mode="json") for e in score.evidence],
+        )
+        for score in competency_scores
+    ]
+    return _add_assessment_version(
+        session, candidate.id, profile.id, card.id, requirements, rows, scores,
+        model=model, prompt_version=prompt_version, overall_score=overall_score, summary=summary,
     )
-    _clear_current(session, Assessment, Assessment.candidate_id == candidate.id, Assessment.profile_id == profile.id)
 
+
+def confirm_formal_check(
+    session: Session,
+    *,
+    assessment_id: uuid.UUID,
+    requirement_id: uuid.UUID,
+    result: CheckResult,
+    basis: VerificationMethod,
+    actor_user_id: uuid.UUID,
+    comment: str,
+) -> Assessment:
+    """Человек вносит результат требования по документу, интервью или тесту.
+
+    Создаётся новая версия оценки: все строки текущей копируются, строка требования
+    заменяется результатом с основанием basis, итог пересчитывается. Прежняя версия
+    остаётся в истории (is_current = false): видно, что было «по резюме», а что — «по документу».
+    Цитат резюме у такой строки нет; основание описывает comment («диплом проверен»;
+    номера и серии документов не пишутся — это ПДн).
+    """
+    if basis == VerificationMethod.RESUME:
+        raise RepositoryError("по резюме результат пишет save_assessment; здесь — документ, интервью или тест")
+    if not comment.strip():
+        raise RepositoryError("не указано, на каком основании подтверждён результат")
+    current = _get(session, Assessment, assessment_id, "оценка")
+    if not current.is_current:
+        raise RepositoryError("подтверждать можно только текущую версию оценки")
+    user = _get(session, User, actor_user_id, "пользователь")
+    if not user.is_active or user.role not in (UserRole.HR, UserRole.ADMIN):
+        raise RepositoryError("подтверждает активный кадровик или администратор")
+    candidate = _get(session, Candidate, current.candidate_id, "кандидат")
+    profile = _get(session, RequirementProfile, current.profile_id, "профиль требований")
+    _check_assessment_allowed(candidate, profile)
+    requirements = _profile_requirements(session, profile.id)
+    if requirement_id not in requirements:
+        raise RepositoryError(f"требование {requirement_id} не из профиля {profile.id}")
+
+    rows = [
+        FormalCheck(
+            requirement_id=old.requirement_id,
+            result=old.result,
+            basis=old.basis,
+            explanation=old.explanation,
+            evidence=old.evidence,
+            alternatives=old.alternatives,
+            confirmed_by_user_id=old.confirmed_by_user_id,
+        )
+        for old in current.formal_checks
+        if old.requirement_id != requirement_id
+    ]
+    rows.append(
+        FormalCheck(
+            requirement_id=requirement_id,
+            result=result,
+            basis=basis,
+            explanation=comment.strip(),
+            evidence=[],
+            alternatives=[],
+            confirmed_by_user_id=user.id,
+        )
+    )
+    scores = [
+        CompetencyScore(
+            competency_id=old.competency_id, level=old.level, explanation=old.explanation, evidence=old.evidence
+        )
+        for old in current.competency_scores
+    ]
+    return _add_assessment_version(
+        session, candidate.id, profile.id, current.card_id, requirements, rows, scores,
+        model=current.model, prompt_version=current.prompt_version,
+        overall_score=current.overall_score, summary=current.summary,
+    )
+
+
+def _profile_requirements(session: Session, profile_id: uuid.UUID) -> dict[uuid.UUID, FormalRequirement]:
+    return {r.id: r for r in session.scalars(select(FormalRequirement).where(FormalRequirement.profile_id == profile_id))}
+
+
+def _add_assessment_version(
+    session: Session,
+    candidate_id: uuid.UUID,
+    profile_id: uuid.UUID,
+    card_id: uuid.UUID,
+    requirements: dict[uuid.UUID, FormalRequirement],
+    rows: list[FormalCheck],
+    scores: list[CompetencyScore],
+    **fields: Any,
+) -> Assessment:
+    """Новая текущая версия оценки в паре (кандидат, профиль); итог по формальным и
+    признаки предварительности считает код."""
+    for row in rows:
+        row.is_preliminary = is_preliminary(row.result, row.basis, requirements[row.requirement_id].verification)
+    formal = _formal_result({r.requirement_id: r.result for r in rows}, requirements)
+    version = _next_version(
+        session, Assessment.version, Assessment.candidate_id == candidate_id, Assessment.profile_id == profile_id
+    )
+    _clear_current(session, Assessment, Assessment.candidate_id == candidate_id, Assessment.profile_id == profile_id)
     assessment = Assessment(
-        candidate_id=candidate.id,
-        profile_id=profile.id,
-        card_id=card.id,
+        candidate_id=candidate_id,
+        profile_id=profile_id,
+        card_id=card_id,
         version=version,
         is_current=True,
-        model=model,
-        prompt_version=prompt_version,
-        formal_result=_formal_result(results, requirements),
-        overall_score=overall_score,
-        summary=summary,
+        formal_result=formal,
+        formal_preliminary=formal == CheckResult.MET and any(
+            r.is_preliminary for r in rows if _in_gate(requirements[r.requirement_id])
+        ),
+        **fields,
     )
+    assessment.formal_checks = rows
+    assessment.competency_scores = scores
     session.add(assessment)
-    session.flush()
-    for check in formal_checks:
-        session.add(
-            FormalCheck(
-                assessment_id=assessment.id,
-                requirement_id=check.requirement_id,
-                result=results[check.requirement_id],
-                explanation=check.explanation,
-                evidence=[e.model_dump(mode="json") for e in check.evidence],
-            )
-        )
-    for score in competency_scores:
-        session.add(
-            CompetencyScore(
-                assessment_id=assessment.id,
-                competency_id=score.competency_id,
-                level=score.level,
-                explanation=score.explanation,
-                evidence=[e.model_dump(mode="json") for e in score.evidence],
-            )
-        )
     session.flush()
     return assessment
 
@@ -740,24 +904,59 @@ def _reject_repeats(ids: Sequence[uuid.UUID], label: str) -> None:
         raise RepositoryError(f"{label} оценено в одной оценке дважды: {', '.join(repeated)}")
 
 
-def _stored_result(check: FormalCheckIn, requirement: FormalRequirement) -> CheckResult:
-    """Требование, которое подтверждается не резюме (документы, интервью, тест), по резюме
-    не закрывается: `met` сохраняется как `unknown` — подтвердит кадровик. `not_met` остаётся:
-    явное несоответствие в резюме документ не исправит."""
-    if requirement.verification != VerificationMethod.RESUME and check.result == CheckResult.MET:
-        return CheckResult.UNKNOWN
-    return check.result
+def _check_alternatives(check: FormalCheckIn, requirement: FormalRequirement) -> None:
+    """Результаты альтернатив: либо не переданы, либо переданы все ключи требования ровно
+    по разу, и итог строки им не противоречит (met — хоть одна met; not_met — все not_met;
+    иначе unknown, который допустим всегда). Так в базе не окажется «требование выполнено»
+    при всех опровергнутых путях."""
+    if not check.alternatives:
+        return
+    expected = alternative_keys(requirement.params)
+    given = [a.key for a in check.alternatives]
+    if not expected:
+        raise RepositoryError(f"у требования {requirement.key} нет альтернатив, а результаты альтернатив переданы")
+    if sorted(given) != sorted(expected):
+        raise RepositoryError(
+            f"альтернативы требования {requirement.key}: нужны ровно {', '.join(expected)}, переданы {', '.join(given)}"
+        )
+    # unknown допустим всегда: направление проверяется только при подтверждённом уровне
+    # (requires_requirement), поэтому при подтверждённой альтернативе итог бывает unknown.
+    # Противоречием считаются только «выполнено» без выполненной альтернативы и
+    # «не выполнено», пока хоть одна альтернатива не опровергнута.
+    combined = combine_alternatives(check.alternatives)
+    if check.result != CheckResult.UNKNOWN and check.result != combined:
+        raise RepositoryError(
+            f"итог требования {requirement.key} = {check.result.value}, а по альтернативам выходит {combined.value}"
+        )
+
+
+def combine_alternatives(alternatives: Sequence[AlternativeResultIn]) -> CheckResult:
+    """Правило альтернатив (контракт оценки п. 4.2): OR между альтернативами."""
+    results = [a.result for a in alternatives]
+    if CheckResult.MET in results:
+        return CheckResult.MET
+    if results and all(r == CheckResult.NOT_MET for r in results):
+        return CheckResult.NOT_MET
+    return CheckResult.UNKNOWN
+
+
+def _in_gate(requirement: FormalRequirement) -> bool:
+    """Требование входит в итог разбора резюме: обязательное и этапа screening."""
+    return requirement.is_mandatory and requirement.check_stage == CheckStage.SCREENING
 
 
 def _formal_result(
     results: dict[uuid.UUID, CheckResult], requirements: dict[uuid.UUID, FormalRequirement]
 ) -> CheckResult:
-    """Итог по обязательным требованиям: хоть одно не выполнено → not_met;
-    хоть одно без сведений или не проверено → unknown; иначе met."""
-    mandatory = [r.id for r in requirements.values() if r.is_mandatory]
-    if any(results.get(r) == CheckResult.NOT_MET for r in mandatory):
+    """Итог разбора резюме по обязательным требованиям этапа screening: хоть одно
+    не выполнено → not_met; хоть одно без сведений или не проверено → unknown; иначе met.
+    Требования этапа interview в итог не входят. Предварительный met (по резюме при
+    verification = documents) считается met: на первичном отборе это и есть вывод по резюме,
+    а пометку «нужен документ» показывает is_preliminary."""
+    gate = [r.id for r in requirements.values() if _in_gate(r)]
+    if any(results.get(r) == CheckResult.NOT_MET for r in gate):
         return CheckResult.NOT_MET
-    if any(results.get(r, CheckResult.UNKNOWN) == CheckResult.UNKNOWN for r in mandatory):
+    if any(results.get(r, CheckResult.UNKNOWN) == CheckResult.UNKNOWN for r in gate):
         return CheckResult.UNKNOWN
     return CheckResult.MET
 

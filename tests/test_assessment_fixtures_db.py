@@ -56,6 +56,8 @@ def _load_texts(session, case) -> dict[str, uuid.UUID]:
             candidate = repo.create_candidate(
                 session, code=code, source_document_id=document.id,
                 redacted_text=item["text"], redaction_method="fixture",
+                # Набор py-9001 учебный: кандидаты в учебном контуре (контракт БД v1.5).
+                is_synthetic=FIXTURE["synthetic"],
             )
             candidates[code] = candidate.id
             ids[item["id"]] = repo.get_current_text(session, candidate.id).id
@@ -69,9 +71,11 @@ def _load_texts(session, case) -> dict[str, uuid.UUID]:
 def _load_profile(session) -> tuple[uuid.UUID, dict[str, uuid.UUID]]:
     """Учебный профиль из набора через repo.create_requirement_profile (контракт БД v1.1).
 
-    Профиль синтетический, поэтому в БД он всегда черновик: утвердить учебный профиль
-    нельзя (approve_requirement_profile). save_assessment статус профиля не проверяет —
-    это и фиксирует случай N7. Вернуть (id профиля, {uuid в наборе: uuid в базе}).
+    Профиль учебный и остаётся черновиком. Учебного кандидата база оценивает по любому
+    не архивному профилю (контракт БД v1.5), поэтому оценка сохраняется — это и фиксирует
+    случай N7: отказ «профиль не утверждён» даёт оценщик в рабочем режиме, а не база.
+    Реального кандидата по черновику база не оценит (tests/test_contours.py).
+    Вернуть (id профиля, {uuid в наборе: uuid в базе}).
     """
     spec = FIXTURE["profile"]
     position = session.scalar(select(Position).where(Position.code == spec["position_code"]))

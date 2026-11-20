@@ -22,6 +22,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    false as sa_false,
     func,
     text as sa_text,
 )
@@ -44,6 +45,10 @@ class Candidate(Base):
     )
     # Заголовок резюме: «Python Backend Developer (FastAPI, PostgreSQL)».
     headline: Mapped[str | None] = mapped_column(String(512))
+    # Учебный кандидат [v1.5]: выдуманный текст для проверки системы (py-9001). Рабочие списки
+    # его не показывают; оценку учебного кандидата нельзя выдать за рабочую рекомендацию.
+    # Ставится при создании и не меняется (триггер базы, миграция 0003).
+    is_synthetic: Mapped[bool] = mapped_column(Boolean, default=False, server_default=sa_false())
     created_at: Mapped[datetime] = created_at_column()
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

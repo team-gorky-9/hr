@@ -21,7 +21,6 @@ from app.db.enums import (
     UserRole,
     VerificationMethod,
 )
-from app.db.models import User
 from app.schemas.requirements import (
     CompetencyIn,
     FormalRequirementIn,
@@ -30,6 +29,7 @@ from app.schemas.requirements import (
     SourceRefIn,
 )
 from tests.factories import add_card, make_candidate, make_profile, position
+from tests.factories import make_user as user
 
 HR_EDUCATION = (
     "Консультант должен иметь высшее образование по специальности, направлению подготовки «Юриспруденция», "
@@ -40,6 +40,9 @@ PY_EDUCATION = "высшее техническое образование (ил
 PY_PUNCTUAL = "пунктуальность"
 PY_CLICKHOUSE = "Навыки работы с ClickHouse будут преимуществом"
 TEAM = {"origin": RowOrigin.TEAM, "note": "группировка команды по разделу 2 ДИ"}
+HR_FIELD_PARAMS = {"schema_version": "0.1", "alternatives": [
+    {"key": "hr.education.field.alt1", "degree_fields": ["Юриспруденция", "Государственное и муниципальное управление"]},
+]}
 
 
 def document(session, kind: DocumentKind, path: str, raw_text: str):
@@ -55,13 +58,6 @@ def quoted(doc, address: str, quote: str, *more: SourceRefIn) -> dict:
     return {"origin": RowOrigin.SOURCE, "source_refs": refs}
 
 
-def user(session, role: UserRole = UserRole.HR, login: str = "hr-1", active: bool = True) -> User:
-    row = User(login=login, full_name="Кадровик", role=role, is_active=active)
-    session.add(row)
-    session.flush()
-    return row
-
-
 def consultant_profile(session, **kwargs):
     di = document(session, DocumentKind.JOB_DESCRIPTION, "Положения/ДИ консультант.docx", HR_EDUCATION)
     matrix = document(session, DocumentKind.COMPETENCY_MATRIX, "матрица.docx", "ИТК 90-100 процентов " + ITK_INDICATOR)
@@ -75,7 +71,7 @@ def consultant_profile(session, **kwargs):
         ],
         formal_requirements=[
             FormalRequirementIn(key="hr.education.field", kind=FormalRequirementKind.EDUCATION_FIELD,
-                                description="Юриспруденция или ГМУ",
+                                description="Юриспруденция или ГМУ", params=HR_FIELD_PARAMS,
                                 verification=VerificationMethod.DOCUMENTS, **quoted(di, "п. 2.2.1", HR_EDUCATION)),
         ],
         competencies=[
@@ -105,8 +101,9 @@ def python_profile(session):
         formal_requirements=[
             FormalRequirementIn(key="py.education", kind=FormalRequirementKind.EDUCATION_LEVEL,
                                 description=PY_EDUCATION,
-                                params={"alternatives": [{"level": "высшее", "field_group": "техническое"},
-                                                         {"enrollment_status": "старшие курсы"}]},
+                                params={"schema_version": "0.1", "alternatives": [
+                                    {"key": "py.education.alt1", "level": "высшее", "field_group": "technical"},
+                                    {"key": "py.education.alt2", "enrollment_status": "senior_student"}]},
                                 verification=VerificationMethod.RESUME,
                                 **quoted(di, "разд. 7, стр. 1", PY_EDUCATION)),
         ],
@@ -173,7 +170,7 @@ def test_row_document_must_be_among_profile_sources(session):
             session, position_id=position(session).id, created_by="test", competencies=[],
             formal_requirements=[FormalRequirementIn(
                 key="x.education", kind=FormalRequirementKind.EDUCATION_FIELD, description="ГМУ",
-                verification=VerificationMethod.DOCUMENTS, **quoted(stray, "п. 2.2.1", HR_EDUCATION))],
+                params=HR_FIELD_PARAMS, verification=VerificationMethod.DOCUMENTS, **quoted(stray, "п. 2.2.1", HR_EDUCATION))],
         )
 
 
@@ -269,7 +266,6 @@ def test_approve_archives_previous_version(session):
 @pytest.mark.parametrize(
     ("setup", "message"),
     [
-        ("synthetic", "учебный профиль"),
         ("department", "кадровик или администратор"),
         ("inactive", "кадровик или администратор"),
         ("no_basis", "основание"),
@@ -277,7 +273,7 @@ def test_approve_archives_previous_version(session):
     ],
 )
 def test_approve_rules(session, setup, message):
-    profile, _, _ = consultant_profile(session, is_synthetic=setup == "synthetic")
+    profile, _, _ = consultant_profile(session)
     role = UserRole.DEPARTMENT if setup == "department" else UserRole.HR
     approver = user(session, role=role, active=setup != "inactive")
     basis = "" if setup == "no_basis" else "распоряжение № 1"
