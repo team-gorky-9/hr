@@ -1,0 +1,86 @@
+{
+  "schema_version": "1.0",
+  "is_synthetic": true,
+  "events": [
+    {
+      "event_id": "00000000-0000-4000-8000-000000000601",
+      "event_type": "employment.ready",
+      "schema_version": "1.0",
+      "producer": "hiring",
+      "organization_id": "00000000-0000-4000-8000-000000000001",
+      "aggregate_id": "00000000-0000-4000-8000-000000000501",
+      "aggregate_revision": 4,
+      "occurred_at": "2026-11-21T11:00:00+03:00",
+      "correlation_id": "00000000-0000-4000-8000-000000000701",
+      "payload": {
+        "case_id": "00000000-0000-4000-8000-000000000501",
+        "application_ref": {
+          "system": "legacy-hr",
+          "id": "00000000-0000-4000-8000-000000000801"
+        },
+        "person_ref": {
+          "system": "legacy-hr",
+          "id": "00000000-0000-4000-8000-000000000901",
+          "display_name": "Марина Учебная"
+        },
+        "department_id": "00000000-0000-4000-8000-000000000011",
+        "position_code": "economist-training",
+        "starts_on": "2026-11-23",
+        "basis": {
+          "document_ref": {
+            "service": "hiring",
+            "id": "00000000-0000-4000-8000-000000000401"
+          },
+          "reference": "DEMO-21",
+          "issued_on": "2026-11-21"
+        },
+        "confirmed_by_actor_id": "00000000-0000-4000-8000-000000000101"
+      }
+    },
+    {
+      "event_id": "00000000-0000-4000-8000-000000000602",
+      "event_type": "assignment.registered",
+      "schema_version": "1.0",
+      "producer": "workforce",
+      "organization_id": "00000000-0000-4000-8000-000000000001",
+      "aggregate_id": "00000000-0000-4000-8000-000000000302",
+      "aggregate_revision": 1,
+      "occurred_at": "2026-11-21T11:05:00+03:00",
+      "correlation_id": "00000000-0000-4000-8000-000000000701",
+      "payload": {
+        "intake_id": "00000000-0000-4000-8000-000000000301",
+        "source_case_id": "00000000-0000-4000-8000-000000000501",
+        "source_case_revision": 4,
+        "source_event_id": "00000000-0000-4000-8000-000000000601",
+        "employee_id": "00000000-0000-4000-8000-000000000201",
+        "assignment_id": "00000000-0000-4000-8000-000000000302",
+        "department_id": "00000000-0000-4000-8000-000000000011",
+        "position_code": "economist-training",
+        "starts_on": "2026-11-23",
+        "revision": 1
+      }
+    },
+    {
+      "event_id": "00000000-0000-4000-8000-000000000603",
+      "event_type": "requirements.approved",
+      "schema_version": "1.0",
+      "producer": "requirements",
+      "organization_id": "00000000-0000-4000-8000-000000000001",
+      "aggregate_id": "00000000-0000-4000-8000-000000000402",
+      "aggregate_revision": 1,
+      "occurred_at": "2026-11-21T10:00:00+03:00",
+      "correlation_id": "00000000-0000-4000-8000-000000000702",
+      "payload": {
+        "profile_id": "00000000-0000-4000-8000-000000000402",
+        "position_code": "economist-training",
+        "profile_version": 1,
+        "contour": "training",
+        "approved_by_actor_id": "00000000-0000-4000-8000-000000000101",
+        "approval_basis": "Учебный пример",
+        "source_document_ids": [
+          "00000000-0000-4000-8000-000000000403"
+        ]
+      }
+    }
+  ]
+}

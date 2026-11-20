@@ -1,0 +1,58 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-requirements}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-requirements}
+      POSTGRES_DB: ${POSTGRES_DB:-requirements}
+    ports:
+      - "${REQUIREMENTS_PG_PORT:-5433}:5432"
+    volumes:
+      - requirements_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-requirements} -d ${POSTGRES_DB:-requirements}"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+
+  rabbitmq:
+    profiles: ["messaging"]
+    image: rabbitmq:3.13-management-alpine
+    ports:
+      - "${REQUIREMENTS_AMQP_PORT:-5672}:5672"
+      - "${REQUIREMENTS_AMQP_MGMT_PORT:-15672}:15672"
+    volumes:
+      - requirements_rabbitmq:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${REQUIREMENTS_PORT:-8102}:8102"
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://requirements:requirements@postgres:5432/requirements}
+      RABBITMQ_URL: ${RABBITMQ_URL:-amqp://guest:guest@rabbitmq:5672/%2F}
+      AUTH_MODE: ${AUTH_MODE:-fixture}
+      WORKFORCE_BASE_URL: ${WORKFORCE_BASE_URL:-http://workforce:8101}
+      FILE_ROOT: ${FILE_ROOT:-/data/files}
+      FILE_MAX_BYTES: ${FILE_MAX_BYTES:-20971520}
+      OUTBOX_POLL_INTERVAL_SEC: ${OUTBOX_POLL_INTERVAL_SEC:-0.0}
+      OUTBOX_MAX_ATTEMPTS: ${OUTBOX_MAX_ATTEMPTS:-5}
+      OUTBOX_BASE_BACKOFF_SEC: ${OUTBOX_BASE_BACKOFF_SEC:-2.0}
+      SEED_ON_STARTUP: ${SEED_ON_STARTUP:-true}
+    volumes:
+      - requirements_files:/data/files
+
+volumes:
+  requirements_pgdata:
+  requirements_rabbitmq:
+  requirements_files:
