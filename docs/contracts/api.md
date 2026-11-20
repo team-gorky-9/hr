@@ -230,6 +230,10 @@ AssessmentOut дополнен algorithm_version, calculation_as_of и competenc
 ### 2.5. `GET /api/v1/health`
 Проверка доступности приложения и подключения к PostgreSQL (`{"status": "ok", "db": "ok"}`).
 
+### 2.6. `POST /api/v1/search/candidates`
+
+Поиск по профессиональному опыту в очищенных резюме (`M-03`). Тело запроса, серверная авторизация рабочего контура, DTO выдачи, границы цитат и ошибки описаны в [контракте поиска](search.md). Пример для учебного контура: `{"contour":"training","query":"анализ и согласование требований к ИС"}`.
+
 ## 3. Запланированные маршруты Этапа 2 (контур наперёд)
 
 Фиксируются названиями и семантикой; подробные DTO уточняются перед выдачей `backend-02`:
@@ -241,4 +245,3 @@ AssessmentOut дополнен algorithm_version, calculation_as_of и competenc
 - `GET/POST /api/v1/applications/{application_id}/interview-guide` — чтение и генерация вопросов по пробелам (`A-11`/`M-09`).
 - `POST /api/v1/reserve` и `GET /api/v1/positions/{position_id}/reserve` — рабочий кадровый резерв (`M-05`/`A-05`).
 - `GET /api/v1/analytics/funnel` — сводка воронки по фактическим `stage_events` (`O-01`).
-- `POST /api/v1/search/candidates` — смысловой и навыковый поиск по очищенным текстам (`M-03`).

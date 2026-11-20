@@ -1,0 +1,593 @@
+{
+  "data_version": "search-01-synthetic-v1",
+  "data_sha256": "6a6e13d64caa212d1bb1fb131f2fd220a18eb5c0d49d4f661c88e8a67d7c275a",
+  "model": "intfloat/multilingual-e5-small@614241f622f53c4eeff9890bdc4f31cfecc418b3:chunk-v1",
+  "dimensions": 384,
+  "documents": 18,
+  "chunks": 25,
+  "scope": "synthetic in-memory, without PostgreSQL/HTTP",
+  "python": "3.13.6",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "logical_cpus": 16,
+  "omp_num_threads": "4",
+  "packages": {
+    "torch": "2.14.1+cpu",
+    "transformers": "5.20.2",
+    "sentence-transformers": "6.2.0",
+    "numpy": "2.5.3"
+  },
+  "cold_model_load_ms": 26247.052500024438,
+  "vectorize_ms": 349.7583999997005,
+  "threshold": 0.94,
+  "calibration": {
+    "queries": [
+      "c-codes",
+      "c-backend",
+      "c-audit",
+      "c-deployment",
+      "c-none-aviation",
+      "c-none-dental"
+    ],
+    "grid": [
+      {
+        "threshold": 0.7,
+        "relevant_at_5": 3,
+        "negative_with_results": 2,
+        "accepted": false
+      },
+      {
+        "threshold": 0.72,
+        "relevant_at_5": 3,
+        "negative_with_results": 2,
+        "accepted": false
+      },
+      {
+        "threshold": 0.74,
+        "relevant_at_5": 3,
+        "negative_with_results": 2,
+        "accepted": false
+      },
+      {
+        "threshold": 0.76,
+        "relevant_at_5": 3,
+        "negative_with_results": 2,
+        "accepted": false
+      },
+      {
+        "threshold": 0.78,
+        "relevant_at_5": 3,
+        "negative_with_results": 2,
+        "accepted": false
+      },
+      {
+        "threshold": 0.8,
+        "relevant_at_5": 3,
+        "negative_with_results": 2,
+        "accepted": false
+      },
+      {
+        "threshold": 0.82,
+        "relevant_at_5": 3,
+        "negative_with_results": 0,
+        "accepted": true
+      },
+      {
+        "threshold": 0.84,
+        "relevant_at_5": 3,
+        "negative_with_results": 0,
+        "accepted": true
+      },
+      {
+        "threshold": 0.86,
+        "relevant_at_5": 3,
+        "negative_with_results": 0,
+        "accepted": true
+      },
+      {
+        "threshold": 0.88,
+        "relevant_at_5": 3,
+        "negative_with_results": 0,
+        "accepted": true
+      },
+      {
+        "threshold": 0.9,
+        "relevant_at_5": 3,
+        "negative_with_results": 0,
+        "accepted": true
+      },
+      {
+        "threshold": 0.92,
+        "relevant_at_5": 3,
+        "negative_with_results": 0,
+        "accepted": true
+      },
+      {
+        "threshold": 0.94,
+        "relevant_at_5": 3,
+        "negative_with_results": 0,
+        "accepted": true
+      }
+    ]
+  },
+  "control": {
+    "lexical": {
+      "metrics": {
+        "precision_at_5": 0.2,
+        "precision_at_10": 0.1,
+        "returned_total_at_10": 7,
+        "relevant_returned_at_10": 6,
+        "relevant_missed_at_10": 1,
+        "negative_with_results": 0,
+        "negative_total": 2,
+        "relevant_citations": 6,
+        "valid_offsets": 7,
+        "warm_median_ms": 4.329249961301684,
+        "warm_p95_ms": 5.66419999813661,
+        "timed_requests": 24
+      },
+      "queries": [
+        {
+          "id": "t-requirements",
+          "query": "анализ и согласование требований к ИС",
+          "required_terms": [],
+          "expected": [
+            "search-9001",
+            "search-9015"
+          ],
+          "hits": [
+            {
+              "code": "search-9015",
+              "score": 10.59081803637419,
+              "kind": "lexical",
+              "relevant": true,
+              "citation_relevant": true,
+              "offsets_valid": true,
+              "fragment": "Анализ и согласование требований к ИС при модернизации портала. Описывала сценарии использования."
+            },
+            {
+              "code": "search-9001",
+              "score": 2.4976696272631314,
+              "kind": "lexical",
+              "relevant": true,
+              "citation_relevant": true,
+              "offsets_valid": true,
+              "fragment": "Сбор функциональных требований к СЭД, BPMN, постановка задач подрядчику."
+            },
+            {
+              "code": "search-9003",
+              "score": 2.4976696272631314,
+              "kind": "lexical",
+              "relevant": false,
+              "citation_relevant": false,
+              "offsets_valid": true,
+              "fragment": "Снабжение торговой сети, запрос коммерческих предложений и согласование договоров."
+            }
+          ],
+          "missing": [],
+          "paraphrase": true
+        },
+        {
+          "id": "t-cpp",
+          "query": "C++",
+          "required_terms": [],
+          "expected": [
+            "search-9004"
+          ],
+          "hits": [
+            {
+              "code": "search-9004",
+              "score": 3.0196510836274846,
+              "kind": "lexical",
+              "relevant": true,
+              "citation_relevant": true,
+              "offsets_valid": true,
+              "fragment": "Оптимизировал управление памятью в приложениях на C++. Профилировал узкие места."
+            }
+          ],
+          "missing": [],
+          "paraphrase": false
+        },
+        {
+          "id": "t-1c",
+          "query": "1С",
+          "required_terms": [
+            "1С"
+          ],
+          "expected": [
+            "search-9007"
+          ],
+          "hits": [
+            {
+              "code": "search-9007",
+              "score": 0.2876820724517809,
+              "kind": "lexical",
+              "relevant": true,
+              "citation_relevant": true,
+              "offsets_valid": true,
+              "fragment": "Перенёс каталоги материалов в 1С. Настроил печатные формы складского учёта."
+            }
+          ],
+          "missing": [],
+          "paraphrase": false
+        },
+        {
+          "id": "t-laws",
+          "query": "муниципальная служба",
+          "required_terms": [
+            "25-ФЗ",
+            "131-ФЗ"
+          ],
+          "expected": [
+            "search-9011"
+          ],
+          "hits": [
+            {
+              "code": "search-9011",
+              "score": 0.5753641449035618,
+              "kind": "lexical",
+              "relevant": true,
+              "citation_relevant": true,
+              "offsets_valid": true,
+              "fragment": "Применял 25-ФЗ при подготовке материалов о муниципальной службе. Разъяснял 131—ФЗ."
+            }
+          ],
+          "missing": [],
+          "paraphrase": false
+        },
+        {
+          "id": "t-tail",
+          "query": "восстановление PostgreSQL",
+          "required_terms": [],
+          "expected": [
+            "search-9010"
+          ],
+          "hits": [
+            {
+              "code": "search-9010",
+              "score": 5.343987870867743,
+              "kind": "lexical",
+              "relevant": true,
+              "citation_relevant": true,
+              "offsets_valid": true,
+              "fragment": "закрывал типовые заявки службы поддержки.\nНастроил репликацию PostgreSQL и восстановление из резервной копии."
+            }
+          ],
+          "missing": [],
+          "paraphrase": false
+        },
+        {
+          "id": "t-citizens",
+          "query": "маршрутизация заявлений горожан по подразделениям",
+          "required_terms": [],
+          "expected": [
+            "search-9013"
+          ],
+          "hits": [],
+          "missing": [
+            "search-9013"
+          ],
+          "paraphrase": true
+        },
+        {
+          "id": "t-none-orbit",
+          "query": "сварка корпуса орбитальной станции",
+          "required_terms": [],
+          "expected": [],
+          "hits": [],
+          "missing": [],
+          "paraphrase": false
+        },
+        {
+          "id": "t-none-strings",
+          "query": "реставрация старинных скрипок",
+          "required_terms": [],
+          "expected": [],
+          "hits": [],
+          "missing": [],
+          "paraphrase": false
+        }
+      ]
+    },
+    "dense": {
+      "metrics": {
+        "precision_at_5": 0.0,
+        "precision_at_10": 0.0,
+        "returned_total_at_10": 0,
+        "relevant_returned_at_10": 0,
+        "relevant_missed_at_10": 7,
+        "negative_with_results": 0,
+        "negative_total": 2,
+        "relevant_citations": 0,
+        "valid_offsets": 0,
+        "warm_median_ms": 27.503249992150813,
+        "warm_p95_ms": 44.472899986431,
+        "timed_requests": 24
+      },
+      "queries": [
+        {
+          "id": "t-requirements",
+          "query": "анализ и согласование требований к ИС",
+          "required_terms": [],
+          "expected": [
+            "search-9001",
+            "search-9015"
+          ],
+          "hits": [],
+          "missing": [
+            "search-9001",
+            "search-9015"
+          ],
+          "paraphrase": true
+        },
+        {
+          "id": "t-cpp",
+          "query": "C++",
+          "required_terms": [],
+          "expected": [
+            "search-9004"
+          ],
+          "hits": [],
+          "missing": [
+            "search-9004"
+          ],
+          "paraphrase": false
+        },
+        {
+          "id": "t-1c",
+          "query": "1С",
+          "required_terms": [
+            "1С"
+          ],
+          "expected": [
+            "search-9007"
+          ],
+          "hits": [],
+          "missing": [
+            "search-9007"
+          ],
+          "paraphrase": false
+        },
+        {
+          "id": "t-laws",
+          "query": "муниципальная служба",
+          "required_terms": [
+            "25-ФЗ",
+            "131-ФЗ"
+          ],
+          "expected": [
+            "search-9011"
+          ],
+          "hits": [],
+          "missing": [
+            "search-9011"
+          ],
+          "paraphrase": false
+        },
+        {
+          "id": "t-tail",
+          "query": "восстановление PostgreSQL",
+          "required_terms": [],
+          "expected": [
+            "search-9010"
+          ],
+          "hits": [],
+          "missing": [
+            "search-9010"
+          ],
+          "paraphrase": false
+        },
+        {
+          "id": "t-citizens",
+          "query": "маршрутизация заявлений горожан по подразделениям",
+          "required_terms": [],
+          "expected": [
+            "search-9013"
+          ],
+          "hits": [],
+          "missing": [
+            "search-9013"
+          ],
+          "paraphrase": true
+        },
+        {
+          "id": "t-none-orbit",
+          "query": "сварка корпуса орбитальной станции",
+          "required_terms": [],
+          "expected": [],
+          "hits": [],
+          "missing": [],
+          "paraphrase": false
+        },
+        {
+          "id": "t-none-strings",
+          "query": "реставрация старинных скрипок",
+          "required_terms": [],
+          "expected": [],
+          "hits": [],
+          "missing": [],
+          "paraphrase": false
+        }
+      ]
+    },
+    "hybrid": {
+      "metrics": {
+        "precision_at_5": 0.2,
+        "precision_at_10": 0.1,
+        "returned_total_at_10": 7,
+        "relevant_returned_at_10": 6,
+        "relevant_missed_at_10": 1,
+        "negative_with_results": 0,
+        "negative_total": 2,
+        "relevant_citations": 6,
+        "valid_offsets": 7,
+        "warm_median_ms": 30.32344998791814,
+        "warm_p95_ms": 41.17390001192689,
+        "timed_requests": 24
+      },
+      "queries": [
+        {
+          "id": "t-requirements",
+          "query": "анализ и согласование требований к ИС",
+          "required_terms": [],
+          "expected": [
+            "search-9001",
+            "search-9015"
+          ],
+          "hits": [
+            {
+              "code": "search-9015",
+              "score": 0.01639344262295082,
+              "kind": "lexical",
+              "relevant": true,
+              "citation_relevant": true,
+              "offsets_valid": true,
+              "fragment": "Анализ и согласование требований к ИС при модернизации портала. Описывала сценарии использования."
+            },
+            {
+              "code": "search-9001",
+              "score": 0.016129032258064516,
+              "kind": "lexical",
+              "relevant": true,
+              "citation_relevant": true,
+              "offsets_valid": true,
+              "fragment": "Сбор функциональных требований к СЭД, BPMN, постановка задач подрядчику."
+            },
+            {
+              "code": "search-9003",
+              "score": 0.015873015873015872,
+              "kind": "lexical",
+              "relevant": false,
+              "citation_relevant": false,
+              "offsets_valid": true,
+              "fragment": "Снабжение торговой сети, запрос коммерческих предложений и согласование договоров."
+            }
+          ],
+          "missing": [],
+          "paraphrase": true
+        },
+        {
+          "id": "t-cpp",
+          "query": "C++",
+          "required_terms": [],
+          "expected": [
+            "search-9004"
+          ],
+          "hits": [
+            {
+              "code": "search-9004",
+              "score": 0.01639344262295082,
+              "kind": "lexical",
+              "relevant": true,
+              "citation_relevant": true,
+              "offsets_valid": true,
+              "fragment": "Оптимизировал управление памятью в приложениях на C++. Профилировал узкие места."
+            }
+          ],
+          "missing": [],
+          "paraphrase": false
+        },
+        {
+          "id": "t-1c",
+          "query": "1С",
+          "required_terms": [
+            "1С"
+          ],
+          "expected": [
+            "search-9007"
+          ],
+          "hits": [
+            {
+              "code": "search-9007",
+              "score": 0.01639344262295082,
+              "kind": "lexical",
+              "relevant": true,
+              "citation_relevant": true,
+              "offsets_valid": true,
+              "fragment": "Перенёс каталоги материалов в 1С. Настроил печатные формы складского учёта."
+            }
+          ],
+          "missing": [],
+          "paraphrase": false
+        },
+        {
+          "id": "t-laws",
+          "query": "муниципальная служба",
+          "required_terms": [
+            "25-ФЗ",
+            "131-ФЗ"
+          ],
+          "expected": [
+            "search-9011"
+          ],
+          "hits": [
+            {
+              "code": "search-9011",
+              "score": 0.01639344262295082,
+              "kind": "lexical",
+              "relevant": true,
+              "citation_relevant": true,
+              "offsets_valid": true,
+              "fragment": "Применял 25-ФЗ при подготовке материалов о муниципальной службе. Разъяснял 131—ФЗ."
+            }
+          ],
+          "missing": [],
+          "paraphrase": false
+        },
+        {
+          "id": "t-tail",
+          "query": "восстановление PostgreSQL",
+          "required_terms": [],
+          "expected": [
+            "search-9010"
+          ],
+          "hits": [
+            {
+              "code": "search-9010",
+              "score": 0.01639344262295082,
+              "kind": "lexical",
+              "relevant": true,
+              "citation_relevant": true,
+              "offsets_valid": true,
+              "fragment": "закрывал типовые заявки службы поддержки.\nНастроил репликацию PostgreSQL и восстановление из резервной копии."
+            }
+          ],
+          "missing": [],
+          "paraphrase": false
+        },
+        {
+          "id": "t-citizens",
+          "query": "маршрутизация заявлений горожан по подразделениям",
+          "required_terms": [],
+          "expected": [
+            "search-9013"
+          ],
+          "hits": [],
+          "missing": [
+            "search-9013"
+          ],
+          "paraphrase": true
+        },
+        {
+          "id": "t-none-orbit",
+          "query": "сварка корпуса орбитальной станции",
+          "required_terms": [],
+          "expected": [],
+          "hits": [],
+          "missing": [],
+          "paraphrase": false
+        },
+        {
+          "id": "t-none-strings",
+          "query": "реставрация старинных скрипок",
+          "required_terms": [],
+          "expected": [],
+          "hits": [],
+          "missing": [],
+          "paraphrase": false
+        }
+      ]
+    }
+  },
+  "hybrid_added_paraphrase_hits": [],
+  "hybrid_meets_local_rule": false
+}
