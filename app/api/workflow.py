@@ -457,7 +457,9 @@ def funnel(
         raise ApiError(422, "INVALID_PERIOD", "Начало периода позже конца",
                        {"period_from": period_from.isoformat(), "period_to": period_to.isoformat()})
 
-    as_of = datetime.now(timezone.utc)
+    from app.api import handoff
+
+    as_of = handoff._now()
     scope = (
         select(Application.id, Application.current_stage_code)
         .join(Candidate, Candidate.id == Application.candidate_id)
@@ -515,8 +517,6 @@ def funnel(
             count=count,
         ))
     closures.sort(key=lambda c: (stage_by_code[c.stage_code].sort_order, c.reason_code is None, c.reason_code or ""))
-
-    from app.api import handoff
 
     return FunnelOut(
         as_of=as_of,

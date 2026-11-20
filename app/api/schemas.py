@@ -20,6 +20,7 @@ from app.db.enums import (
     CheckResult,
     CheckStage,
     CompetencyRank,
+    DeadlineExtensionReason,
     FeedbackOutcome,
     FormalRequirementKind,
     HandoffChannel,
@@ -285,7 +286,6 @@ class HandoffIn(BaseModel):
     handed_off_at: datetime | None = None
     summary_revision: str = Field(min_length=1)
     request_id: uuid.UUID
-    allow_stale: bool = False
 
 
 class StageMoveIn(BaseModel):
@@ -500,6 +500,9 @@ class OpenWaitsByDepartmentOut(BaseModel):
     department: str
     total: int
     unique_applications: int
+    due_soon_total: int = 0
+    overdue_total: int = 0
+    extended_total: int = 0
     max_wait_hours: float
     median_wait_hours: float
 
@@ -507,6 +510,9 @@ class OpenWaitsByDepartmentOut(BaseModel):
 class OpenWaitsOut(BaseModel):
     total: int
     unique_applications: int
+    due_soon_total: int = 0
+    overdue_total: int = 0
+    extended_total: int = 0
     max_wait_hours: float | None = None
     median_wait_hours: float | None = None
     by_department: list[OpenWaitsByDepartmentOut] = Field(default_factory=list)
@@ -626,6 +632,7 @@ class HandoffFeedbackOut(BaseModel):
     reported_at: datetime | None
     recorded_by: UserBriefOut | None
     received_at: datetime
+    received_after_due: bool | None = None
 
 
 class HandoffFeedbackCreatedOut(BaseModel):
@@ -637,6 +644,32 @@ class HandoffFeedbackListOut(BaseModel):
     application_id: uuid.UUID
     total: int
     items: list[HandoffFeedbackOut]
+
+
+DeadlineStatus = Literal["on_track", "due_soon", "overdue", "responded", "closed_without_response"]
+
+
+class HandoffDeadlineExtendIn(BaseModel):
+    new_due_date: date
+    expected_due_date: date
+    reason_code: DeadlineExtensionReason
+    comment: str | None = None
+    request_id: uuid.UUID
+
+
+class HandoffDeadlineExtensionOut(BaseModel):
+    extension_id: uuid.UUID
+    seq: int
+    previous_due_date: date
+    new_due_date: date
+    previous_reminder_date: date
+    new_reminder_date: date
+    was_overdue: bool
+    reason_code: DeadlineExtensionReason
+    reason_title: str
+    comment: str | None
+    actor: UserBriefOut | None
+    created_at: datetime
 
 
 class HandoffAttemptOut(BaseModel):
@@ -654,6 +687,19 @@ class HandoffAttemptOut(BaseModel):
     recipient_department: str
     channel: HandoffChannel
     handed_off_at: datetime
+    initial_due_date: date
+    due_date: date
+    reminder_date: date
+    deadline_business_days: int
+    reminder_business_day: int
+    extensions_count: int = 0
+    deadline_status: DeadlineStatus
+    business_days_left: int | None = None
+    is_overdue: bool = False
+    overdue_notice: str | None = None
+    cross_assessments_url: str | None = None
+    answered_late: bool | None = None
+    response_business_days: int | None = None
     created_by: UserBriefOut | None
     created_at: datetime
     summary_revision: str
@@ -668,6 +714,13 @@ class HandoffAttemptDetailOut(HandoffAttemptOut):
     summary: HandoffSummaryPayloadOut
     markdown: str
     feedback_history: list[HandoffFeedbackOut]
+    deadline_extensions: list[HandoffDeadlineExtensionOut] = Field(default_factory=list)
+
+
+class HandoffDeadlineExtendedOut(BaseModel):
+    created: bool
+    extension: HandoffDeadlineExtensionOut
+    attempt: HandoffAttemptOut
 
 
 class HandoffCreateIn(BaseModel):

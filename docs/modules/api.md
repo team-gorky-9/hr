@@ -2,7 +2,7 @@
 
 Отдаёт фронтенду вакансии, отклики, оценки и очищенные тексты (Этап 1, только чтение) и ведёт действия кадровика (Этап 2, backend-02): перевод этапов с историей, кросс-оценки, кадровый резерв, воронка. Персональные данные кандидатов не отдаёт ни один маршрут.
 
-Контракт: [api.md](../contracts/api.md) v0.5, [workflow.md](../contracts/workflow.md) v0.1. Опирается на [database.md](../contracts/database.md) v1.8 и раздел 20: контуры п. 2.6.1, цитаты п. 2.11, внешние отклики п. 4.5. Владелец — Денис. Потребители — фронтенд (Ася) и сквозная сборка `qa-01`.
+Контракт: [api.md](../contracts/api.md) v0.5, [workflow.md](../contracts/workflow.md) v0.2. Опирается на [database.md](../contracts/database.md) v1.8 и раздел 20: контуры п. 2.6.1, цитаты п. 2.11, внешние отклики п. 4.5. Владелец — Денис. Потребители — фронтенд (Ася) и сквозная сборка `qa-01`.
 
 ## Запуск
 
@@ -22,6 +22,8 @@ uv run uvicorn app.main:app --reload
 |---|---|---|
 | `DATABASE_URL` | база приложения | `postgresql+psycopg://hr:hr@localhost:5432/hr` |
 | `CORS_ORIGINS` | адреса фронтенда, которым браузер разрешит запросы; JSON-список | `["http://localhost:5173", "http://127.0.0.1:5173"]` (Vite) |
+| `HANDOFF_FEEDBACK_DEADLINE_BUSINESS_DAYS` | срок ответа департамента в рабочих днях | `10` |
+| `HANDOFF_FEEDBACK_REMINDER_BUSINESS_DAY` | с какого рабочего дня показывать «скоро срок» | `7` |
 
 ## Маршруты Этапа 1
 
@@ -56,8 +58,15 @@ uv run uvicorn app.main:app --reload
 |---|---|
 | `GET /api/v1/applications/{id}/handoff-summary` | сводка JSON + Markdown без ПДн и заметок с контактами (`from_snapshot = true` для `department`) |
 | `POST /api/v1/applications/{id}/handoffs` | дополнительная передача другому получателю на этапе `sent_to_department` / `department_interview` |
-| `GET /api/v1/applications/{id}/handoffs`, `GET /api/v1/handoffs`, `GET /api/v1/handoffs/{attempt_id}` | очередь передач и просмотр замороженного снимка с историей отзывов |
+| `GET /api/v1/applications/{id}/handoffs`, `GET /api/v1/handoffs`, `GET /api/v1/handoffs/{attempt_id}` | очередь передач (просроченные первыми) и карточка снимка с историей переносов и отзывов |
+| `POST /api/v1/applications/{id}/handoffs/{attempt_id}/deadline` | перенос срока ответа кадровиком с причиной, историей и защитой от гонки (`expected_due_date`) |
 | `POST /api/v1/applications/{id}/feedback`, `GET /api/v1/applications/{id}/feedback` | регистрация и версионные исправления ответа департамента (`supersedes_id`) |
+
+### Сроки ответа и производственный календарь РФ (`app/db/calendar.py`)
+
+Источник производственного календаря — **таблица БД `production_calendar_days`** (выбрана вместо внешней библиотеки, чтобы не зависеть от обновлений пакетов и позволять HR/администратору править переносы праздников прямо в базе). Базовые рабочие дни — понедельник–пятница; в таблице хранятся только исключения (`is_working_day = false` — нерабочие праздники и перенесённые выходные, `true` — рабочие субботы/воскресенья). Официальные праздники РФ и постановления Правительства на 2025–2027 годы предзаполняет `seed_production_calendar()` (`python -m app.db.seed`). При публикации постановления на новый год справочник дополняется вставки/обновлением строк через `seed` или SQL без правки кода.
+
+При создании передачи в `handoff_attempts` фиксируются вычисленные `initial_due_date`, `due_date` (`HANDOFF_FEEDBACK_DEADLINE_BUSINESS_DAYS = 10`), `reminder_date` (`HANDOFF_FEEDBACK_REMINDER_BUSINESS_DAY = 7`) и сами настройки в момент отправки — изменение переменных окружения старые передачи не сдвигает. При переносе срока пересчитывается `reminder_date` за `deadline - reminder` (= 3) рабочих дня до новой даты, а время ответа `response_business_days` всё равно считается от дня передачи.
 
 Гайд интервью — `interview-01`.
 

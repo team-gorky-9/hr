@@ -146,6 +146,7 @@ STAGE_2_ROUTES = {
 WORKFLOW_01_ROUTES = {
     "/api/v1/applications/{application_id}/handoff-summary",
     "/api/v1/applications/{application_id}/handoffs",
+    "/api/v1/applications/{application_id}/handoffs/{attempt_id}/deadline",
     "/api/v1/handoffs",
     "/api/v1/handoffs/{attempt_id}",
     "/api/v1/applications/{application_id}/feedback",

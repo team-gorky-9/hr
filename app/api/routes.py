@@ -26,10 +26,13 @@ from app.api.schemas import (
     ComparisonOut,
     Contour,
     CrossAssessmentListOut,
+    DeadlineStatus,
     FunnelOut,
     HandoffAttemptDetailOut,
     HandoffCreateIn,
     HandoffCreatedOut,
+    HandoffDeadlineExtendedOut,
+    HandoffDeadlineExtendIn,
     HandoffFeedbackCreatedOut,
     HandoffFeedbackIn,
     HandoffFeedbackListOut,
@@ -242,6 +245,7 @@ def list_handoffs(
     user: AuthenticatedUser,
     contour: ContourQuery = Contour.WORKING,
     status: HandoffStatus | None = None,
+    deadline_status: DeadlineStatus | None = None,
     department: str | None = None,
     recipient_user_id: uuid.UUID | None = None,
     actor_login: str | None = None,
@@ -253,6 +257,7 @@ def list_handoffs(
         user,
         contour=contour,
         status=status,
+        deadline_status=deadline_status,
         department=department,
         recipient_user_id=recipient_user_id,
         actor_login=actor_login,
@@ -264,6 +269,25 @@ def list_handoffs(
 @router.get("/handoffs/{attempt_id}", response_model=HandoffAttemptDetailOut)
 def get_handoff_detail(attempt_id: uuid.UUID, session: SessionDep, user: AuthenticatedUser):
     return handoff.get_handoff_detail(session, attempt_id, user)
+
+
+@router.post(
+    "/applications/{application_id}/handoffs/{attempt_id}/deadline",
+    response_model=HandoffDeadlineExtendedOut,
+    status_code=201,
+)
+def extend_handoff_deadline(
+    application_id: uuid.UUID,
+    attempt_id: uuid.UUID,
+    body: HandoffDeadlineExtendIn,
+    session: SessionDep,
+    user: StaffUser,
+    response: Response,
+):
+    result = handoff.extend_handoff_deadline(session, application_id, attempt_id, body, user)
+    if not result.created:
+        response.status_code = 200
+    return result
 
 
 @router.post("/applications/{application_id}/feedback", response_model=HandoffFeedbackCreatedOut, status_code=201)

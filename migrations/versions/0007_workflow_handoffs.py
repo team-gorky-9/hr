@@ -1,13 +1,18 @@
-"""workflow handoffs: attempts, frozen summary snapshots, versioned department feedback
+"""workflow handoffs: attempts, frozen summary snapshots, deadlines, extensions, production calendar, versioned department feedback
 
 Контракт БД (workflow-01):
+- таблица production_calendar_days: исключения и праздники производственного календаря РФ;
 - таблица handoff_attempts: попытка передачи конкретному адресату, канал, время факта,
-  замороженный снимок сводки, статус ожидания, идемпотентность по request_id;
+  исходный и текущий срок ответа, день напоминания, счётчик переносов, замороженный снимок сводки,
+  статус ожидания, идемпотентность по request_id;
+- таблица handoff_deadline_extensions: журнал переносов срока ответа (кто, когда, с какой даты на какую,
+  причина, комментарий, признак предшествующей просрочки, идемпотентность по request_id);
 - расширение department_feedback: привязка к attempt_id, цепочка исправлений supersedes_id + revision
   с частичным уникальным индексом против гонок, факты contact_status/interview_status,
   происхождение внешнего ответа (response_channel, reported_by_*, reported_at) и request_id.
 
-Примечание: при влитии interview-01 с миграцией 0007 раньше этой ветки перенумеровать в 0008 (Revises: 0007).
+Примечание: пока в main последняя миграция 0006, эта ветка занимает 0007; если хранение
+interview-01 со своей 0007 вольётся раньше, перенумеровать эту в 0008 (Revises: 0007).
 
 Revision ID: 0007
 Revises: 0006
@@ -31,6 +36,14 @@ def _enum(*values: str, name: str) -> sa.Enum:
 
 def upgrade() -> None:
     op.create_table(
+        'production_calendar_days',
+        sa.Column('day', sa.Date(), nullable=False),
+        sa.Column('is_working_day', sa.Boolean(), nullable=False),
+        sa.Column('title', sa.String(length=256), nullable=True),
+        sa.PrimaryKeyConstraint('day', name=op.f('pk_production_calendar_days')),
+    )
+
+    op.create_table(
         'handoff_attempts',
         sa.Column('id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
         sa.Column('application_id', sa.UUID(), nullable=False),
@@ -40,6 +53,12 @@ def upgrade() -> None:
         sa.Column('recipient_department', sa.String(length=512), nullable=False),
         sa.Column('channel', _enum('cabinet', 'phone', 'sed', 'email', 'in_person', 'other', name='channel'), nullable=False),
         sa.Column('handed_off_at', sa.DateTime(timezone=True), nullable=False),
+        sa.Column('initial_due_date', sa.Date(), nullable=False),
+        sa.Column('due_date', sa.Date(), nullable=False),
+        sa.Column('reminder_date', sa.Date(), nullable=False),
+        sa.Column('deadline_business_days', sa.SmallInteger(), server_default='10', nullable=False),
+        sa.Column('reminder_business_day', sa.SmallInteger(), server_default='7', nullable=False),
+        sa.Column('extensions_count', sa.SmallInteger(), server_default='0', nullable=False),
         sa.Column('created_by_user_id', sa.UUID(), nullable=True),
         sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
         sa.Column('summary_revision', sa.String(length=64), nullable=False),
@@ -73,6 +92,36 @@ def upgrade() -> None:
     op.create_index(
         'uq_handoff_attempts_request_id',
         'handoff_attempts',
+        ['request_id'],
+        unique=True,
+        postgresql_where=sa.text('request_id IS NOT NULL'),
+    )
+
+    op.create_table(
+        'handoff_deadline_extensions',
+        sa.Column('id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
+        sa.Column('attempt_id', sa.UUID(), nullable=False),
+        sa.Column('seq', sa.SmallInteger(), nullable=False),
+        sa.Column('previous_due_date', sa.Date(), nullable=False),
+        sa.Column('new_due_date', sa.Date(), nullable=False),
+        sa.Column('previous_reminder_date', sa.Date(), nullable=False),
+        sa.Column('new_reminder_date', sa.Date(), nullable=False),
+        sa.Column('was_overdue', sa.Boolean(), server_default='false', nullable=False),
+        sa.Column('reason_code', _enum('illness', 'vacation', 'business_trip', 'other', name='reason_code'), nullable=False),
+        sa.Column('comment', sa.Text(), nullable=True),
+        sa.Column('actor_user_id', sa.UUID(), nullable=True),
+        sa.Column('request_id', sa.UUID(), nullable=True),
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+        sa.CheckConstraint('seq >= 1', name=op.f('ck_handoff_deadline_extensions_seq_positive')),
+        sa.ForeignKeyConstraint(['actor_user_id'], ['users.id'], name=op.f('fk_handoff_deadline_extensions_actor_user_id_users'), ondelete='SET NULL'),
+        sa.ForeignKeyConstraint(['attempt_id'], ['handoff_attempts.id'], name=op.f('fk_handoff_deadline_extensions_attempt_id_handoff_attempts'), ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id', name=op.f('pk_handoff_deadline_extensions')),
+    )
+    op.create_index(op.f('ix_handoff_deadline_extensions_attempt_id'), 'handoff_deadline_extensions', ['attempt_id'], unique=False)
+    op.create_index('uq_handoff_deadline_extensions_attempt_seq', 'handoff_deadline_extensions', ['attempt_id', 'seq'], unique=True)
+    op.create_index(
+        'uq_handoff_deadline_extensions_request_id',
+        'handoff_deadline_extensions',
         ['request_id'],
         unique=True,
         postgresql_where=sa.text('request_id IS NOT NULL'),
@@ -191,8 +240,14 @@ def downgrade() -> None:
     op.drop_column('department_feedback', 'supersedes_id')
     op.drop_column('department_feedback', 'attempt_id')
 
+    op.drop_index('uq_handoff_deadline_extensions_request_id', table_name='handoff_deadline_extensions', postgresql_where=sa.text('request_id IS NOT NULL'))
+    op.drop_index('uq_handoff_deadline_extensions_attempt_seq', table_name='handoff_deadline_extensions')
+    op.drop_index(op.f('ix_handoff_deadline_extensions_attempt_id'), table_name='handoff_deadline_extensions')
+    op.drop_table('handoff_deadline_extensions')
+
     op.drop_index('uq_handoff_attempts_request_id', table_name='handoff_attempts', postgresql_where=sa.text('request_id IS NOT NULL'))
     op.drop_index('ix_handoff_attempts_open_status', table_name='handoff_attempts', postgresql_where=sa.text("status = 'awaiting_response'"))
     op.drop_index(op.f('ix_handoff_attempts_recipient_user_id'), table_name='handoff_attempts')
     op.drop_index(op.f('ix_handoff_attempts_application_id'), table_name='handoff_attempts')
     op.drop_table('handoff_attempts')
+    op.drop_table('production_calendar_days')

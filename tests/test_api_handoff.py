@@ -4,12 +4,15 @@
 import threading
 import uuid
 from collections.abc import Iterator
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
+from app.api import handoff as handoff_api
+from app.config import settings
 from app.db import repository as repo
 from app.db.enums import (
     ApplicationSource,
@@ -24,8 +27,10 @@ from app.db.models import (
     Candidate,
     DepartmentFeedback,
     HandoffAttempt,
+    HandoffDeadlineExtension,
     Interview,
     InterviewQuestion,
+    ProductionCalendarDay,
     ReserveEntry,
     SourceDocument,
     User,
@@ -181,7 +186,7 @@ def test_stage_requires_handoff_and_atomically_creates_attempt_and_snapshot(sess
     assert detail.json()["summary"]["versions"]["candidate_text_id"] == str(built["text_id"])
 
 
-def test_stale_assessment_requires_allow_stale_flag(session, client):
+def test_stale_assessment_is_strictly_blocked_even_with_allow_stale(session, client):
     built = build_case(session, "C1-unknown")
     app_id = built["application_id"]
     for stage in ("screening", "phone_interview"):
@@ -193,7 +198,7 @@ def test_stale_assessment_requires_allow_stale_flag(session, client):
 
     summary = _summary(client, app_id)
     assert summary["summary"]["assessment_status"] == "stale"
-    allowed = move(client, app_id, "sent_to_department", handoff={
+    still_blocked = move(client, app_id, "sent_to_department", handoff={
         "recipient_name": "Внешний руководитель",
         "recipient_department": "Юридический отдел",
         "channel": "email",
@@ -201,7 +206,7 @@ def test_stale_assessment_requires_allow_stale_flag(session, client):
         "request_id": str(uuid.uuid4()),
         "allow_stale": True,
     })
-    assert allowed.status_code == 201
+    assert (still_blocked.status_code, error_code(still_blocked)) == (409, "ASSESSMENT_STALE")
 
 
 # --- 3. Отзывы департамента, исправления, запоздалый ответ и вторая попытка -------
@@ -636,3 +641,287 @@ def test_concurrent_feedback_edits_on_same_supersedes_id_give_409_conflict(engin
             .where(DepartmentFeedback.attempt_id == committed_feedback["attempt_id"])
         )
     assert total == 2
+
+
+# --- 7. Срок ответа (10/7 рабочих дней), календарь РФ, просрочка и перенос ------
+
+def test_handoff_deadline_calendar_overdue_and_late_feedback(session, client, monkeypatch):
+    """Приёмка срока: 1 дек -> 15 дек (напоминание 10 дек), смена настройки не сдвигает старый срок,
+    на 16 дек — просрочено и вверху очереди с ссылкой на кросс-оценки, ответ 17 дек закрывает с пометкой опоздания,
+    синтетический праздник и рабочая суббота сдвигают срок."""
+    clock = [datetime(2026, 12, 1, 7, 0, tzinfo=timezone.utc)]  # 10:00 МСК 01.12.2026 (вторник)
+    monkeypatch.setattr(handoff_api, "_now", lambda: clock[0])
+
+    built = build_case(session, "C1-unknown")
+    app1_id, cand_id = built["application_id"], built["candidate_id"]
+    dept1 = _user(session, "dept_demo")
+    for stage in ("screening", "phone_interview"):
+        assert move(client, app1_id, stage).status_code == 201
+    sent1 = move(client, app1_id, "sent_to_department", handoff=_handoff_to_user(client, app1_id, dept1.id))
+    assert sent1.status_code == 201, sent1.text
+    att1 = sent1.json()["handoff"]
+    att1_id = att1["attempt_id"]
+    assert att1["initial_due_date"] == "2026-12-15"
+    assert att1["due_date"] == "2026-12-15"
+    assert att1["reminder_date"] == "2026-12-10"
+    assert (att1["deadline_business_days"], att1["reminder_business_day"], att1["extensions_count"]) == (10, 7, 0)
+    assert (att1["deadline_status"], att1["business_days_left"], att1["is_overdue"]) == ("on_track", 10, False)
+
+    # Изменение настройки не сдвигает уже сохранённый срок.
+    monkeypatch.setattr(settings, "handoff_feedback_deadline_business_days", 15)
+    assert client.get(f"/api/v1/handoffs/{att1_id}", headers=HR).json()["due_date"] == "2026-12-15"
+    monkeypatch.setattr(settings, "handoff_feedback_deadline_business_days", 10)
+
+    # 3 декабря: ждёт ответа, 8 рабочих дней в запасе.
+    clock[0] = datetime(2026, 12, 3, 9, 0, tzinfo=timezone.utc)
+    d_dec3 = client.get(f"/api/v1/handoffs/{att1_id}", headers=HR).json()
+    assert (d_dec3["deadline_status"], d_dec3["business_days_left"], d_dec3["is_overdue"]) == ("on_track", 8, False)
+
+    # 10 декабря (рабочий день 7): «скоро срок», осталось 3 рабочих дня.
+    clock[0] = datetime(2026, 12, 10, 9, 0, tzinfo=timezone.utc)
+    d_dec10 = client.get(f"/api/v1/handoffs/{att1_id}", headers=HR).json()
+    assert (d_dec10["deadline_status"], d_dec10["business_days_left"], d_dec10["is_overdue"]) == ("due_soon", 3, False)
+
+    # 14 декабря создаём вторую свежую передачу (на ней срок 28 декабря).
+    clock[0] = datetime(2026, 12, 14, 9, 0, tzinfo=timezone.utc)
+    cand2 = f.make_candidate(session, "py-9020", is_synthetic=True)
+    app2_id = application(session, "", position="qa-manual", candidate=cand2).id
+    for stage in ("screening", "phone_interview"):
+        assert move(client, app2_id, stage).status_code == 201
+    sent2 = move(client, app2_id, "sent_to_department", handoff=_handoff_to_user(client, app2_id, _user(session, "dept2_demo").id))
+    assert sent2.status_code == 201
+    att2_id = sent2.json()["handoff"]["attempt_id"]
+
+    # 16 декабря: первая передача просрочена (-1 раб. день), стоит первой в очереди, этап не изменился.
+    clock[0] = datetime(2026, 12, 16, 9, 0, tzinfo=timezone.utc)
+    queue = client.get("/api/v1/handoffs", params={"contour": "training"}, headers=HR).json()
+    assert [i["attempt_id"] for i in queue["items"]] == [att1_id, att2_id]
+    first = queue["items"][0]
+    assert first["deadline_status"] == "overdue"
+    assert first["business_days_left"] == -1
+    assert first["is_overdue"] is True
+    assert first["overdue_notice"] == "Департамент не ответил"
+    assert first["cross_assessments_url"] == f"/api/v1/candidates/{cand_id}/cross-assessments"
+    assert history(client, app1_id)["stage"]["code"] == "sent_to_department"
+    assert [i["attempt_id"] for i in client.get(
+        "/api/v1/handoffs", params={"contour": "training", "deadline_status": "overdue"}, headers=HR
+    ).json()["items"]] == [att1_id]
+    dept_queue = client.get("/api/v1/handoffs", params={"contour": "training"}, headers=DEPT).json()
+    assert dept_queue["items"][0]["cross_assessments_url"] is None
+
+    funnel = client.get("/api/v1/analytics/funnel", params={"contour": "training"}, headers=HR).json()
+    assert (funnel["open_waits"]["total"], funnel["open_waits"]["overdue_total"]) == (2, 1)
+
+    # 17 декабря: ответ not_fit закрывает ожидание и отмечает, что ответ пришёл после срока.
+    clock[0] = datetime(2026, 12, 17, 9, 0, tzinfo=timezone.utc)
+    late_fb = client.post(f"/api/v1/applications/{app1_id}/feedback", headers=HR, json={
+        "attempt_id": att1_id,
+        "outcome": "not_fit",
+        "rejection_reason_code": "experience",
+        "response_channel": "sed",
+        "reported_by_name": "Руководитель",
+        "request_id": str(uuid.uuid4()),
+    })
+    assert late_fb.status_code == 201, late_fb.text
+    assert late_fb.json()["feedback"]["received_after_due"] is True
+    closed_detail = client.get(f"/api/v1/handoffs/{att1_id}", headers=HR).json()
+    assert closed_detail["status"] == "responded"
+    assert closed_detail["deadline_status"] == "responded"
+    assert closed_detail["answered_late"] is True
+    assert closed_detail["response_business_days"] == 12
+    assert closed_detail["business_days_left"] is None
+    assert history(client, app1_id)["stage"]["code"] == "sent_to_department"
+
+    # Проверка производственного календаря: синтетический праздник 8 дек сдвигает срок с 15 на 16 дек,
+    # а добавление рабочей субботы 5 дек сдвигает на день раньше.
+    clock[0] = datetime(2026, 12, 1, 7, 0, tzinfo=timezone.utc)
+    session.add(ProductionCalendarDay(day=date(2026, 12, 8), is_working_day=False, title="Синтетический праздник"))
+    session.flush()
+    cand3 = f.make_candidate(session, "py-9021", is_synthetic=True)
+    app3_id = application(session, "", position="frontend-dev", candidate=cand3).id
+    for stage in ("screening", "phone_interview"):
+        assert move(client, app3_id, stage).status_code == 201
+    sent3 = move(client, app3_id, "sent_to_department")
+    assert sent3.status_code == 201
+    assert sent3.json()["handoff"]["due_date"] == "2026-12-16"
+    assert sent3.json()["handoff"]["reminder_date"] == "2026-12-11"
+
+    session.add(ProductionCalendarDay(day=date(2026, 12, 5), is_working_day=True, title="Рабочая суббота"))
+    session.flush()
+    cand4 = f.make_candidate(session, "py-9022", is_synthetic=True)
+    app4_id = application(session, "", position="junior-ux-ui", candidate=cand4).id
+    for stage in ("screening", "phone_interview"):
+        assert move(client, app4_id, stage).status_code == 201
+    sent4 = move(client, app4_id, "sent_to_department")
+    assert sent4.status_code == 201
+    assert sent4.json()["handoff"]["due_date"] == "2026-12-15"
+
+
+def test_handoff_deadline_extension_history_overdue_recovery_and_race(session, engine, client, monkeypatch):
+    """Перенос срока HR с причиной и историей: 9 дек -> 22 дек (напоминание 17 дек), перенос просрочки,
+    запреты ввода и гонка на PostgreSQL."""
+    clock = [datetime(2026, 12, 1, 7, 0, tzinfo=timezone.utc)]
+    monkeypatch.setattr(handoff_api, "_now", lambda: clock[0])
+
+    built = build_case(session, "C1-unknown")
+    app_id = built["application_id"]
+    dept1 = _user(session, "dept_demo")
+    for stage in ("screening", "phone_interview"):
+        assert move(client, app_id, stage).status_code == 201
+    sent = move(client, app_id, "sent_to_department", handoff=_handoff_to_user(client, app_id, dept1.id))
+    assert sent.status_code == 201
+    att_id = sent.json()["handoff"]["attempt_id"]
+    url = f"/api/v1/applications/{app_id}/handoffs/{att_id}/deadline"
+
+    # 9 декабря: проверка прав, валидации причины/даты и успешный перенос на 22 декабря.
+    clock[0] = datetime(2026, 12, 9, 9, 0, tzinfo=timezone.utc)
+    req_forbidden = client.post(url, headers=DEPT, json={
+        "expected_due_date": "2026-12-15", "new_due_date": "2026-12-22",
+        "reason_code": "illness", "request_id": str(uuid.uuid4()),
+    })
+    assert (req_forbidden.status_code, error_code(req_forbidden)) == (403, "FORBIDDEN_ROLE")
+
+    no_comment = client.post(url, headers=HR, json={
+        "expected_due_date": "2026-12-15", "new_due_date": "2026-12-22",
+        "reason_code": "other", "comment": "   ", "request_id": str(uuid.uuid4()),
+    })
+    assert (no_comment.status_code, error_code(no_comment)) == (422, "EXTENSION_COMMENT_REQUIRED")
+
+    earlier = client.post(url, headers=HR, json={
+        "expected_due_date": "2026-12-15", "new_due_date": "2026-12-14",
+        "reason_code": "illness", "request_id": str(uuid.uuid4()),
+    })
+    assert (earlier.status_code, error_code(earlier)) == (422, "INVALID_DEADLINE_DATE")
+
+    ext_req_id = str(uuid.uuid4())
+    ext_body = {
+        "expected_due_date": "2026-12-15",
+        "new_due_date": "2026-12-22",
+        "reason_code": "illness",
+        "comment": "Руководитель на больничном",
+        "request_id": ext_req_id,
+    }
+    ext1 = client.post(url, headers=HR, json=ext_body)
+    assert ext1.status_code == 201, ext1.text
+    d1 = ext1.json()
+    assert d1["created"] is True
+    assert d1["attempt"]["initial_due_date"] == "2026-12-15"
+    assert d1["attempt"]["due_date"] == "2026-12-22"
+    assert d1["attempt"]["reminder_date"] == "2026-12-17"
+    assert d1["attempt"]["extensions_count"] == 1
+    assert (d1["extension"]["seq"], d1["extension"]["was_overdue"], d1["extension"]["reason_title"]) == (1, False, "Болезнь")
+
+    # Идемпотентный повтор и конфликт повторного request_id.
+    retry = client.post(url, headers=HR, json=ext_body)
+    assert retry.status_code == 200 and retry.json()["created"] is False
+    reused = client.post(url, headers=HR, json={**ext_body, "new_due_date": "2026-12-23"})
+    assert (reused.status_code, error_code(reused)) == (409, "REQUEST_ID_REUSED")
+
+    # 17 декабря: снова «скоро срок» за 3 рабочих дня до нового срока.
+    clock[0] = datetime(2026, 12, 17, 9, 0, tzinfo=timezone.utc)
+    assert (
+        client.get(f"/api/v1/handoffs/{att_id}", headers=HR).json()["deadline_status"],
+        client.get(f"/api/v1/handoffs/{att_id}", headers=HR).json()["business_days_left"],
+    ) == ("due_soon", 3)
+
+    # 23 декабря: после истечения перенесённого срока — просрочка; второй перенос на 30 декабря
+    # возвращает ожидание в on_track, сохраняя was_overdue=True в истории.
+    clock[0] = datetime(2026, 12, 23, 9, 0, tzinfo=timezone.utc)
+    assert client.get(f"/api/v1/handoffs/{att_id}", headers=HR).json()["deadline_status"] == "overdue"
+    ext2 = client.post(url, headers=HR, json={
+        "expected_due_date": "2026-12-22",
+        "new_due_date": "2026-12-30",
+        "reason_code": "vacation",
+        "request_id": str(uuid.uuid4()),
+    })
+    assert ext2.status_code == 201, ext2.text
+    assert ext2.json()["attempt"]["deadline_status"] == "on_track"
+    assert ext2.json()["attempt"]["extensions_count"] == 2
+    assert ext2.json()["extension"]["was_overdue"] is True
+
+    detail = client.get(f"/api/v1/handoffs/{att_id}", headers=HR).json()
+    assert len(detail["deadline_extensions"]) == 2
+    assert [e["previous_due_date"] for e in detail["deadline_extensions"]] == ["2026-12-15", "2026-12-22"]
+    assert history(client, app_id)["stage"]["code"] == "sent_to_department"
+
+    # Время ответа при ответе 24 декабря считается от дня передачи (1 дек -> 24 дек = 17 раб. дней), а опоздания нет.
+    clock[0] = datetime(2026, 12, 24, 9, 0, tzinfo=timezone.utc)
+    fb = client.post(f"/api/v1/applications/{app_id}/feedback", headers=DEPT, json={
+        "attempt_id": att_id, "outcome": "fit", "request_id": str(uuid.uuid4()),
+    })
+    assert fb.status_code == 201
+    final_detail = client.get(f"/api/v1/handoffs/{att_id}", headers=HR).json()
+    assert final_detail["answered_late"] is False
+    assert final_detail["response_business_days"] == 17
+
+    # Реальная гонка двух параллельных переносов срока на PostgreSQL.
+    race_code = f"race-ext-{uuid.uuid4().hex[:8]}"
+    with Session(engine) as s_race:
+        race_app = application(s_race, race_code)
+        for st in ("screening", "phone_interview", "sent_to_department"):
+            repo.move_application(s_race, race_app.id, st, actor_user_id=_user(s_race, "hr_demo").id)
+        handed_dt = repo.stage_history(s_race, race_app.id)[-1].created_at
+        race_att, _ = repo.create_handoff_attempt(
+            s_race,
+            application_id=race_app.id,
+            stage_event_id=None,
+            recipient_user_id=_user(s_race, "dept_demo").id,
+            recipient_name="Руководитель",
+            recipient_department="Департамент-заказчик (учебный)",
+            channel="cabinet",
+            handed_off_at=handed_dt,
+            created_by_user_id=_user(s_race, "hr_demo").id,
+            summary_revision="race-ext",
+            summary_snapshot={"summary": {}, "markdown": "", "referenced_text_ids": []},
+            request_id=uuid.uuid4(),
+        )
+        race_ids = {
+            "application_id": race_app.id,
+            "candidate_id": race_app.candidate_id,
+            "document_id": s_race.get(Candidate, race_app.candidate_id).source_document_id,
+            "attempt_id": race_att.id,
+            "due_date": race_att.due_date,
+        }
+        s_race.commit()
+
+    monkeypatch.setattr(handoff_api, "_now", lambda: handed_dt)
+    race_app_http = create_app()
+
+    def own_session():
+        with Session(engine) as s_req:
+            yield s_req
+
+    race_app_http.dependency_overrides[get_session] = own_session
+    barrier = threading.Barrier(2)
+    race_results: list = [None, None]
+    race_url = f"/api/v1/applications/{race_ids['application_id']}/handoffs/{race_ids['attempt_id']}/deadline"
+
+    def send_ext(idx: int, days_add: int):
+        with TestClient(race_app_http) as http:
+            barrier.wait()
+            race_results[idx] = http.post(race_url, headers=HR, json={
+                "expected_due_date": race_ids["due_date"].isoformat(),
+                "new_due_date": (race_ids["due_date"] + timedelta(days=days_add)).isoformat(),
+                "reason_code": "illness",
+                "request_id": str(uuid.uuid4()),
+            })
+
+    try:
+        threads = [threading.Thread(target=send_ext, args=(0, 3)), threading.Thread(target=send_ext, args=(1, 5))]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=30)
+        assert sorted(r.status_code for r in race_results) == [201, 409], [r.text for r in race_results]
+        loser = next(r for r in race_results if r.status_code == 409)
+        assert error_code(loser) == "DEADLINE_CONFLICT"
+        with Session(engine) as s_check:
+            assert s_check.scalar(
+                select(func.count()).select_from(HandoffDeadlineExtension)
+                .where(HandoffDeadlineExtension.attempt_id == race_ids["attempt_id"])
+            ) == 1
+    finally:
+        with Session(engine) as s_clean:
+            s_clean.execute(delete(Candidate).where(Candidate.id == race_ids["candidate_id"]))
+            s_clean.execute(delete(SourceDocument).where(SourceDocument.id == race_ids["document_id"]))
+            s_clean.commit()

@@ -9,7 +9,7 @@ import hashlib
 import unicodedata
 import uuid
 from collections.abc import Iterable, Sequence
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo
 from pathlib import PurePath
 from typing import Any
@@ -18,12 +18,15 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.config import settings
+from app.db import calendar as prod_calendar
 from app.db.enums import (
     ApplicationSource,
     AuditAction,
     Channel,
     CheckResult,
     CheckStage,
+    DeadlineExtensionReason,
     DocumentKind,
     FeedbackOutcome,
     FileFormat,
@@ -52,6 +55,7 @@ from app.db.models import (
     FormalCheck,
     FormalRequirement,
     HandoffAttempt,
+    HandoffDeadlineExtension,
     Position,
     ProfileSource,
     RejectionReason,
@@ -92,6 +96,13 @@ class FeedbackConflictError(RepositoryError):
         super().__init__(message)
         self.current_feedback_id = current_feedback_id
         self.current_revision = current_revision
+
+
+class DeadlineConflictError(RepositoryError):
+    def __init__(self, message: str, *, current_due_date: date, extensions_count: int):
+        super().__init__(message)
+        self.current_due_date = current_due_date
+        self.extensions_count = extensions_count
 
 
 def _get(session: Session, model, row_id: uuid.UUID, label: str):
@@ -525,11 +536,16 @@ def create_handoff_attempt(
     summary_revision: str,
     summary_snapshot: dict[str, Any],
     request_id: uuid.UUID | None = None,
+    due_date: date | None = None,
+    reminder_date: date | None = None,
+    deadline_business_days: int | None = None,
+    reminder_business_day: int | None = None,
 ) -> tuple[HandoffAttempt, bool]:
     """Создать попытку передачи отклика получателю с замороженным снимком сводки.
 
     Повтор с тем же request_id и теми же полями возвращает существующую попытку (created = False);
     использование того же request_id для другой передачи отклоняется RequestIdReusedError.
+    Срок ответа и день напоминания считаются по производственному календарю и фиксируются в строке.
     """
     _get(session, Application, application_id, "отклик")
     if request_id is not None:
@@ -547,6 +563,18 @@ def create_handoff_attempt(
                 return existing, False
             raise RequestIdReusedError("request_id уже использован для другой передачи")
 
+    d_days = deadline_business_days if deadline_business_days is not None else settings.handoff_feedback_deadline_business_days
+    r_day = reminder_business_day if reminder_business_day is not None else settings.handoff_feedback_reminder_business_day
+    r_day = min(r_day, d_days)
+    if due_date is None or reminder_date is None:
+        overrides = prod_calendar.load_calendar_overrides(session)
+        handed_dt = handed_off_at if handed_off_at.tzinfo is not None else handed_off_at.replace(tzinfo=timezone.utc)
+        base_date = handed_dt.astimezone(RESERVE_TZ).date()
+        if due_date is None:
+            due_date = prod_calendar.add_business_days(base_date, d_days, overrides)
+        if reminder_date is None:
+            reminder_date = prod_calendar.add_business_days(base_date, r_day, overrides)
+
     attempt = HandoffAttempt(
         application_id=application_id,
         stage_event_id=stage_event_id,
@@ -555,6 +583,12 @@ def create_handoff_attempt(
         recipient_department=recipient_department,
         channel=channel,
         handed_off_at=handed_off_at,
+        initial_due_date=due_date,
+        due_date=due_date,
+        reminder_date=reminder_date,
+        deadline_business_days=d_days,
+        reminder_business_day=r_day,
+        extensions_count=0,
         created_by_user_id=created_by_user_id,
         summary_revision=summary_revision,
         summary_snapshot=summary_snapshot,
@@ -585,6 +619,121 @@ def create_handoff_attempt(
     savepoint.commit()
     session.refresh(attempt)
     return attempt, True
+
+
+def _extension_matches(
+    existing: HandoffDeadlineExtension,
+    *,
+    attempt_id: uuid.UUID,
+    new_due_date: date,
+    reason_code: DeadlineExtensionReason,
+    comment: str | None,
+) -> bool:
+    return (
+        existing.attempt_id == attempt_id
+        and existing.new_due_date == new_due_date
+        and existing.reason_code == reason_code
+        and existing.comment == comment
+    )
+
+
+def extend_handoff_deadline(
+    session: Session,
+    *,
+    attempt_id: uuid.UUID,
+    expected_due_date: date,
+    new_due_date: date,
+    reason_code: DeadlineExtensionReason,
+    comment: str | None = None,
+    actor_user_id: uuid.UUID | None = None,
+    as_of_date: date | None = None,
+    created_at: datetime | None = None,
+    request_id: uuid.UUID | None = None,
+) -> tuple[HandoffDeadlineExtension, HandoffAttempt, bool]:
+    """Перенести срок ответа открытой передачи с причиной и историей; исходный срок сохраняется."""
+    if request_id is not None:
+        existing = session.scalar(
+            select(HandoffDeadlineExtension).where(HandoffDeadlineExtension.request_id == request_id)
+        )
+        if existing is not None:
+            if _extension_matches(
+                existing,
+                attempt_id=attempt_id,
+                new_due_date=new_due_date,
+                reason_code=reason_code,
+                comment=comment,
+            ):
+                return existing, _get(session, HandoffAttempt, attempt_id, "передача"), False
+            raise RequestIdReusedError("request_id уже использован для другого переноса срока")
+
+    attempt = session.get(HandoffAttempt, attempt_id, with_for_update=True)
+    if attempt is None:
+        raise RepositoryError(f"нет передачи с id {attempt_id}")
+    if attempt.status != HandoffStatus.AWAITING_RESPONSE:
+        raise RepositoryError("переносить срок можно только для открытой передачи в ожидании ответа")
+    if attempt.due_date != expected_due_date:
+        raise DeadlineConflictError(
+            "срок передачи уже изменён в другом запросе: обновите карточку",
+            current_due_date=attempt.due_date,
+            extensions_count=attempt.extensions_count,
+        )
+    if new_due_date <= attempt.due_date:
+        raise RepositoryError("новый срок должен быть позже текущего")
+
+    overrides = prod_calendar.load_calendar_overrides(session)
+    current_date = as_of_date or moscow_today()
+    was_overdue = current_date > attempt.due_date
+    lead_days = max(0, attempt.deadline_business_days - attempt.reminder_business_day)
+    new_reminder_date = prod_calendar.subtract_business_days(new_due_date, lead_days, overrides)
+    seq = attempt.extensions_count + 1
+
+    extension = HandoffDeadlineExtension(
+        attempt_id=attempt.id,
+        seq=seq,
+        previous_due_date=attempt.due_date,
+        new_due_date=new_due_date,
+        previous_reminder_date=attempt.reminder_date,
+        new_reminder_date=new_reminder_date,
+        was_overdue=was_overdue,
+        reason_code=reason_code,
+        comment=comment,
+        actor_user_id=actor_user_id,
+        request_id=request_id,
+        **({"created_at": created_at} if created_at is not None else {}),
+    )
+    savepoint = session.begin_nested()
+    try:
+        session.add(extension)
+        session.flush()
+    except IntegrityError:
+        savepoint.rollback()
+        if request_id is not None:
+            existing = session.scalar(
+                select(HandoffDeadlineExtension).where(HandoffDeadlineExtension.request_id == request_id)
+            )
+            if existing is not None:
+                if _extension_matches(
+                    existing,
+                    attempt_id=attempt_id,
+                    new_due_date=new_due_date,
+                    reason_code=reason_code,
+                    comment=comment,
+                ):
+                    return existing, attempt, False
+                raise RequestIdReusedError("request_id уже использован для другого переноса срока")
+        session.refresh(attempt)
+        raise DeadlineConflictError(
+            "срок передачи уже изменён в другом запросе",
+            current_due_date=attempt.due_date,
+            extensions_count=attempt.extensions_count,
+        )
+    savepoint.commit()
+    attempt.due_date = new_due_date
+    attempt.reminder_date = new_reminder_date
+    attempt.extensions_count = seq
+    session.flush()
+    session.refresh(extension)
+    return extension, attempt, True
 
 
 def close_open_handoffs_for_application(
@@ -670,6 +819,7 @@ def record_handoff_feedback(
     author_user_id: uuid.UUID | None = None,
     supersedes_id: uuid.UUID | None = None,
     request_id: uuid.UUID | None = None,
+    received_at: datetime | None = None,
 ) -> tuple[DepartmentFeedback, bool]:
     """Записать ответ департамента или его исправление по конкретной попытке передачи.
 
@@ -766,6 +916,7 @@ def record_handoff_feedback(
         reported_at=reported_at,
         author_user_id=author_user_id,
         request_id=request_id,
+        **({"received_at": received_at} if received_at is not None else {}),
     )
     savepoint = session.begin_nested()
     try:

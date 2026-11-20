@@ -456,10 +456,14 @@ AssessmentOut дополнен algorithm_version, calculation_as_of и competenc
   "open_waits": {
     "total": 1,
     "unique_applications": 1,
+    "due_soon_total": 0,
+    "overdue_total": 0,
+    "extended_total": 0,
     "max_wait_hours": 12.5,
     "median_wait_hours": 12.5,
     "by_department": [
       {"department": "Департамент-заказчик (учебный)", "total": 1, "unique_applications": 1,
+       "due_soon_total": 0, "overdue_total": 0, "extended_total": 0,
        "max_wait_hours": 12.5, "median_wait_hours": 12.5}
     ]
   }
@@ -468,7 +472,7 @@ AssessmentOut дополнен algorithm_version, calculation_as_of и competenc
 - `as_of` — момент среза.
 - `stages` — все этапы справочника, в том числе с нулями. `current_count` — уникальные отклики, которые сейчас на этапе; `reached_count` — отклики, у которых есть переход на этап.
 - `closures` — решения о закрытии (переходы в `hired`, `rejected`, `withdrawn`) с причиной. Период задают даты включительно; сутки считаются по `timezone` (Нижний Новгород, МСК). Без дат — за всё время. Исторические отказы без причины — строки с `reason_code = null`, их сумма — в `closures_without_reason`.
-- `open_waits` — открытые ожидания ответа (`status = awaiting_response` в `handoff_attempts`) и длительность ожидания в часах на `as_of` с разбивкой по подразделениям. При отсутствии ожиданий возвращает нули (`total: 0`, `by_department: []`).
+- `open_waits` — открытые ожидания ответа (`status = awaiting_response` в `handoff_attempts`), число передач в статусе «скоро срок» (`due_soon_total`), просроченных (`overdue_total`), перенесённых (`extended_total`) и длительность ожидания в часах на `as_of` с разбивкой по подразделениям. При отсутствии ожиданий возвращает нули (`total: 0`, `by_department: []`).
 - Ошибки: `404 VACANCY_NOT_FOUND`, `404 POSITION_NOT_FOUND`, `422 INVALID_PERIOD` (`period_from` позже `period_to`).
 - Годовой отчёт (`/api/v1/reports/annual/…`, `reporting.md`) строится из выгрузки и базу не читает. Эта воронка — оперативный срез живых записей.
 

@@ -15,7 +15,7 @@ import re
 import uuid
 from collections import defaultdict
 from collections.abc import Sequence
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from statistics import median
 from typing import Any
 
@@ -27,10 +27,14 @@ from app.api.errors import ApiError, not_found
 from app.api.schemas import (
     AssessmentStatus,
     Contour,
+    DeadlineStatus,
     HandoffAttemptDetailOut,
     HandoffAttemptOut,
     HandoffCreateIn,
     HandoffCreatedOut,
+    HandoffDeadlineExtendIn,
+    HandoffDeadlineExtendedOut,
+    HandoffDeadlineExtensionOut,
     HandoffFeedbackCreatedOut,
     HandoffFeedbackIn,
     HandoffFeedbackListOut,
@@ -48,11 +52,13 @@ from app.api.schemas import (
     StageMoveOut,
     UserBriefOut,
 )
+from app.db import calendar as prod_calendar
 from app.db import repository as repo
 from app.db.enums import (
     ApplicationSource,
     CheckResult,
     CheckStage,
+    DeadlineExtensionReason,
     FeedbackOutcome,
     HandoffChannel,
     HandoffStatus,
@@ -65,6 +71,7 @@ from app.db.models import (
     CandidatePii,
     DepartmentFeedback,
     HandoffAttempt,
+    HandoffDeadlineExtension,
     Interview,
     Position,
     RejectionReason,
@@ -77,9 +84,32 @@ redact_mod = importlib.import_module("app.ingest.redact")
 
 _URL_ADDRESS_RE = re.compile(r"@|https?://|www\.|[a-z0-9-]\.[a-z]{2,}|\d{5,}", re.IGNORECASE)
 
+DEADLINE_EXTENSION_REASON_TITLES: dict[DeadlineExtensionReason, str] = {
+    DeadlineExtensionReason.ILLNESS: "Болезнь",
+    DeadlineExtensionReason.VACATION: "Отпуск",
+    DeadlineExtensionReason.BUSINESS_TRIP: "Командировка",
+    DeadlineExtensionReason.OTHER: "Другое",
+}
+
+_DEADLINE_SORT_ORDER: dict[str, int] = {
+    "overdue": 0,
+    "due_soon": 1,
+    "on_track": 2,
+    "responded": 3,
+    "closed_without_response": 4,
+}
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
+
 
 def _utc(dt: datetime) -> datetime:
     return dt if dt.tzinfo is not None else dt.replace(tzinfo=timezone.utc)
+
+
+def _moscow_date(dt: datetime) -> date:
+    return _utc(dt).astimezone(workflow.REPORT_TZ).date()
 
 
 def _clean(text: str | None) -> str | None:
@@ -525,7 +555,11 @@ def _feedback_out(
     users: dict[uuid.UUID, User],
     *,
     is_current: bool,
+    attempt_due_date: date | None = None,
 ) -> HandoffFeedbackOut:
+    received_after_due: bool | None = None
+    if attempt_due_date is not None:
+        received_after_due = _moscow_date(fb.reported_at or fb.received_at) > attempt_due_date
     return HandoffFeedbackOut(
         feedback_id=fb.id,
         application_id=fb.application_id,
@@ -549,6 +583,24 @@ def _feedback_out(
         reported_at=fb.reported_at,
         recorded_by=workflow.user_out(users.get(fb.author_user_id)),
         received_at=fb.received_at,
+        received_after_due=received_after_due,
+    )
+
+
+def _extension_out(ext: HandoffDeadlineExtension, users: dict[uuid.UUID, User]) -> HandoffDeadlineExtensionOut:
+    return HandoffDeadlineExtensionOut(
+        extension_id=ext.id,
+        seq=ext.seq,
+        previous_due_date=ext.previous_due_date,
+        new_due_date=ext.new_due_date,
+        previous_reminder_date=ext.previous_reminder_date,
+        new_reminder_date=ext.new_reminder_date,
+        was_overdue=ext.was_overdue,
+        reason_code=ext.reason_code,
+        reason_title=DEADLINE_EXTENSION_REASON_TITLES[ext.reason_code],
+        comment=ext.comment,
+        actor=workflow.user_out(users.get(ext.actor_user_id)),
+        created_at=ext.created_at,
     )
 
 
@@ -560,6 +612,8 @@ def _attempt_out(
     feedback_by_attempt: dict[uuid.UUID, list[DepartmentFeedback]] | None = None,
     reasons: dict[str, RejectionReason] | None = None,
     users: dict[uuid.UUID, User] | None = None,
+    calendar_overrides: dict[date, bool] | None = None,
+    viewer_role: UserRole | None = None,
 ) -> HandoffAttemptOut:
     application = session.get(Application, attempt.application_id)
     candidate = session.get(Candidate, application.candidate_id)
@@ -582,14 +636,50 @@ def _attempt_out(
         for row in rows:
             uid_set.update([row.reported_by_user_id, row.author_user_id])
         users = workflow._users(session, uid_set)
+    overrides = calendar_overrides if calendar_overrides is not None else prod_calendar.load_calendar_overrides(session)
 
+    latest_row = rows[-1] if rows else None
     latest_fb = (
-        _feedback_out(rows[-1], reasons, users, is_current=True)
-        if rows
+        _feedback_out(latest_row, reasons, users, is_current=True, attempt_due_date=attempt.due_date)
+        if latest_row
         else None
     )
     end_dt = _utc(attempt.closed_at) if attempt.closed_at is not None else _utc(as_of)
     wait_hours = max(0.0, round((end_dt - _utc(attempt.handed_off_at)).total_seconds() / 3600.0, 2))
+
+    as_of_date = _moscow_date(as_of)
+    business_days_left: int | None = None
+    is_overdue = False
+    overdue_notice: str | None = None
+    cross_assessments_url: str | None = None
+    deadline_status: DeadlineStatus
+
+    if attempt.status == HandoffStatus.AWAITING_RESPONSE:
+        business_days_left = prod_calendar.business_days_diff(as_of_date, attempt.due_date, overrides)
+        if as_of_date > attempt.due_date:
+            deadline_status = "overdue"
+            is_overdue = True
+            overdue_notice = "Департамент не ответил"
+            if viewer_role != UserRole.DEPARTMENT:
+                cross_assessments_url = f"/api/v1/candidates/{candidate.id}/cross-assessments"
+        elif as_of_date >= attempt.reminder_date:
+            deadline_status = "due_soon"
+        else:
+            deadline_status = "on_track"
+    elif attempt.status == HandoffStatus.RESPONDED:
+        deadline_status = "responded"
+    else:
+        deadline_status = "closed_without_response"
+
+    answered_late: bool | None = None
+    response_business_days: int | None = None
+    if latest_row is not None and latest_row.outcome in (FeedbackOutcome.FIT, FeedbackOutcome.NOT_FIT):
+        resp_date = _moscow_date(latest_row.reported_at or latest_row.received_at)
+        answered_late = resp_date > attempt.due_date
+        response_business_days = max(
+            0, prod_calendar.business_days_diff(_moscow_date(attempt.handed_off_at), resp_date, overrides)
+        )
+
     return HandoffAttemptOut(
         attempt_id=attempt.id,
         application_id=attempt.application_id,
@@ -605,6 +695,19 @@ def _attempt_out(
         recipient_department=attempt.recipient_department,
         channel=attempt.channel,
         handed_off_at=attempt.handed_off_at,
+        initial_due_date=attempt.initial_due_date,
+        due_date=attempt.due_date,
+        reminder_date=attempt.reminder_date,
+        deadline_business_days=attempt.deadline_business_days,
+        reminder_business_day=attempt.reminder_business_day,
+        extensions_count=attempt.extensions_count,
+        deadline_status=deadline_status,
+        business_days_left=business_days_left,
+        is_overdue=is_overdue,
+        overdue_notice=overdue_notice,
+        cross_assessments_url=cross_assessments_url,
+        answered_late=answered_late,
+        response_business_days=response_business_days,
         created_by=workflow.user_out(users.get(attempt.created_by_user_id)),
         created_at=attempt.created_at,
         summary_revision=attempt.summary_revision,
@@ -622,13 +725,13 @@ def _validate_and_prepare_handoff(
     handoff_in: HandoffIn,
 ) -> tuple[uuid.UUID | None, str, str, datetime, HandoffSummaryOut]:
     recipient_user_id, recipient_name, recipient_department = _resolve_recipient(session, handoff_in)
-    handed_off_at = _utc(handoff_in.handed_off_at) if handoff_in.handed_off_at else datetime.now(timezone.utc)
+    handed_off_at = _utc(handoff_in.handed_off_at) if handoff_in.handed_off_at else _now()
     summary = build_handoff_summary(session, application.id)
-    if summary.summary.assessment_status == AssessmentStatus.STALE and not handoff_in.allow_stale:
+    if summary.summary.assessment_status == AssessmentStatus.STALE:
         raise ApiError(
             409,
             "ASSESSMENT_STALE",
-            "Оценка устарела: пересчитайте оценку или явно подтвердите передачу (allow_stale=true)",
+            "Оценка устарела: пересчитайте оценку перед передачей в департамент",
             {"stale_reason": str(summary.summary.stale_reason)},
         )
     if summary.summary_revision != handoff_in.summary_revision:
@@ -678,7 +781,7 @@ def move_to_sent_with_handoff(
                     application_id=application.id,
                     stage=workflow.stage_out(stages[application.current_stage_code]),
                     event=workflow._event_out(event, stages, reasons, users),
-                    handoff=_attempt_out(session, existing_attempt, as_of=datetime.now(timezone.utc)),
+                    handoff=_attempt_out(session, existing_attempt, as_of=_now(), viewer_role=user.role),
                 ),
                 False,
             )
@@ -749,7 +852,7 @@ def move_to_sent_with_handoff(
             application_id=application.id,
             stage=workflow.stage_out(stages[application.current_stage_code]),
             event=workflow._event_out(event, stages, workflow._reasons(session), {user.id: user}),
-            handoff=_attempt_out(session, attempt, as_of=datetime.now(timezone.utc)),
+            handoff=_attempt_out(session, attempt, as_of=_now(), viewer_role=user.role),
         ),
         created,
     )
@@ -783,7 +886,7 @@ def create_additional_handoff(
         ):
             return HandoffCreatedOut(
                 created=False,
-                attempt=_attempt_out(session, existing_attempt, as_of=datetime.now(timezone.utc)),
+                attempt=_attempt_out(session, existing_attempt, as_of=_now(), viewer_role=user.role),
             )
         raise ApiError(409, "REQUEST_ID_REUSED", "request_id уже использован для другой передачи", {})
 
@@ -835,11 +938,17 @@ def create_additional_handoff(
     session.commit()
     return HandoffCreatedOut(
         created=created,
-        attempt=_attempt_out(session, attempt, as_of=datetime.now(timezone.utc)),
+        attempt=_attempt_out(session, attempt, as_of=_now(), viewer_role=user.role),
     )
 
 
-def _assemble_attempt_list(session: Session, attempts: list[HandoffAttempt], as_of: datetime) -> list[HandoffAttemptOut]:
+def _assemble_attempt_list(
+    session: Session,
+    attempts: list[HandoffAttempt],
+    as_of: datetime,
+    *,
+    viewer_role: UserRole | None = None,
+) -> list[HandoffAttemptOut]:
     if not attempts:
         return []
     attempt_ids = [a.id for a in attempts]
@@ -862,6 +971,7 @@ def _assemble_attempt_list(session: Session, attempts: list[HandoffAttempt], as_
         user_ids.add(fb.author_user_id)
     reasons = workflow._reasons(session)
     users = workflow._users(session, user_ids)
+    overrides = prod_calendar.load_calendar_overrides(session)
     return [
         _attempt_out(
             session,
@@ -870,6 +980,8 @@ def _assemble_attempt_list(session: Session, attempts: list[HandoffAttempt], as_
             feedback_by_attempt=fb_by_attempt,
             reasons=reasons,
             users=users,
+            calendar_overrides=overrides,
+            viewer_role=viewer_role,
         )
         for attempt in attempts
     ]
@@ -881,13 +993,14 @@ def list_handoffs(
     *,
     contour: Contour = Contour.WORKING,
     status: HandoffStatus | None = None,
+    deadline_status: DeadlineStatus | None = None,
     department: str | None = None,
     recipient_user_id: uuid.UUID | None = None,
     actor_login: str | None = None,
     vacancy_id: uuid.UUID | None = None,
     position_id: uuid.UUID | None = None,
 ) -> HandoffListOut:
-    """Очередь передач: все в контуре для HR/admin, только свои для department."""
+    """Очередь передач: все в контуре для HR/admin, только свои для department; просроченные первыми."""
     if user.role == UserRole.DEPARTMENT:
         if recipient_user_id is not None and recipient_user_id != user.id:
             raise ApiError(
@@ -898,7 +1011,7 @@ def list_handoffs(
             )
         recipient_user_id = user.id
 
-    as_of = datetime.now(timezone.utc)
+    as_of = _now()
     stmt = (
         select(HandoffAttempt)
         .join(Application, Application.id == HandoffAttempt.application_id)
@@ -927,7 +1040,18 @@ def list_handoffs(
         stmt = stmt.where(Vacancy.position_id == position_id)
 
     attempts = list(session.scalars(stmt))
-    items = _assemble_attempt_list(session, attempts, as_of)
+    items = _assemble_attempt_list(session, attempts, as_of, viewer_role=user.role)
+    if deadline_status is not None:
+        items = [item for item in items if item.deadline_status == deadline_status]
+    items.sort(
+        key=lambda i: (
+            _DEADLINE_SORT_ORDER[i.deadline_status],
+            i.due_date if i.status == HandoffStatus.AWAITING_RESPONSE else date.min,
+            _utc(i.handed_off_at).timestamp()
+            if i.status == HandoffStatus.AWAITING_RESPONSE
+            else -_utc(i.handed_off_at).timestamp(),
+        )
+    )
     return HandoffListOut(as_of=as_of, total=len(items), items=items)
 
 
@@ -943,7 +1067,7 @@ def list_application_handoffs(session: Session, application_id: uuid.UUID, user:
             {"application_id": str(application_id)},
         )
     workflow.get_application_or_404(session, application_id)
-    as_of = datetime.now(timezone.utc)
+    as_of = _now()
     stmt = (
         select(HandoffAttempt)
         .where(HandoffAttempt.application_id == application_id)
@@ -952,12 +1076,12 @@ def list_application_handoffs(session: Session, application_id: uuid.UUID, user:
     if user.role == UserRole.DEPARTMENT:
         stmt = stmt.where(HandoffAttempt.recipient_user_id == user.id)
     attempts = list(session.scalars(stmt))
-    items = _assemble_attempt_list(session, attempts, as_of)
+    items = _assemble_attempt_list(session, attempts, as_of, viewer_role=user.role)
     return HandoffListOut(as_of=as_of, total=len(items), items=items)
 
 
 def get_handoff_detail(session: Session, attempt_id: uuid.UUID, user: User) -> HandoffAttemptDetailOut:
-    """Карточка попытки передачи: замороженный снимок сводки и история ответов."""
+    """Карточка попытки передачи: замороженный снимок сводки, история переносов и ответов."""
     attempt = session.get(HandoffAttempt, attempt_id)
     if user.role == UserRole.DEPARTMENT:
         if attempt is None or attempt.recipient_user_id != user.id:
@@ -969,7 +1093,7 @@ def get_handoff_detail(session: Session, attempt_id: uuid.UUID, user: User) -> H
             )
     elif attempt is None:
         raise not_found("HANDOFF_NOT_FOUND", "Передача не найдена", attempt_id=attempt_id)
-    as_of = datetime.now(timezone.utc)
+    as_of = _now()
     rows = list(
         session.scalars(
             select(DepartmentFeedback)
@@ -977,10 +1101,19 @@ def get_handoff_detail(session: Session, attempt_id: uuid.UUID, user: User) -> H
             .order_by(DepartmentFeedback.revision, DepartmentFeedback.received_at)
         )
     )
+    extensions = list(
+        session.scalars(
+            select(HandoffDeadlineExtension)
+            .where(HandoffDeadlineExtension.attempt_id == attempt.id)
+            .order_by(HandoffDeadlineExtension.seq)
+        )
+    )
     reasons = workflow._reasons(session)
     uid_set = {attempt.recipient_user_id, attempt.created_by_user_id}
     for row in rows:
         uid_set.update([row.reported_by_user_id, row.author_user_id])
+    for ext in extensions:
+        uid_set.add(ext.actor_user_id)
     users = workflow._users(session, uid_set)
     base = _attempt_out(
         session,
@@ -989,9 +1122,16 @@ def get_handoff_detail(session: Session, attempt_id: uuid.UUID, user: User) -> H
         feedback_by_attempt={attempt.id: rows},
         reasons=reasons,
         users=users,
+        viewer_role=user.role,
     )
     history = [
-        _feedback_out(row, reasons, users, is_current=(idx == len(rows) - 1))
+        _feedback_out(
+            row,
+            reasons,
+            users,
+            is_current=(idx == len(rows) - 1),
+            attempt_due_date=attempt.due_date,
+        )
         for idx, row in enumerate(rows)
     ]
     return HandoffAttemptDetailOut(
@@ -999,6 +1139,119 @@ def get_handoff_detail(session: Session, attempt_id: uuid.UUID, user: User) -> H
         summary=HandoffSummaryPayloadOut.model_validate(attempt.summary_snapshot["summary"]),
         markdown=attempt.summary_snapshot["markdown"],
         feedback_history=history,
+        deadline_extensions=[_extension_out(ext, users) for ext in extensions],
+    )
+
+
+def extend_handoff_deadline(
+    session: Session,
+    application_id: uuid.UUID,
+    attempt_id: uuid.UUID,
+    body: HandoffDeadlineExtendIn,
+    user: User,
+) -> HandoffDeadlineExtendedOut:
+    """Перенести срок ответа открытой передачи (исходный срок сохраняется; напоминание пересчитывается)."""
+    application = workflow.get_application_or_404(session, application_id)
+    workflow.require_working_application(application)
+    comment = _clean(body.comment)
+    as_of = _now()
+    as_of_date = _moscow_date(as_of)
+
+    existing = session.scalar(
+        select(HandoffDeadlineExtension).where(HandoffDeadlineExtension.request_id == body.request_id)
+    )
+    if existing is not None:
+        existing_attempt = session.get(HandoffAttempt, existing.attempt_id)
+        if (
+            existing_attempt is not None
+            and existing_attempt.application_id == application.id
+            and repo._extension_matches(
+                existing,
+                attempt_id=attempt_id,
+                new_due_date=body.new_due_date,
+                reason_code=body.reason_code,
+                comment=comment,
+            )
+        ):
+            users = workflow._users(session, [existing.actor_user_id])
+            return HandoffDeadlineExtendedOut(
+                created=False,
+                extension=_extension_out(existing, users),
+                attempt=_attempt_out(session, existing_attempt, as_of=as_of, viewer_role=user.role),
+            )
+        raise ApiError(409, "REQUEST_ID_REUSED", "request_id уже использован для другого переноса срока", {})
+
+    attempt = session.get(HandoffAttempt, attempt_id)
+    if attempt is None:
+        raise not_found("HANDOFF_NOT_FOUND", "Передача не найдена", attempt_id=attempt_id)
+    if attempt.application_id != application.id:
+        raise ApiError(
+            422,
+            "ATTEMPT_OF_OTHER_APPLICATION",
+            "Указанная передача относится к другому отклику",
+            {"attempt_id": str(attempt_id)},
+        )
+    if attempt.status != HandoffStatus.AWAITING_RESPONSE:
+        raise ApiError(
+            409,
+            "HANDOFF_NOT_OPEN",
+            "Переносить срок можно только для открытой передачи в ожидании ответа",
+            {"status": str(attempt.status)},
+        )
+    if body.reason_code == DeadlineExtensionReason.OTHER and comment is None:
+        raise ApiError(
+            422,
+            "EXTENSION_COMMENT_REQUIRED",
+            "Для причины «другое» укажите комментарий",
+            {},
+        )
+    if body.new_due_date < as_of_date or body.new_due_date <= body.expected_due_date:
+        raise ApiError(
+            422,
+            "INVALID_DEADLINE_DATE",
+            "Новый срок должен быть не раньше сегодняшнего дня и позже текущего срока",
+            {
+                "new_due_date": body.new_due_date.isoformat(),
+                "expected_due_date": body.expected_due_date.isoformat(),
+            },
+        )
+
+    try:
+        extension, updated_attempt, created = repo.extend_handoff_deadline(
+            session,
+            attempt_id=attempt_id,
+            expected_due_date=body.expected_due_date,
+            new_due_date=body.new_due_date,
+            reason_code=body.reason_code,
+            comment=comment,
+            actor_user_id=user.id,
+            as_of_date=as_of_date,
+            created_at=as_of,
+            request_id=body.request_id,
+        )
+    except repo.RequestIdReusedError as error:
+        raise ApiError(409, "REQUEST_ID_REUSED", str(error), {}) from error
+    except repo.DeadlineConflictError as error:
+        raise ApiError(
+            409,
+            "DEADLINE_CONFLICT",
+            str(error),
+            {
+                "current_due_date": error.current_due_date.isoformat(),
+                "extensions_count": error.extensions_count,
+            },
+        ) from error
+    except repo.RepositoryError as error:
+        raise ApiError(409, "HANDOFF_NOT_OPEN", str(error), {}) from error
+
+    session.commit()
+    session.refresh(extension)
+    session.refresh(updated_attempt)
+    users = workflow._users(session, [extension.actor_user_id])
+    return HandoffDeadlineExtendedOut(
+        created=created,
+        extension=_extension_out(extension, users),
+        attempt=_attempt_out(session, updated_attempt, as_of=as_of, viewer_role=user.role),
     )
 
 
@@ -1121,6 +1374,7 @@ def record_feedback(
             author_user_id=user.id,
             supersedes_id=body.supersedes_id,
             request_id=body.request_id,
+            received_at=_now(),
         )
     except repo.RequestIdReusedError as error:
         raise ApiError(409, "REQUEST_ID_REUSED", str(error), {}) from error
@@ -1151,7 +1405,7 @@ def record_feedback(
     users = workflow._users(session, [fb.reported_by_user_id, fb.author_user_id])
     return HandoffFeedbackCreatedOut(
         created=created,
-        feedback=_feedback_out(fb, reasons, users, is_current=not has_newer),
+        feedback=_feedback_out(fb, reasons, users, is_current=not has_newer, attempt_due_date=attempt.due_date),
     )
 
 
@@ -1207,6 +1461,16 @@ def list_feedback(
         if row.attempt_id is not None:
             max_rev_by_attempt[row.attempt_id] = max(max_rev_by_attempt.get(row.attempt_id, 0), row.revision)
 
+    attempt_ids = {row.attempt_id for row in rows if row.attempt_id is not None}
+    due_by_attempt = (
+        dict(
+            session.execute(
+                select(HandoffAttempt.id, HandoffAttempt.due_date).where(HandoffAttempt.id.in_(attempt_ids))
+            ).all()
+        )
+        if attempt_ids
+        else {}
+    )
     reasons = workflow._reasons(session)
     users = workflow._users(
         session, [uid for row in rows for uid in (row.reported_by_user_id, row.author_user_id)]
@@ -1217,6 +1481,7 @@ def list_feedback(
             reasons,
             users,
             is_current=(row.attempt_id is None or row.revision == max_rev_by_attempt.get(row.attempt_id)),
+            attempt_due_date=due_by_attempt.get(row.attempt_id),
         )
         for row in rows
     ]
@@ -1240,19 +1505,41 @@ def funnel_open_waits(
         stmt = stmt.where(HandoffAttempt.recipient_department == cleaned_dep)
     rows = list(session.scalars(stmt))
     if not rows:
-        return OpenWaitsOut(total=0, unique_applications=0, max_wait_hours=None, median_wait_hours=None, by_department=[])
+        return OpenWaitsOut(
+            total=0,
+            unique_applications=0,
+            due_soon_total=0,
+            overdue_total=0,
+            extended_total=0,
+            max_wait_hours=None,
+            median_wait_hours=None,
+            by_department=[],
+        )
 
     as_of_utc = _utc(as_of)
+    as_of_date = _moscow_date(as_of_utc)
     hours = [max(0.0, round((as_of_utc - _utc(r.handed_off_at)).total_seconds() / 3600.0, 2)) for r in rows]
-    grouped: dict[str, list[tuple[uuid.UUID, float]]] = defaultdict(list)
+    grouped: dict[str, list[tuple[HandoffAttempt, float]]] = defaultdict(list)
+    due_soon_total = 0
+    overdue_total = 0
+    extended_total = 0
     for row, h in zip(rows, hours):
-        grouped[row.recipient_department].append((row.application_id, h))
+        if as_of_date > row.due_date:
+            overdue_total += 1
+        elif as_of_date >= row.reminder_date:
+            due_soon_total += 1
+        if row.extensions_count > 0:
+            extended_total += 1
+        grouped[row.recipient_department].append((row, h))
 
     by_department = [
         OpenWaitsByDepartmentOut(
             department=dep,
             total=len(items),
-            unique_applications=len({app_id for app_id, _ in items}),
+            unique_applications=len({r.application_id for r, _ in items}),
+            due_soon_total=sum(1 for r, _ in items if r.reminder_date <= as_of_date <= r.due_date),
+            overdue_total=sum(1 for r, _ in items if as_of_date > r.due_date),
+            extended_total=sum(1 for r, _ in items if r.extensions_count > 0),
             max_wait_hours=round(max(h for _, h in items), 2),
             median_wait_hours=round(float(median(h for _, h in items)), 2),
         )
@@ -1261,6 +1548,9 @@ def funnel_open_waits(
     return OpenWaitsOut(
         total=len(rows),
         unique_applications=len({r.application_id for r in rows}),
+        due_soon_total=due_soon_total,
+        overdue_total=overdue_total,
+        extended_total=extended_total,
         max_wait_hours=round(max(hours), 2),
         median_wait_hours=round(float(median(hours)), 2),
         by_department=by_department,

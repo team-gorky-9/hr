@@ -176,6 +176,14 @@ class ProcessFactStatus(StrEnum):
     NOT_REPORTED = "not_reported"
 
 
+class DeadlineExtensionReason(StrEnum):
+    """Причина переноса срока ответа департамента (workflow-01)."""
+    ILLNESS = "illness"
+    VACATION = "vacation"
+    BUSINESS_TRIP = "business_trip"
+    OTHER = "other"
+
+
 class ReserveStatus(StrEnum):
     ACTIVE = "active"
     WITHDRAWN = "withdrawn"  # основание отозвано кадровиком

@@ -552,6 +552,7 @@ def test_openapi_has_stage_2_routes_and_no_pii_route(client):
         "/api/v1/analytics/funnel": {"get"},
         "/api/v1/applications/{application_id}/handoff-summary": {"get"},
         "/api/v1/applications/{application_id}/handoffs": {"get", "post"},
+        "/api/v1/applications/{application_id}/handoffs/{attempt_id}/deadline": {"post"},
         "/api/v1/handoffs": {"get"},
         "/api/v1/handoffs/{attempt_id}": {"get"},
         "/api/v1/applications/{application_id}/feedback": {"get", "post"},

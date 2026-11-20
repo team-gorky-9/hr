@@ -24,6 +24,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, created_at_column, str_enum, uuid_pk
 from app.db.enums import (
     ApplicationSource,
+    DeadlineExtensionReason,
     FeedbackOutcome,
     HandoffChannel,
     HandoffStatus,
@@ -187,6 +188,15 @@ class InterviewQuestion(Base):
     interview: Mapped[Interview] = relationship(back_populates="questions")
 
 
+class ProductionCalendarDay(Base):
+    """Переопределения рабочих/нерабочих дней производственного календаря РФ (праздники и рабочие субботы)."""
+    __tablename__ = "production_calendar_days"
+
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    is_working_day: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    title: Mapped[str | None] = mapped_column(String(256))
+
+
 class HandoffAttempt(Base):
     """Конкретная передача отклика получателю с замороженным снимком сводки и ожиданием ответа (workflow-01)."""
     __tablename__ = "handoff_attempts"
@@ -205,6 +215,12 @@ class HandoffAttempt(Base):
     recipient_department: Mapped[str] = mapped_column(String(512))
     channel: Mapped[HandoffChannel] = mapped_column(str_enum(HandoffChannel, "channel"))
     handed_off_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    initial_due_date: Mapped[date] = mapped_column(Date)
+    due_date: Mapped[date] = mapped_column(Date)
+    reminder_date: Mapped[date] = mapped_column(Date)
+    deadline_business_days: Mapped[int] = mapped_column(SmallInteger, default=10, server_default="10")
+    reminder_business_day: Mapped[int] = mapped_column(SmallInteger, default=7, server_default="7")
+    extensions_count: Mapped[int] = mapped_column(SmallInteger, default=0, server_default="0")
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL")
     )
@@ -235,6 +251,47 @@ class HandoffAttempt(Base):
             "status",
             "recipient_department",
             postgresql_where=sa_text("status = 'awaiting_response'"),
+        ),
+    )
+
+
+class HandoffDeadlineExtension(Base):
+    """Запись переноса срока ответа департамента кадровиком (исходный срок сохраняется на попытке)."""
+    __tablename__ = "handoff_deadline_extensions"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    attempt_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("handoff_attempts.id", ondelete="CASCADE"), index=True
+    )
+    seq: Mapped[int] = mapped_column(SmallInteger)
+    previous_due_date: Mapped[date] = mapped_column(Date)
+    new_due_date: Mapped[date] = mapped_column(Date)
+    previous_reminder_date: Mapped[date] = mapped_column(Date)
+    new_reminder_date: Mapped[date] = mapped_column(Date)
+    was_overdue: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    reason_code: Mapped[DeadlineExtensionReason] = mapped_column(
+        str_enum(DeadlineExtensionReason, "reason_code")
+    )
+    comment: Mapped[str | None] = mapped_column(Text)
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    request_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    created_at: Mapped[datetime] = created_at_column()
+
+    __table_args__ = (
+        CheckConstraint("seq >= 1", name="seq_positive"),
+        Index(
+            "uq_handoff_deadline_extensions_attempt_seq",
+            "attempt_id",
+            "seq",
+            unique=True,
+        ),
+        Index(
+            "uq_handoff_deadline_extensions_request_id",
+            "request_id",
+            unique=True,
+            postgresql_where=sa_text("request_id IS NOT NULL"),
         ),
     )
 
