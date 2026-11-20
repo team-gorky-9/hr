@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.api.services import utf16_offset
 from app.assessment.version import ALGORITHM_VERSION
+from app.assessment.prompts import ASSESS_PROMPT_VERSION
 from app.db import repository as repo
 from app.db.enums import ApplicationSource, CheckResult, VerificationMethod
 from app.db.models import Candidate, CandidatePii, RequirementProfile
@@ -77,7 +78,7 @@ def build_case(session: Session, case_id: str, *, approve: bool = True, assess: 
                   for i in case["assessment"]["competency_scores"]]
         assessment = repo.save_assessment(session, candidate_id=candidate_id, profile_id=profile_id, card_id=card.id,
                                           model="fixture", formal_checks=checks, competency_scores=scores,
-                                          algorithm_version=ALGORITHM_VERSION)
+                                          algorithm_version=ALGORITHM_VERSION, prompt_version=ASSESS_PROMPT_VERSION)
         result |= {"assessment_id": assessment.id, "text_id": assessed_text_id}
     return result
 
@@ -277,7 +278,7 @@ def test_real_candidate_formal_check_fields(session, client):
 
     assessment = repo.save_assessment(
         session, candidate_id=candidate.id, profile_id=profile.id, card_id=card.id, model="test",
-        algorithm_version=ALGORITHM_VERSION,
+        algorithm_version=ALGORITHM_VERSION, prompt_version=ASSESS_PROMPT_VERSION,
         formal_checks=[
             FormalCheckIn(requirement_id=level.id, result=CheckResult.MET, evidence=[quote("Высшее образование")],
                           alternatives=[AlternativeResultIn(key="t.education.level.alt1", result=CheckResult.MET,

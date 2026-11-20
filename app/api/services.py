@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.api.errors import ApiError, not_found
 from app.assessment.applicability import resolve_applicability
 from app.assessment.version import ALGORITHM_VERSION
+from app.assessment.prompts import ASSESS_PROMPT_VERSION
 from app.assessment.counters import aggregate_profile
 from app.schemas.competency_details import CompetencyDetails
 from app.api.schemas import ComparisonOut, CompetencyDetailsOut
@@ -147,7 +148,8 @@ def resolve_states(
     Правила (api.md п. 2.2, развилка Р2 плана):
     1. нет утверждённого профиля в контуре → no_approved_profile;
     2. есть текущая оценка по утверждённому профилю → ready, но если карточка этой оценки
-       извлечена не из текущей версии текста → stale (text_changed);
+       извлечена не из текущей версии текста → stale (text_changed), а алгоритм или
+       промпт оценки отличается от текущего → stale (algorithm_changed);
     3. есть только текущая оценка по другому профилю этой должности в том же контуре
        (утверждённый профиль с тех пор сменился) → stale (profile_changed);
     4. иначе → not_assessed.
@@ -193,7 +195,8 @@ def resolve_states(
             assessment, card_text_id = on_approved[cid]
             if card_text_id != current_text_ids.get(cid):
                 states[cid] = AssessmentState(AssessmentStatus.STALE, assessment, StaleReason.TEXT_CHANGED)
-            elif assessment.algorithm_version != ALGORITHM_VERSION:
+            elif (assessment.algorithm_version != ALGORITHM_VERSION
+                  or assessment.prompt_version != ASSESS_PROMPT_VERSION):
                 states[cid] = AssessmentState(AssessmentStatus.STALE, assessment, StaleReason.ALGORITHM_CHANGED)
             else:
                 states[cid] = AssessmentState(AssessmentStatus.READY, assessment)

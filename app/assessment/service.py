@@ -351,14 +351,26 @@ def _education_check(requirement: FormalRequirement, rule: EducationRule, extrac
 
 
 _NO_EXPERIENCE = re.compile(
-    r"(нет|отсутству\w*|не\s+име\w*|без)\W+(?:\w+\W+){0,3}опыт"
-    r"|опыт\w*\W+(?:\w+\W+){0,10}(нет|отсутству\w*)\b",
+    r"\bотсутствует\s+(?:(?:коммерческий|релевантный|профессиональный|практический)\s+)*опыт\b"
+    r"|\b(?:нет|не\s+имею|не\s+имеет|без)\s+"
+    r"(?:(?:коммерческого|релевантного|профессионального|практического|такого)\s+)*опыта\b"
+    r"|^(?:у меня\s+)?(?:(?:коммерческий|коммерческого|релевантный|релевантного)\s+)?"
+    r"(?:опыт|опыта)\s+(?:[\w+#/-]+\s+){0,10}(?:нет|отсутствует)\b",
 )
 
 
 def _explicit_no_experience(quote: str) -> bool:
     """«Опыта нет» засчитывается только при прямом отрицании; заглушка «Не указано» — не отрицание."""
-    return bool(_NO_EXPERIENCE.search(quote.lower().replace("ё", "е")))
+    clauses = re.split(r"[.!?;,\n]|\b(?:но|однако)\b", quote.lower().replace("ё", "е"))
+    for clause in clauses:
+        # Отсутствие описания опыта не означает отсутствие самого опыта.
+        if re.search(r"\b(?:есть|неизвест\w*|указан\w*|описан\w*|представлен\w*|сведени\w*|информаци\w*)\b"
+                     r"|\bне\s+(?:отсутствует|без)\b", clause):
+            continue
+        clause = re.sub(r"\s*[:—–]\s*", " ", clause)
+        if _NO_EXPERIENCE.search(clause.strip(" \t:—-«»\"")):
+            return True
+    return False
 
 
 def _norm_field(value: str) -> str:
@@ -374,16 +386,17 @@ def _field_matches(alternative: dict[str, Any], quotes: list[Evidence]) -> bool:
     examples = [_norm_field(e) for e in alternative.get("field_examples") or []]
     if not examples:
         return True
-    joined = " ".join(_norm_field(q.quote) for q in quotes)
-    if "техническ" in joined:
-        return True
-    for example in examples:
-        for found in re.finditer(re.escape(example), joined):
-            before = joined[found.start() - 1:found.start()]
-            after = joined[found.end():].lstrip()
-            # Название целиком: дальше не продолжается словом («… в экономике» — уже другое направление).
-            if not before.isalpha() and (not after or not after[0].isalpha()):
-                return True
+    for quote in quotes:
+        fragment = _norm_field(quote.quote)
+        if "техническ" in fragment:
+            return True
+        for example in examples:
+            for found in re.finditer(re.escape(example), fragment):
+                before = fragment[found.start() - 1:found.start()]
+                after = fragment[found.end():].lstrip()
+                # «… в экономике» — продолжение названия, соседняя цитата — нет.
+                if not before.isalpha() and (not after or not after[0].isalpha()):
+                    return True
     return False
 
 

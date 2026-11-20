@@ -170,7 +170,7 @@ class OpenAICompatClient:
                     if repairs_left == 0:
                         raise LLMInvalidResponseError(
                             f"ответ модели не прошёл схему {response_model.__name__}: {error.error_count()} ошибок; "
-                            f"первая — {_first_problem(error)}"
+                            f"первая — {_first_problem(error, response_model)}"
                         ) from None
                     repairs_left -= 1
                     messages += [
@@ -211,10 +211,25 @@ class OpenAICompatClient:
         return response.choices[0].message.content or "", getattr(response, "usage", None)
 
 
-def _first_problem(error: ValidationError) -> str:
-    """Место и текст первой ошибки схемы — без входного значения (там может быть текст резюме)."""
-    item = error.errors()[0]
-    return f"{'.'.join(str(p) for p in item['loc']) or 'ответ'}: {item['msg']}"[:200]
+def _first_problem(error: ValidationError, response_model: type[BaseModel]) -> str:
+    """Диагностика для журнала: msg и неизвестные имена полей могут содержать резюме."""
+    field_names: set[str] = set()
+
+    def collect_fields(schema):
+        if isinstance(schema, dict):
+            field_names.update(schema.get("properties", {}))
+            for value in schema.values():
+                collect_fields(value)
+        elif isinstance(schema, list):
+            for value in schema:
+                collect_fields(value)
+
+    collect_fields(response_model.model_json_schema())
+    item = error.errors(include_input=False, include_context=False)[0]
+    path = ".".join(str(p) if isinstance(p, int) or p in field_names else "<extra_field>"
+                    for p in item["loc"]) or "ответ"
+    # Не копируем произвольный текст пользовательского ValueError даже без input.
+    return f"{path}: {item['type']}"[:200]
 
 
 def _repair_request(error: ValidationError) -> str:

@@ -111,8 +111,9 @@ def _keyed(base: type[BaseModel], field: str, attr: str, expected: set[str]) -> 
     Ошибка ключа — это ValueError при разборе ответа, поэтому клиент один раз просит модель
     исправить JSON и называет допустимые ключи; только после неудачного исправления —
     LLMInvalidResponseError (контракт оценки, п. 7). Точный повтор одного ключа с тем же
-    статусом склеивается (остаётся вариант с цитатой); один ключ с разными статусами —
-    ошибка. Если ключей не запрашивали (например, только стаж), лишние элементы отбрасываются.
+    статусом склеивается без потери цитат альтернатив. Разные цитаты индикатора
+    (схема допускает одну) или разные статусы требуют исправления ответа.
+    Если ключей не запрашивали (например, только стаж), лишние элементы отбрасываются.
     """
     allowed = ", ".join(sorted(expected))
 
@@ -123,12 +124,25 @@ def _keyed(base: type[BaseModel], field: str, attr: str, expected: set[str]) -> 
             if key not in expected:
                 if not expected:
                     continue
-                raise ValueError(f"{attr} = {key!r} не запрашивался; допустимы только: {allowed}")
+                raise ValueError(f"{attr} не запрашивался; допустимы только: {allowed}")
             first = kept.get(key)
             if first is None:
                 kept[key] = item
             elif first.status != item.status:
-                raise ValueError(f"{attr} = {key!r} указан дважды с разными статусами; оставь один элемент")
+                raise ValueError(f"{attr} указан дважды с разными статусами; оставь один элемент")
+            elif isinstance(first, AlternativeItem):
+                fragments = []
+                for answer in (first, item):
+                    fragments.extend(answer.quotes)
+                    if answer.quote:
+                        fragments.append(QuoteItem(quote=answer.quote, context_before=answer.context_before))
+                # Контекст различает одинаковые строки в разных местах резюме.
+                unique = {(q.quote, q.context_before): q for q in fragments}
+                first.quotes = list(unique.values())
+                first.quote = None
+                first.context_before = None
+            elif first.quote and item.quote and (first.quote, first.context_before) != (item.quote, item.context_before):
+                raise ValueError(f"{attr} повторён с разными цитатами; оставь один элемент с точным свидетельством")
             elif not first.quote and item.quote:
                 kept[key] = item
         object.__setattr__(self, field, list(kept.values()))

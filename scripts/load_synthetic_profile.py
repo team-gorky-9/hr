@@ -21,7 +21,7 @@ def main() -> int:
         print(f"учебный профиль {fixture['profile']['position_code']}: id={profile.id}, "
               f"version={profile.version}, status={profile.status.value}")
         print("утвердить: uv run python -m scripts.approve_profile --position-code "
-              f"{fixture['profile']['position_code']} --synthetic --approver hr-demo --basis \"...\" --commit")
+              f"{fixture['profile']['position_code']} --synthetic --approver <existing-hr-login> --basis \"...\" --commit")
     return 0
 
 

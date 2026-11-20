@@ -11,8 +11,8 @@
 те же проверки, что в рабочем пути: только черновик, активный кадровик или администратор,
 непустое основание; прежняя утверждённая версия того же контура уходит в архив.
 
-Кадровик с логином --approver создаётся, если его нет (роль hr). Существующего пользователя
-скрипт не меняет: неактивный или с другой ролью получит отказ функции утверждения.
+Пользователь с логином --approver должен уже существовать. Скрипт не создаёт пользователей
+и не меняет их роли: неактивный или с другой ролью получит отказ функции утверждения.
 Без --commit изменения откатываются — так можно проверить, что будет утверждено.
 """
 import argparse
@@ -24,7 +24,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import repository as repo
-from app.db.enums import RequirementStatus, UserRole
+from app.db.enums import RequirementStatus
 from app.db.models import Position, RequirementProfile, User
 
 
@@ -51,14 +51,11 @@ def find_draft(session: Session, *, profile_id: str | None, position_code: str |
     return profile
 
 
-def approver(session: Session, login: str, full_name: str) -> tuple[User, bool]:
+def approver(session: Session, login: str) -> User:
     user = session.scalar(select(User).where(User.login == login))
-    if user is not None:
-        return user, False
-    user = User(login=login, full_name=full_name, role=UserRole.HR, is_active=True)
-    session.add(user)
-    session.flush()
-    return user, True
+    if user is None:
+        raise repo.RepositoryError("утверждающий пользователь не найден; укажите логин существующего кадровика или администратора")
+    return user
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -68,7 +65,6 @@ def main(argv: list[str] | None = None) -> int:
     target.add_argument("--position-code", help="код должности: берётся последний черновик контура")
     parser.add_argument("--synthetic", action="store_true", help="учебный контур (с --position-code)")
     parser.add_argument("--approver", required=True, help="логин кадровика, который утверждает")
-    parser.add_argument("--approver-name", default="Кадровик (демо)", help="ФИО, если кадровика нужно создать")
     parser.add_argument("--basis", required=True, help="основание утверждения: что проверено и кем")
     parser.add_argument("--commit", action="store_true", help="записать; без флага — проверка с откатом")
     args = parser.parse_args(argv)
@@ -78,9 +74,9 @@ def main(argv: list[str] | None = None) -> int:
     with SessionLocal() as session:
         profile = find_draft(session, profile_id=args.profile_id, position_code=args.position_code,
                              synthetic=args.synthetic)
-        user, created = approver(session, args.approver, args.approver_name)
         previous = repo.get_approved_profile(session, profile.position_id, synthetic=profile.is_synthetic)
         try:
+            user = approver(session, args.approver)
             approved = repo.approve_requirement_profile(session, profile.id, approved_by_user_id=user.id,
                                                         approval_basis=args.basis)
         except repo.RepositoryError as error:
@@ -93,7 +89,7 @@ def main(argv: list[str] | None = None) -> int:
             "version": approved.version,
             "is_synthetic": approved.is_synthetic,
             "approver": user.login,
-            "approver_created": created,
+            "approver_created": False,
             "archived_previous": str(previous.id) if previous is not None else None,
         }
         if args.commit:
