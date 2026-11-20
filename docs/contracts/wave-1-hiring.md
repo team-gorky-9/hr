@@ -10,6 +10,8 @@ is_synthetic — обязательный boolean поля PositiveSelection. pr
 
 Case содержит id, revision, selection, status preparing/awaiting_documents/ready/withdrawn/started, checklist_version, candidate_actor_id UUID/null, starts_on date/null, basis object/null, workforce_status not_sent/pending/registered/review_required, employee_id/assignment_id UUID/null. Человек связывается с кабинетным actor отдельно, только HR с основанием. Статус started означает зарегистрированный HR подтверждённый факт начала, а workforce_status показывает отдельную доставку кадровому владельцу.
 
+Уточнение 21 ноября — workforce_status дополнен registered_with_difference для завершённой проверки с сохранением прежних кадровых сведений. Case хранит workforce_resolution null/corrected/kept_existing, workforce_review_reason string/null и workforce_assignment_snapshot с фактически полученными department_id, position_code, starts_on, revision.
+
 ChecklistItem содержит id, case_id, key, title, required bool, status requested/received/accepted/needs_revision, document_ids[], review_reason string/null, reviewed_by_actor_id UUID/null, revision. История хранит все версии файлов и решений.
 
 ## API
@@ -38,6 +40,10 @@ ChecklistItem содержит id, case_id, key, title, required bool, status re
 employment.ready содержит реквизиты и ссылку basis.document_ref, сформированную из локального документа. На assignment.registered сервис находит свой source_case_id и актуальную передачу, заполняет кадровую ссылку и workforce_status=registered. Неизвестное дело, чужая организация или конфликт версии сохраняют вопрос в очереди, не создают новое дело. Исправленная дата не должна быть подтверждена старым ответом: сохранять correlation_id и ожидаемую ревизию передачи. В assignment.registered возвращается correlation_id исходного employment.ready.
 
 Локальный тестовый приёмник читает настоящий RabbitMQ и отдаёт assignment.registered по fixtures, умеет задержку, повтор и отсутствие ответа. Это позволяет закончить автономную поставку без сервиса Давида. При интеграции те же события обрабатывает workforce.
+
+После /correct-start новое employment.ready требует отдельного решения Workforce. Hiring потребляет assignment.review-resolved только от workforce для своей организации, case_id и последнего ожидаемого source_event_id/source_case_revision/correlation_id. resolution=corrected даёт workforce_status=registered, resolution=kept_existing — registered_with_difference. HR видит предложенную дату, фактическую кадровую дату и объяснение; started и собственные источники Hiring сохраняются. При следующей /correct-start статус снова review_required, прежний результат хранится в истории. Повтор ответа не повторяет переход; устаревший ответ не закрывает текущую сверку.
+
+В локальной подмене добавить два альтернативных результата из corrections.json. Ветвь kept_existing завершается видимым расхождением, а не бесконечным ожиданием и не молчаливой заменой данных Hiring. Начальный assignment.registered продолжает использоваться для первой регистрации.
 
 ## Учебный путь сдачи
 
