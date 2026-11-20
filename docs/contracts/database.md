@@ -1,5 +1,7 @@
 # Контракт: база данных
 
+**Дополнение v1.8 (backend-02):** миграция `0006`, раздел 19 — периоды кадрового резерва, одна действующая запись на цель, статус `expired`. Ждёт утверждения.
+
 **Интеграционное дополнение v1.7:** ветка `feature/profile-assessment-integration`, миграция `0005`, раздел 18. Реализацию по архитектурному плану разрешил Давид; исторические статусы утверждения версий ниже не переписываются и согласие коллег не подразумевается.
 
 **Версия:** 1.6 (проект) · **Дата:** 2026-11-20 · **Статус:** v1.0 утверждена Родионом 19.11.2026; v1.1 принята решением Родиона 20.11 (Р1); изменения v1.2 (раздел 13), v1.3 (раздел 14), v1.4 (раздел 15), v1.5 (раздел 16) и v1.6 (раздел 17) ждут утверждения
@@ -422,8 +424,11 @@
 | `move_application(application_id, to_stage_code, actor_user_id=None, comment=None, rejection_reason_code=None, confirm_skip=False) → StageEvent` | блокирует строку отклика (`SELECT … FOR UPDATE`), меняет этап и пишет событие; переход не по порядку — только с подтверждением человека (п. 2.7) | нет такого отклика, нет такого этапа, тот же этап, переход не по порядку без `confirm_skip`, `actor_user_id` и `comment` [v1.3], отклик уже в финальном этапе, причина отказа не при `rejected`/`withdrawn`, неизвестная причина → `StageTransitionError` |
 | `stage_history(application_id) → [StageEvent]` | события по `seq` | — |
 | `record_department_feedback(application_id, outcome, …)` | сохраняет обратную связь, этап не меняет | неизвестная причина отказа → `RepositoryError` |
-| `add_to_reserve(candidate_id, position_id=None, competency_area=None, source_application_id=None, reason=None, added_by_user_id=None, valid_until=None)` | при активной записи на ту же должность или направление возвращает её, дубль не создаётся | нет ни должности, ни направления → `RepositoryError` |
-| `reserve_for_position(position_id, today=None) → [ReserveEntry]` | активные записи на должность с неистёкшим сроком; резерв «по направлению» сюда не входит | — |
+| `reserve_candidate(candidate_id, position_id=None, competency_area=None, source_application_id=None, reason=None, contact_basis=None, added_by_user_id=None, valid_until=None, today=None) → (ReserveEntry, created)` [v1.8] | действующая запись на ту же цель (должность, иначе направление) возвращается с `created = False`, в том числе при одновременной вставке; активная с истёкшим сроком закрывается (`expired`) и открывается новый период | нет ни должности, ни направления; нет кандидата, должности или отклика; исходный отклик чужого кандидата или не `response` → `RepositoryError` |
+| `add_to_reserve(...)` | то же, что `reserve_candidate`, возвращает только запись (прежняя сигнатура + `contact_basis`, `today`) | как у `reserve_candidate` |
+| `withdraw_reserve(reserve_id, actor_user_id, reason)` [v1.8] | `withdrawn`, `ended_at`, `end_reason`, `ended_by_user_id` | пустая причина; записи нет; запись не активна → `RepositoryError` |
+| `active_reserve_condition(today=None)` [v1.8] | условие SQLAlchemy «запись действует»: `active` и срок пуст или не раньше `today` (последний день включён). Одно правило для списка резерва и фильтра поиска `search-01` | — |
+| `reserve_for_position(position_id, today=None) → [ReserveEntry]` | действующие записи на должность (`active_reserve_condition`); резерв «по направлению» сюда не входит | — |
 | `get_candidate_pii(candidate_id, user_id, purpose)` | пишет `view_pii` в журнал, затем возвращает ПДн или `None` | — |
 | `write_audit(action, entity_type, entity_id=None, user_id=None, details=None)` | запись журнала | — |
 | `normalize_skill(name) → str` | правило нормализации из п. 4.2 | — |
@@ -671,3 +676,32 @@ save_assessment проверяет полный набор ключей screenin
 Контекст запуска хранится отдельно в audit_log (action=other, entity_type=assessment_run); purpose не записывается как единственное изменяемое свойство Assessment. См. [контракт применимости](profile-applicability.md). Изменение политики влияет на представление отклика, а не переписывает оценки пар.
 
 Реальная проверка миграции 0005: применение/откат/повторное применение на затронутых таблицах PostgreSQL 18 и сохранение legacy-данных. Проверки оценщика/API — на реальной ORM-схеме без embeddings. Полный прогон цепочки 0001–0005 с pgvector остаётся отдельной проверкой; см. [отчёт](../reports/profile-assessment-integration.md).
+
+## 19. Периоды кадрового резерва · v1.8 (20.11.2026, ждёт утверждения)
+
+Задача backend-02: «одна действующая запись для кандидата и цели, включая два конкурентных запроса; закончился срок или отозвано основание — записи нет ни в списке, ни в фильтре поиска; возобновление требует нового основания и сохраняет историю периода».
+
+Миграция `0006` поверх `0005`:
+
+| Изменение | Зачем |
+|---|---|
+| `reserve_entries.contact_basis` text null | основание повторного контакта; `reason` остаётся обоснованием профессиональной пригодности. API требует оба поля, у прежних записей может быть null |
+| `reserve_entries.ended_at` timestamptz null, `end_reason` text null, `ended_by_user_id` → `users` (SET NULL) null | как и кем закончен период |
+| `status` + `expired` (CHECK пересоздан) | срок истёк; запись закрывается при новом включении на ту же цель. `withdrawn` — основание отозвано кадровиком |
+| частичный уникальный индекс `uq_reserve_active_position` (`candidate_id`, `position_id`) `WHERE status = 'active' AND position_id IS NOT NULL` | одна активная запись на кандидата и должность — правило держит база, поэтому два одновременных запроса не создают дубль |
+| частичный уникальный индекс `uq_reserve_active_area` (`candidate_id`, `competency_area`) `WHERE status = 'active' AND position_id IS NULL` | то же для резерва по направлению |
+
+**Цель записи** — должность, если указана, иначе направление. Две записи на одну должность с разными направлениями считаются одной целью.
+
+**Действующая запись** — `status = active` и `valid_until` пусто или ≥ сегодня. Запись с истёкшим сроком может оставаться `active` до следующего включения на ту же цель. Действующей она не считается: условие `active_reserve_condition` проверяет дату. Фоновое закрытие по расписанию не нужно.
+
+**Гонка.** `reserve_candidate` ищет активную запись с `FOR UPDATE`, затем вставляет новую в точке сохранения. Если параллельная транзакция успела вставить запись, вторая вставка ждёт её commit и получает нарушение уникальности. Точка сохранения откатывается, и функция возвращает запись первой транзакции с `created = False`.
+
+**Откат миграции** переводит `expired` в `withdrawn` (прежний CHECK его не знает) и удаляет новые поля.
+
+**Затронутые потребители.**
+- **Ася (frontend-02):** поля `contact_basis`, `status`, `ended_*` в ответах резерва.
+- **Родион (search-01):** фильтр резерва — `active_reserve_condition()`.
+- **Илья:** не затронут.
+
+**Как проверено:** `test_models_match_migrations`; тесты резерва в `tests/test_selection.py` и `tests/test_api_workflow.py`. Среди них последний день срока, новый период после истечения, отзыв и детерминированная гонка двух транзакций на настоящей PostgreSQL. Вторая транзакция ждёт индекс, получает конфликт и возвращает запись первой.

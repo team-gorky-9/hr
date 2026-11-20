@@ -1,0 +1,323 @@
+{
+  "version": "search-01-synthetic-v1",
+  "documents": [
+    {
+      "code": "search-9001",
+      "text": "🧩\nОпыт работы\nСбор функциональных требований к СЭД, BPMN, постановка задач подрядчику.\nНавыки\nМоделирование документооборота.",
+      "skills": [
+        "BPMN"
+      ],
+      "education_level": "высшее",
+      "in_reserve": false
+    },
+    {
+      "code": "search-9002",
+      "text": "Опыт работы\nЗакупки для администрации по 44‑ФЗ. Публиковала извещения в ЕИС.\nОбразование\nВысшее экономическое.",
+      "skills": [
+        "ЕИС"
+      ],
+      "education_level": "высшее",
+      "in_reserve": true
+    },
+    {
+      "code": "search-9003",
+      "text": "Опыт работы\nСнабжение торговой сети, запрос коммерческих предложений и согласование договоров.",
+      "skills": [
+        "снабжение"
+      ],
+      "education_level": null,
+      "in_reserve": false
+    },
+    {
+      "code": "search-9004",
+      "text": "Опыт работы\nОптимизировал управление памятью в приложениях на C++. Профилировал узкие места.",
+      "skills": [
+        "C++"
+      ],
+      "education_level": "высшее",
+      "in_reserve": false
+    },
+    {
+      "code": "search-9005",
+      "text": "Обо мне\nНе работал с C++.\nОпыт работы\nАвтоматизировал выгрузку табличных отчётов с помощью макросов.",
+      "skills": [],
+      "education_level": null,
+      "in_reserve": false
+    },
+    {
+      "code": "search-9006",
+      "text": "Опыт работы\nРазворачивал Python-сервисы на FastAPI. Писал API-тесты и запускал их в CI.",
+      "skills": [
+        "Python",
+        "FastAPI"
+      ],
+      "education_level": "высшее",
+      "in_reserve": true
+    },
+    {
+      "code": "search-9007",
+      "text": "Опыт работы\nПеренёс каталоги материалов в 1С. Настроил печатные формы складского учёта.",
+      "skills": [
+        "1С"
+      ],
+      "education_level": "среднее профессиональное",
+      "in_reserve": false
+    },
+    {
+      "code": "search-9008",
+      "text": "Опыт работы\nРасписывал маршруты водителей, вёл путевые листы.\nИстория общения с кандидатом\nАудит ИБ\n28 января 2026\nОтклик на вакансию: Аудитор информационной безопасности",
+      "skills": [],
+      "education_level": null,
+      "in_reserve": false
+    },
+    {
+      "code": "search-9009",
+      "text": "Опыт работы\nПроводила аудит ИБ, проверяла матрицы доступа и отслеживала инциденты.",
+      "skills": [
+        "аудит ИБ"
+      ],
+      "education_level": null,
+      "in_reserve": false
+    },
+    {
+      "code": "search-9010",
+      "text": "Опыт работы\nРазбирал обращения пользователей и закрывал типовые заявки службы поддержки.\nРазбирал обращения пользователей и закрывал типовые заявки службы поддержки.\nРазбирал обращения пользователей и закрывал типовые заявки службы поддержки.\nРазбирал обращения пользователей и закрывал типовые заявки службы поддержки.\nРазбирал обращения пользователей и закрывал типовые заявки службы поддержки.\nРазбирал обращения пользователей и закрывал типовые заявки службы поддержки.\nРазбирал обращения пользователей и закрывал типовые заявки службы поддержки.\nРазбирал обращения пользователей и закрывал типовые заявки службы поддержки.\nРазбирал обращения пользователей и закрывал типовые заявки службы поддержки.\nНастроил репликацию PostgreSQL и восстановление из резервной копии.",
+      "skills": [
+        "PostgreSQL"
+      ],
+      "education_level": null,
+      "in_reserve": false
+    },
+    {
+      "code": "search-9011",
+      "text": "Опыт работы\nПрименял 25-ФЗ при подготовке материалов о муниципальной службе. Разъяснял 131—ФЗ.",
+      "skills": [
+        "муниципальная служба"
+      ],
+      "education_level": "высшее",
+      "in_reserve": true
+    },
+    {
+      "code": "search-9012",
+      "text": "Опыт работы\nСогласовывал мероприятия с районными учреждениями. Обновлял график встреч.\nОтклик на вакансию: Эксперт 44-ФЗ и ЕИС",
+      "skills": [],
+      "education_level": null,
+      "in_reserve": false
+    },
+    {
+      "code": "search-9013",
+      "text": "Принимала обращения жителей, группировала повторные жалобы и передавала их ответственным службам.",
+      "skills": [
+        "обращения жителей"
+      ],
+      "education_level": "среднее профессиональное",
+      "in_reserve": false
+    },
+    {
+      "code": "search-9014",
+      "text": "Опыт работы\nГотовил протоколы рабочих встреч и следил за исполнением поручений руководителя.",
+      "skills": [],
+      "education_level": null,
+      "in_reserve": false
+    },
+    {
+      "code": "search-9015",
+      "text": "Опыт работы\nАнализ и согласование требований к ИС при модернизации портала. Описывала сценарии использования.",
+      "skills": [
+        "анализ"
+      ],
+      "education_level": "высшее",
+      "in_reserve": false
+    },
+    {
+      "code": "search-9016",
+      "text": "Опыт работы\nВнедрил конвейер сборки и доставки релизов. Автоматизировал выпуск контейнеров после проверки кода.",
+      "skills": [
+        "CI/CD"
+      ],
+      "education_level": null,
+      "in_reserve": false
+    },
+    {
+      "code": "search-9017",
+      "text": "Опыт работы\nНастраивал репозиторий документов для сотрудников. Распределял папки по отделам.",
+      "skills": [],
+      "education_level": null,
+      "in_reserve": false
+    },
+    {
+      "code": "search-9018",
+      "text": "Опыт работы\nАдминистрировала сайт муниципалитета. Вела календарь общественных обсуждений.",
+      "skills": [],
+      "education_level": null,
+      "in_reserve": false
+    }
+  ],
+  "queries": [
+    {
+      "id": "c-codes",
+      "split": "calibration",
+      "query": "44-ФЗ ЕИС",
+      "required_terms": [
+        "44-ФЗ",
+        "ЕИС"
+      ],
+      "relevant": {
+        "search-9002": [
+          "Закупки для администрации по 44‑ФЗ",
+          "Публиковала извещения в ЕИС"
+        ]
+      },
+      "paraphrase": false
+    },
+    {
+      "id": "c-backend",
+      "split": "calibration",
+      "query": "разработка Python FastAPI",
+      "required_terms": [],
+      "relevant": {
+        "search-9006": [
+          "Разворачивал Python-сервисы на FastAPI"
+        ]
+      },
+      "paraphrase": false
+    },
+    {
+      "id": "c-audit",
+      "split": "calibration",
+      "query": "аудит ИБ",
+      "required_terms": [],
+      "relevant": {
+        "search-9009": [
+          "Проводила аудит ИБ"
+        ]
+      },
+      "paraphrase": false
+    },
+    {
+      "id": "c-deployment",
+      "split": "calibration",
+      "query": "непрерывное развёртывание приложения",
+      "required_terms": [],
+      "relevant": {
+        "search-9016": [
+          "Внедрил конвейер сборки и доставки релизов"
+        ]
+      },
+      "paraphrase": true
+    },
+    {
+      "id": "c-none-aviation",
+      "split": "calibration",
+      "query": "пилотирование пассажирского самолёта",
+      "required_terms": [],
+      "relevant": {},
+      "paraphrase": false
+    },
+    {
+      "id": "c-none-dental",
+      "split": "calibration",
+      "query": "установка зубных имплантатов",
+      "required_terms": [],
+      "relevant": {},
+      "paraphrase": false
+    },
+    {
+      "id": "t-requirements",
+      "split": "control",
+      "query": "анализ и согласование требований к ИС",
+      "required_terms": [],
+      "relevant": {
+        "search-9001": [
+          "Сбор функциональных требований к СЭД"
+        ],
+        "search-9015": [
+          "Анализ и согласование требований к ИС"
+        ]
+      },
+      "paraphrase": true
+    },
+    {
+      "id": "t-cpp",
+      "split": "control",
+      "query": "C++",
+      "required_terms": [],
+      "relevant": {
+        "search-9004": [
+          "приложениях на C++"
+        ]
+      },
+      "paraphrase": false
+    },
+    {
+      "id": "t-1c",
+      "split": "control",
+      "query": "1С",
+      "required_terms": [
+        "1С"
+      ],
+      "relevant": {
+        "search-9007": [
+          "Перенёс каталоги материалов в 1С"
+        ]
+      },
+      "paraphrase": false
+    },
+    {
+      "id": "t-laws",
+      "split": "control",
+      "query": "муниципальная служба",
+      "required_terms": [
+        "25-ФЗ",
+        "131-ФЗ"
+      ],
+      "relevant": {
+        "search-9011": [
+          "Применял 25-ФЗ",
+          "Разъяснял 131—ФЗ"
+        ]
+      },
+      "paraphrase": false
+    },
+    {
+      "id": "t-tail",
+      "split": "control",
+      "query": "восстановление PostgreSQL",
+      "required_terms": [],
+      "relevant": {
+        "search-9010": [
+          "Настроил репликацию PostgreSQL"
+        ]
+      },
+      "paraphrase": false
+    },
+    {
+      "id": "t-citizens",
+      "split": "control",
+      "query": "маршрутизация заявлений горожан по подразделениям",
+      "required_terms": [],
+      "relevant": {
+        "search-9013": [
+          "Принимала обращения жителей"
+        ]
+      },
+      "paraphrase": true
+    },
+    {
+      "id": "t-none-orbit",
+      "split": "control",
+      "query": "сварка корпуса орбитальной станции",
+      "required_terms": [],
+      "relevant": {},
+      "paraphrase": false
+    },
+    {
+      "id": "t-none-strings",
+      "split": "control",
+      "query": "реставрация старинных скрипок",
+      "required_terms": [],
+      "relevant": {},
+      "paraphrase": false
+    }
+  ]
+}

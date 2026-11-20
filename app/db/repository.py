@@ -9,11 +9,13 @@ import hashlib
 import unicodedata
 import uuid
 from collections.abc import Iterable, Sequence
-from datetime import date
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 from pathlib import PurePath
 from typing import Any
 
 from sqlalchemy import func, or_, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.db.enums import (
@@ -465,7 +467,33 @@ def record_department_feedback(
 
 # --- Кадровый резерв ---------------------------------------------------------
 
-def add_to_reserve(
+RESERVE_TZ = ZoneInfo("Europe/Moscow")
+
+
+def moscow_today() -> date:
+    """Сегодняшняя дата в Нижнем Новгороде (МСК): по ней считается срок резерва."""
+    return datetime.now(RESERVE_TZ).date()
+
+
+def active_reserve_condition(today: date | None = None):
+    """Правило «запись резерва действует» — одно для списка резерва и фильтра поиска (search-01):
+    статус active и срок не истёк (пустой срок — бессрочно, последний день включён, дата по МСК).
+    Запись с истёкшим сроком может ещё стоять в active, пока на ту же цель не открыли новый
+    период, но действующей не считается."""
+    today = today or moscow_today()
+    return (ReserveEntry.status == ReserveStatus.ACTIVE) & or_(
+        ReserveEntry.valid_until.is_(None), ReserveEntry.valid_until >= today
+    )
+
+
+def _reserve_target(position_id: uuid.UUID | None, competency_area: str | None):
+    """Цель резерва: должность, если указана, иначе направление (так же устроены уникальные индексы)."""
+    if position_id is not None:
+        return (ReserveEntry.position_id == position_id,)
+    return ReserveEntry.position_id.is_(None), ReserveEntry.competency_area == competency_area
+
+
+def reserve_candidate(
     session: Session,
     *,
     candidate_id: uuid.UUID,
@@ -473,54 +501,110 @@ def add_to_reserve(
     competency_area: str | None = None,
     source_application_id: uuid.UUID | None = None,
     reason: str | None = None,
+    contact_basis: str | None = None,
     added_by_user_id: uuid.UUID | None = None,
     valid_until: date | None = None,
-) -> ReserveEntry:
-    """Добавить кандидата в резерв. Если он уже в активном резерве на ту же должность
-    или направление — вернуть существующую запись, а не создавать дубль."""
+    today: date | None = None,
+) -> tuple[ReserveEntry, bool]:
+    """Включить кандидата в резерв. Вернуть (запись, создана ли новая).
+
+    - Активная действующая запись на ту же цель уже есть — вернуть её (created = False).
+    - Активная, но с истёкшим сроком — закрыть её (expired, ended_at) и открыть новый период
+      со своим основанием и происхождением: история прежнего периода сохраняется.
+    - Два одновременных запроса: уникальный индекс пропустит одну вставку, вторая получит
+      IntegrityError внутри точки сохранения и вернёт запись первой [v1.8].
+    - Исходный отклик должен принадлежать этому кандидату и быть откликом площадки
+      (source = response): история и ручные записи не основание для резерва [v1.8].
+    """
     if position_id is None and not competency_area:
         raise RepositoryError("резерв нужен на должность или на направление")
+    today = today or moscow_today()
     candidate = _get(session, Candidate, candidate_id, "кандидат")
+    if position_id is not None:
+        _get(session, Position, position_id, "должность")
     if source_application_id is not None:
-        _get(session, Application, source_application_id, "отклик")
+        source = _get(session, Application, source_application_id, "отклик")
+        if source.candidate_id != candidate.id:
+            raise RepositoryError("исходный отклик принадлежит другому кандидату")
+        if source.source != ApplicationSource.RESPONSE:
+            raise RepositoryError("основанием резерва может быть только отклик с площадки")
+
+    target = _reserve_target(position_id, competency_area)
     existing = session.scalar(
-        select(ReserveEntry).where(
-            ReserveEntry.candidate_id == candidate.id,
-            ReserveEntry.status == ReserveStatus.ACTIVE,
-            ReserveEntry.position_id.is_(None) if position_id is None else ReserveEntry.position_id == position_id,
-            ReserveEntry.competency_area.is_(None)
-            if competency_area is None
-            else ReserveEntry.competency_area == competency_area,
-        )
+        select(ReserveEntry)
+        .where(ReserveEntry.candidate_id == candidate.id, ReserveEntry.status == ReserveStatus.ACTIVE, *target)
+        .with_for_update()
     )
     if existing is not None:
-        return existing
+        if existing.valid_until is None or existing.valid_until >= today:
+            return existing, False
+        existing.status = ReserveStatus.EXPIRED
+        existing.ended_at = func.now()
+        existing.end_reason = "срок резерва истёк"
+        session.flush()
+
     entry = ReserveEntry(
         candidate_id=candidate.id,
         position_id=position_id,
         competency_area=competency_area,
         source_application_id=source_application_id,
         reason=reason,
+        contact_basis=contact_basis,
         added_by_user_id=added_by_user_id,
         valid_until=valid_until,
     )
-    session.add(entry)
+    savepoint = session.begin_nested()
+    try:
+        session.add(entry)
+        session.flush()
+    except IntegrityError:
+        # Параллельный запрос успел вставить активную запись на ту же цель.
+        savepoint.rollback()
+        winner = session.scalar(
+            select(ReserveEntry).where(
+                ReserveEntry.candidate_id == candidate.id, ReserveEntry.status == ReserveStatus.ACTIVE, *target
+            )
+        )
+        if winner is None:
+            raise
+        return winner, False
+    savepoint.commit()
+    return entry, True
+
+
+def add_to_reserve(session: Session, **kwargs) -> ReserveEntry:
+    """Добавить кандидата в резерв без дублей (см. reserve_candidate); вернуть запись."""
+    entry, _ = reserve_candidate(session, **kwargs)
+    return entry
+
+
+def withdraw_reserve(
+    session: Session, reserve_id: uuid.UUID, *, actor_user_id: uuid.UUID | None, reason: str
+) -> ReserveEntry:
+    """Отозвать основание: запись перестаёт действовать и остаётся в истории [v1.8]."""
+    if not reason or not reason.strip():
+        raise RepositoryError("укажите, почему основание резерва отозвано")
+    entry = session.get(ReserveEntry, reserve_id, with_for_update=True)
+    if entry is None:
+        raise RepositoryError(f"нет записи «резерв» с id {reserve_id}")
+    if entry.status != ReserveStatus.ACTIVE:
+        raise RepositoryError("запись резерва уже не активна")
+    entry.status = ReserveStatus.WITHDRAWN
+    entry.ended_at = func.now()
+    entry.end_reason = reason.strip()
+    entry.ended_by_user_id = actor_user_id
     session.flush()
+    session.refresh(entry)
     return entry
 
 
 def reserve_for_position(session: Session, position_id: uuid.UUID, *, today: date | None = None) -> list[ReserveEntry]:
-    """Активный резерв на должность с неистёкшим сроком. Резерв «по направлению»
+    """Действующий резерв на должность (active_reserve_condition). Резерв «по направлению»
     сюда не входит: его подбирает поиск по смыслу."""
-    today = today or date.today()
     return list(
         session.scalars(
             select(ReserveEntry)
-            .where(
-                ReserveEntry.position_id == position_id,
-                ReserveEntry.status == ReserveStatus.ACTIVE,
-                or_(ReserveEntry.valid_until.is_(None), ReserveEntry.valid_until >= today),
-            )
+            .where(ReserveEntry.position_id == position_id, active_reserve_condition(today))
             .order_by(ReserveEntry.added_at)
         )
     )

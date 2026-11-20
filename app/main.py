@@ -9,14 +9,16 @@ from app.api.errors import install_error_handlers
 from app.api.routes import router
 from app.config import settings
 from app.reporting.api import create_router as create_reporting_router
+from app.search.api import router as search_router
 
 
 def create_app() -> FastAPI:
     app = FastAPI(
         title="Кадры — API подбора",
-        version="0.2.0",
-        description="Чтение вакансий, откликов, оценок и очищенных текстов (контракт api.md v0.2). "
-        "Слепой режим: персональные данные кандидатов не отдаются.",
+        version="0.3.0",
+        description="Вакансии, отклики, оценки и очищенные тексты; действия кадровика: этапы с историей, "
+        "кросс-оценки, кадровый резерв, воронка (контракт api.md v0.3). Персональные данные кандидатов не отдаются. "
+        "Маршруты действий требуют заголовок X-User-Login (учебная авторизация стенда).",
     )
     app.add_middleware(
         CORSMiddleware,
@@ -26,6 +28,7 @@ def create_app() -> FastAPI:
     )
     install_error_handlers(app)
     app.include_router(router)
+    app.include_router(search_router)
     app.include_router(create_reporting_router())
     return app
 

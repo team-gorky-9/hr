@@ -1,4 +1,4 @@
-"""Схемы ответов API Этапа 1 (контракт api.md v0.2, раздел 2).
+"""Схемы запросов и ответов API (контракт api.md v0.3: раздел 2 — чтение, раздел 3 — действия кадровика, резерв, воронка).
 
 Это внешние DTO: в них нет ни одного поля candidate_pii и нет source_documents.raw_text
 (слепой режим). Названия полей совпадают с примерами контракта.
@@ -8,17 +8,22 @@ from datetime import date, datetime
 from enum import StrEnum
 from typing import Any, Literal
 from app.assessment.applicability import Applicability
+# Статусы оценки — общие с моделью чтения кросс-оценок (app.assessment.state).
+from app.assessment.state import AssessmentStatus, StaleReason  # noqa: F401
 from app.schemas.competency_details import CompetencyDetails, IndicatorResult, ProfileCounters
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.db.enums import (
+    ApplicationSource,
     Channel,
     CheckResult,
     CheckStage,
     CompetencyRank,
     FormalRequirementKind,
+    RejectionSide,
     RequirementStatus,
+    ReserveStatus,
     VacancyStatus,
     VerificationMethod,
 )
@@ -28,21 +33,6 @@ class Contour(StrEnum):
     """Какие данные показывать (api.md п. 1, v0.2): рабочие — по умолчанию, учебные — явно."""
     WORKING = "working"
     TRAINING = "training"
-
-
-class AssessmentStatus(StrEnum):
-    NOT_APPLICABLE = 'not_applicable'
-    MAPPING_REQUIRED = 'mapping_required'
-    READY = "ready"                              # актуальная оценка по текущему тексту и утверждённому профилю
-    STALE = "stale"                              # оценка есть, но текст или утверждённый профиль сменились
-    NOT_ASSESSED = "not_assessed"                # утверждённый профиль есть, оценки нет
-    NO_APPROVED_PROFILE = "no_approved_profile"  # у должности нет утверждённого профиля в этом контуре
-
-
-class StaleReason(StrEnum):
-    ALGORITHM_CHANGED = 'algorithm_changed'
-    TEXT_CHANGED = "text_changed"        # оценка по прежней версии очищенного текста
-    PROFILE_CHANGED = "profile_changed"  # оценка по прежней версии профиля требований
 
 
 # --- Общие --------------------------------------------------------------------
@@ -246,3 +236,259 @@ class CandidateTextOut(BaseModel):
     text: str
     char_length: int
     utf16_length: int
+
+
+# =============================================================================
+# Этап 2: действия кадровика, резерв, кросс-оценки, воронка (api.md v0.3, раздел 3)
+# =============================================================================
+
+class UserBriefOut(BaseModel):
+    """Кто действовал: логин и роль учётки (не ПДн кандидата)."""
+    login: str
+    role: str
+
+
+# --- Справочники ----------------------------------------------------------------
+
+class StageRefOut(BaseModel):
+    code: str
+    title: str
+    sort_order: int
+    is_final: bool
+
+
+class StageRefListOut(BaseModel):
+    items: list[StageRefOut]
+
+
+class RejectionReasonOut(BaseModel):
+    code: str
+    title: str
+    side: RejectionSide
+
+
+class RejectionReasonListOut(BaseModel):
+    items: list[RejectionReasonOut]
+
+
+# --- Этапы и история --------------------------------------------------------------
+
+class StageMoveIn(BaseModel):
+    to_stage_code: str = Field(min_length=1)
+    # Последний seq истории, который видел кадровик (GET /history → last_seq). Если отклик
+    # с тех пор изменили в другом окне — 409 STALE_STAGE_FORM.
+    expected_seq: int
+    comment: str | None = None
+    # Обязательна для перехода в rejected / withdrawn, запрещена для остальных этапов.
+    rejection_reason_code: str | None = None
+    # Перескок вперёд или возврат назад: кадровик подтверждает и пишет причину в comment.
+    confirm_skip: bool = False
+
+
+class StageEventOut(BaseModel):
+    seq: int
+    from_stage: StageOut | None
+    to_stage: StageOut
+    rejection_reason: RejectionReasonOut | None
+    actor: UserBriefOut | None
+    comment: str | None
+    created_at: datetime
+
+
+class StageMoveOut(BaseModel):
+    application_id: uuid.UUID
+    stage: StageOut
+    event: StageEventOut  # event.seq — новый expected_seq для следующего перевода
+
+
+class StageHistoryOut(BaseModel):
+    application_id: uuid.UUID
+    source: ApplicationSource
+    stage: StageOut
+    last_seq: int | None
+    items: list[StageEventOut]
+
+
+# --- Кросс-оценки -----------------------------------------------------------------
+# Данные собирает app.assessment.cross.cross_assessments (ai-02, Илья); API только
+# проверяет права и переводит результат в эти DTO.
+
+class CrossEvidenceOut(BaseModel):
+    candidate_text_id: uuid.UUID
+    quote: str
+    start: int
+    end: int
+    utf16_start: int  # по тексту, на который ссылается цитата (в том числе прежней версии)
+    utf16_end: int
+
+
+class CrossFormalCheckOut(BaseModel):
+    requirement_key: str
+    description: str
+    is_mandatory: bool
+    check_stage: CheckStage
+    result: CheckResult
+    basis: VerificationMethod
+    is_preliminary: bool
+    evidence: list[CrossEvidenceOut]
+
+
+class CrossCompetencyOut(BaseModel):
+    competency_id: uuid.UUID
+    code: str
+    name: str
+    rank: CompetencyRank | None
+    target_level_min: int | None
+    target_level_max: int | None
+    level: int | None
+    explanation: str | None
+    mandatory: dict[str, Any] | None  # счётчики confirmed/contradicted/no_info/total из details
+    desired: dict[str, Any] | None
+    evidence: list[CrossEvidenceOut]
+
+
+class CrossAssessmentOut(BaseModel):
+    assessment_id: uuid.UUID
+    version: int
+    profile_id: uuid.UUID       # профиль самой оценки (при profile_changed — прежняя версия)
+    profile_version: int
+    formal_result: CheckResult
+    formal_preliminary: bool
+    overall_score: int | None
+    summary: str | None
+    gaps: list[str]  # требования этапа screening с результатом unknown
+    formal_checks: list[CrossFormalCheckOut]
+    competencies: list[CrossCompetencyOut]
+
+
+class CrossApplicationOut(BaseModel):
+    application_id: uuid.UUID
+    vacancy_id: uuid.UUID | None
+    position_code: str | None
+    source: ApplicationSource
+    posting_title: str | None
+    current_stage_code: str
+
+
+class CrossVacancyOut(BaseModel):
+    """Вакансия должности и отклик кандидата на неё, если есть."""
+    vacancy_id: uuid.UUID
+    title: str
+    channel: Channel
+    status: VacancyStatus
+    application_id: uuid.UUID | None
+    application_source: ApplicationSource | None
+    application_stage_code: str | None
+
+
+class CrossAssessmentItemOut(BaseModel):
+    position_id: uuid.UUID
+    position_code: str
+    position_title: str
+    is_municipal_service: bool
+    profile_id: uuid.UUID       # утверждённый сейчас профиль должности
+    profile_version: int
+    is_training: bool
+    # Есть ли у кандидата прямой отклик (source = response) на вакансию этой должности.
+    is_source_position: bool
+    vacancies: list[CrossVacancyOut]
+    assessment_status: AssessmentStatus
+    stale_reason: StaleReason | None
+    assessment: CrossAssessmentOut | None
+
+
+class CrossAssessmentListOut(BaseModel):
+    candidate_id: uuid.UUID
+    candidate_code: str
+    is_training: bool
+    current_text_id: uuid.UUID | None
+    applications: list[CrossApplicationOut]
+    items: list[CrossAssessmentItemOut]
+    empty_reason: str | None  # no_approved_profiles — пустой список не ошибка
+
+
+# --- Кадровый резерв --------------------------------------------------------------
+
+class ReserveIn(BaseModel):
+    candidate_id: uuid.UUID
+    position_id: uuid.UUID | None = None
+    competency_area: str | None = None
+    source_application_id: uuid.UUID | None = None
+    # Обоснование профессиональной пригодности и основание повторного контакта — обязательны
+    # (проверяет сервис: 422 RESERVE_BASIS_REQUIRED в общем формате).
+    reason: str | None = None
+    contact_basis: str | None = None
+    valid_until: date | None = None
+
+
+class ReserveWithdrawIn(BaseModel):
+    reason: str | None = None
+
+
+class ReserveEntryOut(BaseModel):
+    reserve_id: uuid.UUID
+    candidate_id: uuid.UUID
+    candidate_code: str
+    headline: str | None
+    is_training: bool
+    position_id: uuid.UUID | None
+    competency_area: str | None
+    source_application_id: uuid.UUID | None
+    reason: str | None
+    contact_basis: str | None
+    status: ReserveStatus
+    added_by: UserBriefOut | None
+    added_at: datetime
+    valid_until: date | None
+    ended_at: datetime | None
+    end_reason: str | None
+    ended_by: UserBriefOut | None
+
+
+class ReserveCreatedOut(BaseModel):
+    created: bool  # false — у кандидата уже есть действующая запись на эту цель, вернули её
+    entry: ReserveEntryOut
+
+
+class ReserveListOut(BaseModel):
+    position_id: uuid.UUID
+    position_code: str
+    total: int
+    items: list[ReserveEntryOut]
+
+
+# --- Воронка ----------------------------------------------------------------------
+
+class FunnelStageOut(BaseModel):
+    code: str
+    title: str
+    sort_order: int
+    is_final: bool
+    current_count: int  # уникальные отклики, которые сейчас на этом этапе
+    reached_count: int  # отклики, у которых есть переход на этот этап (stage_events)
+
+
+class FunnelClosureOut(BaseModel):
+    """Решения о закрытии за период: переход в hired / rejected / withdrawn с причиной."""
+    stage_code: str
+    stage_title: str
+    reason_code: str | None  # null — причина не указана (исторические записи) или найм
+    reason_title: str
+    side: RejectionSide | None
+    count: int
+
+
+class FunnelOut(BaseModel):
+    as_of: datetime  # момент среза
+    contour: Contour
+    vacancy_id: uuid.UUID | None
+    position_id: uuid.UUID | None
+    period_from: date | None
+    period_to: date | None
+    timezone: str  # в каком поясе даты периода превращаются в границы суток
+    total_applications: int
+    stages: list[FunnelStageOut]
+    closures: list[FunnelClosureOut]
+    closures_without_reason: int
+    # Открытые ожидания ответа и их длительность считает workflow-01 по передачам; до него null.
+    open_waits: dict | None
