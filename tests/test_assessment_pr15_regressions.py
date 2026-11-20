@@ -12,7 +12,7 @@ from app.api.services import resolve_states
 from app.assessment.llm_schemas import keyed_competency, keyed_formal
 from app.assessment.prompts import ASSESS_PROMPT_VERSION
 from app.assessment.rules import parse_rule
-from app.assessment.service import _assess_formal
+from app.assessment.service import _explicit_no_experience, _assess_formal
 from app.assessment.version import ALGORITHM_VERSION
 from app.db import repository as repo
 from scripts.approve_profile import approver
@@ -45,6 +45,11 @@ def evaluate(case_id, text_value, response):
     'В тестировании ПО опыт не указан.',
     'В тестировании недостатка опыта нет.',
     'В тестировании проблем с наличием опыта нет.',
+    # Отрицание в другой области или во времени не опровергает опыт Python.
+    'В тестировании ПО опыта нет.',
+    'По разработке интерфейсов опыта нет.',
+    'В команде опыта нет.',
+    'В 2022 году опыта нет.',
 ])
 def test_unrelated_negation_does_not_refute_experience(quote):
     result = evaluate('py-relevant-unknown', quote, {'no_experience_quote': quote})
@@ -57,8 +62,7 @@ def test_unrelated_negation_does_not_refute_experience(quote):
     'Не имею коммерческого опыта.', 'Опыт работы отсутствует.',
     'Опыта разработки на Python и работы с данными у меня нет.',
     'Отсутствует опыт работы.', 'Опыт работы: нет.',
-    'В тестировании ПО опыта нет.',
-    'По разработке интерфейсов опыта нет.',
+    'В разработке на Python опыта нет.',
 ])
 def test_explicit_experience_negation_still_refutes(quote):
     result = evaluate('py-relevant-unknown', quote, {'no_experience_quote': quote})
@@ -164,3 +168,24 @@ def test_approval_command_does_not_create_unknown_hr():
 def test_merged_supported_status_aliases(value, expected):
     answer = keyed_formal({'a'}).model_validate({'alternatives': [{'alternative_key': 'a', 'status': value}]})
     assert answer.alternatives[0].status == expected
+
+
+QA_HINT = "Собственное выполнение тестирования ПО: тест-дизайн, тест-кейсы, исполнение тестов"
+FRONTEND_HINT = "Собственная разработка клиентских интерфейсов, UI-компонентов, интеграция с API"
+PYTHON_HINT = "Собственная работа по разработке на Python либо технической работе с данными"
+
+
+@pytest.mark.parametrize('quote, hint, refutes', [
+    ('В тестировании ПО опыта нет.', QA_HINT, True),
+    ('В тестировании ПО опыта нет.', PYTHON_HINT, False),
+    ('По разработке интерфейсов опыта нет.', FRONTEND_HINT, True),
+    ('По разработке интерфейсов опыта нет.', PYTHON_HINT, False),
+    ('В Python опыт есть, в тестировании опыта нет.', QA_HINT, True),
+    ('В Python опыт есть, в тестировании опыта нет.', PYTHON_HINT, False),
+    ('В 2022 году опыта нет.', QA_HINT, False),
+    ('В тестировании ПО опыта нет.', None, False),
+    ('Опыта работы нет.', PYTHON_HINT, True),
+])
+def test_scoped_negation_refutes_only_its_own_role(quote, hint, refutes):
+    # «Опыта нет» с областью относится к требованию, только если область совпадает с релевантной ролью.
+    assert _explicit_no_experience(quote, hint) is refutes

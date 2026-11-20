@@ -272,7 +272,7 @@ def _experience_check(requirement: FormalRequirement, rule: ExperienceRule, extr
             return _CheckDraft(requirement, CheckResult.MET, [q.evidence for _, q in work],
                                {"rule": "relevant_role", "notes": notes, "ambiguous": _ambiguous(q for _, q in work)})
         no_exp = _resolve(text, extraction.no_experience_quote, None)
-        if no_exp is not None and not _explicit_no_experience(no_exp.evidence.quote):
+        if no_exp is not None and not _explicit_no_experience(no_exp.evidence.quote, rule.relevance_hint):
             notes.append("в ответе модели «опыта нет», но в цитате нет прямого отрицания — считаем отсутствием сведений")
             no_exp = None
         if no_exp is not None:
@@ -358,14 +358,30 @@ _NO_EXPERIENCE = re.compile(
     r"(?:опыт|опыта)\s+(?:[\w+#/-]+\s+){0,10}(?:нет|отсутствует)\b",
 )
 _SCOPED_NO_EXPERIENCE = re.compile(
-    r"^(?:в|по)\s+(?:[\w+#/-]+\s+){1,6}(?:опыт|опыта)\s+(?:нет|отсутствует)\b"
+    r"^(?:в|по)\s+((?:[\w+#/-]+\s+){1,6})(?:опыт|опыта)\s+(?:нет|отсутствует)\b"
 )
+_SCOPE_FILLER = {"у", "меня", "мой", "моем", "этой", "этом", "данной", "данном", "сфере", "области", "направлении"}
 _SCOPED_EXPERIENCE_AMBIGUITY = re.compile(
     r"\b(?:резюме|анкет\w*|описани\w*|нехватк\w*|недостатк\w*|проблем\w*|сомнен\w*)\b"
 )
 
 
-def _explicit_no_experience(quote: str) -> bool:
+def _stems(text: str) -> set[str]:
+    return {w[:5] for w in re.findall(r"[a-zа-я0-9+#]+", text.lower().replace("ё", "е")) if len(w) >= 4}
+
+
+def _scope_matches(area: str, hint: str | None) -> bool:
+    """Отрицание с областью относится к требованию, только если все значимые слова области
+    есть в описании релевантной роли. «В тестировании ПО» опровергает QA, но не Python;
+    «В 2022 году» — время, а не область."""
+    words = [w for w in re.findall(r"[a-zа-я0-9+#]+", area) if w not in _SCOPE_FILLER]
+    if not hint or any(w.isdigit() for w in words):
+        return False
+    meaningful = [w[:5] for w in words if len(w) >= 4]
+    return bool(meaningful) and set(meaningful) <= _stems(hint)
+
+
+def _explicit_no_experience(quote: str, relevance_hint: str | None = None) -> bool:
     """«Опыта нет» засчитывается только при прямом отрицании; заглушка «Не указано» — не отрицание."""
     clauses = re.split(r"[.!?;,\n]|\b(?:но|однако)\b", quote.lower().replace("ё", "е"))
     for clause in clauses:
@@ -378,8 +394,9 @@ def _explicit_no_experience(quote: str) -> bool:
             return True
         # A leading area is still an explicit denial: «В тестировании ПО опыта нет».
         # Absence in a document or absence of a problem is not absence of experience.
-        if (_SCOPED_NO_EXPERIENCE.search(clause.strip(" \t:—-«»\""))
-                and not _SCOPED_EXPERIENCE_AMBIGUITY.search(clause)):
+        scoped = _SCOPED_NO_EXPERIENCE.search(clause.strip(" \t:—-«»\""))
+        if (scoped and not _SCOPED_EXPERIENCE_AMBIGUITY.search(clause)
+                and _scope_matches(scoped.group(1), relevance_hint)):
             return True
     return False
 
