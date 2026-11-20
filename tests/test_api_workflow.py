@@ -33,6 +33,7 @@ from app.schemas.assessment import CompetencyScoreIn
 from app.schemas.card import Evidence
 from app.schemas.requirements import CompetencyIn, IndicatorIn
 from tests import factories as f
+from tests.posting_helpers import posting_registry  # noqa: F401 (fixture used by imported client)
 from tests.test_api import PII, build_case, client  # noqa: F401  (client — фикстура)
 from tests.test_assessment_fixtures_db import _load_profile
 
@@ -266,7 +267,7 @@ def test_reserve_rules(session, client):
     assert area.status_code == 201 and area.json()["entry"]["position_id"] is None
 
 
-def test_reserve_last_allowed_day_expiry_and_new_period(session):
+def test_reserve_last_allowed_day_expiry_and_new_period(session, posting_registry):
     """Запись видна в последний разрешённый день, после срока пропадает; новый период — своё происхождение."""
     built = build_case(session, "C1-unknown")
     candidate_id, pos = built["candidate_id"], f.position(session)
@@ -485,7 +486,7 @@ def test_cross_assessments_mark_each_vacancy_of_position(session, client):
     [item] = body["items"]
     linked = {v["vacancy_id"]: (v["application_id"], v["application_source"]) for v in item["vacancies"]}
     assert linked == {str(f.vacancy(session).id): (str(built["application_id"]), "response"),
-                      str(second.id): (str(manual.id), "manual"), str(third.id): (None, None)}
+                      str(second.id): (None, None), str(third.id): (None, None)}
     assert item["is_source_position"] is True
     assert {a["application_id"] for a in body["applications"]} == {str(built["application_id"]), str(manual.id)}
 

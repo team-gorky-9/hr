@@ -10,6 +10,8 @@
 
 Загрузчик профилей требований: `uv run python -m app.requirements --help`. Автономный учебный профиль, импорт ДИ и явное утверждение кадровиком описаны в [инструкции requirements](docs/modules/requirements.md).
 
+Шесть профилей по ДИ и матрице поставляются вместе с оригиналами: [состав, решения HR и примеры](fixtures/requirement_profiles/all_six/README.md). После миграций и seed команда `uv run python -m scripts.load_all_six_profiles --commit` загружает все шесть как черновики и выдаёт UUID, источники и версии.
+
 ## Запуск базы
 
 Нужны Python 3.13, [uv](https://docs.astral.sh/uv/) и Docker.

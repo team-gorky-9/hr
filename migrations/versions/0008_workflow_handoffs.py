@@ -11,11 +11,11 @@
   с частичным уникальным индексом против гонок, факты contact_status/interview_status,
   происхождение внешнего ответа (response_channel, reported_by_*, reported_at) и request_id.
 
-Примечание: пока в main последняя миграция 0006, эта ветка занимает 0007; если хранение
-interview-01 со своей 0007 вольётся раньше, перенумеровать эту в 0008 (Revises: 0007).
+Примечание: миграция следует за 0007_posting_sources (requirements-03);
+ветка interview-01 при слиянии наследует от 0008.
 
-Revision ID: 0007
-Revises: 0006
+Revision ID: 0008
+Revises: 0007_posting_sources
 Create Date: 2026-11-20
 """
 from collections.abc import Sequence
@@ -24,8 +24,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = '0007'
-down_revision: str | None = '0006'
+revision: str = '0008'
+down_revision: str | None = '0007_posting_sources'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

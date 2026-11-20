@@ -18,6 +18,8 @@ from sqlalchemy.orm import Session
 from app.api import auth, handoff, services, workflow
 from app.api.auth import AuthenticatedUser, OptionalUser, StaffUser
 from app.api.errors import ApiError
+from app.postings import service as postings
+from app.postings.service import ApplicationResolution
 from app.api.schemas import (
     ApplicationDetailOut,
     ApplicationListOut,
@@ -50,6 +52,7 @@ from app.api.schemas import (
     StageMoveOut,
     StageRefListOut,
     VacancyListOut,
+    PostingSnapshotIn,
 )
 from app.db import repository as repo
 from app.db.enums import CheckResult, HandoffStatus, UserRole
@@ -113,6 +116,41 @@ def get_application(application_id: uuid.UUID, session: SessionDep, user: Option
                 {"application_id": str(application_id)},
             )
     return services.get_application(session, application_id)
+
+
+@router.get('/applications/{application_id}/posting-resolution', response_model=ApplicationResolution)
+def get_posting_resolution(
+    application_id: uuid.UUID,
+    session: SessionDep,
+    user: OptionalUser = None,
+):
+    auth.ensure_not_department(user)
+    try:
+        return postings.resolve_application(session, application_id)
+    except ValueError as error:
+        if str(error) != 'application_not_found':
+            raise
+        raise ApiError(404, 'APPLICATION_NOT_FOUND', 'Отклик не найден') from error
+
+
+@router.post('/posting-snapshots', status_code=201)
+def create_posting_snapshot(body: PostingSnapshotIn, session: SessionDep, actor: StaffUser):
+    try:
+        result = postings.create_snapshot(session, body.application_ids, actor_id=actor.id)
+    except ValueError as error:
+        raise ApiError(422, 'INVALID_SNAPSHOT_SELECTION', 'Выборка должна содержать существующие прямые отклики') from error
+    session.commit()
+    return result
+
+
+@router.get('/posting-snapshots/{snapshot_id}')
+def get_posting_snapshot(snapshot_id: uuid.UUID, session: SessionDep, actor: StaffUser):
+    try:
+        return postings.read_snapshot(session, snapshot_id)
+    except ValueError as error:
+        if str(error) != 'snapshot_not_found':
+            raise
+        raise ApiError(404, 'SNAPSHOT_NOT_FOUND', 'Снимок не найден') from error
 
 
 @router.get('/applications/{application_id}/comparison', response_model=ComparisonOut)

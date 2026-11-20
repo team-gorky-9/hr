@@ -1,5 +1,9 @@
 # Контракт: база данных
 
+**Дополнение v2.0 (workflow-01):** миграция `0008` поверх `0007_posting_sources`, раздел 21 — `production_calendar_days`, `handoff_attempts`, `handoff_deadline_extensions` и расширение `department_feedback`.
+
+**Дополнение v1.9 (requirements-03):** миграция `0007_posting_sources` после `0006`, неизменяемое происхождение конкретного отклика в `application_posting_sources`; снимки выборки через существующий AuditLog. [Поля, ограничения, переход старых данных](posting-position-register.md#происхождение-импорта). Реализация в пределах полной задачи Давида, без приписывания согласия коллег.
+
 **Дополнение v1.8 (backend-02):** миграция `0006`, раздел 19 — периоды кадрового резерва, одна действующая запись на цель, статус `expired`. Ждёт утверждения.
 
 **Интеграционное дополнение v1.7:** ветка `feature/profile-assessment-integration`, миграция `0005`, раздел 18. Реализацию по архитектурному плану разрешил Давид; исторические статусы утверждения версий ниже не переписываются и согласие коллег не подразумевается.
@@ -706,9 +710,13 @@ save_assessment проверяет полный набор ключей screenin
 
 **Как проверено:** `test_models_match_migrations`; тесты резерва в `tests/test_selection.py` и `tests/test_api_workflow.py`. Среди них последний день срока, новый период после истечения, отзыв и детерминированная гонка двух транзакций на настоящей PostgreSQL. Вторая транзакция ждёт индекс, получает конфликт и возвращает запись первой.
 
-## 20. Передача получателю, сроки ответа, производственный календарь и ответы департамента (`workflow-01`, 20.11.2026)
+## 20. Происхождение отклика и снимки · v1.9 (`requirements-03`)
 
-Миграция `0007` поверх `0006` (пока `0007` в `main` свободна; если хранение `interview-01` со своей `0007` вольётся раньше — перенумеровать в `0008`):
+Миграция `0007_posting_sources` поверх `0006` добавляет неизменяемую таблицу `application_posting_sources` для фиксации происхождения конкретного отклика; снимки выборки T-13 сохраняются через существующий `AuditLog`. Подробная схема, ограничения и переход старых данных — в [posting-position-register.md](posting-position-register.md#происхождение-импорта).
+
+## 21. Передача получателю, сроки ответа, производственный календарь и ответы департамента · v2.0 (`workflow-01`, 20.11.2026)
+
+Миграция `0008` поверх `0007_posting_sources` (последующая ветка `interview-01` наследует от `0008`):
 
 | Таблица | Изменение | Зачем |
 |---|---|---|
@@ -719,4 +727,4 @@ save_assessment проверяет полный набор ключей screenin
 
 **Новые функции доступа (`app/db/repository.py` и `app/db/calendar.py`):** `create_handoff_attempt`, `extend_handoff_deadline`, `close_open_handoffs_for_application`, `record_handoff_feedback`, `has_department_application_access`, `has_department_text_access`, расчёт рабочих дней `add_business_days` / `subtract_business_days` / `business_days_diff`.
 
-**Как проверено:** `alembic upgrade head`, `downgrade 0006`, `upgrade head`, `alembic check`; тесты `tests/test_api_handoff.py` на PostgreSQL, включая реальные параллельные гонки исправления отзыва и переноса срока.
+**Как проверено:** `alembic upgrade head`, `downgrade 0007_posting_sources`, `upgrade head`, `alembic check`; тесты `tests/test_api_handoff.py` на PostgreSQL, включая реальные параллельные гонки исправления отзыва и переноса срока.

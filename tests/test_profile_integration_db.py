@@ -16,8 +16,8 @@ from tests import factories as f
 
 
 @pytest.mark.parametrize('title,reason,status', [
-    ('Сметчик', 'different_role', 'not_applicable'),
-    ('Начальник отдела внутреннего финансового контроля, аудита и закупок', 'different_role', 'not_applicable'),
+    ('Сметчик', 'missing_context', 'mapping_required'),
+    ('Начальник отдела внутреннего финансового контроля, аудита и закупок', 'missing_context', 'mapping_required'),
     (None, 'missing_posting', 'mapping_required'),
 ])
 def test_mismatched_primary_is_audited_and_comparison_stays_explicit(session, title, reason, status):
@@ -134,7 +134,8 @@ def test_extraction_call_survives_later_assessment_failure_for_audit(session):
 
 
 def test_confirmed_application_does_not_inherit_other_application_mismatch(session):
-    from app.assessment.applicability import Policy
+    from tests.posting_service_helpers import registry, CONTEXT
+    from app.db.models import ApplicationPostingSource
     candidate = f.make_candidate(session, 'hr-0886')
     profile = f.approve(session, f.make_profile(session))
     vacancy = f.vacancy(session, 'hr-consultant')
@@ -145,22 +146,23 @@ def test_confirmed_application_does_not_inherit_other_application_mismatch(sessi
                                      source=ApplicationSource.RESPONSE, posting_title='Сметчик')
     second = repo.create_application(session, candidate_id=candidate.id, vacancy_id=second_vacancy.id,
                                      source=ApplicationSource.RESPONSE, posting_title='Подтверждённая тестовая публикация')
-    policy = Policy(version='test-1', position_code='hr-consultant', rules=[
-        dict(posting_title='Сметчик', status='mismatch', reason='different_role', source='test', responsible='test'),
-        dict(posting_title=second.posting_title, status='confirmed', reason='reviewed_mapping',
-             source='synthetic mapping decision', responsible='test reviewer')])
+    for app in (first, second):
+        session.add(ApplicationPostingSource(application_id=app.id, **CONTEXT.model_dump(exclude={'is_synthetic'}),
+            source_path='Test/synthetic.txt', source_sha256='b'*64))
+    session.flush()
+    decision = registry(title=second.posting_title, target='hr-consultant')
     llm = FakeLLMClient(lambda *args: {})
     one = assess_in_context(session, candidate_id=candidate.id, profile_id=profile.id, llm=llm,
-                            application_id=first.id, policy=policy)
+                            application_id=first.id, registry=decision)
     two = assess_in_context(session, candidate_id=candidate.id, profile_id=profile.id, llm=llm,
-                            application_id=second.id, policy=policy)
+                            application_id=second.id, registry=decision)
     assert one['status'] == 'skipped' and two['status'] == 'ok'
     assert two['formal_result'] == 'unknown'  # mapping is not qualification evidence
     assert session.scalar(select(func.count()).select_from(Application)) == 2
     previous = len(llm.prompts)
     second.posting_title = 'Сметчик'
     changed = assess_in_context(session, candidate_id=candidate.id, profile_id=profile.id, llm=llm,
-                                application_id=second.id, policy=policy)
+                                application_id=second.id, registry=decision)
     assert changed['status'] == 'skipped' and len(llm.prompts) == previous
     assert changed['applicability']['input_hash'] != two['applicability']['input_hash']
 

@@ -38,6 +38,7 @@ from app.db.models import (
 from app.db.session import get_session
 from app.main import create_app
 from tests import factories as f
+from tests.posting_helpers import posting_registry  # noqa: F401
 from tests.test_api import PII, build_case, client  # noqa: F401
 from tests.test_api_workflow import ADMIN, DEPT, HR, application, error_code, history, move, no_pii
 

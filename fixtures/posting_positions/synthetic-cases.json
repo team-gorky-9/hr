@@ -1,0 +1,21 @@
+{
+  "is_synthetic": true,
+  "status": "acceptance_examples_not_executed_in_application",
+  "context": {"channel": "hh_ru", "dataset_id": "synthetic-posting-review"},
+  "example_decisions": [
+    {"id": "example-confirmed", "register_version": "synthetic-v1", "posting_title": "Учебная публикация подбора", "decision_state": "confirmed", "position_code": "hr-consultant", "decision_author": "synthetic-hr-owner", "decision_date": "2026-11-20", "decision_basis": "synthetic://decision/1"},
+    {"id": "example-no-position", "register_version": "synthetic-v1", "posting_title": "Учебная отсутствующая должность", "decision_state": "no_matching_position", "position_code": null, "decision_author": "synthetic-hr-owner", "decision_date": "2026-11-20", "decision_basis": "synthetic://decision/2"}
+  ],
+  "cases": [
+    {"id": "confirmed-approved", "input": {"decision_id": "example-confirmed", "profile_status": "approved", "same_contour": true}, "expected": "Выбран конкретный UUID и версия утверждённого профиля; состав откликов неизменён."},
+    {"id": "confirmed-no-profile", "input": {"decision_id": "example-confirmed", "profile_status": "archived"}, "expected": "Нет действующего профиля; draft и архивный профиль не подставляются."},
+    {"id": "removed-confirmation", "input": {"register_version": "synthetic-v2", "decision_state": "needs_review", "position_code": null}, "expected": "Новый запуск ждёт сверки; прежний срез сохраняет synthetic-v1 и версию профиля."},
+    {"id": "same-title-other-context", "input": {"posting_title": "Учебная публикация подбора", "dataset_id": "another-employer-dataset"}, "expected": "Подтверждение другого контекста не применяется."},
+    {"id": "missing-footer-with-history", "input": {"posting_title": null, "history_titles": ["Учебная публикация подбора"]}, "expected": "missing_posting; заголовок истории не подставляется в основной отклик."},
+    {"id": "estimator-in-consultant-folder", "input": {"posting_title": "Сметчик", "imported_position_code": "hr-consultant", "purpose": "primary"}, "expected": "Существующая политика даёт mismatch; нет исходной оценки, отказа и нового отклика."},
+    {"id": "explicit-comparison", "input": {"posting_title": "Сметчик", "purpose": "comparison", "profile_status": "approved", "same_contour": true}, "expected": "Отдельное повторное рассмотрение; исходная публикация и этап не изменяются."},
+    {"id": "owner-confirms-no-position", "input": {"decision_id": "example-no-position"}, "expected": "no_matching_position с реквизитами решения; не not_met и не rejected."},
+    {"id": "ambiguous-publication", "input": {"candidate_position_codes": ["python-dev", "junior-python-dev"]}, "expected": "needs_review до выбора одной должности владельцем."},
+    {"id": "history-not-primary", "input": {"application_source": "history"}, "expected": "Не становится основным откликом и не увеличивает рабочую воронку."}
+  ]
+}

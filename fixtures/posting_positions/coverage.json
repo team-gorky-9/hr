@@ -1,0 +1,49 @@
+{
+  "application_records": 287,
+  "counts": {
+    "confirmed": 0,
+    "mismatch": 21,
+    "unresolved": 266
+  },
+  "reason_counts": {
+    "unreviewed_mapping": 221,
+    "missing_posting": 45,
+    "different_role": 21
+  },
+  "eligible_primary_records": 0,
+  "missing_posting_records": 45,
+  "external_history_records": 24,
+  "files_with_external_history": 4,
+  "postings": {
+    "(нет подвала)": 45,
+    "Консультант отдела документационного обеспечения департамента обеспечения деятельности главы города": 4,
+    "Консультант отдела кадровой работы": 122,
+    "Консультант отдела муниципальной службы": 9,
+    "Консультант отдела по работе с обращениями граждан и предпринимателей": 28,
+    "Консультант отдела профессионального развития": 58,
+    "Начальник отдела внутреннего финансового контроля, аудита и закупок": 20,
+    "Сметчик": 1
+  },
+  "policy_version": "1.0",
+  "policy_hash": "c700274b413b1b65ab1db90cd760fcd11c88ca3312c30c45224604dd64a2ce18",
+  "archive_sha256": "801efb82667a63d5d2370e6d39b00c74bea5069a3643472d41f476348a559baf",
+  "scope": "hr-consultant response files; records, not unique people",
+  "model_calls": 0,
+  "assessment_created": false,
+  "product_base_sha": "fec6bd276e2f1545e1f685a999560e06142f391c",
+  "verification_kind": "fresh local archive parse; no DB or model",
+  "missing_posting_with_history_files": 3,
+  "history_record_distribution_per_file": [
+    2,
+    2,
+    8,
+    12
+  ],
+  "known_discrepancy": {
+    "task_external_files": 6,
+    "observed_external_files": 4,
+    "prior_report_archive_sha256": "14a9a8432396a32abba0221c76410d3482bac288a18325d3fcbd7c138e5e7fd2",
+    "status": "requires_ingest_owner_review",
+    "note": "Старый продуктовый отчёт также сообщает четыре файла. Причина расхождения с ранней сводкой не установлена."
+  }
+}

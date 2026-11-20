@@ -20,7 +20,7 @@ import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.db.enums import Channel, DocumentKind, FileFormat
 from app.db.seed import POSITION_CODE_BY_FOLDER
@@ -158,6 +158,14 @@ class Mapping(BaseModel):
     model_config = ConfigDict(extra="forbid")
     folders: dict[str, str] = {}  # имя папки → код должности, например «Python-разработчик» → «python-dev»
     entries: list[MappingEntry] = []
+    dataset_id: str | None = None
+
+    @field_validator("dataset_id")
+    @classmethod
+    def dataset_id_nonempty(cls, value: str | None) -> str | None:
+        if value is not None and not value.strip():
+            raise ValueError("dataset_id must be a nonempty string")
+        return value
 
 
 def folder_key(name: str) -> str:
@@ -170,6 +178,11 @@ class MappingConfig:
     """Загруженный `mapping.json`. Пустой — только правила и значения по умолчанию из seed."""
     entries: dict[str, MappingEntry] = field(default_factory=dict)
     folders: dict[str, str] = field(default_factory=dict)  # ключ — folder_key(имя папки)
+    dataset_id: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.dataset_id is not None and (not isinstance(self.dataset_id, str) or not self.dataset_id.strip()):
+            raise ValueError("dataset_id must be a nonempty string")
 
     def position_for_folder(self, folder: str | None) -> str | None:
         if folder is None:
@@ -190,6 +203,7 @@ def load_mapping(path: Path | None) -> MappingConfig:
     return MappingConfig(
         entries={_nfc(entry.source_path): entry for entry in mapping.entries},
         folders={folder_key(name): code for name, code in mapping.folders.items()},
+        dataset_id=mapping.dataset_id,
     )
 
 
