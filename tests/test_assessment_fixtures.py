@@ -64,10 +64,10 @@ def test_every_case_says_who_enforces_it(fixture):
     by_layer = {}
     for c in fixture["cases"]:
         by_layer.setdefault(c["enforced_by"], []).append(c["id"])
-    # Ожидания этапа 1 отделены от того, что уже обеспечивает БД v1.0.
-    assert set(by_layer["stage_1"]) == {
-        "N3-stale-text-version", "N5-missing-evidence", "N6-model-unavailable", "N7-draft-profile"
-    }
+    # Ожидания этапа 1 отделены от того, что уже обеспечивает БД.
+    # N3 (цитата не из текста карточки) база отклоняет с контракта v1.3, п. 3.2.
+    assert set(by_layer["stage_1"]) == {"N5-missing-evidence", "N6-model-unavailable", "N7-draft-profile"}
+    assert "N3-stale-text-version" in by_layer["db_v1"]
 
 
 # --- Порча набора: проверка должна замечать ошибки ---------------------------

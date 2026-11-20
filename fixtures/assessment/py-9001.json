@@ -838,7 +838,7 @@
     {
       "id": "N3-stale-text-version",
       "title": "Цитата из прошлой версии текста того же кандидата совпадает побуквенно, но версия не та",
-      "enforced_by": "stage_1",
+      "enforced_by": "db_v1",
       "candidate": "py-9001",
       "texts": [
         "py-9001/text/stale-v1",
@@ -921,9 +921,9 @@
           }
         ],
         "db_v1": {
-          "save_assessment": "accepted",
-          "formal_result": "met",
-          "error": null
+          "save_assessment": "rejected",
+          "formal_result": null,
+          "error": "EvidenceError"
         }
       },
       "ui": {
