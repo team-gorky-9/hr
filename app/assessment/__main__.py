@@ -110,7 +110,8 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True)
     for name in ("run", "batch"):
         command = sub.add_parser(name)
-        command.add_argument("--position-code", required=True)
+        command.add_argument("--position-code", required=(name == "run"),
+                             help="должность профиля; в batch вместе с --all-approved — должность исходного отклика")
         command.add_argument("--technical", action="store_true", help="учебный профиль, пометка «синтетика»")
         command.add_argument("--profile-id")
         command.add_argument("--as-of", help="месяц расчёта текущего стажа, 'ГГГГ-ММ'")
@@ -119,7 +120,21 @@ def main(argv: list[str] | None = None) -> int:
         if name == "run":
             command.add_argument("--candidate-code", required=True)
             command.add_argument('--application-id', type=uuid.UUID)
+        else:
+            command.add_argument("--all-approved", action="store_true",
+                                 help="кросс-оценка: выбранные люди × утверждённые профили всех должностей контура")
+            command.add_argument("--candidate-code", action="append", dest="candidate_codes",
+                                 help="ограничить людей (можно несколько раз)")
+            command.add_argument("--limit", type=int, help="не больше N людей")
+            command.add_argument("--skip-existing", action="store_true",
+                                 help="пары с актуальной оценкой не трогать (без вызова модели и записи)")
+            command.add_argument("--workers", type=int, default=1, help="сколько людей оценивать параллельно")
+            command.add_argument("--dry-run", action="store_true", help="только показать пары и оценку времени")
     args = parser.parse_args(argv)
+    if args.command == "batch" and args.all_approved:
+        return _cross_batch(args)
+    if args.command == "batch" and not args.position_code:
+        parser.error("batch без --all-approved требует --position-code")
     if args.command == 'run' and args.purpose == 'primary' and args.application_id is None:
         parser.error('primary требует --application-id; для отдельного сравнения задайте --purpose comparison')
 
@@ -143,6 +158,34 @@ def main(argv: list[str] | None = None) -> int:
                for code, app_id in targets]
     print(json.dumps(results if args.command == "batch" else results[0], ensure_ascii=False, indent=2))
     return 0 if all(r["status"] in {'ok', 'skipped'} for r in results) else 1
+
+
+def _cross_batch(args) -> int:
+    """batch --all-approved (ai-02): люди по выбору оператора × действующие профили контура."""
+    from datetime import UTC, datetime
+
+    from app.assessment.cross import run_cross_batch, select_pairs
+    from app.db.session import SessionLocal
+
+    if not (args.candidate_codes or args.limit or args.position_code):
+        raise SystemExit("укажите людей: --candidate-code, --limit или --position-code "
+                         "(весь архив × 6 профилей — это часы работы модели)")
+    as_of = args.as_of or datetime.now(UTC).strftime("%Y-%m")
+    with SessionLocal() as session:
+        pairs, explained = select_pairs(session, technical=args.technical, candidate_codes=args.candidate_codes,
+                                        source_position_code=args.position_code, limit=args.limit)
+    plan = {"people": len({p.candidate_id for p in pairs}), "pairs": len(pairs), "explained": explained,
+            "estimate_minutes": round(len(pairs) * 10 / 60 / max(args.workers, 1), 1)}
+    if args.dry_run or not pairs:
+        print(json.dumps(plan | {"pairs_list": [
+            {"candidate_code": p.candidate_code, "position_code": p.position_code, "purpose": p.purpose}
+            for p in pairs]}, ensure_ascii=False, indent=2))
+        return 0
+    report = run_cross_batch(SessionLocal, pairs, run_one=run_one, llm_factory=_DeferredClient,
+                             technical=args.technical, as_of=as_of, skip_existing=args.skip_existing,
+                             workers=args.workers)
+    print(json.dumps(report | {"explained": explained}, ensure_ascii=False, indent=2))
+    return 0 if "error" not in report["counts"] else 1
 
 
 if __name__ == "__main__":
