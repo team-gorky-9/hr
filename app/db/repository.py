@@ -631,7 +631,7 @@ def create_requirement_profile(
     Версии нумеруются отдельно в рабочем и учебном контуре (is_synthetic): без version
     берётся следующий номер для должности в этом контуре; повтор номера → IntegrityError.
     """
-    from app.assessment.counters import validate_groups
+    from app.schemas.requirement_groups import validate_groups
     try:
         validate_groups(competencies)
     except ValueError as error:
