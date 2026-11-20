@@ -249,3 +249,43 @@ def _check_texts(fixture: dict[str, Any]) -> list[str]:
         if item["candidate"] not in fixture["candidates"]:
             problems.append(f"текст {key}: неизвестный кандидат {item['candidate']}")
     return problems
+
+
+def create_fixture_profile(session, fixture: dict[str, Any], *, params_override: dict[str, Any] | None = None,
+                           synthetic: bool = True):
+    """Создать в базе профиль из набора через create_requirement_profile (черновик).
+
+    По умолчанию учебный (is_synthetic, БД v1.5): им оценивают учебных кандидатов в режиме technical.
+    synthetic=False — тот же профиль в рабочем контуре (для проверки режима operational в тестах).
+    params_override подменяет params единственного формального требования.
+    """
+    from sqlalchemy import select
+
+    from app.db import repository as repo
+    from app.db.enums import FormalRequirementKind, RowOrigin, VerificationMethod
+    from app.db.models import Position
+    from app.schemas.requirements import CompetencyIn, FormalRequirementIn, IndicatorIn
+
+    spec = fixture["profile"]
+    position = session.scalar(select(Position).where(Position.code == spec["position_code"]))
+    note = spec["synthetic_role"]
+    requirements = [
+        FormalRequirementIn(key=item["key"], origin=RowOrigin.TEAM, note=note,
+                            kind=FormalRequirementKind(item["kind"]), description=item["description"],
+                            params=params_override if params_override is not None else item["params"],
+                            is_mandatory=item["is_mandatory"], verification=VerificationMethod(item["verification"]))
+        for item in spec["formal_requirements"]
+    ]
+    competencies = [
+        CompetencyIn(key=item["key"], origin=RowOrigin.TEAM, note=note, code=item["code"], name=item["name"],
+                     rank=item["rank"], target_level_min=item["target_level_min"],
+                     target_level_max=item["target_level_max"],
+                     indicators=[IndicatorIn(key=i["key"], origin=RowOrigin.TEAM, note=note, text=i["text"],
+                                             verification=VerificationMethod(i["verification"]))
+                                 for i in item["indicators"]])
+        for item in spec["competencies"]
+    ]
+    return repo.create_requirement_profile(
+        session, position_id=position.id, created_by="fixture", is_synthetic=synthetic, note=note,
+        formal_requirements=requirements, competencies=competencies,
+    )
