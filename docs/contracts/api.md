@@ -210,6 +210,7 @@
 - `POST /api/v1/applications/{application_id}/stage` — ручной перевод этапа кадровиком (`move_application`), возвращает `StageEvent`; `409` при попытке перевода из финального этапа.
 - `GET /api/v1/applications/{application_id}/history` — журнал `stage_history` по `seq`.
 - `POST /api/v1/applications/{application_id}/feedback` — сохранение обратной связи департамента (`record_department_feedback`, **не** меняет этап).
+- `GET /api/v1/applications/{application_id}/handoff-summary` — чистая обезличенная сводка кандидата (формальный итог, цитаты, пробелы, заметки кадровика) в JSON + готовом тексте для передачи руководителю «наверх».
 - `GET/POST /api/v1/applications/{application_id}/interview-guide` — чтение и генерация вопросов по пробелам (`A-11`/`M-09`).
 - `POST /api/v1/reserve` и `GET /api/v1/positions/{position_id}/reserve` — рабочий кадровый резерв (`M-05`/`A-05`).
 - `GET /api/v1/analytics/funnel` — сводка воронки по фактическим `stage_events` (`O-01`).
