@@ -63,7 +63,7 @@ def build_guide(session: Session, *, assessment_id: uuid.UUID, llm: LLMClient, b
         raise GuideError("assessment_required", "у отклика нет оценки")
     if not assessment.is_current:
         raise GuideError("assessment_stale", "оценка не текущая: гайд строится по текущей версии")
-    # До миграции 0006 столбца нет — тогда базовая оценка и есть текущая.
+    # До миграции 0007 столбца нет — тогда базовая оценка и есть текущая.
     base_id = getattr(assessment, "base_assessment_id", None) or assessment.id
     profile = session.get(RequirementProfile, assessment.profile_id)
     card = session.get(CandidateCard, assessment.card_id)
