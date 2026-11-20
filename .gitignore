@@ -12,3 +12,4 @@ data/
 !/app/postings/data/versions/
 /app/postings/data/versions/*
 !/app/postings/data/versions/*.json
+.demo_setup.log

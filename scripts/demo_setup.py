@@ -19,6 +19,7 @@
 import argparse
 import subprocess
 import sys
+import time
 from collections import Counter
 from pathlib import Path
 
@@ -34,14 +35,42 @@ BASIS = "Учебный контур демо: копия черновика п�
 ICON = {"ready": "🟢", "clarify": "🟡", "not_met": "🔴", "needs_action": "⚪"}
 
 
-def run(*args: str) -> None:
+def _assessments() -> int:
+    from sqlalchemy import func
+
+    from app.db.models import Assessment
+    from app.db.session import SessionLocal
+    with SessionLocal() as session:
+        return session.scalar(select(func.count()).select_from(Assessment)) or 0
+
+
+def run(*args: str, progress: bool = False, tolerate: bool = False) -> None:
+    """Шаг отдельным процессом. Длинный вывод — в лог, на экран — хвост и, для оценки,
+    ход работы раз в 15 секунд (сколько оценок уже в базе), чтобы долгий шаг не выглядел зависшим."""
     print(f"\n$ {' '.join(args)}", flush=True)
-    completed = subprocess.run([sys.executable, *args], cwd=ROOT, capture_output=True, text=True, check=False)
-    tail = (completed.stdout or "").strip().splitlines()[-1:] + (completed.stderr or "").strip().splitlines()[-3:]
+    log = ROOT / ".demo_setup.log"
+    offset = log.stat().st_size if log.exists() else 0
+    with open(log, "a", encoding="utf-8") as out:
+        process = subprocess.Popen([sys.executable, *args], cwd=ROOT, stdout=out, stderr=subprocess.STDOUT, text=True)
+        started, start_count = time.monotonic(), _assessments() if progress else 0
+        while True:
+            try:
+                process.wait(timeout=15)
+                break
+            except subprocess.TimeoutExpired:
+                if progress:
+                    print(f"  … {int(time.monotonic() - started)} с, новых оценок: {_assessments() - start_count}",
+                          flush=True)
+    with open(log, encoding="utf-8") as written:
+        written.seek(offset)
+        tail = written.read().strip().splitlines()[-2:]
     for line in tail:
-        print("  " + line)
-    if completed.returncode != 0:
-        raise SystemExit(f"шаг завершился с ошибкой: {' '.join(args)}")
+        print("  " + line[:200])
+    if process.returncode != 0:
+        message = f"шаг завершился с ошибкой (подробности в {log.name}): {' '.join(args)}"
+        if not tolerate:
+            raise SystemExit(message)
+        print("  ⚠ " + message + " — остальные пары сохранены, повторный запуск продолжит")
 
 
 def training_profiles() -> list[dict]:
@@ -136,9 +165,9 @@ def main(argv: list[str] | None = None) -> int:
         workers = str(args.workers)
         for code in DEMO_POSITIONS:
             run("-m", "app.assessment", "batch", "--position-code", code, "--technical",
-                "--skip-existing", "--workers", workers)
+                "--skip-existing", "--workers", workers, progress=True, tolerate=True)
             run("-m", "app.assessment", "batch", "--all-approved", "--technical", "--position-code", code,
-                "--skip-existing", "--workers", workers)
+                "--skip-existing", "--workers", workers, progress=True, tolerate=True)
     traffic_light()
     print("\nГотово. API: uv run uvicorn app.main:app — учётка стенда hr_demo, контур training.")
     return 0
