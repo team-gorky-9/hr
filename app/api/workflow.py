@@ -19,13 +19,13 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.api import services
+from app.assessment import cross
 from app.api.errors import ApiError, not_found
 from app.api.schemas import (
     Contour,
+    CrossApplicationOut,
     CrossAssessmentItemOut,
     CrossAssessmentListOut,
-    CrossVacancyOut,
     FunnelClosureOut,
     FunnelOut,
     FunnelStageOut,
@@ -46,14 +46,13 @@ from app.api.schemas import (
     UserBriefOut,
 )
 from app.db import repository as repo
-from app.db.enums import ApplicationSource, CheckResult, RequirementStatus, ReserveStatus
+from app.db.enums import ApplicationSource, ReserveStatus
 from app.db.models import (
     Application,
     Candidate,
     CandidateCard,
     Position,
     RejectionReason,
-    RequirementProfile,
     ReserveEntry,
     SelectionStage,
     StageEvent,
@@ -248,84 +247,38 @@ def get_history(session: Session, application_id: uuid.UUID) -> StageHistoryOut:
 
 # --- Кросс-оценки --------------------------------------------------------------------
 
-_FORMAL_RANK = {CheckResult.MET: 0, CheckResult.UNKNOWN: 1, CheckResult.NOT_MET: 2}
+_FORMAL_RANK = {"met": 0, "unknown": 1, "not_met": 2}
 
 
 def cross_assessments(session: Session, candidate_id: uuid.UUID) -> CrossAssessmentListOut:
-    """Оценки кандидата по всем должностям с утверждённым профилем в его контуре.
+    """Оценки кандидата по всем утверждённым профилям его контура.
 
-    Контур задаёт кандидат, как в карточке отклика: учебного — учебные профили,
-    реального — рабочие. Статус считает тот же resolve_states(), что список и карточка.
-    Для каждой вакансии должности отдельно видно, есть ли у кандидата отклик на неё.
-    Чтение ничего не создаёт: ни оценок, ни откликов.
+    Данные собирает модель чтения ai-02 (app.assessment.cross.cross_assessments): контур по кандидату,
+    актуальность, цитаты. API отвечает только за права (маршрут), 404 и DTO: раскладывает отклики
+    кандидата по должностям и упорядочивает строки — сначала оценённые (met → unknown → not_met),
+    затем не оценённые. Чтение ничего не создаёт.
     """
-    candidate = session.get(Candidate, candidate_id)
-    if candidate is None:
+    data = cross.cross_assessments(session, candidate_id)
+    if data.get("empty_reason") == "candidate_not_found":
         raise not_found("CANDIDATE_NOT_FOUND", "Кандидат не найден", candidate_id=candidate_id)
-    synthetic = candidate.is_synthetic
-
-    profiles = session.execute(
-        select(RequirementProfile, Position)
-        .join(Position, Position.id == RequirementProfile.position_id)
-        .where(RequirementProfile.status == RequirementStatus.APPROVED, RequirementProfile.is_synthetic == synthetic)
-        .order_by(Position.code)
-    ).all()
-    position_ids = [position.id for _, position in profiles]
-    vacancies: dict[uuid.UUID, list[Vacancy]] = {}
-    if position_ids:
-        for vacancy in session.scalars(
-            select(Vacancy).where(Vacancy.position_id.in_(position_ids)).order_by(Vacancy.title, Vacancy.id)
-        ):
-            vacancies.setdefault(vacancy.position_id, []).append(vacancy)
-    applied = {
-        application.vacancy_id: (application, stage)
-        for application, stage in session.execute(
-            select(Application, SelectionStage)
-            .join(SelectionStage, SelectionStage.code == Application.current_stage_code)
-            .where(Application.candidate_id == candidate.id, Application.vacancy_id.is_not(None))
-        ).all()
-    }
-
+    applications = [CrossApplicationOut.model_validate(a) for a in data["applications"]]
     items = []
-    for profile, position in profiles:
-        state = services.resolve_states(session, [candidate.id], profile, position.id, synthetic)[candidate.id]
-        assessment = state.assessment
-        vacancy_rows = []
-        for vacancy in vacancies.get(position.id, []):
-            application, stage = applied.get(vacancy.id, (None, None))
-            vacancy_rows.append(CrossVacancyOut(
-                vacancy_id=vacancy.id, title=vacancy.title, channel=vacancy.channel, status=vacancy.status,
-                application_id=application.id if application else None,
-                application_source=application.source if application else None,
-                application_stage=stage_out(stage) if stage else None,
-            ))
-        items.append(
-            CrossAssessmentItemOut(
-                position_id=position.id,
-                position_code=position.code,
-                position_title=position.title,
-                is_municipal_service=position.is_municipal_service,
-                approved_profile_id=profile.id,
-                approved_profile_version=profile.version,
-                is_training=repo.is_training_assessment(candidate, profile),
-                assessment_status=state.status,
-                formal_result=assessment.formal_result if assessment else None,
-                formal_preliminary=assessment.formal_preliminary if assessment else None,
-                overall_score=assessment.overall_score if assessment else None,
-                has_application=any(v.application_id for v in vacancy_rows),
-                vacancies=vacancy_rows,
-                assessment=services.assessment_out(session, candidate, state) if assessment else None,
-            )
-        )
-    # Сначала оценённые: допуск выполнен → нет сведений → не выполнен, внутри — по баллу.
+    for item in data["items"]:
+        items.append(CrossAssessmentItemOut(
+            **{k: item[k] for k in ("position_code", "position_title", "profile_id", "profile_version",
+                                    "is_source_position", "assessment_status", "stale_reason", "assessment")},
+            is_training=data["is_training"],
+            applications=[a for a in applications if a.position_code == item["position_code"]],
+        ))
     items.sort(key=lambda i: (
         i.assessment is None,
-        _FORMAL_RANK.get(i.formal_result, 3),
-        -(i.overall_score if i.overall_score is not None else -1),
+        _FORMAL_RANK.get(str(i.assessment.formal_result) if i.assessment else "", 3),
         i.position_code,
     ))
     return CrossAssessmentListOut(
-        candidate_id=candidate.id, candidate_code=candidate.code, is_training=synthetic, items=items
+        candidate_id=data["candidate_id"], candidate_code=data["candidate_code"], is_training=data["is_training"],
+        current_text_id=data["current_text_id"], applications=applications, items=items,
+        empty_reason=data["empty_reason"],
     )
 
 

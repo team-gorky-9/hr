@@ -393,6 +393,7 @@ def _approved_training_profile(session, position_code: str):
 
 
 def test_cross_assessments_over_all_approved_profiles(session, client):
+    """Маршрут отдаёт модель чтения ai-02: три утверждённых профиля, порядок, цитата, отклики не создаются."""
     built = build_case(session, "C1-unknown")  # отклик и оценка по python-dev
     qa = _approved_training_profile(session, "qa-manual")
     _approved_training_profile(session, "frontend-dev")  # утверждён, но не оценён
@@ -410,10 +411,10 @@ def test_cross_assessments_over_all_approved_profiles(session, client):
     applications_before = session.scalar(select(func.count()).select_from(Application))
 
     response = client.get(f"/api/v1/candidates/{built['candidate_id']}/cross-assessments", headers=HR)
-    assert response.status_code == 200
+    assert response.status_code == 200, response.text
     no_pii(response)
     body = response.json()
-    assert body["candidate_code"] == "py-9001" and body["is_training"] is True
+    assert body["candidate_code"] == "py-9001" and body["is_training"] is True and body["empty_reason"] is None
     by_code = {i["position_code"]: i for i in body["items"]}
     assert set(by_code) == {"python-dev", "qa-manual", "frontend-dev"}
     assert body["items"][-1]["position_code"] == "frontend-dev"  # не оценённые в конце
@@ -421,14 +422,15 @@ def test_cross_assessments_over_all_approved_profiles(session, client):
 
     qa_item = by_code["qa-manual"]
     assert qa_item["assessment_status"] == "ready" and qa_item["is_training"] is True
-    assert qa_item["has_application"] is False
-    assert [v["application_id"] for v in qa_item["vacancies"]] == [None]
-    [score] = qa_item["assessment"]["competency_scores"]
-    [evidence] = score["evidence"]
+    assert qa_item["is_source_position"] is False and qa_item["applications"] == []
+    [competency] = qa_item["assessment"]["competencies"]
+    [evidence] = competency["evidence"]
     assert evidence["quote"] == quote and evidence["candidate_text_id"] == str(text.id)  # цитата ведёт к своей версии
-    [python_vacancy] = by_code["python-dev"]["vacancies"]
-    assert python_vacancy["application_id"] == str(built["application_id"])
-    assert python_vacancy["application_stage"]["code"] == "new"
+    assert (evidence["utf16_start"], evidence["utf16_end"]) == (0, len(quote))
+    python_item = by_code["python-dev"]
+    assert python_item["is_source_position"] is True
+    assert [a["application_id"] for a in python_item["applications"]] == [str(built["application_id"])]
+    assert python_item["assessment"]["formal_result"] == "unknown"
 
     assert session.scalar(select(func.count()).select_from(Application)) == applications_before
     missing = client.get(f"/api/v1/candidates/{uuid.uuid4()}/cross-assessments", headers=HR)
@@ -438,20 +440,25 @@ def test_cross_assessments_over_all_approved_profiles(session, client):
 def test_cross_assessments_empty_is_not_error(session, client):
     candidate = f.make_candidate(session, "py-0400")
     response = client.get(f"/api/v1/candidates/{candidate.id}/cross-assessments", headers=HR)
-    assert response.status_code == 200 and response.json()["items"] == []
+    assert response.status_code == 200
+    assert response.json()["items"] == [] and response.json()["empty_reason"] == "no_approved_profiles"
 
 
-def test_cross_assessments_link_each_vacancy_of_position(session, client):
-    """У должности две вакансии: отклик показывается только у той, на которую он есть."""
+def test_cross_assessments_show_each_application_with_its_vacancy(session, client):
+    """Отклики кандидата раскладываются по должностям с вакансией и источником; history не делает
+    должность «своей». Вакансии должности без отклика модель чтения ai-02 не отдаёт (открытый вопрос)."""
     built = build_case(session, "C1-unknown")
+    candidate = session.get(Candidate, built["candidate_id"])
     second = Vacancy(position_id=f.position(session).id, channel=Channel.CITY_SITE, title="Python-разработчик (сайт)")
     session.add(second)
     session.flush()
+    manual = repo.create_application(session, candidate_id=candidate.id, source=ApplicationSource.MANUAL,
+                                     vacancy_id=second.id)
     body = client.get(f"/api/v1/candidates/{built['candidate_id']}/cross-assessments", headers=HR).json()
     [item] = body["items"]
-    linked = {v["vacancy_id"]: v["application_id"] for v in item["vacancies"]}
-    assert linked == {str(f.vacancy(session).id): str(built["application_id"]), str(second.id): None}
-    assert item["has_application"] is True
+    linked = {a["vacancy_id"]: a["source"] for a in item["applications"]}
+    assert linked == {str(f.vacancy(session).id): "response", str(second.id): "manual"}
+    assert {a["application_id"] for a in body["applications"]} == {str(built["application_id"]), str(manual.id)}
 
 
 # --- Без ПДн и состав OpenAPI ----------------------------------------------------------

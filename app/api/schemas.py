@@ -323,40 +323,79 @@ class StageHistoryOut(BaseModel):
 
 
 # --- Кросс-оценки -----------------------------------------------------------------
+# Данные собирает app.assessment.cross.cross_assessments (ai-02, Илья); API только
+# проверяет права и переводит результат в эти DTO.
 
-class CrossVacancyOut(BaseModel):
-    """Вакансия должности и отклик кандидата на неё, если есть (привязка — по каждой вакансии)."""
-    vacancy_id: uuid.UUID
-    title: str
-    channel: Channel
-    status: VacancyStatus
-    application_id: uuid.UUID | None
-    application_source: ApplicationSource | None
-    application_stage: StageOut | None
+class CrossEvidenceOut(BaseModel):
+    candidate_text_id: uuid.UUID
+    quote: str
+    start: int
+    end: int
+    # null — цитата из прежней версии текста (модель чтения ai-02 считает UTF-16 только по текущей).
+    utf16_start: int | None
+    utf16_end: int | None
+
+
+class CrossFormalCheckOut(BaseModel):
+    requirement_key: str
+    description: str
+    is_mandatory: bool
+    check_stage: CheckStage
+    result: CheckResult
+    basis: VerificationMethod
+    is_preliminary: bool
+    evidence: list[CrossEvidenceOut]
+
+
+class CrossCompetencyOut(BaseModel):
+    competency_id: uuid.UUID
+    mandatory: dict[str, Any] | None  # счётчики confirmed/contradicted/no_info/total из details
+    desired: dict[str, Any] | None
+    evidence: list[CrossEvidenceOut]
+
+
+class CrossAssessmentOut(BaseModel):
+    assessment_id: uuid.UUID
+    version: int
+    formal_result: CheckResult
+    formal_preliminary: bool
+    summary: str | None
+    gaps: list[str]  # требования этапа screening с результатом unknown
+    formal_checks: list[CrossFormalCheckOut]
+    competencies: list[CrossCompetencyOut]
+
+
+class CrossApplicationOut(BaseModel):
+    application_id: uuid.UUID
+    vacancy_id: uuid.UUID | None
+    position_code: str | None
+    source: ApplicationSource
+    posting_title: str | None
 
 
 class CrossAssessmentItemOut(BaseModel):
-    position_id: uuid.UUID
     position_code: str
     position_title: str
-    is_municipal_service: bool
-    approved_profile_id: uuid.UUID
-    approved_profile_version: int
+    profile_id: uuid.UUID
+    profile_version: int
     is_training: bool
+    # Есть ли у кандидата прямой отклик (source = response) на вакансию этой должности.
+    is_source_position: bool
+    # Все отклики кандидата на вакансии этой должности, с вакансией и источником.
+    applications: list[CrossApplicationOut]
     assessment_status: AssessmentStatus
-    formal_result: CheckResult | None
-    formal_preliminary: bool | None
-    overall_score: int | None
-    has_application: bool
-    vacancies: list[CrossVacancyOut]
-    assessment: AssessmentOut | None
+    stale_reason: StaleReason | None
+    assessment: CrossAssessmentOut | None
 
 
 class CrossAssessmentListOut(BaseModel):
     candidate_id: uuid.UUID
     candidate_code: str
     is_training: bool
+    current_text_id: uuid.UUID | None
+    applications: list[CrossApplicationOut]
     items: list[CrossAssessmentItemOut]
+    empty_reason: str | None  # no_approved_profiles — пустой список не ошибка
 
 
 # --- Кадровый резерв --------------------------------------------------------------
