@@ -195,3 +195,19 @@ def test_unknown_ref_from_model_is_rejected():
     with pytest.raises(ValidationError):
         _keyed({"gap:1"}).model_validate({"items": [{"ref": "gap:2", "question": "Вопрос?", "good_answer": "да",
                                                      "insufficient_answer": "нет"}]})
+
+
+def test_guide_reads_only_when_caller_records_calls(session):
+    """v0.2 §4: модель вызывается вне транзакции записи; с record_calls=False функция ничего не пишет,
+    вызовы остаются в llm.calls для журнала вызывающего."""
+    from sqlalchemy import func, select
+
+    from app.db.models import AuditLog
+
+    profile = create_fixture_profile(session, FIXTURE)
+    assessment_id = assess(session, profile, BASE, "py-9006")
+    before = session.scalar(select(func.count()).select_from(AuditLog))
+    llm = FakeLLMClient(guide_model([]))
+    guide = build_guide(session, assessment_id=assessment_id, llm=llm, record_calls=False)
+    assert guide.assessment_id == str(assessment_id) and len(llm.calls) == 1
+    assert session.scalar(select(func.count()).select_from(AuditLog)) == before

@@ -47,21 +47,31 @@ def _question(kind: str, order: int, item, *, ref: str | None, sources: list[dic
 
 
 def build_guide(session: Session, *, assessment_id: uuid.UUID, llm: LLMClient, budget: int = DEFAULT_BUDGET,
-                include_core: bool = True, core_cache: dict[str, Any] | None = None) -> GuideDraft:
-    """core_cache — уже сохранённая рубрика ядра этой версии профиля {row_key: QuestionItem}:
-    с ней ядро не генерируется повторно и совпадает у всех кандидатов."""
+                include_core: bool = True, core_cache: dict[str, Any] | None = None,
+                record_calls: bool = True) -> GuideDraft:
+    """Собрать гайд по текущей оценке пары. Только чтение: вызывающий (модуль хранения, контракт
+    interview.md v0.2, §4) зовёт функцию вне транзакции записи и сам сохраняет результат.
+
+    core_cache — уже сохранённая рубрика ядра этой версии профиля {row_key: QuestionItem}: с ней ядро
+    не генерируется повторно и совпадает у всех кандидатов. record_calls=False — журнал вызовов
+    модели (llm.calls) пишет вызывающий в своей транзакции.
+
+    В GuideDraft.assessment_id — **базовая** оценка (вывод модели по резюме, v0.2 §4): версия из
+    confirm_formal_check ссылается на неё через base_assessment_id, и гайд по ней не устаревает."""
     assessment = session.get(Assessment, assessment_id)
     if assessment is None:
         raise GuideError("assessment_required", "у отклика нет оценки")
     if not assessment.is_current:
         raise GuideError("assessment_stale", "оценка не текущая: гайд строится по текущей версии")
+    # До миграции 0006 столбца нет — тогда базовая оценка и есть текущая.
+    base_id = getattr(assessment, "base_assessment_id", None) or assessment.id
     profile = session.get(RequirementProfile, assessment.profile_id)
     card = session.get(CandidateCard, assessment.card_id)
     plan = assemble_gaps(profile, assessment, (card.card or {}).get("missing") if card else [], budget=budget)
 
     calls_before = len(llm.calls)
     draft = GuideDraft(
-        assessment_id=str(assessment.id), assessment_version=assessment.version,
+        assessment_id=str(base_id), assessment_version=assessment.version,
         profile_id=str(profile.id), profile_version=profile.version,
         is_training=bool(profile.is_synthetic or session.get(Candidate, assessment.candidate_id).is_synthetic),
         rubric_status="draft", document_requests=plan.document_requests, uncovered_gaps=list(plan.uncovered),
@@ -85,6 +95,6 @@ def build_guide(session: Session, *, assessment_id: uuid.UUID, llm: LLMClient, b
                       for n, r in enumerate(rows, 1) if r["row_key"] in questions]
 
     draft.model_calls = len(llm.calls) - calls_before
-    if llm.calls:
+    if record_calls and llm.calls:
         record_llm_calls(session, llm, assessment.candidate_id)
     return draft
