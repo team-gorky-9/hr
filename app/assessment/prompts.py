@@ -9,7 +9,7 @@
 import json
 
 CARD_PROMPT_VERSION = "card-v2"
-ASSESS_PROMPT_VERSION = "assess-v3"
+ASSESS_PROMPT_VERSION = "assess-v4"
 
 MISSING_VOCABULARY = [
     "длительность коммерческого опыта",
@@ -78,7 +78,9 @@ def formal_user(text: str, *, experience: list[dict] | None, alternatives: list[
     parts = ["Проверь требования к должности по резюме."]
     if experience:
         parts.append(
-            "Стаж: перечисли в periods все периоды работы, стажировок и проектов с датами как в тексте и видом записи. "
+            "Стаж: перечисли в periods все периоды работы, стажировок и проектов с датами как в тексте и видом записи; "
+            "период без дат тоже перечисли (start и end — null). Вид записи определяй по словам текста: "
+            "«на работе», «в компании», должность — это work. "
             "Если в тексте есть фраза об общем стаже, заполни statement. Если кандидат прямо пишет, что опыта нет, "
             "заполни no_experience_quote. Описания релевантного опыта (для поля relevant): "
             + json.dumps(experience, ensure_ascii=False)

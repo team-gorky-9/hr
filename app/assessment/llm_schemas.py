@@ -43,8 +43,11 @@ class PeriodItem(_Strict):
     end: str | None = Field(default=None, description="Конец в том же формате; при 'по настоящее время' — null и is_current=true")
     is_current: bool = False
     kind: Literal["work", "contract", "internship", "project", "unknown"] = Field(
-        description="work — работа по найму; contract — договор/фриланс; internship — стажировка; "
-                    "project — учебный или личный проект; unknown — непонятно")
+        description="work — работа по найму в организации: место работы, должность, «на работе в компании», "
+                    "«работал в …», «сотрудник …» — даже без дат и названия компании; contract — договор, ГПХ, "
+                    "фриланс; internship — стажировка или практика; project — учебный, личный или pet-проект и "
+                    "«в проекте …» без указания, что это работа; unknown — только если по тексту нельзя понять, "
+                    "работа это или проект")
     relevant: bool | None = Field(default=None, description="Совпадают ли обязанности с описанием релевантного опыта; null, если его не спрашивали")
     quote: str = Field(description="Дословная строка резюме с датами или названием этого периода")
     context_before: str | None = Field(default=None, description="Несколько слов перед цитатой, если она может повторяться")

@@ -1,10 +1,10 @@
 {
   "mode": "live",
   "algorithm_version": "assessment-2.0",
-  "prompt_version": "assess-v3",
+  "prompt_version": "assess-v4",
   "fixture_sha256": "9ec1753df3e962945a4241a189ab602cf8c64d4eb0fe960ae3b413f457f4a6d9",
   "total": 41,
-  "passed": 40,
+  "passed": 41,
   "llm_errors": 0,
   "scope": "target rule only; controlled is not model-quality evidence; no database writes",
   "results": [
@@ -372,19 +372,19 @@
       "alternatives": [
         {
           "key": "hr.education.field.alt1",
-          "result": "met",
+          "result": "not_met",
           "evidence": [
             {
               "candidate_text_id": "afbe69db-b1c2-509f-8fca-a770304d6a08",
-              "quote": "Оконченное высшее образование по экономике",
+              "quote": "Оконченное высшее образование по экономике.",
               "start": 0,
-              "end": 42
+              "end": 43
             },
             {
               "candidate_text_id": "afbe69db-b1c2-509f-8fca-a770304d6a08",
-              "quote": "Профессиональная переподготовка по программе Юриспруденция завершена",
+              "quote": "Профессиональная переподготовка по программе Юриспруденция завершена.",
               "start": 44,
-              "end": 112
+              "end": 113
             }
           ]
         },
@@ -394,9 +394,9 @@
           "evidence": [
             {
               "candidate_text_id": "afbe69db-b1c2-509f-8fca-a770304d6a08",
-              "quote": "Профессиональная переподготовка по программе Юриспруденция завершена",
+              "quote": "Профессиональная переподготовка по программе Юриспруденция завершена.",
               "start": 44,
-              "end": 112
+              "end": 113
             }
           ]
         }
@@ -404,7 +404,7 @@
       "details": {
         "rule": "education_field",
         "alternatives": {
-          "hr.education.field.alt1": "met",
+          "hr.education.field.alt1": "not_met",
           "hr.education.field.alt2": "met"
         },
         "basis": "resume",
@@ -414,21 +414,9 @@
       "evidence": [
         {
           "candidate_text_id": "afbe69db-b1c2-509f-8fca-a770304d6a08",
-          "quote": "Оконченное высшее образование по экономике",
-          "start": 0,
-          "end": 42
-        },
-        {
-          "candidate_text_id": "afbe69db-b1c2-509f-8fca-a770304d6a08",
-          "quote": "Профессиональная переподготовка по программе Юриспруденция завершена",
+          "quote": "Профессиональная переподготовка по программе Юриспруденция завершена.",
           "start": 44,
-          "end": 112
-        },
-        {
-          "candidate_text_id": "afbe69db-b1c2-509f-8fca-a770304d6a08",
-          "quote": "Профессиональная переподготовка по программе Юриспруденция завершена",
-          "start": 44,
-          "end": 112
+          "end": 113
         }
       ],
       "model_calls": 1
@@ -783,9 +771,7 @@
       "details": {
         "rule": "relevant_role",
         "gap": "опыт работы",
-        "notes": [
-          "релевантный опыт только в учебном или личном проекте: уточнить на интервью"
-        ],
+        "notes": [],
         "basis": "resume"
       },
       "evidence": [],
@@ -851,16 +837,23 @@
       "case_id": "py-relevant-work-met",
       "rule_key": "py.experience",
       "expected": "met",
-      "actual": "unknown",
-      "passed": false,
+      "actual": "met",
+      "passed": true,
       "alternatives": [],
       "details": {
         "rule": "relevant_role",
-        "gap": "опыт работы",
         "notes": [],
+        "ambiguous": false,
         "basis": "resume"
       },
-      "evidence": [],
+      "evidence": [
+        {
+          "candidate_text_id": "8843a3e5-270b-567b-a40b-d4d5737f4263",
+          "quote": "На работе в компании разрабатывал на Python обработку данных и SQL-запросы",
+          "start": 0,
+          "end": 74
+        }
+      ],
       "model_calls": 1
     },
     {
@@ -887,9 +880,9 @@
       "evidence": [
         {
           "candidate_text_id": "0f131778-9c82-5d40-b56c-fadd5d6e43f6",
-          "quote": "январь 2025 — по настоящее время",
-          "start": 35,
-          "end": 67
+          "quote": "Коммерческая работа разработчиком: январь 2025 — по настоящее время.",
+          "start": 0,
+          "end": 68
         }
       ],
       "model_calls": 1
@@ -949,15 +942,15 @@
       "evidence": [
         {
           "candidate_text_id": "65a0a86a-28fa-5a74-b42a-8774f07baf48",
-          "quote": "Коммерческая работа разработчиком: 2021-01–2023-12",
+          "quote": "Коммерческая работа разработчиком: 2021-01–2023-12.",
           "start": 34,
-          "end": 84
+          "end": 85
         },
         {
           "candidate_text_id": "65a0a86a-28fa-5a74-b42a-8774f07baf48",
-          "quote": "Общий коммерческий опыт — 3 года",
+          "quote": "Общий коммерческий опыт — 3 года.",
           "start": 0,
-          "end": 32
+          "end": 33
         }
       ],
       "model_calls": 1
