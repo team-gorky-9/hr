@@ -44,7 +44,9 @@ uv run python -m app.ingest --input <папка_пакета> --mapping <фай�
 }
 ```
 
-Допустимые значения `document_kind`, `channel`, `file_format` соответствуют перечислениям `app/db/enums.py`. Служебные документы (`job_description`, `vacancy_posting`, `competency_matrix`, `regulation`) сохраняются только в `source_documents` (или явно исключаются из потока откликов с отметкой в отчёте) и **не** создают `candidates` и `applications`.
+Допустимые значения `document_kind`, `channel`, `file_format` соответствуют перечислениям `app/db/enums.py`.
+
+**Учебные файлы [БД v1.5].** Необязательное поле записи `"synthetic": true` создаёт кандидата в учебном контуре (`candidates.is_synthetic`, `database.md` п. 2.6.1): он не попадает в рабочие списки, и его оценка никогда не считается рабочей рекомендацией. Пакет `fixtures/stage_0a` (`py-9001`, `hr-9001`) помечен так. Без поля новый кандидат реальный, а повтор уже сохранённого файла остаётся в своём контуре. В отчёте у резюме есть `is_synthetic`. Служебные документы (`job_description`, `vacancy_posting`, `competency_matrix`, `regulation`) сохраняются только в `source_documents` (или явно исключаются из потока откликов с отметкой в отчёте) и **не** создают `candidates` и `applications`.
 
 ## 3. Правила дедупликации и конфликтов
 
@@ -55,6 +57,7 @@ uv run python -m app.ingest --input <папка_пакета> --mapping <фай�
 | Те же байты (тот же `sha256`), но **другая** вакансия | Используется существующий `candidate`, создаётся новый `application` на новую вакансию | `application_added` |
 | Разные файлы (разный `sha256`) с одинаковым извлечённым текстом и разными `code` | По ADR-002 Р2 — два отдельных `source_document` и два `candidate`, в отчёте ставится предупреждение `duplicate_text_warning` | `imported` (с флагом warning) |
 | Тот же `candidate_code`, но **другие байты** (`sha256` не совпадает с существующим кандидатом) | Не перезаписывается молча; запись уходит в карантин на ручную сверку | `conflict` |
+| Те же байты, но в `mapping` явно указан другой контур (`synthetic`), чем у сохранённого кандидата | Контур не меняется; причина `CONTOUR_CONFLICT` | `conflict` |
 | Неизвестный `position_code`, пустой текст, `PDF_NEEDS_REVIEW`, сбой очистки ПДн или ошибка парсинга | Откат транзакции по записи, карантин с причиной | `quarantined` / `error` |
 | Служебный файл (`job_description`, `vacancy_posting`, др. не-резюме) | Не создаёт кандидата/отклик | `excluded_non_resume` |
 

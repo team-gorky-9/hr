@@ -29,6 +29,8 @@ class ReportItem(BaseModel):
     candidate_id: uuid.UUID | None = None
     candidate_text_id: uuid.UUID | None = None
     application_id: uuid.UUID | None = None
+    # Учебный кандидат (mapping: synthetic = true) — в учебном контуре, не в рабочих списках.
+    is_synthetic: bool | None = None
     reason: str | None = None
     warnings: list[str] = Field(default_factory=list)
 
