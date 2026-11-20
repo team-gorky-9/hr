@@ -1,4 +1,6 @@
-# Hiring · контракт первой волны 1.1
+# Hiring · контракт первой волны 1.0
+
+**Текущая сдача — этап 1 по [отдельному профилю поставки](wave-1-stage-1.md).** Комплект и результат оформляются через API, кадровое подтверждение регистрируется вручную. Автоматические события и надёжная доставка из этого документа относятся к этапу 2.
 
 Спецификация к реализации Ильёй. Обязателен [общий контракт](wave-1-common.md). Сервис hiring владеет оформлением. Существующий отклик и его решение читаются через доступный вход или учебный снимок.
 
@@ -9,6 +11,8 @@ PositiveSelection содержит application_ref {system,id}, candidate_ref {s
 is_synthetic — обязательный boolean поля PositiveSelection. provenance — серверные поля source_mode (fixture/manual-confirmed/legacy-api), verified_by_actor_id, verified_at; их клиент не подменяет. Режим приёма выбирается серверной конфигурацией/операцией уполномоченного HR и явно виден в Case.
 
 Case содержит id, revision, selection, status preparing/awaiting_documents/ready/withdrawn/started, checklist_version, candidate_actor_id UUID/null, starts_on date/null, basis object/null, workforce_status not_sent/pending/registered/review_required, employee_id/assignment_id UUID/null. Человек связывается с кабинетным actor отдельно, только HR с основанием. Статус started означает зарегистрированный HR подтверждённый факт начала, а workforce_status показывает отдельную доставку кадровому владельцу.
+
+Уточнение 21 ноября — workforce_status дополнен registered_with_difference для завершённой проверки с сохранением прежних кадровых сведений. Case хранит workforce_resolution null/corrected/kept_existing, workforce_review_reason string/null и workforce_assignment_snapshot с фактически полученными department_id, position_code, starts_on, revision.
 
 ChecklistItem содержит id, case_id, key, title, required bool, status requested/received/accepted/needs_revision, document_ids[], review_reason string/null, reviewed_by_actor_id UUID/null, revision. История хранит все версии файлов и решений.
 
@@ -39,7 +43,9 @@ employment.ready содержит реквизиты и ссылку basis.docum
 
 Локальный тестовый приёмник читает настоящий RabbitMQ и отдаёт assignment.registered по fixtures, умеет задержку, повтор и отсутствие ответа. Это позволяет закончить автономную поставку без сервиса Давида. При интеграции те же события обрабатывает workforce.
 
-Уточнение повторной проверки, 21 ноября 2026: после correct-start Workforce проверяет **прежнее** назначение и отвечает `assignment.reviewed` (общий контракт 1.1). Hiring проверяет организацию, producer, source_case_id, source_event_id, source_case_revision и correlation_id ожидаемой передачи, а также прежний assignment_id. Для актуального ответа оба решения apply/keep завершают review_required и дают workforce_status=registered. Поле `workforce_review` сохраняет decision, reason, reviewed_by_actor_id, reviewed_at, source_case_revision и фактические starts_on/basis/revision назначения. Keep не означает применение предложенной даты: объяснение и оставленные кадровые значения показываются отдельно от исходного исправления Hiring. История сохраняет оба факта; старый ответ не закрывает новую проверку. Повтор event_id не дублирует исход. Обработчик нового типа и это отображение — зависимость интеграционной поставки Hiring; их наличие не следует из реализации Workforce.
+После /correct-start новое employment.ready требует отдельного решения Workforce. Hiring потребляет assignment.review-resolved только от workforce для своей организации, case_id и последнего ожидаемого source_event_id/source_case_revision/correlation_id. resolution=corrected даёт workforce_status=registered, resolution=kept_existing — registered_with_difference. HR видит предложенную дату, фактическую кадровую дату и объяснение; started и собственные источники Hiring сохраняются. При следующей /correct-start статус снова review_required, прежний результат хранится в истории. Повтор ответа не повторяет переход; устаревший ответ не закрывает текущую сверку.
+
+В локальной подмене добавить два альтернативных результата из corrections.json. Ветвь kept_existing завершается видимым расхождением, а не бесконечным ожиданием и не молчаливой заменой данных Hiring. Начальный assignment.registered продолжает использоваться для первой регистрации.
 
 ## Учебный путь сдачи
 

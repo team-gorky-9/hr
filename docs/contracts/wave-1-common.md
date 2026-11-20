@@ -1,4 +1,6 @@
-# Первая волна · общий контракт 1.1
+# Первая волна · общий контракт 1.0
+
+Для текущей сдачи Дениса (Requirements) и Ильи (Hiring) действует приоритетное [описание этапа 1](wave-1-stage-1.md). Оно сохраняет пользовательские операции и переносит брокер, outbox/inbox и расширенные распределённые проверки в этап 2. Давид продолжает Workforce по уже выданному полному контракту.
 
 21 ноября 2026. Спецификация к реализации первой волны. Существующий API продукта продолжает действовать по своим контрактам. Новые операции, описанные здесь, ещё предстоит реализовать. Основания — принятое сервисное устройство и поручение Родиона подготовить автономные задачи.
 
@@ -36,9 +38,9 @@
 
 ## Файлы на сервере
 
-Файловый API этого раздела реализуют Hiring и Requirements. Workforce хранит ссылки и реквизиты оснований, не принимает и не хранит байты файлов (уточнение участника 21 ноября 2026).
+Этот раздел реализуют владельцы файлов **Hiring и Requirements**. Workforce в первой волне хранит ссылки document_ref и реквизиты оснований; файловые POST/GET /documents, FILE_ROOT и обработка загрузок в его поставку не входят. При необходимости проверки оригинала кадровик обращается к владельцу документа через согласованный внешний канал.
 
-Каждый владелец реализует POST /documents (multipart file и kind, возвращает 201 document), GET /documents/{id} (метаданные), GET /documents/{id}/content (поток оригинала). document содержит id, organization_id, kind, original_name, media_type, size_bytes, sha256, revision, uploaded_by. Метаданные в БД, байты в собственном FILE_ROOT. Серверный путь формируется по ID; original_name — подпись, никогда путь. MIME и размер проверяются, превышение настроенного лимита даёт 413 FILE_TOO_LARGE. FILE_MAX_BYTES задаётся средой, стартовое значение 20 MiB — стендовый параметр.
+Hiring и Requirements реализуют POST /documents (multipart file и kind, возвращает 201 document), GET /documents/{id} (метаданные), GET /documents/{id}/content (поток оригинала). document содержит id, organization_id, kind, original_name, media_type, size_bytes, sha256, revision, uploaded_by. Метаданные в БД, байты в собственном FILE_ROOT. Серверный путь формируется по ID; original_name — подпись, никогда путь. MIME и размер проверяются, превышение настроенного лимита даёт 413 FILE_TOO_LARGE. FILE_MAX_BYTES задаётся средой, стартовое значение 20 MiB — стендовый параметр.
 
 Загрузка создаёт новую неизменяемую версию-объект; исправленный документ имеет новый ID. Повтор с прежним ключом возвращает тот же объект. Файл полностью сохраняется до доступности записи; незавершённый временный файл недоступен через API. Повтор/сбой проверяются, очистка сирот не удаляет связанный документ. Скачивание проверяет право по организации и связанному делу. Точная политика конкретных документов уточнена в сервисных контрактах. Перезапуск контейнера сохраняет том.
 
@@ -58,14 +60,14 @@ Transient-сбой приводит к отложенному повтору с 
 |---|---|---|
 | employment.ready / hiring | case_id, application_ref, person_ref, department_id, position_code, starts_on, basis {document_ref,reference,issued_on}, confirmed_by_actor_id | workforce создаёт intake, HR проверяет личность и регистрирует назначение |
 | assignment.registered / workforce | intake_id, source_case_id, source_case_revision, source_event_id, employee_id, assignment_id, department_id, position_code, starts_on, revision | hiring отмечает кадровую передачу зарегистрированной |
-| assignment.reviewed / workforce | Те же поля связи и фактического назначения, что у assignment.registered, плюс basis {reference,issued_on}, decision apply/keep, reason string/null, reviewed_by_actor_id, reviewed_at | hiring завершает review_required по соответствующей версии и сохраняет решение HR |
+| assignment.review-resolved / workforce | intake_id, source_case_id, source_case_revision, source_event_id, employee_id, assignment_id, department_id, position_code, starts_on, revision, resolution:"corrected"|"kept_existing", reason, reviewed_by_actor_id | hiring завершает проверку конкретного исправления и показывает фактически сохранённое назначение |
 | requirements.approved / requirements | profile_id, position_code, profile_version, contour, approved_by_actor_id, approval_basis, source_document_ids | Пока демонстрационный получатель и будущий подбор. API самого сервиса даёт профиль по ID |
 
 person_ref — {system:"legacy-hr",id:UUID,display_name:string}; он обозначает кандидатскую запись. application_ref — {system:"legacy-hr",id:UUID}. document_ref — {service:"hiring",id:UUID}; байты документа в сообщение не вкладываются. Выдача документа другому сервису требует разрешённого внутреннего чтения; в первой волне Workforce получает реквизиты основания и при необходимости запрашивает уполномоченного регистратора, а не автоматически скачивает файл чужого сервиса.
 
-Каждый автор проверяет свои сообщения на [events.json](../../fixtures/wave-1/events.json). Это общая семантика обмена. Примеры содержат учебные ID. Локальный тестовый получатель публикует/читает эти сообщения через настоящий RabbitMQ, а не только вызывает функцию памяти.
+assignment.review-resolved завершает пересмотр существующего назначения. Его correlation_id повторяет correlation_id исправленного employment.ready, а source_event_id/source_case_revision указывают именно на эту принятую передачу. starts_on, department_id, position_code и revision показывают действительную кадровую запись после решения. Схема новых сообщений остаётся 1.0; тип review-resolved добавлен отдельно от прежнего assignment.registered. Hiring подписывается на оба типа. Новый пример и два альтернативных результата находятся в [corrections.json](../../fixtures/wave-1/corrections.json).
 
-`assignment.reviewed` — отдельный тип события со schema_version="1.0", exchange `w1.workforce`, очередью `w1.hiring.assignment.reviewed`. Его aggregate_id/revision относятся к Intake и его завершённой проверке; payload.revision — к существующему назначению. `source_event_id/source_case_revision/correlation_id` относятся к исправленному employment.ready. `starts_on/basis` содержат фактически оставленные кадровые значения: при keep они могут отличаться от предложенных Hiring. `reason` обязателен для keep. При apply назначение меняет revision, при keep — сохраняет. Прежний assignment.registered не меняет формат. [Примеры повторной проверки](../../fixtures/wave-1/review-events.json) — альтернативные исходы одной коррекции.
+Каждый автор проверяет свои сообщения на [events.json](../../fixtures/wave-1/events.json). Это общая семантика обмена. Примеры содержат учебные ID. Локальный тестовый получатель публикует/читает эти сообщения через настоящий RabbitMQ, а не только вызывает функцию памяти.
 
 ## Подмены и начало без коллег
 
