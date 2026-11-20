@@ -1,0 +1,65 @@
+# Stage 1 (wave-1-stage-1.md): API + own PostgreSQL 17. No broker: the transfer to Workforce is
+# manual (transfer_mode=manual), so nothing here waits for RabbitMQ or a neighbour service.
+name: wave-1-hiring
+
+services:
+  db:
+    image: postgres:17.6
+    environment:
+      POSTGRES_DB: hiring
+      POSTGRES_USER: hiring
+      POSTGRES_PASSWORD: hiring
+    ports: ["127.0.0.1:${POSTGRES_PORT:-5413}:5432"]
+    volumes: ["db:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hiring -d hiring"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  api:
+    build:
+      context: ../..
+      dockerfile: services/hiring/Dockerfile
+      target: runtime
+    environment:
+      # For integration point DATABASE_URL / WORKFORCE_URL to the shared stand and set AUTH_MODE=workforce.
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://hiring:hiring@db:5432/hiring}
+      AUTH_MODE: ${AUTH_MODE:-fixture}
+      WORKFORCE_URL: ${WORKFORCE_URL:-http://host.docker.internal:8101}
+      SELECTION_SOURCE: ${SELECTION_SOURCE:-fixture}
+      FILE_MAX_BYTES: ${FILE_MAX_BYTES:-20971520}
+    ports: ["127.0.0.1:${HTTP_PORT:-8103}:8103"]
+    volumes: ["files:/var/lib/hiring/files"]
+    depends_on:
+      db: {condition: service_healthy}
+    restart: unless-stopped
+
+  testdb:
+    image: postgres:17.6
+    profiles: [test]
+    environment:
+      POSTGRES_DB: hiring_test
+      POSTGRES_USER: hiring
+      POSTGRES_PASSWORD: hiring
+    tmpfs: ["/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hiring -d hiring_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  tests:
+    build:
+      context: ../..
+      dockerfile: services/hiring/Dockerfile
+      target: tests
+    profiles: [test]
+    environment:
+      HIRING_TEST_DATABASE_URL: postgresql+psycopg://hiring:hiring@testdb:5432/hiring_test
+    depends_on:
+      testdb: {condition: service_healthy}
+
+volumes:
+  db:
+  files:

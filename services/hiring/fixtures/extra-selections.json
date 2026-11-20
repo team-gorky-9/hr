@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0",
+  "is_synthetic": true,
+  "note": "Second training candidate for the withdrawal path of the hiring acceptance. Marina comes from fixtures/wave-1/selection.json and is not copied here.",
+  "selections": [
+    {
+      "application_ref": {
+        "system": "legacy-hr",
+        "id": "00000000-0000-4000-8000-000000000802"
+      },
+      "candidate_ref": {
+        "system": "legacy-hr",
+        "id": "00000000-0000-4000-8000-000000000902",
+        "display_name": "Пётр Учебный"
+      },
+      "organization_id": "00000000-0000-4000-8000-000000000001",
+      "department_id": "00000000-0000-4000-8000-000000000011",
+      "position_code": "economist-training",
+      "outcome": "hired",
+      "decided_at": "2026-11-21T10:30:00+03:00",
+      "decided_by_actor_id": "00000000-0000-4000-8000-000000000101",
+      "decision_basis": "Учебный положительный результат, второй кандидат",
+      "is_synthetic": true
+    }
+  ]
+}
