@@ -107,3 +107,17 @@ def test_schema_has_no_refs():
 
 def test_extract_json_strips_text_around():
     assert extract_json('Вот ответ:\n```json\n{"a": 1}\n```') == '{"a": 1}'
+
+
+def test_provider_message_is_shown_and_key_is_masked():
+    request = httpx.Request("POST", "https://llm.api.cloud.yandex.net/v1/chat/completions")
+    denied = openai.PermissionDeniedError(
+        "err", response=httpx.Response(403, request=request),
+        body={"error": {"message": "Permission denied for key topsecretkey"}},
+    )
+    llm = OpenAICompatClient(LLMConfig(yandex_api_key="topsecretkey", yandex_folder_id="b1g", _env_file=None))
+    llm._sdk = FakeSDK(denied)
+    with pytest.raises(LLMUnavailableError) as error:
+        call(llm)
+    assert "403" in str(error.value) and "Permission denied" in str(error.value)
+    assert "topsecretkey" not in str(error.value)

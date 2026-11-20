@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from app.ai import LLMClient, LLMError, build_client
 from app.assessment.errors import AssessmentDomainError, RuleUnsupportedError
 from app.assessment.service import assess_candidate, record_llm_calls
+from app.db import repository as repo
 from app.db.enums import RequirementStatus
 from app.db.models import (
     Application,
@@ -31,6 +32,9 @@ from app.db.models import (
 
 def pick_profile(session: Session, position_code: str, *, technical: bool,
                  profile_id: str | None) -> RequirementProfile:
+    """Профиль для оценки. Явный --profile-id берётся как есть (правила режима проверит сервис);
+    иначе действующий профиль своего контура через repository.get_approved_profile,
+    а в --technical при его отсутствии — последний учебный черновик."""
     if profile_id:
         profile = session.get(RequirementProfile, uuid.UUID(profile_id))
         if profile is None:
@@ -39,15 +43,19 @@ def pick_profile(session: Session, position_code: str, *, technical: bool,
     position = session.scalar(select(Position).where(Position.code == position_code))
     if position is None:
         raise SystemExit(f"нет должности {position_code}")
-    query = select(RequirementProfile).where(RequirementProfile.position_id == position.id)
-    if technical:
-        query = query.where(RequirementProfile.is_synthetic).order_by(RequirementProfile.version.desc())
-    else:
-        query = query.where(RequirementProfile.status == RequirementStatus.APPROVED)
-    profile = session.scalars(query).first()
+    profile = repo.get_approved_profile(session, position.id, synthetic=technical)
+    if profile is None and technical:
+        # Учебного кандидата можно оценивать и по учебному черновику: берём последнюю версию.
+        profile = session.scalars(
+            select(RequirementProfile).where(RequirementProfile.position_id == position.id,
+                                             RequirementProfile.is_synthetic,
+                                             RequirementProfile.status == RequirementStatus.DRAFT)
+            .order_by(RequirementProfile.version.desc())
+        ).first()
     if profile is None:
-        kind = "учебного" if technical else "утверждённого"
-        raise SystemExit(f"у должности {position_code} нет {kind} профиля требований")
+        kind = "учебного" if technical else "рабочего"
+        raise SystemExit(f"у должности {position_code} нет утверждённого {kind} профиля; "
+                         "любой не архивный профиль можно указать через --profile-id (только --technical)")
     return profile
 
 
@@ -112,7 +120,9 @@ def main(argv: list[str] | None = None) -> int:
             codes = list(session.scalars(
                 select(Candidate.code).join(Application, Application.candidate_id == Candidate.id)
                 .join(Vacancy, Vacancy.id == Application.vacancy_id)
-                .where(Vacancy.position_id == profile.position_id).distinct().order_by(Candidate.code)
+                .where(Vacancy.position_id == profile.position_id,
+                       Candidate.is_synthetic.is_(args.technical))  # свой контур
+                .distinct().order_by(Candidate.code)
             ))
     results = [run_one(SessionLocal, llm, candidate_code=code, profile_id=profile_id,
                        technical=args.technical, as_of=args.as_of) for code in codes]

@@ -1,19 +1,22 @@
-"""Извлечение карточки и оценивание кандидата (контракт assessment.md v0.2, п. 3).
+"""Извлечение карточки и оценивание кандидата (контракт assessment.md v0.2, п. 3; БД v1.5).
 
 Путь одного кандидата:
 1. Очищенный текст → модель → CandidateCard → repository.add_candidate_card.
-2. Профиль: проверка режима (operational/technical) и разбор params (rules.py).
+2. Проверка режима по контурам кандидата и профиля (operational/technical) и разбор params (rules.py).
 3. Модель извлекает по формальным требованиям периоды, фразу о стаже и статусы альтернатив
    образования — с цитатами; по каждой компетенции — статусы индикаторов с цитатами.
-4. Код находит позиции цитат (evidence.py), считает стаж (experience.py), сводит альтернативы,
-   понижает неподтверждённое (verification.py) и считает счётчики «X из Y».
+4. Код находит позиции цитат (evidence.py), считает стаж (experience.py), сводит альтернативы
+   (результат и цитаты каждой — в FormalCheckIn.alternatives), понижает вывод без цитаты
+   (verification.py) и считает счётчики «X из Y». Вывод по резюме при verification ≠ resume
+   сохраняется как есть: база помечает его is_preliminary («по резюме да, нужен документ»).
+   Требования и индикаторы этапа interview (check_stage) модели не отправляются.
 5. repository.save_assessment. Функции не делают commit: транзакцией управляет вызывающий.
 """
 import json
 import re
 import uuid
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import UTC, datetime
 from typing import Any, Literal
 
 from sqlalchemy.orm import Session
@@ -41,21 +44,20 @@ from app.assessment.rules import (
 )
 from app.assessment.verification import EvidenceVerdict, confirm_result, formal_result
 from app.db import repository as repo
-from app.db.enums import AuditAction, CheckResult, RequirementStatus
-from app.db.models import CandidateCard as CardRow
+from app.db.enums import AuditAction, CheckResult, CheckStage, RequirementStatus
 from app.db.models import (
+    Candidate,
     CandidateText,
     Competency,
     FormalRequirement,
     RequirementProfile,
 )
-from app.schemas.assessment import CompetencyScoreIn, FormalCheckIn
+from app.db.models import CandidateCard as CardRow
+from app.schemas.assessment import AlternativeResultIn, CompetencyScoreIn, FormalCheckIn
 from app.schemas.card import CandidateCard, Evidence
 
 Mode = Literal["operational", "technical"]
 _AS_OF = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
-# Индикаторы с такой проверкой по резюме не оцениваются: они уходят в вопросы интервью.
-_INTERVIEW_STAGE = {"interview", "test"}
 
 
 # --- Журнал вызовов модели -----------------------------------------------------
@@ -94,6 +96,7 @@ class _CheckDraft:
     result: CheckResult
     evidence: list[Evidence] = field(default_factory=list)
     details: dict[str, Any] = field(default_factory=dict)
+    alternatives: list[AlternativeResultIn] = field(default_factory=list)
 
 
 def assess_candidate(
@@ -110,7 +113,10 @@ def assess_candidate(
     profile = session.get(RequirementProfile, profile_id)
     if profile is None:
         raise AssessmentDomainError("no_profile", f"нет профиля требований {profile_id}")
-    _check_mode(profile, mode)
+    candidate = session.get(Candidate, candidate_id)
+    if candidate is None:
+        raise AssessmentDomainError("no_candidate", f"нет кандидата {candidate_id}")
+    _check_mode(candidate, profile, mode)
     # Правила разбираются до вызова модели: неизвестный формат — оценки нет вовсе.
     rules = {r.key: parse_rule(r.key, r.kind, r.params, r.verification) for r in profile.formal_requirements}
 
@@ -118,7 +124,7 @@ def assess_candidate(
     if text is None:
         raise AssessmentDomainError("no_clean_text", "у кандидата нет очищенного текста")
     card_row = _card_for_text(session, candidate_id=candidate_id, text=text, card_id=card_id, llm=llm)
-    as_of = as_of or date.today().strftime("%Y-%m")
+    as_of = as_of or datetime.now(UTC).strftime("%Y-%m")
     if not _AS_OF.match(as_of):
         raise AssessmentDomainError("bad_as_of", f"as_of должен быть 'ГГГГ-ММ', получено {as_of!r}")
 
@@ -127,7 +133,7 @@ def assess_candidate(
 
     checks = [_to_check_in(d) for d in drafts]
     effective = {d.requirement.id: d.result for d in drafts}
-    mandatory = [r.id for r in profile.formal_requirements if r.is_mandatory]
+    mandatory = [r.id for r in profile.formal_requirements if _in_gate(r)]
     summary = _summary(formal_result(effective, mandatory), drafts)
 
     assessment = repo.save_assessment(
@@ -145,21 +151,38 @@ def assess_candidate(
     return assessment.id
 
 
-def _check_mode(profile: RequirementProfile, mode: Mode) -> None:
+def _check_mode(candidate: Candidate, profile: RequirementProfile, mode: Mode) -> None:
+    """Кого и по какому профилю можно оценивать (БД v1.5, п. 2.6.1). Проверяется до вызова
+    модели, чтобы не тратить токены; save_assessment повторяет те же правила.
+
+    operational — реальный кандидат по утверждённому рабочему профилю;
+    technical — учебный кандидат по любому не архивному профилю (рабочему или учебному);
+    архивный профиль запрещён всем."""
+    if mode not in ("operational", "technical"):
+        raise AssessmentDomainError("bad_mode", f"неизвестный режим {mode!r}")
     if profile.status == RequirementStatus.ARCHIVED:
-        raise AssessmentDomainError("profile_not_approved", "профиль в архиве")
+        raise AssessmentDomainError("profile_archived", "профиль в архиве: оценивать по действующей версии")
     if mode == "operational":
+        if candidate.is_synthetic:
+            raise AssessmentDomainError("training_candidate",
+                                        "учебного кандидата оценивают только в режиме technical")
         if profile.is_synthetic or profile.status != RequirementStatus.APPROVED:
             raise AssessmentDomainError(
                 "profile_not_approved",
-                "рабочая оценка — только по утверждённому реальному профилю; учебный профиль — в режиме technical",
+                "реального кандидата оценивают только по утверждённому рабочему профилю",
             )
-    elif mode == "technical":
-        if not profile.is_synthetic:
-            raise AssessmentDomainError("technical_mode_real_profile",
-                                        "технический режим — только для учебного профиля")
-    else:
-        raise AssessmentDomainError("bad_mode", f"неизвестный режим {mode!r}")
+    elif not candidate.is_synthetic:
+        raise AssessmentDomainError("technical_mode_real_candidate",
+                                    "технический режим — только для учебных кандидатов")
+
+
+def _in_gate(requirement: FormalRequirement) -> bool:
+    """Входит в итог разбора резюме: обязательное и этапа screening (как в save_assessment)."""
+    return requirement.is_mandatory and requirement.check_stage == CheckStage.SCREENING
+
+
+def _on_screening(row) -> bool:
+    return row.check_stage == CheckStage.SCREENING
 
 
 def _card_for_text(session: Session, *, candidate_id: uuid.UUID, text: CandidateText,
@@ -184,8 +207,9 @@ def _card_for_text(session: Session, *, candidate_id: uuid.UUID, text: Candidate
 
 def _assess_formal(profile: RequirementProfile, rules: dict[str, Rule], text: CandidateText,
                    llm: LLMClient, prompt_version: str, as_of: str) -> list[_CheckDraft]:
-    education = [r for r in rules.values() if isinstance(r, EducationRule)]
-    experience = [r for r in rules.values() if isinstance(r, ExperienceRule)]
+    screening = {r.key for r in profile.formal_requirements if _on_screening(r)}
+    education = [r for r in rules.values() if isinstance(r, EducationRule) and r.key in screening]
+    experience = [r for r in rules.values() if isinstance(r, ExperienceRule) and r.key in screening]
     extraction = FormalExtraction()
     if education or experience:
         hints = [{"requirement": r.key, "relevant_experience": r.relevance_hint} for r in experience if r.relevance_hint]
@@ -209,12 +233,16 @@ def _assess_formal(profile: RequirementProfile, rules: dict[str, Rule], text: Ca
                                     r.sort_order))
     for requirement in ordered:
         rule = rules[requirement.key]
-        if isinstance(rule, ExperienceRule):
+        if not _on_screening(requirement):
+            draft = _CheckDraft(requirement, CheckResult.UNKNOWN,
+                                details={"notes": ["проверяется на интервью: в итог разбора резюме не входит"]})
+        elif isinstance(rule, ExperienceRule):
             draft = _experience_check(requirement, rule, extraction, text, as_of)
         elif isinstance(rule, EducationRule):
             draft = _education_check(requirement, rule, extraction, text)
             dependency = drafts.get(rule.requires) if rule.requires else None
-            if dependency is not None and dependency.result == CheckResult.UNKNOWN and draft.result != CheckResult.NOT_MET:
+            if (dependency is not None and dependency.result == CheckResult.UNKNOWN
+                    and draft.result != CheckResult.NOT_MET):
                 draft.result, draft.evidence = CheckResult.UNKNOWN, []
                 draft.details.setdefault("notes", []).append(f"зависит от {rule.requires}: там нет сведений")
         else:
@@ -287,43 +315,43 @@ def _experience_check(requirement: FormalRequirement, rule: ExperienceRule, extr
 
 def _education_check(requirement: FormalRequirement, rule: EducationRule, extraction: FormalExtraction,
                      text: CandidateText) -> _CheckDraft:
+    """Альтернативы через ИЛИ (контракт п. 4.2). У каждой альтернативы свой результат и свои
+    цитаты: они уходят в FormalCheckIn.alternatives. Вывод альтернативы без цитаты,
+    найденной в тексте, — unknown."""
     answers = {a.alternative_key: a for a in extraction.alternatives}
-    statuses: dict[str, str] = {}
-    met_evidence: list[Evidence] = []
-    refuted_evidence: list[Evidence] = []
+    results: list[AlternativeResultIn] = []
     for alternative in rule.alternatives:
         answer = answers.get(alternative["key"])
         found = _resolve(text, answer.quote, answer.context_before) if answer else None
         if answer and answer.status == "confirmed" and found:
-            statuses[alternative["key"]] = "met"
-            met_evidence.append(found.evidence)
+            result, evidence = CheckResult.MET, [found.evidence]
         elif answer and answer.status == "refuted" and found:
-            statuses[alternative["key"]] = "not_met"
-            refuted_evidence.append(found.evidence)
+            result, evidence = CheckResult.NOT_MET, [found.evidence]
         else:
-            statuses[alternative["key"]] = "unknown"
-    details = {"rule": requirement.kind, "alternatives": statuses}
-    if "met" in statuses.values():
-        return _CheckDraft(requirement, CheckResult.MET, met_evidence, details)
-    if statuses and all(s == "not_met" for s in statuses.values()):
-        return _CheckDraft(requirement, CheckResult.NOT_MET, refuted_evidence, details)
+            result, evidence = CheckResult.UNKNOWN, []
+        results.append(AlternativeResultIn(key=alternative["key"], result=result, evidence=evidence))
+    details = {"rule": requirement.kind, "alternatives": {a.key: a.result.value for a in results}}
+    met = [e for a in results if a.result == CheckResult.MET for e in a.evidence]
+    if met:
+        return _CheckDraft(requirement, CheckResult.MET, met, details, results)
+    if results and all(a.result == CheckResult.NOT_MET for a in results):
+        return _CheckDraft(requirement, CheckResult.NOT_MET, [e for a in results for e in a.evidence], details, results)
     details["gap"] = "образование" if requirement.kind == "education_level" else "направление подготовки"
-    return _CheckDraft(requirement, CheckResult.UNKNOWN, [], details)
+    return _CheckDraft(requirement, CheckResult.UNKNOWN, [], details, results)
 
 
 def _apply_basis(draft: _CheckDraft) -> _CheckDraft:
-    """Понижение неподтверждённого и правило «по резюме не закрывается» (план ai-01, Р7)."""
+    """Вывод без годной цитаты понижается до unknown. Основание вывода модели — всегда резюме.
+    met/not_met при verification ≠ resume не понижается (БД v1.5): база ставит is_preliminary,
+    а в объяснении остаётся, чем требование подтверждается."""
     confirmation = confirm_result(draft.result, [EvidenceVerdict.OK] * len(draft.evidence))
     if confirmation.issue is not None:
         draft.details["downgraded"] = confirmation.issue.value
         draft.result, draft.evidence = confirmation.effective, []
     draft.details["basis"] = "resume"
-    verification = draft.requirement.verification
-    if draft.result == CheckResult.MET and verification != "resume":
-        # Требование подтверждается документом/интервью: по резюме — только «заявлено».
-        draft.result = CheckResult.UNKNOWN
-        draft.details["claimed"] = "met"
-        draft.details["needs"] = str(verification)
+    verification = draft.requirement.verification.value
+    if draft.result != CheckResult.UNKNOWN and verification != "resume":
+        draft.details["needs"] = verification
     return draft
 
 
@@ -333,6 +361,7 @@ def _to_check_in(draft: _CheckDraft) -> FormalCheckIn:
         result=draft.result,
         explanation=_explanation(draft.details),
         evidence=draft.evidence,
+        alternatives=draft.alternatives,
     )
 
 
@@ -351,8 +380,7 @@ def _ambiguous(found) -> bool:
 def _assess_competency(competency: Competency, text: CandidateText, llm: LLMClient,
                        prompt_version: str) -> CompetencyScoreIn:
     excluded = [i for i in competency.indicators if i.excluded_from_scoring]
-    on_interview = [i for i in competency.indicators
-                    if not i.excluded_from_scoring and str(i.verification) in _INTERVIEW_STAGE]
+    on_interview = [i for i in competency.indicators if not i.excluded_from_scoring and not _on_screening(i)]
     screening = [i for i in competency.indicators if i not in excluded and i not in on_interview]
 
     answers = {}
@@ -401,10 +429,10 @@ def _counter() -> dict[str, int]:
 
 def _summary(result: CheckResult, drafts: list[_CheckDraft]) -> str:
     gaps = sorted({d.details["gap"] for d in drafts if d.result == CheckResult.UNKNOWN and d.details.get("gap")})
-    claimed = [d.requirement.description for d in drafts if d.details.get("claimed")]
+    preliminary = [d.requirement.description for d in drafts if d.details.get("needs")]
     parts = [f"Формальные требования: {result.value}."]
     if gaps:
         parts.append("Пробелы: " + ", ".join(gaps) + ".")
-    if claimed:
-        parts.append("Заявлено по резюме, нужен документ: " + "; ".join(claimed) + ".")
+    if preliminary:
+        parts.append("По резюме, нужно подтверждение: " + "; ".join(preliminary) + ".")
     return " ".join(parts)
