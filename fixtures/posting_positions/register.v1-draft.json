@@ -1,0 +1,295 @@
+{
+  "format_version": "posting-position-review/0.1",
+  "register_version": "2026-11-20.1-draft",
+  "status": "proposal_for_consumer_review",
+  "prepared_for": "Давид",
+  "prepared_on": "2026-11-20",
+  "product_base_sha": "fec6bd276e2f1545e1f685a999560e06142f391c",
+  "rows": [
+    {
+      "id": "hr-work",
+      "register_version": "2026-11-20.1-draft",
+      "context": {
+        "channel": "hh_ru",
+        "dataset_id": "kadry-archive",
+        "dataset_sha256": "801efb82667a63d5d2370e6d39b00c74bea5069a3643472d41f476348a559baf",
+        "source_folder": "консультанта сектора подбора кадров",
+        "employer_id": null,
+        "note": "Область решения — этот набор; работодатель отдельной публикации не подтверждён по папке."
+      },
+      "source": {
+        "kind": "docx_response_footer",
+        "report_ref": "coverage.json#/postings"
+      },
+      "posting_title": "Консультант отдела кадровой работы",
+      "document_count": 122,
+      "decision_state": "needs_review",
+      "position_code": null,
+      "decision_author": null,
+      "decision_date": null,
+      "decision_basis": null,
+      "evidence_refs": [
+        "evidence.json#/paragraphs/P60",
+        "evidence.json#/paragraphs/P67",
+        "evidence.json#/paragraphs/P102"
+      ],
+      "observation": "Название шире сектора подбора кадров. Близость предмета не подтверждает подразделение и обязанности.",
+      "current_policy": {
+        "version": "1.0",
+        "sha256": "c700274b413b1b65ab1db90cd760fcd11c88ca3312c30c45224604dd64a2ce18",
+        "position_code": "hr-consultant",
+        "status": "unresolved"
+      },
+      "open_question": "Относится ли публикация к сектору подбора кадров отдела подбора кадров и мотивации? Подтвердите подразделение, функции подбора и оценки и применимую редакцию ДИ.",
+      "follow_up_owner": "Давид",
+      "decision_owner_role": "Уполномоченный владелец кадрового процесса"
+    },
+    {
+      "id": "development",
+      "register_version": "2026-11-20.1-draft",
+      "context": {
+        "channel": "hh_ru",
+        "dataset_id": "kadry-archive",
+        "dataset_sha256": "801efb82667a63d5d2370e6d39b00c74bea5069a3643472d41f476348a559baf",
+        "source_folder": "консультанта сектора подбора кадров",
+        "employer_id": null,
+        "note": "Область решения — этот набор; работодатель отдельной публикации не подтверждён по папке."
+      },
+      "source": {
+        "kind": "docx_response_footer",
+        "report_ref": "coverage.json#/postings"
+      },
+      "posting_title": "Консультант отдела профессионального развития",
+      "document_count": 58,
+      "decision_state": "needs_review",
+      "position_code": null,
+      "decision_author": null,
+      "decision_date": null,
+      "decision_basis": null,
+      "evidence_refs": [
+        "evidence.json#/paragraphs/P63",
+        "evidence.json#/paragraphs/P65",
+        "evidence.json#/paragraphs/P102"
+      ],
+      "observation": "В ДИ есть развитие кадрового состава и мотивация, но конкретная функция — подбор и оценка кандидатов. Название другого отдела не устанавливает тождество.",
+      "current_policy": {
+        "version": "1.0",
+        "sha256": "c700274b413b1b65ab1db90cd760fcd11c88ca3312c30c45224604dd64a2ce18",
+        "position_code": "hr-consultant",
+        "status": "unresolved"
+      },
+      "open_question": "Описывает публикация подбор и оценку либо обучение и профессиональное развитие? Нужны текст публикации, ДИ отдела и решение об их соответствии должности платформы.",
+      "follow_up_owner": "Давид",
+      "decision_owner_role": "Уполномоченный владелец кадрового процесса"
+    },
+    {
+      "id": "appeals",
+      "register_version": "2026-11-20.1-draft",
+      "context": {
+        "channel": "hh_ru",
+        "dataset_id": "kadry-archive",
+        "dataset_sha256": "801efb82667a63d5d2370e6d39b00c74bea5069a3643472d41f476348a559baf",
+        "source_folder": "консультанта сектора подбора кадров",
+        "employer_id": null,
+        "note": "Область решения — этот набор; работодатель отдельной публикации не подтверждён по папке."
+      },
+      "source": {
+        "kind": "docx_response_footer",
+        "report_ref": "coverage.json#/postings"
+      },
+      "posting_title": "Консультант отдела по работе с обращениями граждан и предпринимателей",
+      "document_count": 28,
+      "decision_state": "needs_review",
+      "position_code": null,
+      "decision_author": null,
+      "decision_date": null,
+      "decision_basis": null,
+      "evidence_refs": [
+        "evidence.json#/paragraphs/P60",
+        "evidence.json#/paragraphs/P102",
+        "evidence.json#/paragraphs/P108"
+      ],
+      "observation": "Пункт 3.8 ограничивает обращения вопросами деятельности сектора. Он не подтверждает работу отдельного отдела обращений.",
+      "current_policy": {
+        "version": "1.0",
+        "sha256": "c700274b413b1b65ab1db90cd760fcd11c88ca3312c30c45224604dd64a2ce18",
+        "position_code": "hr-consultant",
+        "status": "unresolved"
+      },
+      "open_question": "Совпадают ли функции и подразделение с сектором подбора кадров? Если нет, есть ли подходящая должность среди шести или требуется явное решение об её отсутствии? Приложите ДИ публикации.",
+      "follow_up_owner": "Давид",
+      "decision_owner_role": "Уполномоченный владелец кадрового процесса"
+    },
+    {
+      "id": "financial-control",
+      "register_version": "2026-11-20.1-draft",
+      "context": {
+        "channel": "hh_ru",
+        "dataset_id": "kadry-archive",
+        "dataset_sha256": "801efb82667a63d5d2370e6d39b00c74bea5069a3643472d41f476348a559baf",
+        "source_folder": "консультанта сектора подбора кадров",
+        "employer_id": null,
+        "note": "Область решения — этот набор; работодатель отдельной публикации не подтверждён по папке."
+      },
+      "source": {
+        "kind": "docx_response_footer",
+        "report_ref": "coverage.json#/postings"
+      },
+      "posting_title": "Начальник отдела внутреннего финансового контроля, аудита и закупок",
+      "document_count": 20,
+      "decision_state": "needs_review",
+      "position_code": null,
+      "decision_author": null,
+      "decision_date": null,
+      "decision_basis": null,
+      "evidence_refs": [
+        "evidence.json#/paragraphs/P60",
+        "evidence.json#/paragraphs/P67",
+        "evidence.json#/paragraphs/P102"
+      ],
+      "observation": "Руководитель финансового контроля не соответствует названию и функции консультанта по подбору. Политика 1.0 уже даёт mismatch относительно hr-consultant.",
+      "current_policy": {
+        "version": "1.0",
+        "sha256": "c700274b413b1b65ab1db90cd760fcd11c88ca3312c30c45224604dd64a2ce18",
+        "position_code": "hr-consultant",
+        "status": "mismatch"
+      },
+      "open_question": "Подтвердите целевую должность или отсутствие подходящей среди шести с основанием и датой. Текущий mismatch не является таким подтверждением.",
+      "follow_up_owner": "Давид",
+      "decision_owner_role": "Уполномоченный владелец кадрового процесса"
+    },
+    {
+      "id": "municipal-service",
+      "register_version": "2026-11-20.1-draft",
+      "context": {
+        "channel": "hh_ru",
+        "dataset_id": "kadry-archive",
+        "dataset_sha256": "801efb82667a63d5d2370e6d39b00c74bea5069a3643472d41f476348a559baf",
+        "source_folder": "консультанта сектора подбора кадров",
+        "employer_id": null,
+        "note": "Область решения — этот набор; работодатель отдельной публикации не подтверждён по папке."
+      },
+      "source": {
+        "kind": "docx_response_footer",
+        "report_ref": "coverage.json#/postings"
+      },
+      "posting_title": "Консультант отдела муниципальной службы",
+      "document_count": 9,
+      "decision_state": "needs_review",
+      "position_code": null,
+      "decision_author": null,
+      "decision_date": null,
+      "decision_basis": null,
+      "evidence_refs": [
+        "evidence.json#/paragraphs/P62",
+        "evidence.json#/paragraphs/P63",
+        "evidence.json#/paragraphs/P67",
+        "evidence.json#/paragraphs/P102"
+      ],
+      "observation": "Муниципальная служба указана как область деятельности ДИ, но это не доказывает совпадение отдела и фактических задач.",
+      "current_policy": {
+        "version": "1.0",
+        "sha256": "c700274b413b1b65ab1db90cd760fcd11c88ca3312c30c45224604dd64a2ce18",
+        "position_code": "hr-consultant",
+        "status": "unresolved"
+      },
+      "open_question": "Это та же должность под иным названием или отдельная функция организации прохождения службы? Нужны структура подразделения, ДИ публикации и письменное решение.",
+      "follow_up_owner": "Давид",
+      "decision_owner_role": "Уполномоченный владелец кадрового процесса"
+    },
+    {
+      "id": "documentation",
+      "register_version": "2026-11-20.1-draft",
+      "context": {
+        "channel": "hh_ru",
+        "dataset_id": "kadry-archive",
+        "dataset_sha256": "801efb82667a63d5d2370e6d39b00c74bea5069a3643472d41f476348a559baf",
+        "source_folder": "консультанта сектора подбора кадров",
+        "employer_id": null,
+        "note": "Область решения — этот набор; работодатель отдельной публикации не подтверждён по папке."
+      },
+      "source": {
+        "kind": "docx_response_footer",
+        "report_ref": "coverage.json#/postings"
+      },
+      "posting_title": "Консультант отдела документационного обеспечения департамента обеспечения деятельности главы города",
+      "document_count": 4,
+      "decision_state": "needs_review",
+      "position_code": null,
+      "decision_author": null,
+      "decision_date": null,
+      "decision_basis": null,
+      "evidence_refs": [
+        "evidence.json#/paragraphs/P60",
+        "evidence.json#/paragraphs/P67",
+        "evidence.json#/paragraphs/P96",
+        "evidence.json#/paragraphs/P102"
+      ],
+      "observation": "Подготовка внутренних документов сектора не означает тождество отдельному отделу документационного обеспечения другого департамента.",
+      "current_policy": {
+        "version": "1.0",
+        "sha256": "c700274b413b1b65ab1db90cd760fcd11c88ca3312c30c45224604dd64a2ce18",
+        "position_code": "hr-consultant",
+        "status": "unresolved"
+      },
+      "open_question": "Подтвердите подразделение и основную функцию по ДИ публикации. Выберите конкретную должность каталога либо зафиксируйте отсутствие подходящей; одного навыка работы с документами недостаточно.",
+      "follow_up_owner": "Давид",
+      "decision_owner_role": "Уполномоченный владелец кадрового процесса"
+    },
+    {
+      "id": "estimator",
+      "register_version": "2026-11-20.1-draft",
+      "context": {
+        "channel": "hh_ru",
+        "dataset_id": "kadry-archive",
+        "dataset_sha256": "801efb82667a63d5d2370e6d39b00c74bea5069a3643472d41f476348a559baf",
+        "source_folder": "консультанта сектора подбора кадров",
+        "employer_id": null,
+        "note": "Область решения — этот набор; работодатель отдельной публикации не подтверждён по папке."
+      },
+      "source": {
+        "kind": "docx_response_footer",
+        "report_ref": "coverage.json#/postings"
+      },
+      "posting_title": "Сметчик",
+      "document_count": 1,
+      "decision_state": "needs_review",
+      "position_code": null,
+      "decision_author": null,
+      "decision_date": null,
+      "decision_basis": null,
+      "evidence_refs": [
+        "evidence.json#/paragraphs/P60",
+        "evidence.json#/paragraphs/P102"
+      ],
+      "observation": "Название относится к другой должности. Политика 1.0 уже исключает исходную оценку по hr-consultant; о полноте каталога HR ещё не высказался.",
+      "current_policy": {
+        "version": "1.0",
+        "sha256": "c700274b413b1b65ab1db90cd760fcd11c88ca3312c30c45224604dd64a2ce18",
+        "position_code": "hr-consultant",
+        "status": "mismatch"
+      },
+      "open_question": "Есть ли соответствующая должность в каталоге из шести? Если нет, подтвердите отсутствие с указанием публикации, основания и даты решения.",
+      "follow_up_owner": "Давид",
+      "decision_owner_role": "Уполномоченный владелец кадрового процесса"
+    }
+  ],
+  "missing_publication": {
+    "document_count": 45,
+    "reason": "missing_posting",
+    "display": "Исходная публикация неизвестна",
+    "with_external_history": 3,
+    "without_history": 42,
+    "position_code": null,
+    "follow_up_owner": "Давид",
+    "open_question": "Получить исходную публикацию или документальную привязку; не подставлять название из истории."
+  },
+  "decision_coverage": {
+    "confirmed_publications": 0,
+    "confirmed_documents": 0,
+    "no_matching_position_publications": 0,
+    "needs_review_publications": 7,
+    "needs_review_named_documents": 242,
+    "missing_publication_documents": 45
+  }
+}
