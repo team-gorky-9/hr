@@ -320,6 +320,7 @@ def create_application(
     external_position_title: str | None = None,
     applied_at: date | None = None,
     actor_user_id: uuid.UUID | None = None,
+    posting_title: str | None = None,
 ) -> Application:
     """Начать отбор кандидата на вакансию. Первый этап — «Новый отклик», он же пишется в журнал."""
     if vacancy_id is None and not external_position_title:
@@ -334,6 +335,7 @@ def create_application(
         external_position_title=external_position_title,
         source=source,
         applied_at=applied_at,
+        posting_title=posting_title,
         current_stage_code=INITIAL_STAGE,
     )
     session.add(application)

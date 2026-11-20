@@ -235,3 +235,50 @@ def test_dictionary_overrides_seed_default(tmp_path):
     mapping = _mapping(tmp_path, {"Python-разработчик": "junior-python-dev"})
     route = resolve_route(InputFile("Python-разработчик/отклик 5.txt", b"", "text"), mapping)
     assert (route.position_code, route.candidate_code) == ("junior-python-dev", "jpy-0005")
+
+
+# --- v2 (ingest-02): личные ссылки, которые пропускала v1 (найдены аудитом на архиве) ---
+
+@pytest.mark.parametrize("link", [
+    "https://drive.google.com/file/d/1AbCdEfGh/view?usp=sharing",
+    "https://docs.google.com/document/d/1xYz/edit",
+    "https://www.figma.com/file/AbC123/portfolio",
+    "https://www.notion.so/testuser/Portfolio-8201f34ba78e",
+    "https://test-user.notion.site/b9cc238c0e2a446f9f",
+    "test-user.notion.site",
+    "https://sites.google.com/view/portfoliotest",
+    "disk.yandex.ru/d/AbCdEf",
+    "https://test-user.netlify.app",
+    "https://test-user-portfolio-123456.framer.app",
+    "https://test-host.zapto.org:8443/auth",   # домашний сервер с портом
+    "https://music.test-user.na4u.ru/#/",      # путь SPA «/#/»
+])
+def test_personal_links_are_masked(link):
+    result = redact(f"Портфолио проектов\n{link}\n" + BODY, FileFormat.HH_TXT)
+    assert link not in result.text
+    assert "[ссылка скрыта]" in result.text
+    assert link in result.pii.links
+
+
+def test_link_glued_to_city_is_masked():
+    """В выгрузке hh сайт идёт сразу после города: «Москваtest-site.example.com/…»."""
+    result = redact("Организация 1\nМоскваpersonal.chickenkiller.com/\n" + BODY, FileFormat.HH_TXT)
+    assert "chickenkiller" not in result.text
+    assert "Москва" in result.text
+
+
+@pytest.mark.parametrize("kept", [
+    "Москваwww.sibur.ru",      # сайт работодателя без пути — не ПДн кандидата
+    "rabota.sber.ru",
+    "ASP.NET/Core",            # технологии, а не ссылки
+    "Node.js/Express",
+    "CI/CD",
+])
+def test_company_sites_and_technologies_are_kept(kept):
+    assert kept in redact(f"Навыки\n{kept}\n" + BODY, FileFormat.HH_TXT).text
+
+
+def test_git_label_with_skill_is_not_an_address():
+    result = redact("Git: CI/CD, GitLab\n" + BODY, FileFormat.HH_TXT)
+    assert "Git: CI/CD, GitLab" in result.text
+    assert result.pii.links == []
