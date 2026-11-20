@@ -9,7 +9,8 @@
   человека идут последовательно в одном потоке, параллельно обрабатываются разные люди (`workers`).
 - Одна текущая оценка на пару гарантируется уникальным индексом `uq_assessments_current`. Если
   параллельный запуск успел записать ту же пару, пара повторяется один раз и берёт уже готовую оценку.
-- GET только читает сохранённое: пакет запускает CLI.
+- GET только читает сохранённое: пакет запускает CLI. Статус и цитаты — общими правилами
+  app.assessment.state, как в списке откликов.
 """
 import uuid
 from collections.abc import Callable, Iterable
@@ -22,7 +23,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.assessment.prompts import ASSESS_PROMPT_VERSION
-from app.assessment.verification import utf16_offsets
+from app.assessment.state import assessment_texts, evidence_with_utf16, resolve_states
 from app.assessment.version import ALGORITHM_VERSION
 from app.db import repository as repo
 from app.db.models import (
@@ -31,6 +32,7 @@ from app.db.models import (
     Candidate,
     CandidateCard,
     CandidateText,
+    Competency,
     Position,
     RequirementProfile,
     Vacancy,
@@ -195,10 +197,14 @@ def _run_pair(session_factory, pair: Pair, *, run_one: RunOne, llm, technical: b
 
 def cross_assessments(session: Session, candidate_id: uuid.UUID, *,
                       application_id: uuid.UUID | None = None) -> dict[str, Any]:
-    """Набор для GET /api/v1/candidates/{candidate_id}/cross-assessments (план ai-02, Р4).
+    """Набор для GET /api/v1/candidates/{candidate_id}/cross-assessments (план ai-02, Р4; backend-02).
 
     Только чтение сохранённых оценок. Контур определяется кандидатом: учебный человек видит
-    учебные профили, реальный — рабочие. Ничего не создаёт и не меняет."""
+    учебные профили, реальный — рабочие. Ничего не создаёт и не меняет.
+
+    Актуальность оценки и границы цитат считаются общими правилами app.assessment.state —
+    теми же, что в списке и карточке откликов, поэтому статус пары везде одинаковый.
+    """
     candidate = session.get(Candidate, candidate_id)
     if candidate is None:
         return {"candidate_id": str(candidate_id), "items": [], "empty_reason": "candidate_not_found"}
@@ -209,19 +215,28 @@ def cross_assessments(session: Session, candidate_id: uuid.UUID, *,
         .where(Application.candidate_id == candidate_id).order_by(Application.created_at, Application.id)))
     profiles, _ = approved_profiles(session, technical=candidate.is_synthetic)
     own_positions = {v.position_id for a, v, p in applications if v is not None and _value(a.source) == RESPONSE}
+    by_vacancy: dict[uuid.UUID, Application] = {}
+    for application, vacancy, _ in applications:
+        if vacancy is not None:
+            by_vacancy.setdefault(vacancy.id, application)
 
     items = []
     for profile in profiles:
         position = session.get(Position, profile.position_id)
-        assessment = session.scalar(select(Assessment).where(
-            Assessment.candidate_id == candidate_id, Assessment.profile_id == profile.id, Assessment.is_current))
-        status, stale_reason = _state(session, assessment, text)
+        state = resolve_states(session, [candidate_id], profile, position.id, candidate.is_synthetic)[candidate_id]
+        vacancies = session.scalars(select(Vacancy).where(Vacancy.position_id == position.id)
+                                    .order_by(Vacancy.title, Vacancy.id))
         items.append({
-            "position_code": position.code, "position_title": position.title,
+            "position_id": str(position.id), "position_code": position.code, "position_title": position.title,
+            "is_municipal_service": position.is_municipal_service,
             "profile_id": str(profile.id), "profile_version": profile.version,
+            "is_training": repo.is_training_assessment(candidate, profile),
             "is_source_position": profile.position_id in own_positions,
-            "assessment_status": status, "stale_reason": stale_reason,
-            "assessment": _assessment(assessment, profile, text) if assessment is not None else None,
+            # Признак отклика по каждой вакансии должности, в том числе без отклика.
+            "vacancies": [_vacancy(v, by_vacancy.get(v.id)) for v in vacancies],
+            "assessment_status": _value(state.status),
+            "stale_reason": _value(state.stale_reason) if state.stale_reason else None,
+            "assessment": _assessment(session, state.assessment) if state.assessment is not None else None,
         })
     return {
         "candidate_id": str(candidate_id), "candidate_code": candidate.code, "is_training": candidate.is_synthetic,
@@ -229,7 +244,8 @@ def cross_assessments(session: Session, candidate_id: uuid.UUID, *,
         "context_application_id": str(application_id) if application_id else None,
         "applications": [{"application_id": str(a.id), "vacancy_id": str(a.vacancy_id) if a.vacancy_id else None,
                           "position_code": p.code if p else None, "source": _value(a.source),
-                          "posting_title": a.posting_title} for a, v, p in applications],
+                          "posting_title": a.posting_title, "current_stage_code": a.current_stage_code}
+                         for a, v, p in applications],
         "items": items,
         "empty_reason": None if items else "no_approved_profiles",
     }
@@ -239,49 +255,55 @@ def _value(enum_or_str):
     return getattr(enum_or_str, "value", enum_or_str)
 
 
-def _state(session: Session, assessment: Assessment | None, text: CandidateText | None) -> tuple[str, str | None]:
-    """Те же правила актуальности, что в api.md: текст, версия алгоритма; иначе ready."""
-    if assessment is None:
-        return "not_assessed", None
-    card = session.get(CandidateCard, assessment.card_id)
-    if text is None or card.candidate_text_id != text.id:
-        return "stale", "text_changed"
-    if assessment.algorithm_version != ALGORITHM_VERSION:
-        return "stale", "algorithm_changed"
-    return "ready", None
+def _vacancy(vacancy: Vacancy, application: Application | None) -> dict[str, Any]:
+    return {
+        "vacancy_id": str(vacancy.id), "title": vacancy.title, "channel": _value(vacancy.channel),
+        "status": _value(vacancy.status),
+        "application_id": str(application.id) if application else None,
+        "application_source": _value(application.source) if application else None,
+        "application_stage_code": application.current_stage_code if application else None,
+    }
 
 
-def _assessment(assessment: Assessment, profile: RequirementProfile, text: CandidateText | None) -> dict[str, Any]:
+def _assessment(session: Session, assessment: Assessment) -> dict[str, Any]:
+    """Оценка с цитатами. Строки берутся из профиля самой оценки: при profile_changed это
+    прежняя версия профиля, а не утверждённая сейчас."""
+    profile = session.get(RequirementProfile, assessment.profile_id)
     requirements = {r.id: r for r in profile.formal_requirements}
+    competencies = {c.id: c for c in session.scalars(select(Competency).where(Competency.profile_id == profile.id))}
+    texts = assessment_texts(session, assessment.formal_checks, assessment.competency_scores)
     checks, gaps = [], []
-    for check in assessment.formal_checks:
-        requirement = requirements.get(check.requirement_id)
-        if requirement is None:
-            continue
+    for check in sorted(assessment.formal_checks,
+                        key=lambda c: (requirements[c.requirement_id].sort_order, requirements[c.requirement_id].key)):
+        requirement = requirements[check.requirement_id]
         if _value(check.result) == "unknown" and _value(requirement.check_stage) == "screening":
             gaps.append(requirement.description)
         checks.append({
             "requirement_key": requirement.key, "description": requirement.description,
             "is_mandatory": requirement.is_mandatory, "check_stage": _value(requirement.check_stage),
             "result": _value(check.result), "basis": _value(check.basis), "is_preliminary": check.is_preliminary,
-            "evidence": [_evidence(e, text) for e in check.evidence or []],
+            "evidence": _evidence(check.evidence, texts),
         })
+    scores = sorted(assessment.competency_scores,
+                    key=lambda s: (competencies[s.competency_id].sort_order, competencies[s.competency_id].code))
     return {
         "assessment_id": str(assessment.id), "version": assessment.version,
+        "profile_id": str(profile.id), "profile_version": profile.version,
         "formal_result": _value(assessment.formal_result), "formal_preliminary": assessment.formal_preliminary,
+        "overall_score": assessment.overall_score,
         "summary": assessment.summary, "gaps": gaps, "formal_checks": checks,
-        "competencies": [{"competency_id": str(s.competency_id),
-                          "mandatory": (s.details or {}).get("mandatory"), "desired": (s.details or {}).get("desired"),
-                          "evidence": [_evidence(e, text) for e in s.evidence or []]}
-                         for s in assessment.competency_scores],
+        "competencies": [{
+            "competency_id": str(s.competency_id), "code": competencies[s.competency_id].code,
+            "name": competencies[s.competency_id].name, "rank": _value(competencies[s.competency_id].rank),
+            "target_level_min": competencies[s.competency_id].target_level_min,
+            "target_level_max": competencies[s.competency_id].target_level_max,
+            "level": s.level, "explanation": s.explanation,
+            "mandatory": (s.details or {}).get("mandatory"), "desired": (s.details or {}).get("desired"),
+            "evidence": _evidence(s.evidence, texts),
+        } for s in scores],
     }
 
 
-def _evidence(evidence: dict[str, Any], text: CandidateText | None) -> dict[str, Any]:
-    """Цитата с обеими парами координат: кодовые точки (база) и UTF-16 (подсветка в браузере)."""
-    item = {k: evidence.get(k) for k in ("candidate_text_id", "quote", "start", "end")}
-    if text is not None and str(text.id) == str(evidence.get("candidate_text_id")):
-        item["utf16_start"], item["utf16_end"] = utf16_offsets(text.text, evidence["start"], evidence["end"])
-    else:
-        item["utf16_start"] = item["utf16_end"] = None  # цитата из прежней версии текста
-    return item
+def _evidence(items, texts: dict[uuid.UUID, str]) -> list[dict[str, Any]]:
+    """Цитаты с кодовыми точками (база) и UTF-16 (браузер) по тексту, на который ссылается цитата."""
+    return [{**e, "candidate_text_id": str(e["candidate_text_id"])} for e in evidence_with_utf16(items or [], texts)]

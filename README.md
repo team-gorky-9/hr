@@ -47,7 +47,7 @@ uv run python -m app.ingest --input fixtures/stage_0a --mapping fixtures/stage_0
 uv run uvicorn app.main:app --reload
 ```
 
-Swagger UI — http://127.0.0.1:8000/docs, проверка — `GET /api/v1/health`. Маршруты чтения Этапа 1, контуры `working`/`training`, статусы оценки и переменная `CORS_ORIGINS` описаны в [docs/modules/api.md](docs/modules/api.md), контракт — [docs/contracts/api.md](docs/contracts/api.md).
+Swagger UI — http://127.0.0.1:8000/docs, проверка — `GET /api/v1/health`. Маршруты чтения Этапа 1 и действий кадровика Этапа 2 (этапы с историей, кросс-оценки, резерв, воронка), контуры `working`/`training`, статусы оценки, учебная авторизация `X-User-Login` (учётки `hr_demo`, `dept_demo`, `admin_demo` загружает `python -m app.db.seed`) и переменная `CORS_ORIGINS` описаны в [docs/modules/api.md](docs/modules/api.md), контракт — [docs/contracts/api.md](docs/contracts/api.md).
 
 ## Поиск кандидатов
 

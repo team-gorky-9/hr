@@ -154,8 +154,9 @@ class FeedbackOutcome(StrEnum):
 
 class ReserveStatus(StrEnum):
     ACTIVE = "active"
-    WITHDRAWN = "withdrawn"
+    WITHDRAWN = "withdrawn"  # основание отозвано кадровиком
     HIRED = "hired"
+    EXPIRED = "expired"      # срок резерва истёк; закрывается при новом периоде на ту же цель [v1.8]
 
 
 class ChunkKind(StrEnum):

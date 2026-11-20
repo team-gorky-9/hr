@@ -1,8 +1,8 @@
 # Контракт: HTTP API (`app/api/`)
 
-**Версия:** 0.3 (интеграционная ветка) · **Дата:** 2026-11-20 · **Владелец:** Денис · **Потребители:** фронтенд. Дополнение разрешено Давидом в составе интеграционного плана; согласование коллегами не приписывается.
+**Версия:** 0.4 (проект: backend-02 поверх интеграционной v0.3) · **Дата:** 2026-11-20 · **Владелец:** Денис · **Потребители:** фронтенд (Ася), `qa-01`/`qa-02` (Родион), `search-01` (правило действующего резерва). Дополнение разрешено Давидом в составе интеграционного плана; согласование коллегами не приписывается.
 
-Опирается на [database.md](database.md) v1.7 и [assessment.md](assessment.md) v0.3.
+Опирается на [database.md](database.md) v1.8 и [assessment.md](assessment.md) v0.3.
 
 ## Дополнение v0.3: применимость и подробные счётчики
 
@@ -17,6 +17,13 @@ AssessmentOut дополнен algorithm_version, calculation_as_of и competenc
 Новые значения assessment_status/stale_reason требуют обработки в клиенте с исчерпывающим switch. Изменение фронтенда в этой ветке не выполнялось. Фактические DTO — `app/api/schemas.py`; применимость — [profile-applicability.md](profile-applicability.md).
 
 **Изменения v0.2:** учебный и рабочий контуры (п. 1.1), признаки `is_training`, `is_preliminary`, `formal_preliminary`, основание `basis` и альтернативы в блоке формальных требований.
+
+**Изменения v0.4 (backend-02):**
+- раздел 3: справочники, история и перевод этапа с `expected_seq` (две вкладки → `409 STALE_STAGE_FORM`) и обязательной причиной для `rejected`/`withdrawn`; кросс-оценки с привязкой отклика к каждой вакансии; кадровый резерв с обоснованием, основанием повторного контакта, сроком, отзывом и периодами (БД v1.8); воронка за период с моментом среза;
+- учебная авторизация стенда — заголовок `X-User-Login` (п. 1.2), коды `401`/`403`;
+- действия и счётчики — только для откликов `source = response` (п. 1.3);
+- в контракт внесены поля, которые были описаны только в `docs/modules/api.md`: `stale_reason`, `formal_checks[].key`, `candidate.is_training`, `candidate-texts.is_training`, `vacancy = null`;
+- **не входит:** передача руководителю, ответ департамента и ожидания (`workflow-01`), гайд интервью (`interview-01`), поиск (`search-01`). Раскрытия ПДн в MVP нет (hr#14).
 
 ## 1. Общие соглашения
 
@@ -43,7 +50,23 @@ AssessmentOut дополнен algorithm_version, calculation_as_of и competenc
 }
 ```
 
-Коды HTTP: `400` (некорректный запрос), `403` (нет прав), `404` (сущность не найдена), `409` (конфликт состояния/перехода этапа), `422` (ошибка валидации схемы).
+Коды HTTP: `400` (некорректный запрос), `401` (нет пользователя в `X-User-Login` или он неизвестен/отключён) [v0.3], `403` (роли пользователя действие недоступно), `404` (сущность не найдена), `409` (конфликт состояния: перевод из финального этапа, перескок без подтверждения, действие над внешним откликом), `422` (ошибка валидации запроса или неизвестный код справочника).
+
+### 1.2. Учебная авторизация стенда [v0.4]
+
+- Маршруты чтения раздела 2 заголовков не требуют.
+- Все маршруты раздела 3 (и чтение, и запись) требуют заголовок `X-User-Login: <логин>`. API находит активного пользователя в `users` и берёт роль из базы (клиент роль не присылает). Пользователь пишется в журналы: `stage_events.actor_user_id`, `reserve_entries.added_by_user_id` и `ended_by_user_id`.
+- Учётки стенда загружает `python -m app.db.seed`: `hr_demo` (роль `hr`), `dept_demo` (`department`), `admin_demo` (`admin`). Пароля нет: это подпись действия, а не защита. В рабочей эксплуатации её заменит вход через систему учётных записей администрации.
+- Нет заголовка → `401 USER_REQUIRED`; логин неизвестен или отключён → `401 UNKNOWN_USER`; роль не подходит → `403 FORBIDDEN_ROLE` с `details.role` и `details.allowed_roles`.
+
+| Маршруты | Роли |
+|---|---|
+| весь раздел 3: справочники, история и перевод этапа, кросс-оценки, резерв, воронка | `hr`, `admin` |
+| `department` | `403` на весь раздел 3, пока не согласована область доступа по подразделениям |
+
+### 1.3. Рабочие и внешние отклики [v0.4]
+
+Рабочие действия и счётчики — только для откликов `source = response`. Внешний отклик из «Истории общения» (`history`, БД v1.6 п. 4.5) и ручная запись (`manual`) читаются как предыстория (карточка, история этапов). Перевод этапа и использование такого отклика как основания резерва дают `409 NOT_WORKING_APPLICATION`, а воронка их не считает.
 
 ## 2. Маршруты Этапа 1 (только чтение — первый сквозной срез)
 
@@ -90,6 +113,7 @@ AssessmentOut дополнен algorithm_version, calculation_as_of и competenc
       "current_stage_code": "new",
       "current_stage_title": "Новый отклик",
       "applied_at": "2026-11-19",
+      "posting_title": null,
       "assessment_status": "ready",
       "formal_result": "unknown",
       "overall_score": 85,
@@ -118,6 +142,7 @@ AssessmentOut дополнен algorithm_version, calculation_as_of и competenc
     "title": "Python-разработчик",
     "is_municipal_service": false
   },
+  "posting_title": null,
   "stage": {
     "code": "new",
     "title": "Новый отклик",
@@ -207,6 +232,8 @@ AssessmentOut дополнен algorithm_version, calculation_as_of и competenc
 ```
 Если `assessment_status` равен `"not_assessed"` или `"no_approved_profile"`, поле `assessment` равно `null`. Если карточка ещё не извлечена, `candidate.card = null`.
 
+Дополнительные поля [v0.3, до этого были только в описании модуля]: `stale_reason` — `text_changed` | `profile_changed` при `is_stale = true`; `formal_checks[].key` — устойчивый ключ требования (`py.education.level`); `candidate.is_training`; `vacancy = null` у записи «Истории общения» без вакансии на платформе; `posting_title` — публикация hh, на которую пришёл отклик (БД v1.6), `null`, если её нет. В элементе списка откликов тоже есть `posting_title`, у текста кандидата (п. 2.4) — `is_training`.
+
 Поля формального требования [v0.2]: `verification` — где требование положено подтверждать; `basis` — на чём результат фактически основан (`resume` у вывода модели; `documents` / `interview` / `test` — подтвердил человек, тогда `confirmed_by` — логин, а `evidence` пуст); `is_preliminary = true` — подпись «по резюме, нужен документ»; `alternatives` — `[{key, result, evidence}]` по ключам `params.alternatives`. Требования этапа `interview` показываются отдельным блоком «проверить на интервью» и на `formal_result` не влияют. Карточка отклика учебного кандидата открывается по id и в рабочем контуре, но всегда с `is_training = true`.
 
 ### 2.4. `GET /api/v1/candidate-texts/{candidate_text_id}`
@@ -234,14 +261,208 @@ AssessmentOut дополнен algorithm_version, calculation_as_of и competenc
 
 Поиск по профессиональному опыту в очищенных резюме (`M-03`). Тело запроса, серверная авторизация рабочего контура, DTO выдачи, границы цитат и ошибки описаны в [контракте поиска](search.md). Пример для учебного контура: `{"contour":"training","query":"анализ и согласование требований к ИС"}`.
 
-## 3. Запланированные маршруты Этапа 2 (контур наперёд)
+## 3. Маршруты Этапа 2: действия кадровика, резерв, кросс-оценки, воронка [v0.4, backend-02]
 
-Фиксируются названиями и семантикой; подробные DTO уточняются перед выдачей `backend-02`:
-- `GET /api/v1/candidates/{candidate_id}/cross-assessments` — оценки кандидата по другим утверждённым профилям (`M-02`).
-- `POST /api/v1/applications/{application_id}/stage` — ручной перевод этапа кадровиком (`move_application`), возвращает `StageEvent`; `409` при попытке перевода из финального этапа.
-- `GET /api/v1/applications/{application_id}/history` — журнал `stage_history` по `seq`.
-- `POST /api/v1/applications/{application_id}/feedback` — сохранение обратной связи департамента (`record_department_feedback`, **не** меняет этап).
-- `GET /api/v1/applications/{application_id}/handoff-summary` — чистая обезличенная сводка кандидата (формальный итог, цитаты, пробелы, заметки кадровика) в JSON + готовом тексте для передачи руководителю «наверх».
-- `GET/POST /api/v1/applications/{application_id}/interview-guide` — чтение и генерация вопросов по пробелам (`A-11`/`M-09`).
-- `POST /api/v1/reserve` и `GET /api/v1/positions/{position_id}/reserve` — рабочий кадровый резерв (`M-05`/`A-05`).
-- `GET /api/v1/analytics/funnel` — сводка воронки по фактическим `stage_events` (`O-01`).
+Постановка: `hq/tasks/backend-02-denis-workflow-reserve-and-pii-api.md` в штабе. Передача руководителю и ответ департамента — `workflow-01`, гайд и ответы интервью — `interview-01`. Раскрытия ПДн в MVP нет: ни один маршрут не отдаёт `candidate_pii`.
+
+**Общее для раздела:**
+- Все маршруты требуют `X-User-Login` с ролью `hr` или `admin` (п. 1.2). Роль `department` получает `403 FORBIDDEN_ROLE`, в том числе на чтение по прямому ID: область доступа по подразделениям не согласована. Права департамента в своей области появятся в `workflow-01`.
+- Действия и счётчики — только для откликов `source = response` (п. 1.3).
+- Маршруты записи сами фиксируют транзакцию; при ошибке ничего не сохраняется.
+- Вложенные объекты: `stage` — `{"code", "title", "is_final"}`; `rejection_reason` — `{"code", "title", "side"}` или `null`; `actor` / `added_by` / `ended_by` — `{"login", "role"}` или `null` (действие импорта).
+
+### 3.1. Справочники
+
+`GET /api/v1/references/stages` → `{"items": [{"code": "new", "title": "Новый отклик", "sort_order": 1, "is_final": false}, …]}` по `sort_order`.
+
+`GET /api/v1/references/rejection-reasons` → `{"items": [{"code": "experience", "title": "Недостаточно профессионального опыта", "side": "employer"}, …]}`.
+
+### 3.2. История и перевод этапа
+
+`GET /api/v1/applications/{application_id}/history`:
+```json
+{
+  "application_id": "8ca4a29c-6081-4745-b009-2cafb99286d2",
+  "source": "response",
+  "stage": {"code": "screening", "title": "Первичный отбор", "is_final": false},
+  "last_seq": 2,
+  "items": [
+    {"seq": 1, "from_stage": null, "to_stage": {"code": "new", "title": "Новый отклик", "is_final": false},
+     "rejection_reason": null, "actor": null, "comment": null, "created_at": "2026-11-20T11:30:09.289095Z"},
+    {"seq": 2, "from_stage": {"code": "new", "title": "Новый отклик", "is_final": false},
+     "to_stage": {"code": "screening", "title": "Первичный отбор", "is_final": false},
+     "rejection_reason": null, "actor": {"login": "hr_demo", "role": "hr"},
+     "comment": "Резюме релевантно, уточнить стаж", "created_at": "2026-11-20T11:30:09.289095Z"}
+  ]
+}
+```
+События идут по `seq`. `last_seq` — значение, которое форма передаёт как `expected_seq`. Исторический отказ без причины отдаётся с `rejection_reason = null`, интерфейс показывает «не указана».
+
+`POST /api/v1/applications/{application_id}/stage`:
+```json
+{"to_stage_code": "rejected", "expected_seq": 4, "rejection_reason_code": "experience",
+ "comment": "Стаж меньше двух лет", "confirm_skip": false}
+```
+- `expected_seq` обязателен: последний `seq` истории, который видел кадровик.
+- Обычный шаг — следующий этап по порядку, «Отказ»/«Кандидат отказался» в любой момент, «Принят» — с последнего этапа. Перескок вперёд или возврат назад — только с `confirm_skip: true` и непустым `comment`.
+- Для перехода в `rejected` и `withdrawn` причина обязательна, для остальных этапов запрещена.
+
+**Ответ `201 Created`:** `{"application_id", "stage", "event"}`, где `event` — событие в формате истории. `event.seq` — новый `expected_seq`.
+
+| HTTP | `error.code` | Когда |
+|---|---|---|
+| 404 | `APPLICATION_NOT_FOUND` | нет отклика |
+| 409 | `NOT_WORKING_APPLICATION` | `source` не `response` (`history`, `manual`) |
+| 422 | `UNKNOWN_STAGE_CODE`, `UNKNOWN_REJECTION_REASON` | кода нет в справочнике |
+| 422 | `REJECTION_REASON_REQUIRED` | переход в `rejected`/`withdrawn` без причины |
+| 422 | `REJECTION_REASON_NOT_ALLOWED` | причина при переходе на другой этап |
+| 422 | `VALIDATION_ERROR` | нет `expected_seq` или `to_stage_code` |
+| 409 | `STALE_STAGE_FORM` | `expected_seq` не равен последнему `seq`: отклик уже изменили в другой вкладке. `details`: `expected_seq`, `last_seq`, `current_stage_code` |
+| 409 | `STAGE_TRANSITION_CONFLICT` | выход из финального этапа, тот же этап, перескок без подтверждения; `message` — правило по-русски |
+
+Две вкладки с одним `expected_seq` дают один переход: строка отклика блокируется (`SELECT … FOR UPDATE`) до проверки `seq` и держится до commit, второй запрос получает `409 STALE_STAGE_FORM`.
+
+```json
+{"error": {"code": "STAGE_TRANSITION_CONFLICT", "message": "Отбор уже завершён на этапе «Отказ»",
+           "details": {"current_stage_code": "rejected", "to_stage_code": "screening"}}}
+```
+
+Переход в `sent_to_department` пока выполняется этим маршрутом без регистрации передачи. По постановке он должен идти одной транзакцией с регистрацией передачи из `workflow-01`; связка добавляется в `workflow-01`.
+
+### 3.3. Кросс-оценки по другим должностям
+
+`GET /api/v1/candidates/{candidate_id}/cross-assessments` — оценки кандидата по всем должностям, у которых есть утверждённый профиль в контуре кандидата. Данные собирает модель чтения ai-02 `app.assessment.cross.cross_assessments` (владелец — Илья). API добавляет права (п. 1.2), `404` и порядок строк. Актуальность и цитаты считаются общими правилами `app.assessment.state`, теми же, что в п. 2.2–2.3, поэтому статус пары в списке откликов и здесь совпадает. Чтение не создаёт ни оценок, ни откликов. Явное сравнение одного отклика с выбранным профилем — `GET /applications/{id}/comparison` (дополнение v0.3).
+
+```json
+{
+  "candidate_id": "eb5fb76d-b27a-4f7f-87ab-69fcd5b7ac61",
+  "candidate_code": "py-9001",
+  "is_training": true,
+  "current_text_id": "fc616e86-…",
+  "applications": [
+    {"application_id": "8ca4a29c-…", "vacancy_id": "…", "position_code": "python-dev",
+     "source": "response", "posting_title": null, "current_stage_code": "new"}
+  ],
+  "items": [
+    {
+      "position_id": "…", "position_code": "qa-manual", "position_title": "QA Engineer (Manual)",
+      "is_municipal_service": false, "profile_id": "…", "profile_version": 1, "is_training": true,
+      "is_source_position": false,
+      "vacancies": [
+        {"vacancy_id": "…", "title": "QA Engineer (Manual)", "channel": "hh_ru", "status": "open",
+         "application_id": null, "application_source": null, "application_stage_code": null}
+      ],
+      "assessment_status": "ready", "stale_reason": null,
+      "assessment": {
+        "assessment_id": "…", "version": 1, "profile_id": "…", "profile_version": 1,
+        "formal_result": "met", "formal_preliminary": false, "overall_score": 90,
+        "summary": null, "gaps": [], "formal_checks": [],
+        "competencies": [
+          {"competency_id": "…", "code": "API_TEST", "name": "Тестирование API", "rank": null,
+           "target_level_min": 60, "target_level_max": 100, "level": 90, "explanation": "пишет API-тесты",
+           "mandatory": null, "desired": null,
+           "evidence": [{"candidate_text_id": "fc616e86-…", "quote": "Написал API-тесты",
+                         "start": 0, "end": 17, "utf16_start": 0, "utf16_end": 17}]}
+        ]
+      }
+    }
+  ],
+  "empty_reason": null
+}
+```
+- `vacancies` — все вакансии должности; у каждой отклик кандидата (`application_id`, `application_source`, `application_stage_code`) или `null`. `is_source_position` — есть прямой отклик `response` хотя бы на одну из них. `position_id` нужен для `POST /reserve` из строки рекомендации.
+- `profile_id`/`profile_version` строки — утверждённый сейчас профиль. Внутри `assessment` — профиль самой оценки: при `profile_changed` это прежняя версия, и строки проверок взяты из неё.
+- `formal_checks[]`: `requirement_key`, `description`, `is_mandatory`, `check_stage`, `result`, `basis`, `is_preliminary`, `evidence`. `gaps` — требования этапа `screening` с `unknown`.
+- `assessment_status`: `ready`, `stale` (`stale_reason`: `text_changed`, `algorithm_changed` — алгоритм или промпт, `profile_changed`), `not_assessed`.
+- Цитаты: `candidate_text_id` указывает на свою версию текста, `utf16_start`/`utf16_end` считаются по ней.
+- `level` и `overall_score` новый оценщик (БД v1.7) оставляет `null`; заполнены у оценок, где их записали.
+- Порядок: сначала оценённые — `met`, `unknown`, `not_met`, внутри по `overall_score` по убыванию; затем `not_assessed`.
+- Пустой результат — `200`, `items: []`, `empty_reason: "no_approved_profiles"`. Неизвестный кандидат — `404 CANDIDATE_NOT_FOUND`.
+
+### 3.4. Кадровый резерв
+
+`POST /api/v1/reserve`:
+```json
+{"candidate_id": "eb5fb76d-…", "position_id": "9ee53c09-…", "competency_area": null,
+ "source_application_id": "8ca4a29c-…",
+ "reason": "Сильные API-тесты, не хватило стажа",
+ "contact_basis": "Вернуться при новой вакансии QA",
+ "valid_until": "2027-05-20"}
+```
+- Цель — должность (`position_id`) или направление (`competency_area`).
+- `reason` (обоснование профессиональной пригодности) и `contact_basis` (основание повторного контакта) обязательны.
+- `valid_until` по желанию; пусто — бессрочно. Прошедшая дата — ошибка.
+- Исходный отклик, если указан, должен принадлежать тому же кандидату и быть откликом `response`.
+
+Ответ `201` (`created: true`) для новой записи. Если у кандидата уже есть действующая запись на эту цель, ответ `200` (`created: false`) с прежней записью. Так же отвечают два одновременных запроса: уникальный индекс пропускает одну вставку, второй запрос возвращает её запись. Если прежняя запись истекла, она закрывается (`status = expired`) и открывается новый период со своим основанием и автором.
+
+```json
+{
+  "created": true,
+  "entry": {
+    "reserve_id": "c5dea982-0151-4ec7-9145-80288a24d26b",
+    "candidate_id": "eb5fb76d-b27a-4f7f-87ab-69fcd5b7ac61", "candidate_code": "py-9001", "headline": null,
+    "is_training": true, "position_id": "9ee53c09-…", "competency_area": null,
+    "source_application_id": "8ca4a29c-…",
+    "reason": "Сильные API-тесты, не хватило стажа", "contact_basis": "Вернуться при новой вакансии QA",
+    "status": "active", "added_by": {"login": "hr_demo", "role": "hr"},
+    "added_at": "2026-11-20T11:30:09.289095Z", "valid_until": "2027-05-20",
+    "ended_at": null, "end_reason": null, "ended_by": null
+  }
+}
+```
+
+| HTTP | `error.code` | Когда |
+|---|---|---|
+| 404 | `CANDIDATE_NOT_FOUND`, `POSITION_NOT_FOUND`, `APPLICATION_NOT_FOUND` | нет кандидата, должности или исходного отклика |
+| 422 | `RESERVE_TARGET_REQUIRED` | нет ни должности, ни направления |
+| 422 | `RESERVE_BASIS_REQUIRED` | пустой `reason` или `contact_basis`; `details.missing` |
+| 422 | `RESERVE_VALID_UNTIL_IN_PAST` | срок уже прошёл |
+| 422 | `APPLICATION_OF_OTHER_CANDIDATE` | исходный отклик другого кандидата |
+| 409 | `NOT_WORKING_APPLICATION` | исходный отклик `history`/`manual` |
+
+`POST /api/v1/reserve/{reserve_id}/withdraw` `{"reason": "Кандидат трудоустроен в другом месте"}` отзывает основание. Запись получает `status = withdrawn`, `ended_at`, `end_reason`, `ended_by`, пропадает из списка и фильтра поиска и остаётся в истории. Возобновление — новый `POST /reserve` с новым основанием. Ошибки: `404 RESERVE_NOT_FOUND`, `422 WITHDRAW_REASON_REQUIRED`, `409 RESERVE_NOT_ACTIVE`.
+
+`GET /api/v1/positions/{position_id}/reserve?contour=` → `{"position_id", "position_code", "total", "items": [ReserveEntry…]}`: действующие записи на должность по времени добавления. Действующая запись — `status = active` и `valid_until` пусто или не раньше сегодняшнего дня, последний день срока включён. Это же правило — `repository.active_reserve_condition()` — использует фильтр поиска `search-01`. Резерв «по направлению» в список должности не входит. Ошибка: `404 POSITION_NOT_FOUND`.
+
+### 3.5. Воронка
+
+`GET /api/v1/analytics/funnel?contour=&vacancy_id=&position_id=&period_from=&period_to=` — счётчики по фактическим записям базы. Выборка — отклики `source = response` на вакансии платформы от кандидатов выбранного контура.
+
+```json
+{
+  "as_of": "2026-11-20T11:30:09.553480Z",
+  "contour": "working",
+  "vacancy_id": null,
+  "position_id": null,
+  "period_from": "2026-11-01",
+  "period_to": "2026-11-30",
+  "timezone": "Europe/Moscow",
+  "total_applications": 1721,
+  "stages": [
+    {"code": "new", "title": "Новый отклик", "sort_order": 1, "is_final": false, "current_count": 1719, "reached_count": 1721},
+    {"code": "rejected", "title": "Отказ", "sort_order": 8, "is_final": true, "current_count": 2, "reached_count": 2}
+  ],
+  "closures": [
+    {"stage_code": "rejected", "stage_title": "Отказ", "reason_code": "experience",
+     "reason_title": "Недостаточно профессионального опыта", "side": "employer", "count": 1},
+    {"stage_code": "rejected", "stage_title": "Отказ", "reason_code": null,
+     "reason_title": "Причина не указана", "side": null, "count": 1}
+  ],
+  "closures_without_reason": 1,
+  "open_waits": null
+}
+```
+- `as_of` — момент среза.
+- `stages` — все этапы справочника, в том числе с нулями. `current_count` — уникальные отклики, которые сейчас на этапе; `reached_count` — отклики, у которых есть переход на этап.
+- `closures` — решения о закрытии (переходы в `hired`, `rejected`, `withdrawn`) с причиной. Период задают даты включительно; сутки считаются по `timezone` (Нижний Новгород, МСК). Без дат — за всё время. Исторические отказы без причины — строки с `reason_code = null`, их сумма — в `closures_without_reason`.
+- `open_waits` — открытые ожидания ответа и их длительность по передачам `workflow-01`. До `workflow-01` всегда `null`.
+- Ошибки: `404 VACANCY_NOT_FOUND`, `404 POSITION_NOT_FOUND`, `422 INVALID_PERIOD` (`period_from` позже `period_to`).
+- Годовой отчёт (`/api/v1/reports/annual/…`, `reporting.md`) строится из выгрузки и базу не читает. Эта воронка — оперативный срез живых записей.
+
+### 3.6. Запланировано
+
+- Переход в `sent_to_department` вместе с регистрацией передачи, ответ департамента, ожидания в воронке — `workflow-01`.
+- Гайд интервью, ответы и итог — `interview-01`.
+- `POST /api/v1/search/candidates` с фильтром действующего резерва — `search-01`.
+- Права роли `department` в своей области — после согласования области доступа.

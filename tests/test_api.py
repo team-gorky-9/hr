@@ -130,14 +130,27 @@ STAGE_1_ROUTES = {
     "/api/v1/candidate-texts/{candidate_text_id}",
 }
 
+# Маршруты backend-02 (api.md раздел 3); состав и методы проверяет tests/test_api_workflow.py.
+STAGE_2_ROUTES = {
+    "/api/v1/references/stages",
+    "/api/v1/references/rejection-reasons",
+    "/api/v1/applications/{application_id}/stage",
+    "/api/v1/applications/{application_id}/history",
+    "/api/v1/candidates/{candidate_id}/cross-assessments",
+    "/api/v1/reserve",
+    "/api/v1/reserve/{reserve_id}/withdraw",
+    "/api/v1/positions/{position_id}/reserve",
+    "/api/v1/analytics/funnel",
+}
+
 
 def test_openapi_has_all_stage_1_routes(client):
-    """Маршруты чтения этапа 1, годового отчёта и поиска доступны в общей схеме."""
+    """Маршруты чтения этапа 1 на месте, а лишних нет: кроме них — маршруты backend-02, поиск
+    и годовой отчёт (hr#16, проверяется в test_reporting.py). Новый модуль маршрутов добавляет сюда свой префикс."""
     paths = set(client.get("/openapi.json").json()["paths"])
     assert STAGE_1_ROUTES <= paths
-    assert {p for p in paths - STAGE_1_ROUTES if not p.startswith("/api/v1/reports/annual")} == {
-        "/api/v1/search/candidates",
-    }
+    extra = paths - STAGE_1_ROUTES - STAGE_2_ROUTES
+    assert {p for p in extra if not p.startswith("/api/v1/reports/annual")} == {"/api/v1/search/candidates"}
 
 
 def test_cors_allows_vite_dev_server(client):

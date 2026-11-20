@@ -5,17 +5,17 @@ from datetime import date
 from uuid import UUID
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Date, and_, bindparam, case, cast, delete, exists, func, or_, select
+from sqlalchemy import and_, bindparam, case, delete, exists, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.api.schemas import Contour
-from app.db.enums import ApplicationSource, ReserveStatus, VacancyStatus
+from app.db.enums import ApplicationSource, VacancyStatus
 from app.db.models.candidates import Candidate, CandidateCard, CandidateSkill, CandidateText
 from app.db.models.positions import Position, Vacancy
 from app.db.models.search import Embedding
 from app.db.models.selection import Application, ReserveEntry, SelectionStage
-from app.db.repository import normalize_skill
+from app.db.repository import active_reserve_condition, normalize_skill
 from app.schemas.card import normalize_education_level
 from app.search.encoder import Encoder, checked_vectors
 from app.search.ranking import Document, Passage
@@ -33,12 +33,8 @@ class CandidateRow:
 
 def load_candidates(session: Session, request: SearchRequest, *, today: date | None = None) -> list[CandidateRow]:
     filters = request.filters
-    moscow_date = today if today is not None else cast(func.timezone("Europe/Moscow", func.now()), Date)
-    reserve = exists().where(
-        ReserveEntry.candidate_id == Candidate.id,
-        ReserveEntry.status == ReserveStatus.ACTIVE,
-        or_(ReserveEntry.valid_until.is_(None), ReserveEntry.valid_until >= moscow_date),
-    )
+    # Правило «резерв действует» — общее с API резерва (backend-02): repository.active_reserve_condition.
+    reserve = exists().where(ReserveEntry.candidate_id == Candidate.id, active_reserve_condition(today))
     statement = (
         select(Candidate.id, Candidate.code, CandidateText.id, CandidateText.text,
                CandidateCard.id, CandidateCard.education_level, reserve.label("in_reserve"))
