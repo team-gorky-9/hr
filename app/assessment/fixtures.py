@@ -249,3 +249,41 @@ def _check_texts(fixture: dict[str, Any]) -> list[str]:
         if item["candidate"] not in fixture["candidates"]:
             problems.append(f"текст {key}: неизвестный кандидат {item['candidate']}")
     return problems
+
+
+def create_fixture_profile(session, fixture: dict[str, Any], *, params_override: dict[str, Any] | None = None):
+    """Создать в базе учебный профиль из набора через create_requirement_profile (контракт БД v1.1).
+
+    Профиль учебный (is_synthetic): его нельзя утвердить, оценивается он в режиме technical.
+    params_override подменяет params единственного формального требования (для проверки отказов).
+    """
+    from sqlalchemy import select
+
+    from app.db import repository as repo
+    from app.db.enums import FormalRequirementKind, RowOrigin, VerificationMethod
+    from app.db.models import Position
+    from app.schemas.requirements import CompetencyIn, FormalRequirementIn, IndicatorIn
+
+    spec = fixture["profile"]
+    position = session.scalar(select(Position).where(Position.code == spec["position_code"]))
+    note = spec["synthetic_role"]
+    requirements = [
+        FormalRequirementIn(key=item["key"], origin=RowOrigin.TEAM, note=note,
+                            kind=FormalRequirementKind(item["kind"]), description=item["description"],
+                            params=params_override if params_override is not None else item["params"],
+                            is_mandatory=item["is_mandatory"], verification=VerificationMethod(item["verification"]))
+        for item in spec["formal_requirements"]
+    ]
+    competencies = [
+        CompetencyIn(key=item["key"], origin=RowOrigin.TEAM, note=note, code=item["code"], name=item["name"],
+                     rank=item["rank"], target_level_min=item["target_level_min"],
+                     target_level_max=item["target_level_max"],
+                     indicators=[IndicatorIn(key=i["key"], origin=RowOrigin.TEAM, note=note, text=i["text"],
+                                             verification=VerificationMethod(i["verification"]))
+                                 for i in item["indicators"]])
+        for item in spec["competencies"]
+    ]
+    return repo.create_requirement_profile(
+        session, position_id=position.id, created_by="fixture", is_synthetic=True, note=note,
+        formal_requirements=requirements, competencies=competencies,
+    )
