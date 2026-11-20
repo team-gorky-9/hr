@@ -310,6 +310,44 @@ def check_fixtures(fixtures, profile_keys):
     return len(cases)
 
 
+def check_content_cases(suite, package):
+    """Validate the independent content oracle; do not calculate semantic results."""
+    require(suite.get("schema_version") == "requirement-content-cases/0.1", "Unsupported content schema")
+    versions = {p["position_code"]: p["version"] for p in package["profiles"]}
+    require(suite.get("profile_versions") == versions, "Content profile versions mismatch")
+    targets = {(p["position_code"], r["key"]): r for p in package["profiles"]
+               for r in p["formal_requirements"] + [i for c in p["competencies"] for i in c["indicators"]]}
+    cases = suite["cases"]
+    require(bool(cases), "Empty content cases")
+    require(len({c["id"] for c in cases}) == len(cases), "Duplicate content case id")
+    for case in cases:
+        require(case.get("is_synthetic") is True, "Content case is not synthetic")
+        target = (case["position_code"], case["rule_key"])
+        require(target in targets, "Unknown content target")
+        row = targets[target]
+        require(case["check_stage"] in {"screening", "interview"}, "Invalid content stage")
+        require(case["basis"] in {"resume", "documents", "interview", "test"}, "Invalid content basis")
+        expected = case["expected"]
+        screening = row["check_stage"] == "screening" and not row.get("excluded_from_scoring", False)
+        require(type(expected["included_in_screening"]) is bool
+                and expected["included_in_screening"] == screening, "Incorrect screening membership")
+        active = row["check_stage"] == case["check_stage"] and not row.get("excluded_from_scoring", False)
+        if active:
+            require(expected["result"] in {"met", "not_met", "unknown"}, "Invalid active content result")
+        else:
+            require(expected["result"] == "not_evaluated", "Inactive target must be not_evaluated")
+        require(bool(expected.get("rationale", "").strip()), "Missing content rationale")
+        text = case["text"]
+        require(isinstance(text, str) and bool(text.strip()), "Missing content text")
+        for evidence in case["evidence"]:
+            start, end = evidence["start"], evidence["end"]
+            require(type(start) is int and type(end) is int and 0 <= start < end <= len(text)
+                    and text[start:end] == evidence["quote"], "Content evidence mismatch")
+        if expected["result"] in {"met", "not_met"}:
+            require(bool(case["evidence"]), "Content outcome requires evidence")
+    return len(cases)
+
+
 def check_archive(path, manifest):
     require(hashlib.sha256(path.read_bytes()).hexdigest() == manifest["archive"]["sha256"], "Archive SHA-256 mismatch")
     with zipfile.ZipFile(path, metadata_encoding="utf-8") as archive:
@@ -328,12 +366,16 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--archive", type=Path)
     parser.add_argument("--card-schemas", action="store_true", help="Validate fixture cards/evidence with existing Pydantic schemas")
+    parser.add_argument("--content-cases", type=Path, help="Validate a separate manual content oracle (no model run)")
     args = parser.parse_args()
     manifest = read_json(ROOT / "sources.json")
     package = read_json(ROOT / "profiles.draft.json")
     fixtures = read_json(ROOT / "synthetic" / "cases.json")
     rows, keys = check_package(package, manifest)
     cases = check_fixtures(fixtures, keys)
+    if args.content_cases:
+        count = check_content_cases(read_json(args.content_cases), package)
+        print(f"Verified {count} content expectations; semantic outcomes have not been evaluated.")
     if args.archive:
         check_archive(args.archive, manifest)
     if args.card_schemas:
