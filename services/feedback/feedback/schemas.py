@@ -65,3 +65,12 @@ class ResponseCreate(Input):
     access_code: Annotated[str, Field(min_length=20, max_length=200)]
     answers: Annotated[list[Answer], Field(min_length=1, max_length=50)]
     topic_key: Key
+
+
+class Policy(Input):
+    k: Annotated[StrictInt, Field(ge=2, le=100000)]
+
+
+class PublicationCreate(Revision):
+    policy: Policy
+    policy_basis: Text
