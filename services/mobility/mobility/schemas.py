@@ -40,3 +40,34 @@ class OpportunityIn(Conditions):
 
 class InterestIn(Input):
     comment: str = Field(default="", max_length=10000)
+
+
+class ProposalIn(Conditions):
+    manager_actor_id: UUID
+    manager_source_reference: Nonempty
+
+
+class Response(Revision):
+    accepted: bool = Field(strict=True)
+    reason: Nonempty | None = None
+
+
+class ManagerResponse(Response):
+    @model_validator(mode="after")
+    def refusal_reason(self):
+        if not self.accepted and not self.reason:
+            raise ValueError("Отказ требует объяснения")
+        return self
+
+
+class ProposalPatch(Reason):
+    starts_on: date | None = None
+    ends_on: date | None = None
+    time_percent: float | None = Field(default=None, gt=0, le=100, allow_inf_nan=False)
+
+    @model_validator(mode="after")
+    def not_null(self):
+        for field in ("starts_on", "ends_on", "time_percent"):
+            if field in self.model_fields_set and getattr(self, field) is None:
+                raise ValueError("Условие не может быть null")
+        return self
