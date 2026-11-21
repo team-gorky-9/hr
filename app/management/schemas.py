@@ -1,9 +1,9 @@
 """DTO /api/v1/management, docs/contracts/wave-4-reporting-stage-1.md (раздел 4A)."""
 from datetime import date, datetime
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from app.api.schemas import Contour, FunnelOut
 
@@ -112,3 +112,98 @@ class ReleaseSummary(BaseModel):
 class AnnualReleaseOut(BaseModel):
     release: ReleaseSummary
     report: dict
+
+
+# --- 4C · плановый снимок потребностей ----------------------------------------------------
+
+PlanKey = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
+PlanText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)]
+Readiness = Literal["confirmed", "expected", "similarity", "unknown"]
+
+
+class PlanRef(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    system: PlanKey
+    id: PlanKey
+
+
+class PlanNeed(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    key: PlanKey
+    department_key: PlanKey
+    position_code: PlanKey
+    quantity: int = Field(ge=1, le=1000, strict=True)
+    source_reference: PlanText
+
+
+class PlanPerson(BaseModel):
+    """Запись о человеке. person_ref — подтверждённая идентичность; без него запись не склеивается
+    с другими и не считается подтверждённым уникальным человеком."""
+    model_config = ConfigDict(extra="forbid")
+    person_ref: PlanRef | None
+    record_ref: PlanRef
+    label: PlanText
+    contact_available: bool
+
+
+class PlanMatch(BaseModel):
+    """Заключение HR о готовности записи к потребности; система его не выводит сама."""
+    model_config = ConfigDict(extra="forbid")
+    need_key: PlanKey
+    record_ref: PlanRef
+    readiness: Readiness
+    basis: PlanText
+
+
+class PlanIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    target_date: date
+    scope_label: PlanText
+    needs: list[PlanNeed] = Field(min_length=1, max_length=200)
+    people: list[PlanPerson] = Field(default_factory=list, max_length=2000)
+    matches: list[PlanMatch] = Field(default_factory=list, max_length=10000)
+    coverage_note: PlanText
+
+    @model_validator(mode="after")
+    def references(self):
+        needs = [n.key for n in self.needs]
+        if len(needs) != len(set(needs)):
+            raise ValueError("needs: keys must be unique")
+        records = [(p.record_ref.system, p.record_ref.id) for p in self.people]
+        if len(records) != len(set(records)):
+            raise ValueError("people: record_ref must be unique")
+        known_needs, known_records, seen = set(needs), set(records), set()
+        for index, match in enumerate(self.matches):
+            record = (match.record_ref.system, match.record_ref.id)
+            if match.need_key not in known_needs:
+                raise ValueError(f"matches[{index}].need_key does not refer to an input need")
+            if record not in known_records:
+                raise ValueError(f"matches[{index}].record_ref does not refer to an input person record")
+            if (match.need_key, record) in seen:
+                raise ValueError(f"matches[{index}] repeats the same need and record")
+            seen.add((match.need_key, record))
+        return self
+
+
+class PlanOut(BaseModel):
+    id: UUID
+    target_date: date
+    scope_label: str
+    coverage_note: str
+    created_at: datetime
+    created_by: str | None
+    input_sha256: str
+    input: dict
+    result: dict
+
+
+class PlanSummaryOut(BaseModel):
+    """Управленческая проекция: без имён, record_ref и первичных оснований."""
+    id: UUID
+    target_date: date
+    scope_label: str
+    coverage_note: str
+    created_at: datetime
+    totals: dict
+    needs: list[dict]
+    warnings: list[dict]

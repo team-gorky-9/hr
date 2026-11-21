@@ -1,0 +1,16 @@
+{
+  "thanks_id": "7445dcec-934a-4ebd-9e4d-6f0ab38b92d5",
+  "status": "withdrawn",
+  "public_before_withdrawal": {
+    "id": "7445dcec-934a-4ebd-9e4d-6f0ab38b92d5",
+    "organization_id": "45879470-3679-54a2-aeaa-8ce295c0555a",
+    "author_id": "2b5467f9-ddf1-5346-aadc-babb6d9e8288",
+    "recipient_id": "678f5620-c651-556f-859f-2c41e375d567",
+    "text": "Thanks for checking the totals",
+    "revision": 6,
+    "status": "published",
+    "created_at": "2026-11-21T01:02:49.953598+00:00",
+    "updated_at": "2026-11-21T01:02:50.068381+00:00"
+  },
+  "reopened_revision": 7
+}
