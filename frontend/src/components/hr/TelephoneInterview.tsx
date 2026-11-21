@@ -14,13 +14,16 @@ export const TelephoneInterview: React.FC<TelephoneInterviewProps> = ({ applicat
   const [busy, setBusy] = useState(false);
   const [reload, setReload] = useState(0);
   const updateGuide = (g: Guide) => { setGuide(g); setNotes(Object.fromEntries([...g.core, ...g.clarifications].map(q => [q.question_id, q.answer?.text || '']))); };
+  // The tab can be opened before any application is chosen (the app starts with a placeholder id).
+  const chosen = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(applicationId);
   useEffect(() => {
+    if (!chosen) { setLoading(false); return; }
     let live = true; setLoading(true); setError('');
     Promise.all([api.guide(applicationId).catch(e => { if (e instanceof ApiError && e.status === 404) return null; throw e; }), api.interviews(applicationId)])
       .then(([g, meetings]) => { if (live) { if (g) updateGuide(g); else setGuide(null); setInterviews(meetings.items); setLoading(false); } })
       .catch(e => { if (live) { setError(errorMessage(e)); setLoading(false); } });
     return () => { live = false; };
-  }, [applicationId, reload]);
+  }, [applicationId, chosen, reload]);
   const action = async (work: () => Promise<void>) => { setBusy(true); setError(''); setNotice(''); try { await work(); } catch(e) { setError(errorMessage(e)); } finally { setBusy(false); } };
   const createGuide = () => action(async () => { updateGuide(await request<Guide>(`/applications/${applicationId}/interview-guide`, 'hr', { kind: 'phone', regenerate: false, request_id: crypto.randomUUID() })); setInterviews((await api.interviews(applicationId)).items); });
   const current = interviews.find(i => i.id === guide?.interview_id);
@@ -42,6 +45,7 @@ export const TelephoneInterview: React.FC<TelephoneInterviewProps> = ({ applicat
     await request(`/interviews/${guide.interview_id}/outcome`, 'hr', { expected_revision: current.revision, result, occurred_at: new Date().toISOString(), summary });
     setNotice('Итог встречи сохранён. Этап отклика не изменён.'); setReload(n => n + 1); onSaveResult?.(result);
   });
+  if (!chosen) return <div className="max-w-[1240px] mx-auto px-6 py-8 space-y-5"><PageTitle title="Телефонное интервью" subtitle="Вопросы, ответы кандидата и итог встречи" /><Card><p>Сначала выберите отклик: «Отклики по вакансиям» → вакансия → карточка отклика. Затем откройте эту вкладку — интервью будет по выбранному отклику.</p></Card></div>;
   return <div className="max-w-[1240px] mx-auto px-6 py-8 space-y-5"><Btn variant="link" onClick={onBackToCard}>← Карточка отклика</Btn><PageTitle title="Телефонное интервью" subtitle="Вопросы, ответы кандидата и итог встречи" />
     {error && <div role="alert" className="bg-red-50 text-red-800 p-4 rounded-xl">{error} <Btn onClick={() => setReload(n => n + 1)}>Повторить чтение</Btn></div>}{notice && <p role="status" className="bg-green-50 p-4 rounded-xl">{notice}</p>}
     {loading ? <Card>Загрузка интервью…</Card> : !guide ? <Card className="space-y-4"><h2 className="text-xl font-bold">Гайд ещё не сформирован</h2><p>Для подготовки вопросов нужна актуальная оценка по утверждённому профилю вакансии.</p><Btn variant="primary" disabled={busy || !applicationId} onClick={createGuide}>Сформировать гайд</Btn></Card> : <div className="grid grid-cols-[1.6fr_1fr] gap-6 items-start"><Card className="space-y-5"><div className="flex justify-between"><h2 className="text-xl font-bold">Вопросы к звонку</h2><Badge tone={guide.is_stale ? 'amber' : 'blue'}>Версия {guide.guide_version}{guide.is_stale ? ' · устарела' : ''}</Badge></div>

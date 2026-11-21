@@ -17,6 +17,7 @@
 Все кандидаты вымышленные (is_synthetic). Модель видит только очищенный текст.
 """
 import argparse
+import os
 import subprocess
 import sys
 import time
@@ -48,7 +49,8 @@ def run(*args: str, progress: bool = False, tolerate: bool = False) -> None:
     """Шаг отдельным процессом. Длинный вывод — в лог, на экран — хвост и, для оценки,
     ход работы раз в 15 секунд (сколько оценок уже в базе), чтобы долгий шаг не выглядел зависшим."""
     print(f"\n$ {' '.join(args)}", flush=True)
-    log = ROOT / ".demo_setup.log"
+    # В образе сервиса каталог кода только для чтения: на стенде журнал задаётся DEMO_SETUP_LOG.
+    log = Path(os.environ.get("DEMO_SETUP_LOG") or ROOT / ".demo_setup.log")
     offset = log.stat().st_size if log.exists() else 0
     with open(log, "a", encoding="utf-8") as out:
         process = subprocess.Popen([sys.executable, *args], cwd=ROOT, stdout=out, stderr=subprocess.STDOUT, text=True)

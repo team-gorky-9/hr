@@ -2,6 +2,7 @@
 
 Запуск: uv run python -m app.db.seed
 """
+import uuid
 from dataclasses import dataclass
 from datetime import date
 
@@ -116,11 +117,20 @@ DEMO_USERS: list[tuple[str, str, UserRole, str | None]] = [
 ]
 
 
+# Новые учётки стенда получают постоянный id: фронтенд стенда знает получателя передачи (dept_demo)
+# без ручной настройки VITE_RECRUITMENT_RECIPIENT_ID. Уже созданные учётки не меняются.
+DEMO_USER_NAMESPACE = uuid.UUID("6f1b8e3a-2c4d-5e6f-8a9b-0c1d2e3f4a5b")
+
+
+def demo_user_id(login: str) -> uuid.UUID:
+    return uuid.uuid5(DEMO_USER_NAMESPACE, login)
+
+
 def seed_demo_users(session: Session) -> None:
     for login, full_name, role, department in DEMO_USERS:
         user = session.scalar(select(User).where(User.login == login))
         if user is None:
-            user = User(login=login)
+            user = User(id=demo_user_id(login), login=login)
             session.add(user)
         user.full_name = full_name
         user.role = role
