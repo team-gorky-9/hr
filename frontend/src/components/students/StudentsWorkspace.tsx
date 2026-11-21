@@ -267,6 +267,7 @@ export default function StudentsWorkspace() {
       <div><h1 className="text-[26px] font-bold">Практика студентов</h1><p className="text-[14px] text-[#616977]">Место, задание и подтверждённый результат.</p></div>
       <div className="flex items-center gap-3"><Badge>API · учебные участники</Badge>
         <select className={field} aria-label="Роль в практике" value={role} disabled={busy} onChange={(e) => {
+          if (e.target.value === role) return;
           setRole(e.target.value as StudentRole); setSelected(''); setApplying(''); setCreateOpen(false); setNotice('');
           setOpportunities([]); setApplications([]); setPlacements([]);
         }}>{Object.entries(studentRoles).map(([value, title]) => <option key={value} value={value}>{title}</option>)}</select>
