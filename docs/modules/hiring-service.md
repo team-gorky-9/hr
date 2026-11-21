@@ -1,5 +1,7 @@
 # Модуль hiring-service · оформление выбранного кандидата
 
+Stage 2: [единое окно взаимодействия](interaction-window.md) размещено в этом runtime. Оно объединяет разрешённые страницы candidate-portal и legacy, оставляя команды и полномочия источникам. Q-ref, отдельный FeedbackReview и отзыв назначения HandoffAttempt реализованы; [контракт](../contracts/interaction-window.md), [проверка](../reports/interaction-window.md). Нового UI окна в этой поставке нет.
+
 Сервис `services/hiring/`, порт 8103, своя БД. Реализует этап 1 по [wave-1-stage-1](../contracts/wave-1-stage-1.md) в пределах операций [wave-1-hiring](../contracts/wave-1-hiring.md) и общих правил [wave-1-common](../contracts/wave-1-common.md). Запуск и тесты — [README сервиса](../../services/hiring/README.md).
 
 ## Задача человека

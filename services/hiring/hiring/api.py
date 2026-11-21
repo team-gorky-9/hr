@@ -21,6 +21,7 @@ from hiring.portal import Portal
 from hiring.portal import public_vacancies as portal_public_vacancies
 from hiring.errors import Problem, forbidden
 from hiring.models import Document, IdempotentCommand
+from hiring.interaction_window import InteractionWindow
 
 Limit = Annotated[int, Query(ge=1, le=100)]
 
@@ -53,13 +54,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(title="Hiring service", version="1.0-stage-1",
                   description="Wave 1 hiring: cases, checklist, documents, start and manual HR confirmation.")
     app.state.settings = settings
-    app.state.engine = make_engine(settings.database_url)
+    app.state.engine = make_engine(settings.database_url, connect_timeout=(
+        settings.interaction_connect_seconds if settings.interaction_enabled else None))
+    app.state.interaction_window = InteractionWindow(settings, app.state.engine)
 
     @app.middleware("http")
     async def request_id(request: Request, call_next):
         request.state.request_id = str(uuid.uuid4())
         response = await call_next(request)
         response.headers["X-Request-ID"] = request.state.request_id
+        if request.url.path.startswith("/api/v1/interaction-window"):
+            response.headers["Cache-Control"] = "no-store"
         return response
 
     @app.exception_handler(Problem)
@@ -75,6 +80,35 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     def actor_of(request: Request):
         return authenticate(settings, request.headers.get("Authorization"))
+
+    @app.get("/api/v1/interaction-window")
+    async def interaction_window(request: Request, relation: str | None = None,
+                                 subject_source: str | None = None, subject_kind: str | None = None,
+                                 subject_id: uuid.UUID | None = None,
+                                 portal_cursor: str | None = Query(default=None, max_length=8192),
+                                 legacy_cursor: str | None = Query(default=None, max_length=8192), page_size: Limit = 25):
+        # Workforce authentication is synchronous; do not block concurrent source reads.
+        import asyncio
+        actor = await asyncio.to_thread(actor_of, request)
+        body, status = await app.state.interaction_window.read(
+            actor, relation=relation, subject_source=subject_source, subject_kind=subject_kind,
+            subject_id=str(subject_id) if subject_id else None,
+            portal_cursor=portal_cursor, legacy_cursor=legacy_cursor, page_size=page_size)
+        return JSONResponse(body, status_code=status)
+
+    @app.api_route("/api/v1/interaction-window/legacy/{path:path}", methods=["GET", "POST"])
+    async def interaction_legacy(request: Request, path: str):
+        import asyncio
+        actor = await asyncio.to_thread(actor_of, request)
+        if request.query_params:
+            raise Problem(422, "VALIDATION_ERROR", "Legacy action query is fixed by the server")
+        content = bytearray()
+        async for chunk in request.stream():
+            content.extend(chunk)
+            if len(content) > settings.interaction_max_bytes:
+                raise Problem(413, "BODY_TOO_LARGE", "Action body exceeds limit")
+        body, status = await app.state.interaction_window.proxy(actor, request.method, path, bytes(content))
+        return JSONResponse(body, status_code=status)
 
     def read(request: Request, action):
         actor = actor_of(request)

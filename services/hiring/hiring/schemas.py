@@ -203,8 +203,15 @@ class InformationRequest(Strict):
                                Field(min_length=1, max_length=20)]
 
 
+class InformationRequestRef(Strict):
+    request_id: UUID
+    event_sequence: Revision
+
+
 class Addendum(Strict):
     expected_revision: Revision
+    # Optional only for historical questions issued before event correlation existed.
+    information_request_ref: InformationRequestRef | None = None
     text: Text
     document_ids: Annotated[list[UUID], Field(max_length=20)] = []
 

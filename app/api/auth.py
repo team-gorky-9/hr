@@ -11,6 +11,7 @@
 и по прямому ID данных не видит.
 """
 from collections.abc import Callable
+import os
 from typing import Annotated
 
 from fastapi import Depends, Header
@@ -34,6 +35,7 @@ def current_user(
     x_user_login: Annotated[
         str | None, Header(description="Логин пользователя стенда (учебная авторизация): hr_demo, admin_demo; dept_demo — роль department")
     ] = None,
+    x_interaction_user_id: Annotated[str | None, Header()] = None,
 ) -> User:
     """Активный пользователь из заголовка X-User-Login или 401."""
     login = (x_user_login or "").strip()
@@ -43,6 +45,8 @@ def current_user(
     if user is None or not user.is_active:
         # Логин в ответ не возвращаем: details не повторяют ввод клиента.
         raise ApiError(401, "UNKNOWN_USER", "Пользователь не найден или отключён")
+    if os.getenv("INTERACTION_GATEWAY_KEY") and x_interaction_user_id != str(user.id):
+        raise ApiError(403, "IDENTITY_MAPPING_MISMATCH", "Сопоставление пользователя изменилось")
     return user
 
 
@@ -54,11 +58,12 @@ def optional_user(
             description="Логин пользователя стенда (учебная авторизация): hr_demo, admin_demo, dept_demo, dept2_demo"
         ),
     ] = None,
+    x_interaction_user_id: Annotated[str | None, Header()] = None,
 ) -> User | None:
     """Активный пользователь из заголовка X-User-Login, если заголовок передан."""
     if x_user_login is None:
         return None
-    return current_user(session, x_user_login)
+    return current_user(session, x_user_login, x_interaction_user_id)
 
 
 def ensure_not_department(user: User | None) -> None:

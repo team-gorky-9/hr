@@ -498,6 +498,7 @@ def get_handoff_summary(session: Session, application_id: uuid.UUID, user: User)
             .where(
                 HandoffAttempt.application_id == application_id,
                 HandoffAttempt.recipient_user_id == user.id,
+                HandoffAttempt.access_revoked_at.is_(None),
             )
             .order_by(HandoffAttempt.handed_off_at.desc(), HandoffAttempt.created_at.desc())
         )
@@ -716,6 +717,10 @@ def _attempt_out(
         created_at=attempt.created_at,
         summary_revision=attempt.summary_revision,
         status=attempt.status,
+        assignment_revision=attempt.assignment_revision,
+        access_revoked_at=attempt.access_revoked_at,
+        access_revoked_by_user_id=attempt.access_revoked_by_user_id,
+        access_revocation_reason=attempt.access_revocation_reason,
         closed_at=attempt.closed_at,
         close_reason=attempt.close_reason,
         wait_hours=wait_hours,
@@ -756,6 +761,8 @@ def move_to_sent_with_handoff(
     application: Application,
     body: StageMoveIn,
     user: User,
+    *,
+    commit: bool = True,
 ) -> tuple[StageMoveOut, bool]:
     """В одной транзакции перевести отклик в sent_to_department и сохранить попытку передачи."""
     assert body.handoff is not None
@@ -848,7 +855,10 @@ def move_to_sent_with_handoff(
             )
         except repo.RequestIdReusedError as error:
             raise ApiError(409, "REQUEST_ID_REUSED", str(error), {}) from error
-    session.commit()
+    if commit:
+        session.commit()
+    else:
+        session.flush()
 
     stages = workflow._stages(session)
     return (
@@ -1027,6 +1037,8 @@ def list_handoffs(
         )
         .order_by(HandoffAttempt.handed_off_at.desc(), HandoffAttempt.created_at.desc())
     )
+    if user.role == UserRole.DEPARTMENT:
+        stmt = stmt.where(HandoffAttempt.access_revoked_at.is_(None))
     if status is not None:
         stmt = stmt.where(HandoffAttempt.status == status)
     if _clean(department) is not None:
@@ -1078,7 +1090,7 @@ def list_application_handoffs(session: Session, application_id: uuid.UUID, user:
         .order_by(HandoffAttempt.handed_off_at.desc(), HandoffAttempt.created_at.desc())
     )
     if user.role == UserRole.DEPARTMENT:
-        stmt = stmt.where(HandoffAttempt.recipient_user_id == user.id)
+        stmt = stmt.where(HandoffAttempt.recipient_user_id == user.id, HandoffAttempt.access_revoked_at.is_(None))
     attempts = list(session.scalars(stmt))
     items = _assemble_attempt_list(session, attempts, as_of, viewer_role=user.role)
     return HandoffListOut(as_of=as_of, total=len(items), items=items)
@@ -1088,7 +1100,7 @@ def get_handoff_detail(session: Session, attempt_id: uuid.UUID, user: User) -> H
     """Карточка попытки передачи: замороженный снимок сводки, история переносов и ответов."""
     attempt = session.get(HandoffAttempt, attempt_id)
     if user.role == UserRole.DEPARTMENT:
-        if attempt is None or attempt.recipient_user_id != user.id:
+        if attempt is None or attempt.recipient_user_id != user.id or attempt.access_revoked_at is not None:
             raise ApiError(
                 403,
                 "FORBIDDEN_SCOPE",
@@ -1266,9 +1278,15 @@ def record_feedback(
     user: User,
 ) -> HandoffFeedbackCreatedOut:
     """Записать ответ департамента или его исправление (этап отклика не меняется)."""
-    attempt = session.get(HandoffAttempt, body.attempt_id)
+    # Shared order with reviews/revocation: application, then assignment. Check access
+    # after taking the lock so revocation cannot race a feedback write.
+    if user.role == UserRole.DEPARTMENT and not repo.has_department_application_access(session, user.id, application_id):
+        raise ApiError(403, "FORBIDDEN_SCOPE", "Отзыв доступен только назначенному получателю передачи")
+    application = workflow.get_application_or_404(session, application_id)
+    session.refresh(application, with_for_update=True)
+    attempt = session.get(HandoffAttempt, body.attempt_id, with_for_update=True, populate_existing=True)
     if user.role == UserRole.DEPARTMENT:
-        if attempt is None or attempt.recipient_user_id != user.id or attempt.application_id != application_id:
+        if attempt is None or attempt.recipient_user_id != user.id or attempt.application_id != application_id or attempt.access_revoked_at is not None:
             raise ApiError(
                 403,
                 "FORBIDDEN_SCOPE",
@@ -1440,7 +1458,7 @@ def list_feedback(
     if attempt_id is not None:
         attempt = session.get(HandoffAttempt, attempt_id)
         if user.role == UserRole.DEPARTMENT:
-            if attempt is None or attempt.recipient_user_id != user.id or attempt.application_id != application.id:
+            if attempt is None or attempt.recipient_user_id != user.id or attempt.application_id != application.id or attempt.access_revoked_at is not None:
                 raise ApiError(403, "FORBIDDEN_SCOPE", "Нет доступа к отзывам чужой передачи", {})
         elif attempt is None:
             raise not_found("HANDOFF_NOT_FOUND", "Передача не найдена", attempt_id=attempt_id)
@@ -1456,6 +1474,7 @@ def list_feedback(
         own_attempt_ids = select(HandoffAttempt.id).where(
             HandoffAttempt.application_id == application.id,
             HandoffAttempt.recipient_user_id == user.id,
+            HandoffAttempt.access_revoked_at.is_(None),
         )
         stmt = stmt.where(DepartmentFeedback.attempt_id.in_(own_attempt_ids))
 

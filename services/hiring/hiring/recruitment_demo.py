@@ -102,6 +102,7 @@ def run(rec: Recorder) -> dict:
     status, row = rec.hiring_call("3. Кандидат отправляет дополнение", "candidate", "POST",
                                   f"/candidate-requests/{row['id']}/addendum", json_body={
                                       "expected_revision": second["request_revision"],
+                                      "information_request_ref": row["information_request_ref"],
                                       "text": "Собирала функциональные требования к СЭД и согласовывала их с подрядчиком (учебно)",
                                       "document_ids": [second["id"]]})
 

@@ -12,6 +12,7 @@ from app.db.models.positions import (
     Vacancy,
 )
 from app.db.models.management import AnnualReportRelease, PlanSnapshot
+from app.db.models.interaction import FeedbackReview, FeedbackReviewItem
 from app.db.models.matching import MatchingSuggestion
 from app.db.models.search import Embedding
 from app.db.models.selection import (
@@ -35,6 +36,8 @@ from app.db.models.postings import ApplicationPostingSource
 from app.db.models.users import AuditLog, User
 
 __all__ = [
+    "FeedbackReview",
+    "FeedbackReviewItem",
     "PlanSnapshot",
     "AnnualReportRelease",
     "MatchingSuggestion",

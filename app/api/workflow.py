@@ -167,7 +167,7 @@ def _event_out(
     )
 
 
-def move_stage(session: Session, application_id: uuid.UUID, body: StageMoveIn, user: User) -> tuple[StageMoveOut, bool]:
+def move_stage(session: Session, application_id: uuid.UUID, body: StageMoveIn, user: User, *, commit: bool = True) -> tuple[StageMoveOut, bool]:
     """Ручной перевод этапа кадровиком.
 
     Порядок проверок:
@@ -206,7 +206,7 @@ def move_stage(session: Session, application_id: uuid.UUID, body: StageMoveIn, u
                 {"to_stage_code": target.code},
             )
         from app.api import handoff
-        return handoff.move_to_sent_with_handoff(session, application, body, user)
+        return handoff.move_to_sent_with_handoff(session, application, body, user, commit=commit)
     if body.handoff is not None:
         raise ApiError(
             422,
@@ -245,7 +245,10 @@ def move_stage(session: Session, application_id: uuid.UUID, body: StageMoveIn, u
             close_reason=f"stage_moved:{target.code}",
             stage_event_id=event.id,
         )
-    session.commit()
+    if commit:
+        session.commit()
+    else:
+        session.flush()
 
     stages = _stages(session)
     return (
