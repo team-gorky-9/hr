@@ -11,6 +11,7 @@ import StudentsPage from './pages/StudentsPage';
 import StudentsWorkspace from './components/students/StudentsWorkspace';
 import SupportPage from './components/support/SupportPage';
 import DevelopmentPage from './components/development/DevelopmentPage';
+import WorkforcePage from './components/workforce/WorkforcePage';
 
 import HeaderHR, { HRNavTab } from './components/hr/HeaderHR';
 import CandidatesDatabase, { CandidateRecord } from './components/hr/CandidatesDatabase';
@@ -49,10 +50,10 @@ export type PortalRoute = 'home' | 'vacancies' | 'students' | 'practice' | 'cabi
 
 export const App: React.FC = () => {
   // Mode: 'portal' (Соискатель) vs 'hr' (HR-менеджер)
-  const [appMode, setAppMode] = useState<AppMode>(initialWorkspace === 'support' || initialWorkspace === 'development' ? 'employee' : 'portal');
+  const [appMode, setAppMode] = useState<AppMode>(initialWorkspace === 'support' || initialWorkspace === 'development' || initialWorkspace === 'workforce' || initialWorkspace === 'onboarding' ? 'employee' : 'portal');
   const [headTab, setHeadTab] = useState<string>('summary');
   const [directorTab, setDirectorTab] = useState<string>('analytics');
-  const [employeeTab, setEmployeeTab] = useState<string>(initialWorkspace === 'support' || initialWorkspace === 'development' ? initialWorkspace : 'workspace');
+  const [employeeTab, setEmployeeTab] = useState<string>(initialWorkspace === 'support' || initialWorkspace === 'development' || initialWorkspace === 'workforce' || initialWorkspace === 'onboarding' ? initialWorkspace : 'workspace');
   const [hrAnalyticsView, setHrAnalyticsView] = useState<'dashboard' | 'report'>('dashboard');
 
   // Portal Routing State (Главная по умолчанию)
@@ -395,6 +396,8 @@ export const App: React.FC = () => {
               { id: 'care', label: 'Забота и мотивация' },
               { id: 'support', label: 'Материальная помощь' },
               { id: 'development', label: 'Развитие' },
+              { id: 'workforce', label: 'Кадровые назначения' },
+              { id: 'onboarding', label: 'Адаптация' },
               { id: 'surveys', label: 'Опросы' },
               { id: 'vacancies', label: 'Витрина вакансий' },
             ]}
@@ -408,6 +411,8 @@ export const App: React.FC = () => {
             {employeeTab === 'care' && <Care />}
             {employeeTab === 'support' && <SupportPage />}
             {employeeTab === 'development' && <DevelopmentPage />}
+            {employeeTab === 'workforce' && <WorkforcePage />}
+            {employeeTab === 'onboarding' && <WorkforcePage initialTab="onboarding" />}
             {employeeTab === 'surveys' && <Surveys />}
             {employeeTab === 'vacancies' && <VacancyShowcase />}
           </main>

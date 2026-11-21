@@ -1,7 +1,8 @@
 export type Contour = 'training' | 'working';
 const environment = (import.meta as ImportMeta & { env: Record<string, string> }).env;
 export const contour: Contour = environment.VITE_ARCHIVE_CONTOUR === 'working' ? 'working' : 'training';
-const base = environment.VITE_ARCHIVE_API_BASE || '/api/v1';
+export const archiveApiBase = environment.VITE_ARCHIVE_API_BASE || '/api/v1';
+const base = archiveApiBase;
 
 export interface Vacancy {
   vacancy_id: string; position_id: string; title: string; status: string;

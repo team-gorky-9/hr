@@ -12,6 +12,7 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       host: true,
       proxy: {
+        '/api/v1/reports/annual': { target: env.REPORT_API_TARGET || 'http://127.0.0.1:18590', changeOrigin: true },
         '/api/v1/students': {
           target: env.STUDENTS_API_TARGET || 'http://127.0.0.1:8105',
           changeOrigin: true,
