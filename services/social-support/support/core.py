@@ -75,6 +75,8 @@ def case_view(case, actor):
                 "support_type", "revision", "status", "statement", "number",
                 "submitted_at", "created_at", "submissions")
         result = {k: case[k] for k in keys}
+    result["public_message"] = case.get("public_message")
+    result["staff_status"] = case.get("staff_confirmation", {}).get("state", "unknown")
     result["documents"] = [document_view(d) for d in case["documents"]
                            if staff(case, actor) or d["visibility"] == "applicant"]
     return result

@@ -49,3 +49,18 @@ uv run pytest tests/test_5a.py -q
 проверяет две загрузки, подачу, назначения, чужой доступ и чтение после рестарта.
 SUPPORT_REPORT_DIR позволяет сохранить OpenAPI и синтетические ответы для фронтенда.
 PostgreSQL, UI, внешние системы и полный набор продукта не входят в проверку этапа.
+
+## 5B: комплектность
+
+Назначенный специалист POST /cases/{id}/staff-confirmation фиксирует confirmed/unknown
+и source_reference кадрового источника; роль employee не подтверждает занятость.
+POST /cases/{id}/completeness принимает expected_revision, items по всем пунктам,
+public_message. У present/unreadable/needs_clarification документ обязан входить в
+текущую подачу и относиться к этому пункту. missing не ссылается на файл; замечанию
+нужна причина. Полный комплект без confirmed остаётся submitted.
+
+После needs_information заявитель загружает замену и явно делает POST /addenda
+с expected_revision,text,document_ids. Это новый снимок подачи; одна версия на пункт,
+история не перезаписывается. Проверяющий читает его перед новой completeness.
+GET /history отделяет публичные объяснения от служебных деталей.
+Проверка: uv run pytest tests/test_5b.py -q.
