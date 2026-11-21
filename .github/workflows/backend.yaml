@@ -1,0 +1,110 @@
+name: Backend delivery
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      packages: write
+    env:
+      COMPOSE_ENV_FILES: ${{ github.workspace }}/deploy/local/runtime.env
+      COMPOSE_FILE: deploy/compose.yaml
+    steps:
+      - uses: actions/checkout@v4
+      - name: Isolated credentials
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          prefix="ghcr.io/${REPOSITORY,,}"
+          python3 deploy/create-env.py deploy/local/runtime.env --release "$GITHUB_SHA" --image-prefix "$prefix"
+      - name: Validate and build locked images
+        run: |
+          docker compose config --quiet
+          docker compose --parallel 2 build
+      - name: Start complete backend
+        run: docker compose up -d --wait --wait-timeout 240
+      - name: Verify HTTP through Nginx
+        run: |
+          python3 deploy/smoke.py
+          bash deploy/seed-roles.sh "$COMPOSE_ENV_FILES"
+          python3 deploy/check-sessions.py create --state deploy/local/probe.json
+      - name: Verify restart
+        run: |
+          docker compose down
+          docker compose up -d --wait --wait-timeout 240
+          python3 deploy/smoke.py
+          python3 deploy/check-sessions.py verify --state deploy/local/probe.json
+      - name: Sign in to registry
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: Publish the tested release
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        run: docker compose push legacy workforce requirements hiring students mobility social-support recognition feedback
+      - name: Upload deployment bundle
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-deploy
+          path: |
+            deploy/compose.yaml
+            deploy/nginx.conf
+            deploy/init-databases.sh
+            deploy/smoke.py
+            deploy/release.sh
+            deploy/backup.sh
+      - name: Container status
+        if: failure()
+        run: docker compose ps -a
+      - name: Remove CI-only resources
+        if: always()
+        run: docker compose down --volumes
+
+  deploy:
+    needs: integration
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: backend
+    concurrency:
+      group: backend-server-deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: backend-deploy
+          path: bundle
+      - name: Install SSH identity
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+      - name: Transfer and activate verified release
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          test -n "$DEPLOY_HOST" && test -n "$DEPLOY_USER"
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p /opt/hr/releases/$GITHUB_SHA"
+          scp -o BatchMode=yes -o StrictHostKeyChecking=yes bundle/* "$DEPLOY_USER@$DEPLOY_HOST:/opt/hr/releases/$GITHUB_SHA/"
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" "bash /opt/hr/releases/$GITHUB_SHA/release.sh '$GITHUB_SHA' 'ghcr.io/${REPOSITORY,,}'"
