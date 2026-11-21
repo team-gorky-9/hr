@@ -88,3 +88,11 @@ curl -s -X POST localhost:8103/api/v1/candidate-requests \
 ```
 
 Ответ `201` — черновик: `status=draft`, `target_question=no_target`, `contact.source=candidate_reported`. Подача — `POST /candidate-requests/{id}/submit {expected_revision}`, она присваивает номер `ОБР-000001`.
+
+### 5B · уточнение и передача в подбор
+
+```bash
+uv run python -m hiring.portal_clarification_demo   # запрос сведений → дополнение → выбор вакансии → ready → регистрация рассмотрения
+```
+
+HR: `POST /candidate-requests/{id}/information-request`, `…/ready`, `…/record-consideration`. Кандидат: `…/addendum`, `…/choose-vacancy`. Все операции принимают `expected_revision`. Ссылки на записи подбора в демо учебные (`system=legacy-hr-training`), реального соединения нет.

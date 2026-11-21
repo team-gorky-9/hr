@@ -238,6 +238,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def submit_candidate_request(request: Request, request_id: uuid.UUID, body: s.SubmitCandidateRequest):
         return portal_command(request, body, lambda p: p.submit(request_id, body))
 
+    @app.post(f"{api}/candidate-requests/{{request_id}}/information-request")
+    def candidate_request_information(request: Request, request_id: uuid.UUID, body: s.InformationRequest):
+        return portal_command(request, body, lambda p: p.request_information(request_id, body))
+
+    @app.post(f"{api}/candidate-requests/{{request_id}}/addendum")
+    def candidate_request_addendum(request: Request, request_id: uuid.UUID, body: s.Addendum):
+        return portal_command(request, body, lambda p: p.add_addendum(request_id, body))
+
+    @app.post(f"{api}/candidate-requests/{{request_id}}/ready")
+    def candidate_request_ready(request: Request, request_id: uuid.UUID, body: s.RequestReady):
+        return portal_command(request, body, lambda p: p.mark_ready(request_id, body))
+
+    @app.post(f"{api}/candidate-requests/{{request_id}}/choose-vacancy")
+    def candidate_request_choose_vacancy(request: Request, request_id: uuid.UUID, body: s.ChooseVacancy):
+        return portal_command(request, body, lambda p: p.choose_vacancy(request_id, body))
+
+    @app.post(f"{api}/candidate-requests/{{request_id}}/record-consideration")
+    def candidate_request_consideration(request: Request, request_id: uuid.UUID, body: s.RecordConsideration):
+        return portal_command(request, body, lambda p: p.record_consideration(request_id, body))
+
     @app.post(f"{api}/candidate-requests/{{request_id}}/documents", status_code=201)
     def upload_request_document(request: Request, request_id: uuid.UUID, file: Annotated[UploadFile, File()],
                                 kind: Annotated[str, Form()] = "candidate_resume"):

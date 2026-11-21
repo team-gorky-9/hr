@@ -22,6 +22,7 @@ from hiring.errors import Problem, forbidden, invalid_state, not_found, stale
 from hiring.models import CandidateRequest, CandidateRequestEvent, Document, now
 
 EDITABLE = ("draft",)
+CHOOSE_VACANCY = ("submitted", "needs_information", "ready")
 DOCUMENTS_ALLOWED = ("draft", "submitted", "needs_information")
 
 
@@ -108,9 +109,21 @@ class Portal:
             "documents": [document_view(d) for d in self.documents(row)],
             "created_at": iso(row.created_at), "updated_at": iso(row.updated_at), "submitted_at": iso(row.submitted_at),
         }
+        info = row.information_request
+        body["information_request"] = None if info is None else {
+            k: info[k] for k in ("public_message", "requested_items", "requested_at", "answered")}
+        body["addenda"] = [{k: a[k] for k in ("text", "document_ids", "added_at")} for a in row.addenda]
         if self.actor.is_hr():
             body |= {"organization_id": uid(row.organization_id), "author_actor_id": uid(row.author_actor_id),
-                     "submitted_snapshot": row.submitted_snapshot}
+                     "submitted_snapshot": row.submitted_snapshot, "review": row.review,
+                     "consideration": row.consideration}
+        else:
+            # Кандидат видит факт принятия к рассмотрению и выбранную вакансию, но не ссылки на записи
+            # подбора, основание связи личности и внутреннюю проверку достаточности.
+            consideration = row.consideration
+            body["consideration"] = None if consideration is None else {
+                "status": "registered", "recorded_at": consideration["recorded_at"],
+                "selected_vacancy": consideration["selected_vacancy"]}
         return body
 
     def record(self, row: CandidateRequest, event_type: str, data: dict) -> None:
@@ -228,3 +241,103 @@ class Portal:
         if document is None or document.request_id != row.id:
             raise not_found("Document")
         return document
+
+
+    # --- 5B · уточнение и передача в подбор
+
+    def hr_load(self, request_id) -> CandidateRequest:
+        if not self.actor.is_hr():
+            raise forbidden("hr or admin of the organization is required")
+        return self.load(request_id, lock=True)
+
+    @staticmethod
+    def check(row: CandidateRequest, expected: int, allowed: tuple, action: str):
+        if row.revision != expected:
+            raise stale()
+        if row.status not in allowed:
+            raise invalid_state(f"{action} is not allowed in status {row.status}")
+
+    def request_information(self, request_id, body: s.InformationRequest) -> dict:
+        row = self.hr_load(request_id)
+        self.check(row, body.expected_revision, ("submitted", "ready", "needs_information"), "Information request")
+        previous = row.status
+        row.information_request = {
+            "public_message": body.public_message, "requested_items": body.requested_items,
+            "requested_at": iso(now()), "requested_by_actor_id": uid(self.actor.actor_id), "answered": False}
+        row.status = "needs_information"
+        if previous == "ready":
+            row.review = None  # готовность снята: сведения снова неполны
+        row.revision += 1
+        self.record(row, "information.requested", {"public_message": body.public_message,
+                                                   "requested_items": body.requested_items, "previous": previous})
+        return self.view(row)
+
+    def add_addendum(self, request_id, body: s.Addendum) -> dict:
+        row = self.own(request_id)
+        self.check(row, body.expected_revision, ("needs_information",), "Addendum")
+        own_documents = {d.id for d in self.documents(row)}
+        unknown = [str(d) for d in body.document_ids if d not in own_documents]
+        if unknown:
+            raise Problem(422, "VALIDATION_ERROR", "document_ids must be documents of this request", "document_ids")
+        addendum = {"text": body.text, "document_ids": [str(d) for d in body.document_ids], "added_at": iso(now()),
+                    "answers_request_at": row.information_request["requested_at"]}
+        row.addenda = [*row.addenda, addendum]  # прежние материалы и подача сохраняются
+        row.information_request = {**row.information_request, "answered": True}
+        row.status = "submitted"
+        row.revision += 1
+        self.record(row, "addendum.added", addendum)
+        return self.view(row)
+
+    def mark_ready(self, request_id, body: s.RequestReady) -> dict:
+        row = self.hr_load(request_id)
+        self.check(row, body.expected_revision, ("submitted",), "Ready")
+        row.review = {"review_basis": body.review_basis, "reviewed_by_actor_id": uid(self.actor.actor_id),
+                      "reviewed_at": iso(now())}
+        row.status = "ready"
+        row.revision += 1
+        self.record(row, "request.ready", {"review_basis": body.review_basis})
+        return self.view(row)
+
+    def choose_vacancy(self, request_id, body: s.ChooseVacancy) -> dict:
+        row = self.own(request_id)
+        self.check(row, body.expected_revision, CHOOSE_VACANCY, "Choosing a vacancy")
+        vacancy, question = resolve_vacancy(self.settings, row.organization_id, body.vacancy_ref)
+        if question is not None:
+            raise Problem(409, "VACANCY_NOT_AVAILABLE", "Vacancy is closed or this revision is not published",
+                          "vacancy_ref")
+        row.vacancy_ref, row.vacancy, row.target_question = body.vacancy_ref.model_dump(mode="json"), vacancy, None
+        row.revision += 1
+        self.record(row, "vacancy.chosen", {"vacancy_ref": row.vacancy_ref})
+        view = self.view(row)
+        view["vacancy_conditions"] = vacancy_conditions(self.settings, body.vacancy_ref)
+        return view
+
+    def record_consideration(self, request_id, body: s.RecordConsideration) -> dict:
+        row = self.hr_load(request_id)
+        self.check(row, body.expected_revision, ("ready",), "Recording consideration")
+        vacancy, _ = resolve_vacancy(self.settings, row.organization_id, body.selected_vacancy_ref)
+        if vacancy is None:
+            # Закрытая после фактической регистрации публикация допустима; неизвестная редакция — нет.
+            raise Problem(409, "VACANCY_NOT_AVAILABLE", "Selected vacancy revision is unknown", "selected_vacancy_ref")
+        row.consideration = {
+            "candidate_ref": body.candidate_ref.model_dump(mode="json"),
+            "application_ref": body.application_ref.model_dump(mode="json"),
+            "selected_vacancy_ref": body.selected_vacancy_ref.model_dump(mode="json"),
+            "selected_vacancy": {"title": vacancy["title"], "position_code": vacancy["position_code"]},
+            "identity_basis": body.identity_basis, "source_reference": body.source_reference,
+            # Слово HR о факте регистрации, а не автоматическая проверка соседней системы.
+            "confirmation_method": "manual-confirmed",
+            "recorded_by_actor_id": uid(self.actor.actor_id), "recorded_at": iso(now()),
+        }
+        row.status = "forwarded"
+        row.revision += 1
+        self.record(row, "consideration.recorded", row.consideration)
+        return self.view(row)
+
+
+def vacancy_conditions(settings, ref: s.PortalVacancyRef) -> dict | None:
+    """Условия точной редакции публикации из того же источника, по которому выбрана вакансия."""
+    for item in public_vacancies(settings)["vacancies"]:
+        if (item["ref"]["system"], item["ref"]["id"], item["ref"]["revision"]) == (ref.system, str(ref.id), ref.revision):
+            return {"ref": item["ref"], "title": item["title"], "description": item["description"]}
+    return None

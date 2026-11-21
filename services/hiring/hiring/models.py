@@ -184,6 +184,12 @@ class CandidateRequest(Timestamps, Base):
     contact: Mapped[dict] = mapped_column(JSONB, nullable=False)
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     submitted_snapshot: Mapped[dict | None] = mapped_column(JSONB)
+    # 5B: последний запрос сведений HR (публичная часть видна кандидату), дополнения кандидата,
+    # основание готовности (только HR) и ручная регистрация рассмотрения в подборе.
+    information_request: Mapped[dict | None] = mapped_column(JSONB)
+    addenda: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    review: Mapped[dict | None] = mapped_column(JSONB)
+    consideration: Mapped[dict | None] = mapped_column(JSONB)
 
 
 class CandidateRequestEvent(Base):
