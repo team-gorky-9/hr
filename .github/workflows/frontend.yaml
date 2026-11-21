@@ -51,5 +51,6 @@ jobs:
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
           test -n "$DEPLOY_KEY" && test -n "$KNOWN_HOSTS" && test -n "$DEPLOY_HOST" && test -n "$DEPLOY_USER"
           tar -czf /tmp/frontend.tar.gz -C frontend/dist .
-          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" "$GITHUB_SHA" < /tmp/frontend.tar.gz
+          scp -o BatchMode=yes -o StrictHostKeyChecking=yes deploy/frontend-receive.py "$DEPLOY_USER@$DEPLOY_HOST:/opt/hr/frontend-receive.py"
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" "python3 /opt/hr/frontend-receive.py $GITHUB_SHA" < /tmp/frontend.tar.gz
           curl --fail --retry 3 https://gorky.bond/version.json | grep -F "$GITHUB_SHA"

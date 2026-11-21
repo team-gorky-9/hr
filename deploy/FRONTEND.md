@@ -4,13 +4,11 @@ GitHub Actions builds TypeScript/Vite for PRs. A main push publishes the exact b
 
 ## Server provisioning
 
-An administrator installs frontend-receive.py as root-owned /usr/local/lib/hr-frontend-receive.py and frontend-ssh-command.sh as root-owned /usr/local/bin/hr-frontend-command. The dedicated frontend-ci account uses a root-owned authorized_keys entry with `restrict,command="/usr/local/bin/hr-frontend-command"`. Its only sudo permission is `/usr/bin/python3 /usr/local/lib/hr-frontend-receive.py *`. The receiver validates its sole argument as a full commit SHA before doing any work; no repository-supplied script is executed as root.
+The frontend GitHub environment stores FRONTEND_SSH_KEY, FRONTEND_KNOWN_HOSTS, FRONTEND_HOST and FRONTEND_USER. The owner explicitly approved gorky_deploy for GitHub Secrets on 2026-11-21; it authenticates as root. Protect repository writes and workflow changes accordingly. No administrator key is committed to the repository. RECRUITMENT_RECIPIENT_ID is a repository variable matching the deployed dept_demo identity.
 
-The receiver accepts a gzip tar on stdin, rejects links, traversal, special files and oversized payloads, installs an immutable release and atomically switches /var/www/hr-frontend. It verifies the public version and rolls back the symlink on failure. Nginx does not need a reload for static release changes. Old releases remain for rollback.
+The workflow uploads the receiver and streams the built gzip tar over SSH. The receiver rejects links, traversal, special files and oversized payloads, installs an immutable release and atomically switches /var/www/hr-frontend. It verifies the public version and rolls back the symlink on failure. Nginx does not need a reload. Old releases remain for rollback.
 
-Configure the `frontend` GitHub environment with FRONTEND_SSH_KEY (a new dedicated key, never the administrator key), FRONTEND_KNOWN_HOSTS (verified host key), FRONTEND_HOST and FRONTEND_USER secrets. Set repository variable RECRUITMENT_RECIPIENT_ID to the deployed dept_demo identity.
-
-Changing the receiver requires an administrator installation; workflow runs can publish files only. Provisioning requires server permission. A failed Actions deployment is not evidence that the public site updated.
+A failed Actions deployment is not evidence that the public site updated. Verify version.json against the merged commit SHA. Backend deployment remains a separate workflow.
 
 ## Current UI scope
 
