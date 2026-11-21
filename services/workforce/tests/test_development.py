@@ -153,3 +153,70 @@ def test_goal_privacy_and_agreement(client):
     assert saved["goal_revision"] == goal["revision"]
     assert saved["agreed_revision"] == accepted["revision"]
     assert len(call(client, "GET", "/plans", manager)["items"]) == 1
+
+
+def submit(client, plan, owner, activity="draft", criterion="sources", url=False):
+    return call(
+        client,
+        "POST",
+        f"/plans/{plan['id']}/submissions",
+        owner,
+        {
+            "activity_key": activity,
+            "criterion_keys": [criterion],
+            "statement": "Подготовила сводку",
+            "artifact": {
+                "kind": "url" if url else "text",
+                "value": "https://example.org/report" if url else "Источники: учебный реестр, версия 2",
+                "mutable_source": False,
+            },
+        },
+        201,
+    )
+
+
+def review(client, submission, manager, result="confirmed"):
+    return call(
+        client,
+        "POST",
+        f"/submissions/{submission['id']}/review",
+        manager,
+        {
+            "results": [
+                {"criterion_key": key, "result": result, "reason": "Проверен учебный материал"}
+                for key in submission["criterion_keys"]
+            ],
+        },
+        201,
+    )
+
+
+def test_attempts_keep_history_and_use_latest_evidence(client):
+    owner, manager, _, plan = activate(client)
+    first = submit(client, plan, owner)
+    returned = review(client, first, manager, "needs_revision")
+    second = submit(client, plan, owner, url=True)
+    assert second["attempt_no"] == 2
+    assert second["artifact"]["mutable_source"] is True
+    progress = call(client, "GET", f"/plans/{plan['id']}/progress", owner)
+    assert progress["criteria"][0]["state"] == "waiting"
+    assert progress["criteria"][0]["submission_id"] == second["id"]
+    assert progress["criteria"][1]["state"] == "unsubmitted"
+    data = {"results": [{"criterion_key": "sources", "result": "confirmed", "reason": "Источник указан"}]}
+    call(client, "POST", f"/submissions/{second['id']}/review", owner, data, 404)
+    call(client, "POST", f"/submissions/{second['id']}/review", auth(client, "hr"), data, 404)
+    approved = call(client, "POST", f"/submissions/{second['id']}/review", manager, data, 201)
+    assert call(client, "POST", f"/submissions/{second['id']}/review", manager, data, 200) == approved
+    data["results"][0]["reason"] = "Другое решение"
+    conflict = call(client, "POST", f"/submissions/{second['id']}/review", manager, data, 409)
+    assert conflict["error"]["code"] == "REVIEW_EXISTS"
+    history = call(client, "GET", f"/plans/{plan['id']}/submissions", owner)["items"]
+    assert history[0]["id"] == first["id"] and history[0]["review"]["id"] == returned["id"]
+    assert history[0]["artifact"]["value"] == "Источники: учебный реестр, версия 2"
+    assert history[1]["review"]["id"] == approved["id"]
+    assert call(client, "GET", f"/plans/{plan['id']}/progress", owner)["completed_count"] == 1
+    third = submit(client, plan, owner)
+    latest = call(client, "GET", f"/plans/{plan['id']}/progress", owner)
+    assert latest["completed_count"] == 0
+    assert latest["criteria"][0]["submission_id"] == third["id"]
+    assert latest["criteria"][0]["state"] == "waiting"

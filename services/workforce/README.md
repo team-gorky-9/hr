@@ -37,6 +37,16 @@ Fixture-вход включается только `AUTH_MODE=fixture`: `Bearer 
 свой снимок. После accept критерии и действия плана не редактируются. `resource_note` фиксирует
 договорённость, а не автоматически зарезервированное место курса или проекта.
 
+Сдача: `POST /plans/{id}/submissions` с
+`{"activity_key":"draft","criterion_keys":["sources"],"statement":"Подготовила сводку","artifact":{"kind":"text","value":"Источники: учебный реестр, версия 2"}}`.
+Review: `POST /submissions/{id}/review` от назначенного department с
+`{"results":[{"criterion_key":"sources","result":"needs_revision","reason":"Укажите дату источника"}]}`.
+Новая сдача получает новый ID и номер; `GET /plans/{id}/submissions` сохраняет обе попытки и отзывы,
+`GET /plans/{id}/progress` показывает последнюю. Результаты: confirmed/needs_revision/not_verified.
+Точный повтор review возвращает 200 и прежний объект, изменённый повтор — 409 REVIEW_EXISTS.
+Для URL допустимы только HTTP(S), без встроенных учётных данных; `mutable_source=true` означает,
+что копия не сохранена и источник может измениться. Доступ к ссылке остаётся внешним условием.
+
 ## Вводная программа · этап 1 второй волны
 
 Модуль `workforce/onboarding` использует ту же БД и серверные сессии. `python -m workforce prepare`

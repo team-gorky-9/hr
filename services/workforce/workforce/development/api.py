@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.orm import Session
 
 from workforce.api import authenticate
@@ -20,7 +20,7 @@ def service(request: Request):
         yield Development(session, actor)
 
 
-Service = Annotated[Development, Depends(service)]
+Service = Annotated[Development, Depends(service, scope="function")]
 
 
 @router.post("/goals", response_model=s.GoalView, status_code=201)
@@ -71,3 +71,29 @@ def patch_plan(id: UUID, body: s.PlanPatch, service: Service):
 @router.post("/plans/{id}/respond", response_model=s.PlanView)
 def respond(id: UUID, body: s.Respond, service: Service):
     return service.respond(id, body)
+
+
+@router.post("/plans/{id}/submissions", response_model=s.SubmissionView, status_code=201)
+def submit(id: UUID, body: s.SubmissionCreate, service: Service):
+    return service.submit(id, body)
+
+
+@router.get("/plans/{id}/submissions", response_model=s.Submissions)
+def submissions(id: UUID, service: Service):
+    return service.submissions(id)
+
+
+@router.post(
+    "/submissions/{id}/review",
+    response_model=s.ReviewView,
+    status_code=201,
+    responses={200: {"model": s.ReviewView, "description": "Existing identical review"}},
+)
+def review(id: UUID, body: s.ReviewCreate, service: Service, response: Response):
+    result, response.status_code = service.review(id, body)
+    return result
+
+
+@router.get("/plans/{id}/progress", response_model=s.Progress)
+def progress(id: UUID, service: Service):
+    return service.progress(id)

@@ -1,9 +1,9 @@
 from copy import deepcopy
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 
 from workforce.development import schemas as s
-from workforce.development.models import Goal, GoalVersion, Plan
+from workforce.development.models import Goal, GoalVersion, Plan, Review, Submission
 from workforce.domain import Problem, changed, iso, owned, revision, serialize
 from workforce.models import Actor, Department, now
 from workforce.onboarding.service import self_access
@@ -203,6 +203,100 @@ class Development:
         row.status = "proposed"
         changed(row)
         return self.save(row)
+
+    def submit(self, id, body):
+        plan = self.plan(id)
+        self.owner(plan)
+        state(plan, "active")
+        activity = next((item for item in plan.activities if item["key"] == body.activity_key), None)
+        if activity is None or not set(body.criterion_keys) <= set(activity["criterion_keys"]):
+            raise Problem(422, "VALIDATION_ERROR", "Criteria must belong to this plan activity")
+        attempt = (
+            self.session.scalar(
+                select(func.max(Submission.attempt_no)).where(
+                    Submission.plan_id == plan.id,
+                    Submission.activity_key == body.activity_key,
+                )
+            )
+            or 0
+        )
+        sequence = (
+            self.session.scalar(
+                select(func.max(Submission.sequence_no)).where(
+                    Submission.plan_id == plan.id,
+                )
+            )
+            or 0
+        )
+        return self.save(
+            Submission(
+                plan_id=plan.id,
+                plan_revision=plan.agreed_revision,
+                created_by=self.actor.id,
+                attempt_no=attempt + 1,
+                sequence_no=sequence + 1,
+                **body.model_dump(mode="json"),
+            )
+        )
+
+    def submission_history(self, plan):
+        rows = self.session.execute(
+            select(Submission, Review)
+            .outerjoin(
+                Review,
+                Review.submission_id == Submission.id,
+            )
+            .where(Submission.plan_id == plan.id)
+            .order_by(Submission.sequence_no)
+        ).all()
+        return [
+            {**serialize(submission), "review": serialize(review) if review else None}
+            for submission, review in rows
+        ]
+
+    def submissions(self, id):
+        return {"items": self.submission_history(self.plan(id))}
+
+    def review(self, id, body):
+        submission = self.session.get(Submission, str(id))
+        if submission is None:
+            missing()
+        plan = self.plan(submission.plan_id)
+        if plan.reviewer_actor_id != self.actor.id or submission.created_by == self.actor.id:
+            missing()
+        self.department_actor(self.actor.id, plan.owner_actor_id)
+        results = sorted(body.model_dump(mode="json")["results"], key=lambda item: item["criterion_key"])
+        previous = self.session.scalar(select(Review).where(Review.submission_id == submission.id))
+        if previous:
+            if previous.results != results:
+                raise Problem(409, "REVIEW_EXISTS", "This attempt already has a different review")
+            return serialize(previous), 200
+        state(plan, "active")
+        if {item["criterion_key"] for item in results} != set(submission.criterion_keys):
+            raise Problem(422, "VALIDATION_ERROR", "Review must cover every submitted criterion exactly once")
+        return self.save(
+            Review(submission_id=submission.id, reviewer_actor_id=self.actor.id, results=results)
+        ), 201
+
+    def progress(self, id):
+        plan = self.plan(id)
+        criteria = {item["key"]: {"key": item["key"], "state": "unsubmitted"} for item in plan.criteria}
+        # Ordered across the plan, even when two different activities target the same criterion.
+        for submission in self.submission_history(plan):
+            review = submission["review"]
+            results = {item["criterion_key"]: item for item in review["results"]} if review else {}
+            for key in submission["criterion_keys"]:
+                criteria[key] = {
+                    "key": key,
+                    "state": results[key]["result"] if review else "waiting",
+                    "submission_id": submission["id"],
+                    "review_id": review["id"] if review else None,
+                }
+        return {
+            "criteria": list(criteria.values()),
+            "completed_count": sum(item["state"] == "confirmed" for item in criteria.values()),
+            "total_count": len(criteria),
+        }
 
     def respond(self, id, body):
         row = self.plan(id)

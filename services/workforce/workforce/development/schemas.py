@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, StringConstraints, model_validator
+from pydantic import BaseModel, Field, HttpUrl, StringConstraints, TypeAdapter, model_validator
 
 from workforce.schemas import Code, Input, Revision, Text
 
@@ -126,3 +126,90 @@ class Goals(BaseModel):
 
 class Plans(BaseModel):
     items: list[PlanView]
+
+
+Keys = Annotated[list[Code], Field(min_length=1, max_length=100)]
+
+
+class Artifact(Input):
+    kind: Literal["text", "url"]
+    value: Content
+    mutable_source: bool = False
+
+    @model_validator(mode="after")
+    def source_type(self):
+        if self.kind == "url":
+            url = TypeAdapter(HttpUrl).validate_python(self.value)
+            if url.username or url.password:
+                raise ValueError("Do not embed credentials in a source URL")
+        # No copy of a remote source is fetched or claimed by this module.
+        self.mutable_source = self.kind == "url"
+        return self
+
+
+class SubmissionCreate(Input):
+    activity_key: Code
+    criterion_keys: Keys
+    statement: Content
+    artifact: Artifact
+
+    @model_validator(mode="after")
+    def unique_keys(self):
+        if len(set(self.criterion_keys)) != len(self.criterion_keys):
+            raise ValueError("Criterion keys must be unique")
+        return self
+
+
+class CriterionResult(Input):
+    criterion_key: Code
+    result: Literal["confirmed", "needs_revision", "not_verified"]
+    reason: Content
+
+
+class ReviewCreate(Input):
+    results: Annotated[list[CriterionResult], Field(min_length=1, max_length=100)]
+
+    @model_validator(mode="after")
+    def unique_results(self):
+        keys = [item.criterion_key for item in self.results]
+        if len(set(keys)) != len(keys):
+            raise ValueError("One result per criterion required")
+        return self
+
+
+class ReviewView(ResourceView):
+    submission_id: UUID
+    reviewer_actor_id: UUID
+    results: list[CriterionResult]
+
+
+class SubmissionView(ResourceView):
+    plan_id: UUID
+    plan_revision: int
+    activity_key: str
+    attempt_no: int
+    criterion_keys: list[str]
+    statement: str
+    artifact: Artifact
+    created_by: UUID
+
+
+class SubmissionHistory(SubmissionView):
+    review: ReviewView | None
+
+
+class Submissions(BaseModel):
+    items: list[SubmissionHistory]
+
+
+class CriterionProgress(BaseModel):
+    key: str
+    state: Literal["unsubmitted", "waiting", "confirmed", "needs_revision", "not_verified"]
+    submission_id: UUID | None = None
+    review_id: UUID | None = None
+
+
+class Progress(BaseModel):
+    criteria: list[CriterionProgress]
+    completed_count: int
+    total_count: int

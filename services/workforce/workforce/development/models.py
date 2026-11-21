@@ -1,4 +1,4 @@
-from sqlalchemy import JSON, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from workforce.models import Base, Resource
@@ -38,3 +38,27 @@ class Plan(Resource, Base):
     agreed_revision: Mapped[int | None] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(20), default="proposed")
     decision_note: Mapped[str | None] = mapped_column(Text)
+
+
+class Submission(Resource, Base):
+    __tablename__ = "development_submissions"
+    __table_args__ = (
+        UniqueConstraint("plan_id", "activity_key", "attempt_no"),
+        UniqueConstraint("plan_id", "sequence_no"),
+    )
+    plan_id: Mapped[str] = mapped_column(ForeignKey("development_plans.id"), index=True)
+    plan_revision: Mapped[int] = mapped_column(Integer)
+    activity_key: Mapped[str] = mapped_column(String(100))
+    attempt_no: Mapped[int] = mapped_column(Integer)
+    sequence_no: Mapped[int] = mapped_column(Integer)
+    criterion_keys: Mapped[list] = mapped_column(JSON)
+    statement: Mapped[str] = mapped_column(Text)
+    artifact: Mapped[dict] = mapped_column(JSON)
+    created_by: Mapped[str] = mapped_column(ForeignKey("actors.id"))
+
+
+class Review(Resource, Base):
+    __tablename__ = "development_reviews"
+    submission_id: Mapped[str] = mapped_column(ForeignKey("development_submissions.id"), unique=True)
+    reviewer_actor_id: Mapped[str] = mapped_column(ForeignKey("actors.id"))
+    results: Mapped[list] = mapped_column(JSON)
