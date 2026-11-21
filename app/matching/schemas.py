@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.api.schemas import Contour
 from app.search.schemas import SearchFilters, SearchHit, SearchMode, SemanticStatus
@@ -36,7 +36,8 @@ class VacancySnapshot(Strict):
     contour: Contour
     observed_at: datetime
     profile_ref: ProfileRef | None = None
-    search_query: str = Field(max_length=512)
+    # Нужен для 3A (поиск людей); в списке вакансий 3B может быть пустым.
+    search_query: str = Field(default="", max_length=512)
 
     @field_validator("observed_at")
     @classmethod
@@ -48,9 +49,9 @@ class VacancySnapshot(Strict):
     @field_validator("search_query")
     @classmethod
     def chosen_query(cls, value: str) -> str:
-        """Правила SearchRequest.query, но пустым запрос быть не может: его явно выбирает HR."""
+        """Правила SearchRequest.query: непустой запрос содержит букву или цифру."""
         query = value.strip()
-        if not any(char.isalnum() for char in query):
+        if query and not any(char.isalnum() for char in query):
             raise ValueError("search_query must contain a letter or a digit")
         return query
 
@@ -59,6 +60,12 @@ class CandidatesForVacancyIn(Strict):
     vacancy: VacancySnapshot
     filters: SearchFilters = Field(default_factory=SearchFilters)
     limit: int = Field(default=10, ge=1, le=50, strict=True)
+
+    @model_validator(mode="after")
+    def query_chosen(self):
+        if not self.vacancy.search_query:
+            raise ValueError("vacancy.search_query is required: HR chooses the description of the work")
+        return self
 
 
 QualificationStatus = Literal["not_evaluated", "met", "unknown", "not_met"]
@@ -89,3 +96,58 @@ class CandidatesForVacancyOut(BaseModel):
     semantic_status: SemanticStatus
     matching_status: Literal["completed"] = "completed"
     items: list[CandidateMatch]
+
+
+# --- 3B · вакансии по присланному резюме -------------------------------------------------------
+
+class VacanciesForCandidateIn(Strict):
+    candidate_id: UUID
+    contour: Contour
+    vacancies: list[VacancySnapshot] = Field(min_length=1, max_length=50)
+    limit: int = Field(default=10, ge=1, le=50, strict=True)
+
+    @model_validator(mode="after")
+    def unique_refs(self):
+        refs = [(v.ref.system, v.ref.id) for v in self.vacancies]
+        if len(refs) != len(set(refs)):
+            raise ValueError("vacancies must not repeat the same ref")
+        return self
+
+
+NeedsEvaluationReason = Literal[
+    "no_profile_ref", "unmapped_profile", "profile_not_found", "profile_mismatch", "profile_not_current",
+    "not_assessed", "assessment_stale",
+]
+
+
+class VacancyMatch(BaseModel):
+    vacancy_ref: VacancyRef
+    vacancy_revision: int
+    title: str
+    profile_ref: ProfileRef
+    assessment_status: Literal["ready"]
+    formal_result: Literal["met", "unknown", "not_met"]
+    assessment_id: UUID
+    reason: str
+
+
+class VacancyNeedsEvaluation(BaseModel):
+    vacancy_ref: VacancyRef
+    title: str
+    reason: NeedsEvaluationReason
+    stale_reason: str | None = None
+
+
+class VacancyExcluded(BaseModel):
+    vacancy_ref: VacancyRef
+    reason: Literal["closed", "other_contour"]
+
+
+class VacanciesForCandidateOut(BaseModel):
+    candidate_id: UUID
+    current_text_id: UUID | None
+    contour: Contour
+    source_mode: Literal["provided", "catalog_api"]
+    items: list[VacancyMatch]
+    needs_evaluation: list[VacancyNeedsEvaluation]
+    excluded: list[VacancyExcluded]
