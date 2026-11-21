@@ -21,17 +21,19 @@ work_bearer = HTTPBearer(scheme_name="SearchWorkBearer", auto_error=False,
                          description="Серверный ключ требуется только для рабочего контура")
 
 
-@router.post("/candidates", response_model=SearchResponse, openapi_extra={"security": [{}]},
-             responses={code: {"model": SearchErrorResponse} for code in (401, 422, 500, 503)})
-def search_route(body: SearchRequest, response: Response,
-                 session: Annotated[Session, Depends(get_session)],
-                 credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(work_bearer)]):
-    if body.contour == Contour.WORKING:
+def require_search_access(contour: Contour, credentials: HTTPAuthorizationCredentials | None) -> None:
+    """Рабочий контур — только с серверным ключом поиска; учебный доступен без него.
+    Общая проверка для /search и /matching (wave-3-matching-stage-1)."""
+    if contour == Contour.WORKING:
         token = settings.hr_search_work_token
         expected = token.get_secret_value() if token is not None else ""
         if not (expected and credentials and secrets.compare_digest(
                 credentials.credentials.encode(), expected.encode())):
             raise ApiError(401, "SEARCH_AUTH_REQUIRED", "Требуется доступ к рабочему поиску")
+
+
+def run_search(session: Session, body: SearchRequest) -> SearchResponse:
+    """Поиск в снимке только для чтения; сбой базы — 503 SEARCH_UNAVAILABLE, а не пустая выдача."""
     factory = get_local_encoder if settings.hr_search_semantic_enabled else None
     try:
         # API открывает свежую Session. При переданном тестовом Connection
@@ -40,9 +42,18 @@ def search_route(body: SearchRequest, response: Response,
             session.connection(execution_options={
                 "isolation_level": "REPEATABLE READ", "postgresql_readonly": True,
             })
-        result = search_candidates(session, body, encoder_factory=factory,
-                                   threshold=settings.hr_search_dense_threshold)
+        return search_candidates(session, body, encoder_factory=factory,
+                                 threshold=settings.hr_search_dense_threshold)
     except SQLAlchemyError:
         raise ApiError(503, "SEARCH_UNAVAILABLE", "Поиск временно недоступен") from None
+
+
+@router.post("/candidates", response_model=SearchResponse, openapi_extra={"security": [{}]},
+             responses={code: {"model": SearchErrorResponse} for code in (401, 422, 500, 503)})
+def search_route(body: SearchRequest, response: Response,
+                 session: Annotated[Session, Depends(get_session)],
+                 credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(work_bearer)]):
+    require_search_access(body.contour, credentials)
+    result = run_search(session, body)
     response.headers["Cache-Control"] = "private, no-store"
     return result

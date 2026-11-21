@@ -158,6 +158,8 @@ INTERVIEW_ROUTES = {
     # wave-2-stage-1: итог телефонной встречи и чтение встреч отклика.
     "/api/v1/applications/{application_id}/interviews",
     "/api/v1/interviews/{interview_id}/outcome",
+    # wave-3-matching-stage-1: люди под выбранную вакансию (3A).
+    "/api/v1/matching/candidates",
 }
 
 WORKFLOW_01_ROUTES = {
