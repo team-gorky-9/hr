@@ -2,8 +2,10 @@ name: Backend delivery
 on:
   pull_request:
     branches: [main]
+    paths-ignore: ["frontend/**", "docs/**", ".github/workflows/frontend.yaml", "deploy/frontend-*"]
   push:
     branches: [main]
+    paths-ignore: ["frontend/**", "docs/**", ".github/workflows/frontend.yaml", "deploy/frontend-*"]
   workflow_dispatch:
 
 permissions:

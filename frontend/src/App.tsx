@@ -6,12 +6,14 @@ import NewVacanciesSection from './components/portal/NewVacanciesSection';
 import WhyUsSection from './components/portal/WhyUsSection';
 import ReserveCtaBanner from './components/portal/ReserveCtaBanner';
 import VacancyPage from './pages/VacancyPage';
-import CandidateCabinetPage from './pages/CandidateCabinetPage';
 import StudentsPage from './pages/StudentsPage';
 import StudentsWorkspace from './components/students/StudentsWorkspace';
 import SupportPage from './components/support/SupportPage';
 import DevelopmentPage from './components/development/DevelopmentPage';
 import WorkforcePage from './components/workforce/WorkforcePage';
+import HiringWorkspace from './components/hiring/HiringWorkspace';
+import RequirementsPage from './components/requirements/RequirementsPage';
+import ServiceAccess from './components/shared/ServiceAccess';
 
 import HeaderHR, { HRNavTab } from './components/hr/HeaderHR';
 import CandidatesDatabase, { CandidateRecord } from './components/hr/CandidatesDatabase';
@@ -191,13 +193,7 @@ export const App: React.FC = () => {
 
             {/* ЛИЧНЫЙ КАБИНЕТ КАНДИДАТА (макет 5) */}
             {portalRoute === 'cabinet' && (
-              <CandidateCabinetPage
-                onGoHome={handlePortalHome}
-                onGoVacancy={() => {
-                  setPortalRoute('vacancies');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-              />
+              <ServiceAccess initialLogin="candidate">{(token) => <HiringWorkspace audience="candidate" token={token} />}</ServiceAccess>
             )}
           </main>
         </>
@@ -281,6 +277,7 @@ export const App: React.FC = () => {
             {/* 20. ТЕЛЕФОННОЕ ИНТЕРВЬЮ (макет 20. Телефонное интервью.png) */}
             {hrTab === 'interview' && (
               <TelephoneInterview
+                applicationId={selectedCandidateId}
                 onBackToCard={() => {
                   setHrTab('database');
                   setDbView('profile');
@@ -291,6 +288,8 @@ export const App: React.FC = () => {
 
             {/* 24 & 25. КАДРОВЫЙ РЕЗЕРВ: КОНКУРС И СТУДЕНТЫ (макеты 24 и 25) */}
             {hrTab === 'archive' && <ArchivePage />}
+            {hrTab === 'hiring' && <ServiceAccess>{(token) => <HiringWorkspace token={token} />}</ServiceAccess>}
+            {hrTab === 'requirements' && <ServiceAccess>{(_token, role) => <RequirementsPage role={role === 'department' ? 'department' : 'hr'} />}</ServiceAccess>}
             {hrTab === 'reserve' && (
               <TalentReserve />
             )}

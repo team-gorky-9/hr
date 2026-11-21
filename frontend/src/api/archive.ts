@@ -36,7 +36,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
   try {
     response = await fetch(base + path, {
       ...options, credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json', ...options.headers },
+      headers: { 'Content-Type': 'application/json', ...(contour === 'training' ? { 'X-User-Login': 'hr_demo' } : {}), ...options.headers },
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error;
