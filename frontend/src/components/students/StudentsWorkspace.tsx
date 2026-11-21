@@ -234,6 +234,20 @@ export default function StudentsWorkspace({ token, role = 'candidate' }: { token
   return <PracticeWorkspace key={token + ':' + role} token={token} role={role} />;
 }
 
+function StudentsHero() {
+  return <section className="bg-[#FF6A3D] rounded-2xl p-8 lg:p-12 text-white shadow-sm">
+    <span className="inline-block bg-white/95 text-[#C2410C] text-[12px] font-bold px-3 py-1 rounded-full mb-4 shadow-sm">
+      Для студентов и выпускников
+    </span>
+    <h1 className="text-[32px] sm:text-[38px] font-bold tracking-tight mb-3">
+      Практика в администрации — не для галочки
+    </h1>
+    <p className="text-[15px] sm:text-[16px] text-white/95 leading-relaxed max-w-2xl">
+      Реальные задачи города, наставник из департамента и шанс попасть в студенческий резерв.
+    </p>
+  </section>;
+}
+
 function PracticeWorkspace({ token, role }: { token: string; role: StudentRole }) {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [applications, setApplications] = useState<StudentApplication[]>([]);
@@ -265,30 +279,46 @@ function PracticeWorkspace({ token, role }: { token: string; role: StudentRole }
     } catch (e) { setError(message(e)); return null; }
     finally { setBusy(false); }
   };
-  return <div className="max-w-[1240px] mx-auto px-4 sm:px-6 py-8 space-y-5">
-    <div className="flex items-center justify-between gap-5">
+  return <div className={role === 'candidate' ? 'space-y-10' : 'max-w-[1240px] mx-auto px-4 sm:px-6 py-8 space-y-5'}>
+    {role === 'candidate' ? <StudentsHero /> : <div className="flex items-center justify-between gap-5">
       <div><h1 className="text-[26px] font-bold">Практика студентов</h1><p className="text-[14px] text-[#616977]">Место, задание и подтверждённый результат.</p></div>
-    </div>
+    </div>}
     {selected ? <PracticeDetail key={role + selected} id={selected} role={role} token={token} onBack={() => { setSelected(''); setRefresh((value) => value + 1); }} /> : <>
       {error && <div role="alert" className="bg-[#FCE8E8] p-4 rounded-xl text-[#A3171B]">{error} <Btn onClick={() => setRefresh((value) => value + 1)}>Повторить</Btn></div>}
       {notice && <div role="status" className="bg-[#E3F2E7] p-4 rounded-xl text-[#1D7A40]">{notice}</div>}
       {loading ? <Card>Загружаем практику…</Card> : <>
         {role === 'hr' && <Btn variant="primary" onClick={() => setCreateOpen((value) => !value)}>{createOpen ? 'Закрыть форму' : 'Создать место практики'}</Btn>}
         {createOpen && role === 'hr' && <CreateOpportunity perform={perform} busy={busy} />}
-        {role !== 'department' && <div className="space-y-3">
-          <h2 className="text-[20px] font-bold">Места практики</h2>
+        {role !== 'department' && <section>
+          <h2 className="text-[20px] font-bold text-[#141A24] mb-4">{role === 'candidate' ? 'Практика и стажировки' : 'Места практики'}</h2>
           {opportunities.length === 0 && <Card>Доступных мест пока нет.</Card>}
+          <div className={role === 'candidate' ? 'grid grid-cols-1 md:grid-cols-3 gap-5' : 'space-y-3'}>
           {opportunities.map((opportunity) => {
             const applied = applications.some((item) => item.opportunity_id === opportunity.id && ['submitted', 'assigned'].includes(item.status));
+            if (role === 'candidate') {
+              return <article key={opportunity.id} className="bg-white border border-[#E1E5EB] rounded-2xl p-6 shadow-sm flex flex-col justify-between hover:shadow-md transition-shadow min-w-0">
+                <div>
+                  <span className="inline-block bg-[#FEF7E0] text-[#B06000] text-[12px] font-medium px-2.5 py-1 rounded-md mb-3">Практика</span>
+                  <h3 className="text-[17px] font-bold text-[#141A24] mb-1.5 break-words">{opportunity.title}</h3>
+                  <p className="text-[13px] text-[#616977] mb-3">{date(opportunity.starts_on)} — {date(opportunity.ends_on)} · свободных мест {opportunity.available_places ?? 0}</p>
+                  <p className="text-[13px] text-[#4A5363] leading-relaxed mb-6 break-words">{opportunity.description}</p>
+                </div>
+                <div>
+                  <button type="button" disabled={busy || applied} onClick={() => setApplying(opportunity.id)} className="px-6 py-2.5 bg-[#1F4FD1] hover:bg-[#1841B2] text-white text-[14px] font-medium rounded-lg transition-colors shadow-sm disabled:opacity-60">
+                    {applied ? 'Заявка уже подана' : 'Откликнуться'}
+                  </button>
+                  {applying === opportunity.id && <ApplyForm opportunity={opportunity} perform={perform} busy={busy} />}
+                </div>
+              </article>;
+            }
             return <Card key={opportunity.id}>
               <div className="flex items-start justify-between gap-4"><div><h3 className="text-[18px] font-bold">{opportunity.title}</h3><p className="text-[14px] text-[#4A5363] mt-1">{opportunity.description}</p></div><Badge>{label(opportunity.status)}</Badge></div>
               <p className="my-3 text-[14px]">{date(opportunity.starts_on)} — {date(opportunity.ends_on)} · свободных мест {opportunity.available_places ?? 0}</p>
               {role === 'hr' && opportunity.status === 'draft' && <Btn disabled={busy} onClick={() => void perform('/opportunities/' + opportunity.id + '/publish', { expected_revision: opportunity.revision })}>Опубликовать место</Btn>}
-              {role === 'candidate' && <Btn disabled={busy || applied} onClick={() => setApplying(opportunity.id)}>{applied ? 'Заявка уже подана' : 'Подать заявку'}</Btn>}
-              {role === 'candidate' && applying === opportunity.id && <ApplyForm opportunity={opportunity} perform={perform} busy={busy} />}
             </Card>;
           })}
-        </div>}
+          </div>
+        </section>}
         {role !== 'department' && <Card className="space-y-4"><h2 className="text-[20px] font-bold">{role === 'hr' ? 'Заявки на практику' : 'Мои заявки'}</h2>
           {!applications.length && <p className="text-[#4A5363]">Заявок на практику пока нет.</p>}
           {applications.map((item) => <div key={item.id} className="border-t border-[#E1E5EB] pt-3">

@@ -30,7 +30,6 @@ import ReportPage from './components/report/ReportPage';
 import Workspace from './components/employee/Workspace';
 import Care from './components/employee/Care';
 import Surveys from './components/employee/Surveys';
-import VacancyShowcase from './components/employee/VacancyShowcase';
 
 export type AppMode = 'portal' | 'hr' | 'dept' | 'employee';
 
@@ -62,6 +61,7 @@ export const App: React.FC = () => {
   const [appMode, setAppMode] = useState<AppMode>(initialEmployeeWorkspace ? 'employee' : 'portal');
   const [employeeTab, setEmployeeTab] = useState<string>(initialEmployeeWorkspace || 'workspace');
   const [hrAnalyticsView, setHrAnalyticsView] = useState<'dashboard' | 'report'>('dashboard');
+  const [opkTab, setOpkTab] = useState('mine');
 
   // Portal Routing State (Главная по умолчанию)
   const [portalRoute, setPortalRoute] = useState<PortalRoute>(initialWorkspace === 'practice' ? 'practice' : 'home');
@@ -350,13 +350,22 @@ export const App: React.FC = () => {
       {roleReady && appMode === 'dept' && (
         <>
           <RoleHeader
-            tabs={[{ id: 'mine', label: 'Мои кандидаты' }]}
-            activeTab="mine"
-            onTabChange={() => {}}
+            tabs={[{ id: 'mine', label: 'Мои кандидаты' }, { id: 'analytics', label: 'Аналитика' }]}
+            activeTab={opkTab}
+            onTabChange={setOpkTab}
             roleLabel="ОПК"
           />
           <main className="flex-1 w-full">
-            <MyCandidates />
+            {opkTab === 'mine' && <MyCandidates />}
+            {opkTab === 'analytics' && <>
+              <div className="max-w-[1240px] mx-auto px-4 sm:px-6 pt-6">
+                <div className="inline-flex bg-[#E8ECF2] rounded-xl p-1">
+                  {([['dashboard', 'Аналитика подбора'], ['report', 'Годовой доклад']] as const).map(([id, label]) =>
+                    <button key={id} type="button" onClick={() => setHrAnalyticsView(id)} className={`px-4 py-2 rounded-lg text-[14px] font-semibold ${hrAnalyticsView === id ? 'bg-white text-[#141A24] shadow-sm' : 'text-[#4A5363]'}`}>{label}</button>)}
+                </div>
+              </div>
+              {hrAnalyticsView === 'dashboard' ? <AnalyticsDashboard /> : <ReportPage />}
+            </>}
           </main>
         </>
       )}
@@ -370,7 +379,6 @@ export const App: React.FC = () => {
               { id: 'care', label: 'Забота и мотивация' },
               { id: 'support', label: 'Материальная помощь' },
               { id: 'surveys', label: 'Опросы' },
-              { id: 'vacancies', label: 'Витрина вакансий' },
             ]}
             activeTab={employeeTab}
             onTabChange={setEmployeeTab}
@@ -387,7 +395,6 @@ export const App: React.FC = () => {
             {employeeTab === 'workforce' && <ServiceAccess initialLogin="hr" allowedRoles={['hr', 'admin']}>{() => <WorkforcePage />}</ServiceAccess>}
             {employeeTab === 'onboarding' && <ServiceAccess initialLogin="employee" allowedRoles={['employee', 'hr', 'admin']}>{() => <WorkforcePage initialTab="onboarding" />}</ServiceAccess>}
             {employeeTab === 'surveys' && <Surveys />}
-            {employeeTab === 'vacancies' && <VacancyShowcase />}
           </main>
         </>
       )}

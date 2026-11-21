@@ -34,7 +34,6 @@ export default function Workspace({ onNavigate }: { onNavigate: (tab: string) =>
   const sections = [
     { title: 'Опросы', description: 'Открытые опросы и опубликованные итоги', tab: 'surveys', icon: '🛡', color: 'bg-[#F1EDFF]' },
     { title: 'Забота и мотивация', description: 'Поддержка, мероприятия и обучение', tab: 'care', icon: '🏅', color: 'bg-[#FFEFD9]' },
-    { title: 'Витрина вакансий', description: 'Опубликованные вакансии', tab: 'vacancies', icon: '💼', color: 'bg-[#E3F2E7]' },
   ];
 
   return <div className="max-w-[1240px] mx-auto px-4 sm:px-6 py-8 space-y-5">
@@ -45,7 +44,7 @@ export default function Workspace({ onNavigate }: { onNavigate: (tab: string) =>
         <p className="text-[15px] text-[#DCE5FB]">Шаги адаптации</p>
       </div>}
     </div>
-    <div className="grid md:grid-cols-3 gap-5">
+    <div className="grid md:grid-cols-2 gap-5">
       {sections.map(({ title, description, tab, icon, color }) => <Card key={tab} className="space-y-3">
         <div className="flex items-center gap-4">
           <div aria-hidden="true" className={color + ' w-[52px] h-[52px] shrink-0 rounded-xl grid place-items-center text-[22px]'}>{icon}</div>

@@ -4,13 +4,12 @@ import { annualReportsPath as path, downloadWorkbook } from '../../api/reports';
 import { Card, Btn, Kpi, Badge } from '../shared/ui';
 import { REPORT_TABS, type ReportTab } from './ReportShell';
 import ReportBars from './ReportBars';
+import { AnnualTrends, Findings, monthLabel, type AnnualSeries, type Cell } from './AnnualVisuals';
 
-type Cell = { value: number | null; status: string; reason_codes: string[]; numerator?: number; denominator?: number };
 type Version = { snapshot_id: string; year: number; scope_label: string; mode: string; extracted_at: string };
-type Snapshot = Version & {
+type Snapshot = Version & AnnualSeries & {
   period_start: string; period_end_exclusive: string; observed_until: string;
   totals: Record<string, Cell>;
-  months: { month: string; metrics: Record<string, Cell> }[];
   quality: { undated_applications: number; undated_interviews: number; duplicates: number };
 };
 type Catalog = {
@@ -20,14 +19,13 @@ type Catalog = {
   departments?: { key: string; label: string }[];
 };
 type Analysis = { totals: Record<string, Cell>; rows: { dimensions: Record<string, string | number>; metrics: Record<string, Cell> }[] };
-type Operations = { available: boolean; workforce: Record<string, Cell>; handoffs: Record<string, Cell>; by_department: { key: string; label: string; workforce: Record<string, Cell>; handoffs: Record<string, Cell> }[] };
+type Operations = { available: boolean; workforce: Record<string, Cell>; handoffs: Record<string, Cell>; months: { month: string; handoffs: Record<string, Cell> }[]; by_department: { key: string; label: string; workforce: Record<string, Cell>; handoffs: Record<string, Cell> }[] };
 const metricNames: Record<string, string> = { applications_received: 'Поступившие отклики', phone_interviews_held: 'Телефонные интервью', applications_with_phone_interview: 'Отклики с разговором', headcount:'Численность', authorized_fte:'Штатные ставки', occupied_fte:'Занятые ставки', hires:'Приняты', exits:'Выбыли', open:'Открытые передачи', open_over_15:'Ожидают более 15 календарных дней', sent:'Передано', answered:'Ответов', median_response_days:'Медиана ответа, дни' };
 const statuses: Record<string, string> = { complete:'Полные данные', partial:'Неполный охват', unavailable:'Источник недоступен', future:'За пределами наблюдения' };
 const reasons: Record<string, string> = { coverage_gap:'Неполный период', coverage_unknown:'Охват неизвестен', missing_business_date:'Отсутствуют даты событий', outside_period:'За пределами периода', incomplete_coverage:'Сравнение недоступно из-за неполноты', zero_baseline:'Нулевая база' };
 const show = (cell: Cell) => cell.value === null ? 'Нет данных' : (cell.status === 'partial' ? 'Не менее ' : '') + cell.value.toLocaleString('ru-RU');
 const field = 'border border-[#C9D0DB] rounded-xl px-3 py-2 bg-white text-[14px]';
 const point = (label: string, cell?: Cell) => ({ label, value: cell?.value ?? null, partial: cell?.status === 'partial' });
-const monthLabel = (month: string) => new Date(`${month.slice(0,7)}-01T12:00:00Z`).toLocaleDateString('ru-RU', { month: 'short' });
 function Value({ cell }: { cell?: Cell }) {
   return cell ? <span>{show(cell)}<small className="block text-[#4A5363]">{statuses[cell.status]}{cell.denominator != null && ` · ${cell.numerator} из ${cell.denominator}`}</small></span> : <span>Нет данных</span>;
 }
@@ -55,6 +53,7 @@ export default function ReportPage({ embeddedView, onPrepared }: {
   const [department, setDepartment] = useState('');
   const [reload, setReload] = useState(0);
   const [loadingVersions, setLoadingVersions] = useState(true);
+  const [futureNotice, setFutureNotice] = useState(false);
   useEffect(() => {
     const controller = new AbortController();
     setLoadingVersions(true);
@@ -101,22 +100,25 @@ export default function ReportPage({ embeddedView, onPrepared }: {
   }
 
   return <div className={embedded ? 'space-y-5' : 'max-w-[1240px] mx-auto px-4 sm:px-6 py-8 space-y-5'}>
-    <Card><div className="flex flex-wrap items-start justify-between gap-5"><div><h1 className="text-[28px] font-bold">{embeddedView === 'config' ? 'Новый отчёт' : embeddedView === 'ready' ? 'Готовый отчёт' : 'Годовой кадровый доклад'}{snapshot && ' · '+snapshot.year}</h1><p className="text-[#4A5363]">{snapshot?.scope_label}</p>{snapshot&&<p className="text-[13px]">С {snapshot.period_start} до {snapshot.period_end_exclusive} (исключительно)</p>}</div>
-      <div className="flex flex-wrap gap-3 items-end"><label>Версия доклада<select aria-label="Версия доклада" className={field+' block'} value={id} disabled={busy} onChange={(e)=>setId(e.target.value)}><option value="">Выберите снимок</option>{versions.map((v)=><option key={v.snapshot_id} value={v.snapshot_id}>{v.year} · {v.extracted_at.slice(0,10)} · {v.snapshot_id.slice(0,6)}</option>)}</select></label>{!embedded && <Btn disabled={!snapshot||busy} onClick={()=>download('/xlsx')}>Скачать годовой XLSX</Btn>}</div></div>
-      {snapshot&&<div className="mt-3"><Badge>{snapshot.mode==='demo'?'Учебный снимок':'Рабочий снимок'}</Badge></div>}
-      {!embedded && <div className="flex flex-wrap gap-4 mt-5">{REPORT_TABS.map((item)=><button key={item.id} type="button" aria-pressed={tab === item.id} disabled={busy} onClick={()=>{setTab(item.id);setApplied(null);}} className={`text-[15px] font-semibold pb-2 border-b-2 ${tab===item.id?'text-[#1F4FD1] border-[#1F4FD1]':'border-transparent'}`}>{item.label}</button>)}</div>}
-    </Card>
+    <div className={'bg-white border border-[#E1E5EB] rounded-2xl px-6 pt-6 ' + (embedded ? 'pb-6' : '')}>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div><div className="flex flex-wrap items-center gap-3"><h1 className="text-[28px] font-bold text-[#141A24]">{embeddedView === 'config' ? 'Новый отчёт' : embeddedView === 'ready' ? 'Готовый отчёт' : 'Годовой кадровый доклад'}{snapshot && ' · '+snapshot.year}</h1>{snapshot && <Badge tone={snapshot.mode==='demo' ? 'amber' : 'gray'}>{snapshot.mode==='demo'?'Учебный':'Рабочий'}</Badge>}</div>
+          {snapshot && <p className="text-[16px] text-[#4A5363] mt-1">{snapshot.scope_label} · период с {snapshot.period_start} до {snapshot.period_end_exclusive}</p>}
+        </div>
+        <div className="flex flex-wrap gap-3 items-end"><label className="text-[13px] font-semibold text-[#4A5363]">Версия доклада<select aria-label="Версия доклада" className="block mt-1 min-w-[200px] border border-[#C9D0DB] rounded-xl px-4 py-3 text-[16px] bg-white" value={id} disabled={busy} onChange={(e)=>setId(e.target.value)}><option value="">Выберите снимок</option>{versions.map((v)=><option key={v.snapshot_id} value={v.snapshot_id}>{v.year} · {v.extracted_at.slice(0,10)} · {v.snapshot_id.slice(0,6)}</option>)}</select></label>{!embedded && <Btn disabled={!snapshot||busy} onClick={()=>download('/xlsx')}>Скачать годовой XLSX</Btn>}</div>
+      </div>
+      {!embedded && <div className="flex flex-wrap gap-x-7 mt-6">{REPORT_TABS.map((item)=><button key={item.id} type="button" aria-pressed={tab === item.id} disabled={busy} onClick={()=>{setTab(item.id);setApplied(null);}} className={`text-[16px] font-semibold pb-3 border-b-[3px] transition-colors ${tab===item.id?'text-[#1F4FD1] border-[#1F4FD1]':'text-[#141A24] border-transparent hover:text-[#1F4FD1]'}`}>{item.label}</button>)}</div>}
+    </div>
     {error&&<Card><p role="alert" className="text-[#A3171B]">{error}</p><Btn onClick={()=>setReload((n)=>n+1)}>Повторить</Btn></Card>}
     {!id&&!error&&<Card>{loadingVersions ? 'Загружаем список снимков…' : 'Доступных снимков пока нет.'}</Card>}
     {id&&!snapshot&&!error&&<Card>Загружаем снимок…</Card>}
     {snapshot&&tab==='overview'&&<>
       <div className="grid sm:grid-cols-3 gap-4">{Object.entries(snapshot.totals).map(([key,cell])=><Kpi key={key} label={metricNames[key]||key} value={show(cell)} caption={statuses[cell.status]} />)}</div>
-      <ReportBars title="Итоги подбора за год" points={Object.entries(snapshot.totals).map(([key, cell]) => point(metricNames[key] || key, cell))} />
-      <Card><h2 className="text-[20px] font-bold mb-4">Выводы и основания</h2>{findings.map((finding,index)=><details key={index} className="border-b border-[#E1E5EB] py-3"><summary className="font-medium">{finding.statement}</summary><p className="text-[13px] text-[#4A5363] mt-2">{finding.section}. Основание — фиксированный снимок {snapshot.year} года, выгрузка {snapshot.extracted_at.slice(0,10)}. Полнота и первичные показатели доступны на вкладках динамики и покрытия.</p></details>)}</Card>
+      <Findings key={id} rows={findings} year={snapshot.year} onOpenBuilder={() => setTab('builder')} onDownload={() => void download('/xlsx')} />
+      <AnnualTrends key={id} series={snapshot} />
     </>}
     {snapshot&&tab==='dynamics'&&<>
-      <div className="grid lg:grid-cols-2 gap-5">{Object.keys(snapshot.totals).map((key) => <ReportBars key={key} title={metricNames[key] || key} points={snapshot.months.map((month) => point(monthLabel(month.month), month.metrics[key]))} />)}</div>
-      <Card className="overflow-x-auto"><h2 className="text-[20px] font-bold mb-4">Месячная динамика</h2><table className="w-full text-left text-[14px]"><thead><tr><th>Месяц</th>{Object.keys(snapshot.totals).map((key)=><th key={key}>{metricNames[key] || key}</th>)}</tr></thead><tbody>{snapshot.months.map((month)=><tr key={month.month} className="border-t border-[#E1E5EB]"><td className="py-3">{monthLabel(month.month)}</td>{Object.keys(snapshot.totals).map((key)=><td key={key}><Value cell={month.metrics[key]}/></td>)}</tr>)}</tbody></table></Card>
+      <AnnualTrends key={id} series={snapshot} dynamics />
     </>}
     {snapshot&&(tab==='builder'||tab==='staff')&&<>
       {embeddedView !== 'ready' && <div className={embedded ? 'grid items-start gap-5 lg:grid-cols-[2fr_1fr]' : ''}><Card>
@@ -131,7 +133,7 @@ export default function ReportPage({ embeddedView, onPrepared }: {
         </>:<label>Подразделение<select aria-label="Подразделение" className={field+' block'} value={department} onChange={(e)=>{setDepartment(e.target.value);setApplied(null);}}><option value="">Все подразделения</option>{catalog?.departments?.map((d)=><option key={d.key} value={d.key}>{d.label}</option>)}</select></label>}
         <Btn variant="primary" disabled={busy||!catalog||first<1||last>12||first>last} onClick={() => void query()}>{embedded ? 'Сформировать отчёт' : 'Применить'}</Btn>
         {!embedded && <Btn disabled={busy||!applied} onClick={()=>applied&&download(tab==='staff'?'/operations/xlsx':'/query/xlsx',applied)}>Скачать срез XLSX</Btn>}
-      </fieldset></Card>{embedded && <Card><h2 className="mb-3 text-[17px] font-bold">Формат отчёта</h2><Badge tone="blue">Excel (.xlsx)</Badge></Card>}</div>}
+      </fieldset></Card>{embedded && <Card className="space-y-3"><h2 className="text-[17px] font-bold">Формат отчёта</h2><div className="flex flex-wrap items-center gap-2"><Badge tone="blue">Excel (.xlsx)</Badge><Btn variant="link" onClick={() => setFutureNotice(true)}>PDF</Btn><Btn variant="link" onClick={() => setFutureNotice(true)}>Презентация</Btn></div>{futureNotice && <p role="status" className="text-[14px] text-[#4A5363]">Будет добавлено позже</p>}</Card>}</div>}
       {embeddedView === 'ready' && !analysis && !error && <Card>Сформируйте отчёт из выбранного снимка и показателя.</Card>}
       {embeddedView === 'ready' && applied && <Card className="flex flex-wrap items-center justify-between gap-4">
         <p className="text-[14px] font-semibold">Месяцы {String(applied.start_month)}–{String(applied.end_month)}</p>
@@ -143,12 +145,20 @@ export default function ReportPage({ embeddedView, onPrepared }: {
       </>}
       {operations&&tab==='staff'&&(operations.available ? <>
         {!applied&&<Card>Нажмите «Применить», чтобы обновить результат по выбранным параметрам.</Card>}
-        <div className="grid lg:grid-cols-2 gap-5"><ReportBars title="Численность по подразделениям" points={operations.by_department.map((d) => point(d.label,d.workforce.headcount))} /><ReportBars title="Открытые передачи по подразделениям" points={operations.by_department.map((d) => point(d.label,d.handoffs.open))} color="#7C5CDB" /></div>
-        <Card><div className="grid sm:grid-cols-3 gap-4">{Object.entries({...operations.workforce,...operations.handoffs}).map(([key,cell])=><Kpi key={key} label={metricNames[key]||key} value={show(cell)} caption={statuses[cell.status]}/>)}</div><table className="w-full mt-5"><thead><tr className="text-left"><th>Подразделение</th><th>Численность</th><th>Открытые передачи</th></tr></thead><tbody>{operations.by_department.map((d)=><tr key={d.key}><td>{d.label}</td><td><Value cell={d.workforce.headcount}/></td><td><Value cell={d.handoffs.open}/></td></tr>)}</tbody></table></Card>
+        <div className="grid lg:grid-cols-2 gap-5">
+          {([{ title: 'На конец выбранного периода', tone: 'blue', keys: ['authorized_fte','occupied_fte','headcount','open'] }, { title: 'За выбранный период', tone: 'purple', keys: ['hires','exits','answered','median_response_days'] }] as const).map(({ title, tone, keys }) => <Card key={title}>
+            <div className="flex justify-between gap-2"><h2 className="text-[20px] font-bold">{title}</h2><Badge tone={tone}>{tone === 'blue' ? 'На дату' : 'За период'}</Badge></div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">{keys.map((key) => <div key={key}><strong>{metricNames[key]}</strong><div className="mt-1"><Value cell={operations.workforce[key] ?? operations.handoffs[key]} /></div></div>)}</div>
+          </Card>)}
+        </div>
+        <div className="grid lg:grid-cols-[2fr_1fr] gap-5">
+          <Card className="overflow-x-auto"><h2 className="text-[22px] font-bold">Рейтинг по открытым передачам</h2><table className="w-full mt-5"><thead><tr className="text-left"><th>Подразделение</th><th>Численность</th><th>Открытые передачи</th></tr></thead><tbody>{[...operations.by_department].sort((a,b)=>(b.handoffs.open?.value??0)-(a.handoffs.open?.value??0)).map((d)=><tr key={d.key} className="border-t border-[#E1E5EB]"><td className="py-3">{d.label}</td><td><Value cell={d.workforce.headcount}/></td><td><Value cell={d.handoffs.open}/></td></tr>)}</tbody></table></Card>
+          <Card className="space-y-3"><h2 className="text-[22px] font-bold">Ответы по месяцам</h2><div className="flex items-end gap-2 h-[170px]">{operations.months.map((m) => <div key={m.month} className="flex flex-col justify-end items-center flex-1 h-full gap-1"><strong className="text-[12px]">{m.handoffs.answered?.value ?? '—'}</strong><div className="w-full bg-[#5B80E0] rounded-t" style={{height: 80*(m.handoffs.answered?.value??0)/Math.max(1,...operations.months.map((month)=>month.handoffs.answered?.value??0))+'%'}} /></div>)}</div><div className="flex gap-2 text-[12px] text-[#4A5363]">{operations.months.map((m)=><span key={m.month} className="flex-1 text-center">{monthLabel(m.month)}</span>)}</div></Card>
+        </div>
       </> : <Card>Источник кадрового учёта не включён в этот снимок.</Card>)}
     </>}
     {snapshot&&tab==='coverage'&&<>
-      <ReportBars title="Охват помесячных показателей" points={Object.entries(statuses).map(([status, label]) => ({ label, value: snapshot.months.flatMap((month) => Object.values(month.metrics)).filter((cell) => cell.status === status).length }))} color="#7C5CDB" />
+      <Card className="space-y-4"><h2 className="text-[22px] font-bold">Охват помесячных показателей</h2><div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3.5">{Object.entries(statuses).map(([status,label],index) => <div key={status} className={'rounded-2xl border p-4 min-h-[120px] '+ ['bg-white border-[#E1E5EB]','bg-[#FFEFD9] border-[#F3C98B]','bg-[#EEF1F5] border-dashed border-[#C9D0DB]','bg-[#F1EDFF] border-[#D5C9F5]'][index]}><p className="text-[26px] font-bold">{snapshot.months.flatMap((month)=>Object.values(month.metrics)).filter((cell)=>cell.status===status).length}</p><p>{label}</p></div>)}</div></Card>
       <Card><h2 className="text-[20px] font-bold mb-4">Полнота источников</h2>{Object.entries(snapshot.totals).map(([key,cell])=><div key={key} className="border-b border-[#E1E5EB] py-3"><strong>{metricNames[key] || key}</strong><p>{statuses[cell.status]} · {cell.reason_codes.map((code)=>reasons[code]||'Ограничение источника').join(', ')||'Ограничения не указаны'}</p></div>)}<p className="mt-4">Без даты отклика — {snapshot.quality.undated_applications}. Без даты интервью — {snapshot.quality.undated_interviews}.</p></Card>
     </>}
   </div>;
