@@ -1,0 +1,245 @@
+{
+  "is_synthetic": true,
+  "plan": {
+    "id": "d76e19b8-0fc2-4568-8695-78cb0dbcb402",
+    "revision": 3,
+    "created_at": "2026-11-21T00:43:48.468974Z",
+    "updated_at": "2026-11-21T00:43:48.580125Z",
+    "organization_id": "00000000-0000-4000-8000-000000000001",
+    "goal_id": "0fd8bbdc-9ee9-46f2-bd96-4cf1ba74dcfa",
+    "owner_actor_id": "00000000-0000-4000-8000-000000000104",
+    "manager_actor_id": "00000000-0000-4000-8000-000000000103",
+    "reviewer_actor_id": "00000000-0000-4000-8000-000000000103",
+    "assignment_basis": {
+      "share": {
+        "shared_by": "00000000-0000-4000-8000-000000000104",
+        "shared_at": "2026-11-21T00:43:48.450496+00:00",
+        "recipient": {
+          "actor_id": "00000000-0000-4000-8000-000000000103",
+          "organization_id": "00000000-0000-4000-8000-000000000001",
+          "grants": [
+            {
+              "role": "department",
+              "scope_type": "department",
+              "scope_id": "00000000-0000-4000-8000-000000000011"
+            }
+          ]
+        }
+      },
+      "manager": {
+        "actor_id": "00000000-0000-4000-8000-000000000103",
+        "organization_id": "00000000-0000-4000-8000-000000000001",
+        "grants": [
+          {
+            "role": "department",
+            "scope_type": "department",
+            "scope_id": "00000000-0000-4000-8000-000000000011"
+          }
+        ]
+      },
+      "reviewer": {
+        "actor_id": "00000000-0000-4000-8000-000000000103",
+        "organization_id": "00000000-0000-4000-8000-000000000001",
+        "grants": [
+          {
+            "role": "department",
+            "scope_type": "department",
+            "scope_id": "00000000-0000-4000-8000-000000000011"
+          }
+        ]
+      },
+      "assigned_by": "00000000-0000-4000-8000-000000000103",
+      "assigned_at": "2026-11-21T00:43:48.468721+00:00"
+    },
+    "title": "Проба сводки",
+    "criteria": [
+      {
+        "key": "sources",
+        "text": "Указаны источники",
+        "required": true
+      },
+      {
+        "key": "conclusion",
+        "text": "Обоснован вывод",
+        "required": true
+      }
+    ],
+    "activities": [
+      {
+        "key": "draft",
+        "title": "Подготовить текст",
+        "criterion_keys": [
+          "sources"
+        ],
+        "resource_note": "Час рабочего времени"
+      },
+      {
+        "key": "summary",
+        "title": "Сформулировать вывод",
+        "criterion_keys": [
+          "conclusion"
+        ],
+        "resource_note": "Обсудить с руководителем"
+      }
+    ],
+    "goal_revision": 2,
+    "goal_snapshot": {
+      "id": "0fd8bbdc-9ee9-46f2-bd96-4cf1ba74dcfa",
+      "revision": 2,
+      "created_at": "2026-11-21T00:43:48.432656Z",
+      "updated_at": "2026-11-21T00:43:48.450511Z",
+      "organization_id": "00000000-0000-4000-8000-000000000001",
+      "owner_actor_id": "00000000-0000-4000-8000-000000000104",
+      "title": "Аналитическая сводка",
+      "description": "Источник: ДИ экономиста, версия 2",
+      "status": "shared",
+      "shared_with_actor_id": "00000000-0000-4000-8000-000000000103"
+    },
+    "agreed_revision": 2,
+    "status": "closed",
+    "decision_note": "Согласовано",
+    "closure": {
+      "outcome": "reached",
+      "reason": "Проба завершена",
+      "actor_id": "00000000-0000-4000-8000-000000000103",
+      "closed_at": "2026-11-21T00:43:48.580102Z",
+      "criteria_snapshot": [
+        {
+          "key": "sources",
+          "text": "Указаны источники",
+          "required": true,
+          "state": "confirmed",
+          "submission_id": "f377357a-b901-4764-a002-4347a8acc081",
+          "review_id": "4160cd00-6c8e-4732-b6a4-f8a12151f0c5"
+        },
+        {
+          "key": "conclusion",
+          "text": "Обоснован вывод",
+          "required": true,
+          "state": "confirmed",
+          "submission_id": "46d52a2b-048b-4651-8bff-e2fc6af11f3c",
+          "review_id": "8ac20467-5d95-4fe3-8281-68e27d21c5cc"
+        }
+      ]
+    }
+  },
+  "package": {
+    "package_id": "ea98b394-bfbc-4166-afc2-ca57f1ac0f3f",
+    "plan_id": "d76e19b8-0fc2-4568-8695-78cb0dbcb402",
+    "owner_actor_id": "00000000-0000-4000-8000-000000000104",
+    "purpose": "Обсудить участие в проекте",
+    "created_at": "2026-11-21T00:43:49.097924Z",
+    "items": [
+      {
+        "criterion_key": "sources",
+        "criterion_text": "Указаны источники",
+        "result": "confirmed",
+        "source_submission_id": "f377357a-b901-4764-a002-4347a8acc081",
+        "source_author_actor_id": "00000000-0000-4000-8000-000000000104",
+        "review_id": "4160cd00-6c8e-4732-b6a4-f8a12151f0c5",
+        "reviewer_actor_id": "00000000-0000-4000-8000-000000000103",
+        "reviewed_at": "2026-11-21T00:43:48.529329Z"
+      }
+    ],
+    "limitations": {
+      "plan_outcome": "reached",
+      "delivery_status": "not_sent",
+      "mutable_source_criterion_keys": [
+        "sources"
+      ],
+      "note": "Prepared for manual transfer; source access is not granted. This is evidence for selected criteria, not an overall competence level."
+    }
+  },
+  "history": {
+    "items": [
+      {
+        "id": "f377357a-b901-4764-a002-4347a8acc081",
+        "revision": 1,
+        "created_at": "2026-11-21T00:43:48.513230Z",
+        "updated_at": "2026-11-21T00:43:48.513232Z",
+        "plan_id": "d76e19b8-0fc2-4568-8695-78cb0dbcb402",
+        "plan_revision": 2,
+        "activity_key": "draft",
+        "attempt_no": 1,
+        "criterion_keys": [
+          "sources"
+        ],
+        "statement": "Подготовила сводку",
+        "artifact": {
+          "kind": "url",
+          "value": "https://example.org/report",
+          "mutable_source": true
+        },
+        "created_by": "00000000-0000-4000-8000-000000000104",
+        "review": {
+          "id": "4160cd00-6c8e-4732-b6a4-f8a12151f0c5",
+          "revision": 1,
+          "created_at": "2026-11-21T00:43:48.529329Z",
+          "updated_at": "2026-11-21T00:43:48.529331Z",
+          "submission_id": "f377357a-b901-4764-a002-4347a8acc081",
+          "reviewer_actor_id": "00000000-0000-4000-8000-000000000103",
+          "results": [
+            {
+              "criterion_key": "sources",
+              "result": "confirmed",
+              "reason": "Проверен учебный материал"
+            }
+          ]
+        }
+      },
+      {
+        "id": "46d52a2b-048b-4651-8bff-e2fc6af11f3c",
+        "revision": 1,
+        "created_at": "2026-11-21T00:43:48.544691Z",
+        "updated_at": "2026-11-21T00:43:48.544692Z",
+        "plan_id": "d76e19b8-0fc2-4568-8695-78cb0dbcb402",
+        "plan_revision": 2,
+        "activity_key": "summary",
+        "attempt_no": 1,
+        "criterion_keys": [
+          "conclusion"
+        ],
+        "statement": "Подготовила сводку",
+        "artifact": {
+          "kind": "text",
+          "value": "Источники: учебный реестр, версия 2",
+          "mutable_source": false
+        },
+        "created_by": "00000000-0000-4000-8000-000000000104",
+        "review": {
+          "id": "8ac20467-5d95-4fe3-8281-68e27d21c5cc",
+          "revision": 1,
+          "created_at": "2026-11-21T00:43:48.562245Z",
+          "updated_at": "2026-11-21T00:43:48.562247Z",
+          "submission_id": "46d52a2b-048b-4651-8bff-e2fc6af11f3c",
+          "reviewer_actor_id": "00000000-0000-4000-8000-000000000103",
+          "results": [
+            {
+              "criterion_key": "conclusion",
+              "result": "confirmed",
+              "reason": "Проверен учебный материал"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "progress": {
+    "criteria": [
+      {
+        "key": "sources",
+        "state": "confirmed",
+        "submission_id": "f377357a-b901-4764-a002-4347a8acc081",
+        "review_id": "4160cd00-6c8e-4732-b6a4-f8a12151f0c5"
+      },
+      {
+        "key": "conclusion",
+        "state": "confirmed",
+        "submission_id": "46d52a2b-048b-4651-8bff-e2fc6af11f3c",
+        "review_id": "8ac20467-5d95-4fe3-8281-68e27d21c5cc"
+      }
+    ],
+    "completed_count": 2,
+    "total_count": 2
+  }
+}

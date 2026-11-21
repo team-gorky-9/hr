@@ -220,3 +220,114 @@ def test_attempts_keep_history_and_use_latest_evidence(client):
     assert latest["completed_count"] == 0
     assert latest["criteria"][0]["submission_id"] == third["id"]
     assert latest["criteria"][0]["state"] == "waiting"
+
+
+def test_closure_and_selected_package_survive_new_app(client, app):
+    from fastapi.testclient import TestClient
+
+    from workforce.api import create_app
+
+    owner, manager, _, plan = activate(client)
+    close = {"expected_revision": plan["revision"], "outcome": "reached", "reason": "Проба завершена"}
+    denied = call(client, "POST", f"/plans/{plan['id']}/close", owner, close, 409)
+    assert denied["error"]["code"] == "REQUIRED_CRITERIA_OPEN"
+    first = submit(client, plan, owner, url=True)
+    approved = review(client, first, manager)
+    second = submit(client, plan, owner, "summary", "conclusion")
+    review(client, second, manager)
+    closed = call(client, "POST", f"/plans/{plan['id']}/close", manager, close)
+    assert closed["status"] == "closed" and closed["closure"]["outcome"] == "reached"
+    assert all(item["state"] == "confirmed" for item in closed["closure"]["criteria_snapshot"])
+    call(
+        client,
+        "POST",
+        f"/plans/{plan['id']}/submissions",
+        owner,
+        {
+            "activity_key": "draft",
+            "criterion_keys": ["sources"],
+            "statement": "Поздняя сдача",
+            "artifact": {"kind": "text", "value": "Новый текст"},
+        },
+        409,
+    )
+    package = call(
+        client,
+        "POST",
+        f"/plans/{plan['id']}/share-result",
+        owner,
+        {
+            "criterion_keys": ["sources"],
+            "purpose": "Обсуждение участия в проекте",
+        },
+    )
+    assert len(package["items"]) == 1
+    item = package["items"][0]
+    assert item["criterion_key"] == "sources" and item["source_submission_id"] == first["id"]
+    assert item["review_id"] == approved["id"] and item["reviewer_actor_id"] == MANAGER
+    assert "artifact" not in str(package) and "example.org" not in str(package)
+    assert "goal_snapshot" not in package and "closure" not in package
+    assert package["limitations"]["delivery_status"] == "not_sent"
+    assert package["limitations"]["mutable_source_criterion_keys"] == ["sources"]
+    call(client, "GET", f"/result-packages/{package['package_id']}", manager, status=404)
+    restarted = create_app(app.state.settings)
+    try:
+        with TestClient(restarted) as fresh:
+            assert call(fresh, "GET", f"/result-packages/{package['package_id']}", owner) == package
+            assert call(fresh, "GET", f"/plans/{plan['id']}", owner) == closed
+            assert len(call(fresh, "GET", f"/plans/{plan['id']}/submissions", owner)["items"]) == 2
+    finally:
+        restarted.state.engine.dispose()
+
+
+def test_partial_and_stopped_do_not_export_open_criteria(client):
+    owner, manager, _, plan = activate(client)
+    first = submit(client, plan, owner)
+    review(client, first, manager)
+    closed = call(
+        client,
+        "POST",
+        f"/plans/{plan['id']}/close",
+        owner,
+        {
+            "expected_revision": plan["revision"],
+            "outcome": "partial",
+            "reason": "Не хватило времени на вывод",
+        },
+    )
+    assert closed["closure"]["criteria_snapshot"][1]["state"] == "unsubmitted"
+    call(
+        client,
+        "POST",
+        f"/plans/{plan['id']}/share-result",
+        owner,
+        {
+            "criterion_keys": ["conclusion"],
+            "purpose": "Обсудить результат",
+        },
+        409,
+    )
+    package = call(
+        client,
+        "POST",
+        f"/plans/{plan['id']}/share-result",
+        owner,
+        {
+            "criterion_keys": ["sources"],
+            "purpose": "Обсудить результат",
+        },
+    )
+    assert package["limitations"]["plan_outcome"] == "partial"
+    owner, _, _, another = activate(client)
+    stopped = call(
+        client,
+        "POST",
+        f"/plans/{another['id']}/close",
+        owner,
+        {
+            "expected_revision": another["revision"],
+            "outcome": "stopped",
+            "reason": "Задача отменена",
+        },
+    )
+    assert stopped["closure"]["outcome"] == "stopped"

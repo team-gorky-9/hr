@@ -9,6 +9,17 @@ from workforce.schemas import Code, Input, Revision, Text
 Content = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=20000)]
 
 
+class ErrorDetail(BaseModel):
+    code: str
+    message: str
+    field: str | None
+    request_id: str | None
+
+
+class ErrorResponse(BaseModel):
+    error: ErrorDetail
+
+
 class GoalCreate(Input):
     title: Text
     description: Content
@@ -103,6 +114,20 @@ class GoalView(ResourceView):
     shared_with_actor_id: UUID | None
 
 
+class ClosureCriterion(Criterion):
+    state: Literal["unsubmitted", "waiting", "confirmed", "needs_revision", "not_verified"]
+    submission_id: UUID | None = None
+    review_id: UUID | None = None
+
+
+class ClosureView(BaseModel):
+    outcome: Literal["reached", "partial", "stopped"]
+    reason: str
+    actor_id: UUID
+    closed_at: datetime
+    criteria_snapshot: list[ClosureCriterion]
+
+
 class PlanView(ResourceView):
     organization_id: UUID
     goal_id: UUID
@@ -118,6 +143,7 @@ class PlanView(ResourceView):
     agreed_revision: int | None
     status: Literal["proposed", "returned", "active", "closed"]
     decision_note: str | None
+    closure: ClosureView | None
 
 
 class Goals(BaseModel):
@@ -213,3 +239,47 @@ class Progress(BaseModel):
     criteria: list[CriterionProgress]
     completed_count: int
     total_count: int
+
+
+class Close(Revision):
+    outcome: Literal["reached", "partial", "stopped"]
+    reason: Content
+
+
+class ShareResult(Input):
+    criterion_keys: Keys
+    purpose: Content
+
+    @model_validator(mode="after")
+    def unique_selection(self):
+        if len(set(self.criterion_keys)) != len(self.criterion_keys):
+            raise ValueError("Choose each criterion once")
+        return self
+
+
+class PackageItem(BaseModel):
+    criterion_key: str
+    criterion_text: str
+    result: Literal["confirmed"]
+    source_submission_id: UUID
+    source_author_actor_id: UUID
+    review_id: UUID
+    reviewer_actor_id: UUID
+    reviewed_at: datetime
+
+
+class PackageLimitations(BaseModel):
+    plan_outcome: Literal["reached", "partial", "stopped"]
+    delivery_status: Literal["not_sent"]
+    mutable_source_criterion_keys: list[str]
+    note: str
+
+
+class PackageView(BaseModel):
+    package_id: UUID
+    plan_id: UUID
+    owner_actor_id: UUID
+    purpose: str
+    created_at: datetime
+    items: list[PackageItem]
+    limitations: PackageLimitations

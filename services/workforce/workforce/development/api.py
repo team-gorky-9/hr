@@ -2,6 +2,7 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request, Response
+from fastapi.security import HTTPBearer
 from sqlalchemy.orm import Session
 
 from workforce.api import authenticate
@@ -9,7 +10,12 @@ from workforce.development import schemas as s
 from workforce.development.service import Development
 from workforce.domain import lock_organization, serialize
 
-router = APIRouter(prefix="/api/v1/development", tags=["development"])
+router = APIRouter(
+    prefix="/api/v1/development",
+    tags=["development"],
+    dependencies=[Depends(HTTPBearer(auto_error=False))],
+    responses={status: {"model": s.ErrorResponse} for status in (401, 403, 404, 409, 422, 503)},
+)
 
 
 def service(request: Request):
@@ -97,3 +103,18 @@ def review(id: UUID, body: s.ReviewCreate, service: Service, response: Response)
 @router.get("/plans/{id}/progress", response_model=s.Progress)
 def progress(id: UUID, service: Service):
     return service.progress(id)
+
+
+@router.post("/plans/{id}/close", response_model=s.PlanView)
+def close(id: UUID, body: s.Close, service: Service):
+    return service.close(id, body)
+
+
+@router.post("/plans/{id}/share-result", response_model=s.PackageView)
+def share_result(id: UUID, body: s.ShareResult, service: Service):
+    return service.share_result(id, body)
+
+
+@router.get("/result-packages/{id}", response_model=s.PackageView)
+def package(id: UUID, service: Service):
+    return service.package(id)

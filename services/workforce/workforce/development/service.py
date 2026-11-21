@@ -3,7 +3,7 @@ from copy import deepcopy
 from sqlalchemy import func, or_, select
 
 from workforce.development import schemas as s
-from workforce.development.models import Goal, GoalVersion, Plan, Review, Submission
+from workforce.development.models import Goal, GoalVersion, Plan, ResultPackage, Review, Submission
 from workforce.domain import Problem, changed, iso, owned, revision, serialize
 from workforce.models import Actor, Department, now
 from workforce.onboarding.service import self_access
@@ -311,3 +311,84 @@ class Development:
             self.department_actor(row.reviewer_actor_id, row.owner_actor_id)
             row.agreed_revision = row.revision
         return self.save(row)
+
+    def close(self, id, body):
+        plan = self.plan(id)
+        if self.actor.id not in {plan.owner_actor_id, plan.manager_actor_id}:
+            missing()
+        if self.actor.id == plan.manager_actor_id:
+            self.department_actor(self.actor.id, plan.owner_actor_id)
+        revision(plan, body.expected_revision)
+        state(plan, "active")
+        progress = {item["key"]: item for item in self.progress(id)["criteria"]}
+        snapshot = [{**deepcopy(criterion), **progress[criterion["key"]]} for criterion in plan.criteria]
+        if body.outcome == "reached" and any(
+            item["required"] and item["state"] != "confirmed" for item in snapshot
+        ):
+            raise Problem(409, "REQUIRED_CRITERIA_OPEN", "All required criteria must be confirmed")
+        plan.closure = {
+            "outcome": body.outcome,
+            "reason": body.reason,
+            "actor_id": self.actor.id,
+            "closed_at": iso(now()),
+            "criteria_snapshot": snapshot,
+        }
+        plan.status = "closed"
+        changed(plan)
+        return self.save(plan)
+
+    @staticmethod
+    def package_view(package):
+        result = serialize(package)
+        result["package_id"] = result.pop("id")
+        return result
+
+    def share_result(self, id, body):
+        plan = self.plan(id)
+        self.owner(plan)
+        state(plan, "closed")
+        criteria = {item["key"]: item for item in plan.closure["criteria_snapshot"]}
+        if not set(body.criterion_keys) <= criteria.keys():
+            raise Problem(422, "VALIDATION_ERROR", "Unknown criterion in this plan")
+        if any(criteria[key]["state"] != "confirmed" for key in body.criterion_keys):
+            raise Problem(409, "RESULT_NOT_CONFIRMED", "Only confirmed results can be selected")
+        items, mutable = [], []
+        for key in body.criterion_keys:
+            criterion = criteria[key]
+            submission = self.session.get(Submission, criterion["submission_id"])
+            review = self.session.get(Review, criterion["review_id"])
+            items.append(
+                {
+                    "criterion_key": key,
+                    "criterion_text": criterion["text"],
+                    "result": "confirmed",
+                    "source_submission_id": submission.id,
+                    "source_author_actor_id": submission.created_by,
+                    "review_id": review.id,
+                    "reviewer_actor_id": review.reviewer_actor_id,
+                    "reviewed_at": iso(review.created_at),
+                }
+            )
+            if submission.artifact["mutable_source"]:
+                mutable.append(key)
+        package = ResultPackage(
+            organization_id=plan.organization_id,
+            plan_id=plan.id,
+            owner_actor_id=plan.owner_actor_id,
+            purpose=body.purpose,
+            items=items,
+            limitations={
+                "plan_outcome": plan.closure["outcome"],
+                "delivery_status": "not_sent",
+                "mutable_source_criterion_keys": mutable,
+                "note": "Prepared for manual transfer; source access is not granted. "
+                "This is evidence for selected criteria, not an overall competence level.",
+            },
+        )
+        self.save(package)
+        return self.package_view(package)
+
+    def package(self, id):
+        package = owned(self.session, ResultPackage, id, self.actor.organization_id)
+        self.owner(package)
+        return self.package_view(package)

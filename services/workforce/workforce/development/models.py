@@ -38,6 +38,7 @@ class Plan(Resource, Base):
     agreed_revision: Mapped[int | None] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(20), default="proposed")
     decision_note: Mapped[str | None] = mapped_column(Text)
+    closure: Mapped[dict | None] = mapped_column(JSON)
 
 
 class Submission(Resource, Base):
@@ -62,3 +63,13 @@ class Review(Resource, Base):
     submission_id: Mapped[str] = mapped_column(ForeignKey("development_submissions.id"), unique=True)
     reviewer_actor_id: Mapped[str] = mapped_column(ForeignKey("actors.id"))
     results: Mapped[list] = mapped_column(JSON)
+
+
+class ResultPackage(Resource, Base):
+    __tablename__ = "development_result_packages"
+    organization_id: Mapped[str] = mapped_column(ForeignKey("organizations.id"), index=True)
+    plan_id: Mapped[str] = mapped_column(ForeignKey("development_plans.id"))
+    owner_actor_id: Mapped[str] = mapped_column(ForeignKey("actors.id"), index=True)
+    purpose: Mapped[str] = mapped_column(Text)
+    items: Mapped[list] = mapped_column(JSON)
+    limitations: Mapped[dict] = mapped_column(JSON)

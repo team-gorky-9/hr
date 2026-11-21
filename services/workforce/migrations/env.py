@@ -2,8 +2,8 @@ from alembic import context
 
 from workforce.config import Settings
 from workforce.database import make_engine
-from workforce.models import Base
 from workforce.development import models as development_models  # noqa: F401
+from workforce.models import Base
 
 
 def run(connection):

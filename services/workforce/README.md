@@ -47,6 +47,22 @@ Review: `POST /submissions/{id}/review` от назначенного department
 Для URL допустимы только HTTP(S), без встроенных учётных данных; `mutable_source=true` означает,
 что копия не сохранена и источник может измениться. Доступ к ссылке остаётся внешним условием.
 
+Закрытие: `POST /plans/{id}/close` с
+`{"expected_revision":2,"outcome":"reached","reason":"Оба критерия подтверждены"}`.
+Открытый обязательный критерий даёт `409 REQUIRED_CRITERIA_OPEN`. Допустимы также partial/stopped с причиной.
+Владелец выбирает результат: `POST /plans/{id}/share-result`, тело
+`{"criterion_keys":["sources"],"purpose":"Обсудить участие в проекте"}`.
+`GET /result-packages/{package_id}` возвращает сохранённый собственный пакет без текста и URL работы;
+`limitations.delivery_status=not_sent` означает подготовку для передачи человеком.
+
+Короткий проход по настоящему HTTP, без контейнеров: `uv run python -m tests.support.development_smoke`.
+Он сохраняет SQLite, OpenAPI и примеры ответов во временном каталоге, проверяет 404 для другой employee
+и другого department, затем перечитывает пакет после остановки HTTP. Зафиксированные материалы:
+[протокол](../../docs/reports/wave-3-development.md), [ответы](../../docs/reports/wave-3-development-examples.json),
+[OpenAPI development](../../docs/reports/wave-3-development-openapi.json).
+Источник ДИ записывается вручную в description; автоматический массовый поиск затронутых сотрудников
+остаётся отдельной задачей. Долгие, конкурентные, PostgreSQL/Docker и UI-прогоны здесь не заявлены.
+
 ## Вводная программа · этап 1 второй волны
 
 Модуль `workforce/onboarding` использует ту же БД и серверные сессии. `python -m workforce prepare`
