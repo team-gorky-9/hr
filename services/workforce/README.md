@@ -1,5 +1,68 @@
 # Workforce · кадровые назначения и вводные программы
 
+## Развитие · третья волна, этап 1
+
+`workforce/development` работает в этой же БД и с теми же сессиями, без worker и брокера.
+Контракт: [wave-3-development-stage-1](../../docs/contracts/wave-3-development-stage-1.md).
+Устройство и границы: [development](../../docs/modules/development.md).
+Все пути имеют префикс `/api/v1/development`, модели команд/ответов доступны в `/openapi.json` и `/docs`.
+`Idempotency-Key` для новых development-операций не требуется; PATCH/share/respond требуют
+`expected_revision`, устаревшая версия даёт `409 STALE_REVISION`.
+
+Быстрый запуск из `services/workforce` без контейнеров:
+
+```powershell
+uv sync --locked
+$env:DATABASE_URL = 'sqlite:///development-demo.db'
+$env:AUTH_MODE = 'fixture'
+uv run python -m workforce prepare
+uv run uvicorn workforce.api:create_app --factory --host 127.0.0.1 --port 8101
+```
+
+Fixture-вход включается только `AUTH_MODE=fixture`: `Bearer fixture:employee` — владелец,
+`Bearer fixture:department` — назначаемый руководитель/проверяющий. При `AUTH_MODE=workforce`
+используются обычные серверные сессии через `POST /api/v1/sessions`, как описано ниже.
+
+Пример первого запроса: `POST /api/v1/development/goals`, заголовок
+`Authorization: Bearer fixture:employee`, тело
+`{"title":"Аналитическая сводка","description":"Источник: ДИ экономиста, версия 2"}`.
+Полученный `id` передать в `POST /goals/{id}/share` с
+`{"expected_revision":1,"recipient_actor_id":"00000000-0000-4000-8000-000000000103"}`.
+Руководитель создаёт `/plans` по этой редакции; сотрудник вызывает `/plans/{id}/respond`.
+Полный воспроизводимый пример с двумя критериями и двумя действиями —
+`tests/test_development.py`; короткая проверка: `uv run pytest tests/test_development.py -q`.
+
+Обычная HR-роль не получает личные цели. Правка отправленной цели создаёт личный черновик:
+до повторного share новый текст видит только автор. Уже предложенный/согласованный план сохраняет
+свой снимок. После accept критерии и действия плана не редактируются. `resource_note` фиксирует
+договорённость, а не автоматически зарезервированное место курса или проекта.
+
+Сдача: `POST /plans/{id}/submissions` с
+`{"activity_key":"draft","criterion_keys":["sources"],"statement":"Подготовила сводку","artifact":{"kind":"text","value":"Источники: учебный реестр, версия 2"}}`.
+Review: `POST /submissions/{id}/review` от назначенного department с
+`{"results":[{"criterion_key":"sources","result":"needs_revision","reason":"Укажите дату источника"}]}`.
+Новая сдача получает новый ID и номер; `GET /plans/{id}/submissions` сохраняет обе попытки и отзывы,
+`GET /plans/{id}/progress` показывает последнюю. Результаты: confirmed/needs_revision/not_verified.
+Точный повтор review возвращает 200 и прежний объект, изменённый повтор — 409 REVIEW_EXISTS.
+Для URL допустимы только HTTP(S), без встроенных учётных данных; `mutable_source=true` означает,
+что копия не сохранена и источник может измениться. Доступ к ссылке остаётся внешним условием.
+
+Закрытие: `POST /plans/{id}/close` с
+`{"expected_revision":2,"outcome":"reached","reason":"Оба критерия подтверждены"}`.
+Открытый обязательный критерий даёт `409 REQUIRED_CRITERIA_OPEN`. Допустимы также partial/stopped с причиной.
+Владелец выбирает результат: `POST /plans/{id}/share-result`, тело
+`{"criterion_keys":["sources"],"purpose":"Обсудить участие в проекте"}`.
+`GET /result-packages/{package_id}` возвращает сохранённый собственный пакет без текста и URL работы;
+`limitations.delivery_status=not_sent` означает подготовку для передачи человеком.
+
+Короткий проход по настоящему HTTP, без контейнеров: `uv run python -m tests.support.development_smoke`.
+Он сохраняет SQLite, OpenAPI и примеры ответов во временном каталоге, проверяет 404 для другой employee
+и другого department, затем перечитывает пакет после остановки HTTP. Зафиксированные материалы:
+[протокол](../../docs/reports/wave-3-development.md), [ответы](../../docs/reports/wave-3-development-examples.json),
+[OpenAPI development](../../docs/reports/wave-3-development-openapi.json).
+Источник ДИ записывается вручную в description; автоматический массовый поиск затронутых сотрудников
+остаётся отдельной задачей. Долгие, конкурентные, PostgreSQL/Docker и UI-прогоны здесь не заявлены.
+
 ## Вводная программа · этап 1 второй волны
 
 Модуль `workforce/onboarding` использует ту же БД и серверные сессии. `python -m workforce prepare`
