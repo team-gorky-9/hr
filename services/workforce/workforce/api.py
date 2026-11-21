@@ -120,6 +120,7 @@ def execute(request, body, action, model=None, id=None, status=200, roles=("hr",
 
 
 def create_app(settings=None):
+    from workforce.development.api import router as development_router
     from workforce.onboarding.api import router as onboarding_router
 
     settings = settings or Settings()
@@ -465,4 +466,5 @@ def create_app(settings=None):
         return execute(request, body, "delivery_retry", Outbox, id)
 
     app.include_router(onboarding_router)
+    app.include_router(development_router)
     return app
