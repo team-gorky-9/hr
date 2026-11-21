@@ -2,6 +2,7 @@ import { useEffect, useSyncExternalStore } from 'react';
 import { developmentRequest, type Actor, type Session } from './development';
 const key = 'workforce-access-token';
 const env = (import.meta as ImportMeta & { env: Record<string, string> }).env;
+export const demoRolesEnabled = env.VITE_DEMO_ROLES === 'true';
 const base = env.VITE_DEVELOPMENT_API_BASE || '/workforce-api';
 type State = { session: Session | null; loading: boolean; error: string };
 let state: State = { session: null, loading: Boolean(sessionStorage.getItem(key)), error: '' };
@@ -37,11 +38,20 @@ export function refreshSession(): Promise<void> {
   return pending;
 }
 export async function loginSession(login: string, password: string): Promise<Session> {
+  const revision = ++generation;
   const session = await developmentRequest<Session>(null, '/sessions', { login, password });
-  generation += 1; initialized = true;
+  if (revision !== generation) return session;
+  initialized = true;
   sessionStorage.setItem(key, session.access_token);
   publish({ session, loading: false, error: '' });
   return session;
+}
+export function selectDemoRole(login: 'candidate' | 'hr' | 'department' | 'employee') {
+  if (!demoRolesEnabled) return Promise.reject(new Error('Учебное переключение ролей выключено.'));
+  // These are the public, synthetic stand accounts from fixtures/wave-1/actors.json.
+  // The backend still validates the session and every operation's scope.
+  if (state.session?.actor.login === login) return Promise.resolve(state.session);
+  return loginSession(login, '123');
 }
 export async function logoutSession(): Promise<void> {
   const token = sessionStorage.getItem(key);

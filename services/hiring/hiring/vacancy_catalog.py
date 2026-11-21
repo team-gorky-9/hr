@@ -65,6 +65,25 @@ def legacy_publications(settings):
     return rows
 
 
+def legacy_publication_detail(settings, vacancy_id):
+    if not settings.portal_legacy_url:
+        return None
+    row = fetch_catalog(settings.portal_legacy_url, f"/api/v1/public/vacancies/{vacancy_id}", allow_missing=True)
+    if row is None:
+        return None
+    try:
+        ref = PortalVacancyRef(system="legacy", id=row["vacancy_id"], revision=row["approved_profile_version"])
+        if ref.id != vacancy_id:
+            raise ValueError("Mismatched vacancy")
+        return {"ref": ref.model_dump(mode="json"), "title": row["title"], "position_code": row["position_code"],
+                "employer": row["employer"], "published_at": row["opened_at"], "is_synthetic": True,
+                "description": row["description"], "duties": row["duties"], "duties_source": row["duties_source"],
+                "requirements": [{"text": item["text"], "mandatory": item["mandatory"]} for item in row["requirements"]],
+                "advertised_requirements": row["advertised_requirements"], "conditions": row["conditions"]}
+    except (KeyError, TypeError, ValueError) as exc:
+        raise dependency_error() from exc
+
+
 def list_publications(settings):
     rows = publication_items(fetch_catalog(settings.requirements_url, REQUIREMENTS_PUBLIC_PATH))
     return [requirements_item(row) for row in rows] if rows else legacy_publications(settings)
@@ -79,7 +98,7 @@ def requirements_publication(settings, vacancy_id, organization_id=None):
 def read_publication(settings, vacancy_id):
     publication = requirements_publication(settings, vacancy_id)
     if publication is None:
-        publication = next((row for row in legacy_publications(settings) if row["ref"]["id"] == str(vacancy_id)), None)
+        publication = legacy_publication_detail(settings, vacancy_id)
     if publication is None:
         raise Problem(404, "NOT_FOUND", "Вакансия больше не опубликована.")
     return publication
