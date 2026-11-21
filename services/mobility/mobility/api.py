@@ -8,7 +8,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
-from .core import (Problem, Settings, Store, check_revision, close_proposals, fail,
+from .core import (Problem, Settings, Store, check_revision, close_proposals,
                    has_role, in_state, read_interest, require, visible)
 from .schemas import InterestIn, OpportunityIn, Reason, Revision
 
@@ -30,7 +30,7 @@ def create_app(settings=None):
         yield
         store.engine.dispose()
 
-    app = FastAPI(title="Internal mobility", version="4B", lifespan=lifespan)
+    app = FastAPI(title="Internal mobility", version="4C", lifespan=lifespan)
     app.state.store = store
 
     @app.exception_handler(Problem)
@@ -140,5 +140,7 @@ def create_app(settings=None):
             return unit.save("interest", row, "not_selected")
 
     from .agreements import register_agreements
+    from .participation import register_participation
     register_agreements(app, store)
+    register_participation(app, store)
     return app

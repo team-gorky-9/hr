@@ -1,5 +1,5 @@
 from datetime import date
-from typing import Annotated
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -71,3 +71,28 @@ class ProposalPatch(Reason):
             if field in self.model_fields_set and getattr(self, field) is None:
                 raise ValueError("Условие не может быть null")
         return self
+
+
+class Finish(Revision):
+    outcome: Literal["completed", "stopped"]
+    result_note: Nonempty
+
+
+class Feedback(Revision):
+    accepted: bool = Field(strict=True)
+    note: Nonempty
+
+
+class PackageIn(Input):
+    purpose: Nonempty
+    share_allowed: bool = Field(strict=True)
+
+
+class VacancyInterestIn(InterestIn):
+    vacancy_ref: Nonempty
+    publication_revision: int = Field(ge=1, strict=True)
+
+
+class Consideration(Revision):
+    consideration_ref: Nonempty
+    confirmation_basis: Nonempty

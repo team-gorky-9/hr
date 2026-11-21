@@ -71,3 +71,33 @@ OpenAPI доступен на `/openapi.json`, Swagger — `/docs`.
 Manager не читает предложение до разрешения сотрудника; PATCH снова закрывает ему
 новые условия до согласия сотрудника. Из истории ему доступны только раскрытые
 редакции его назначения; интерес и комментарий сотрудника не возвращаются.
+
+## 4C: участие, результат, постоянная вакансия
+
+1. Owner вызывает `POST /proposals/{id}/start {"expected_revision":6}` после
+   согласований примера 4B. Получает Participation с revision 1, статусом active,
+   proposal_revision 6. Повтор с той же revision возвращает тот же ID.
+2. Employee/owner/действующий согласующий читают `GET /participations/{id}`.
+3. Owner: `POST /participations/{id}/finish {"expected_revision":1,"outcome":"completed","result_note":"Подготовлены программа и расписание"}`.
+   Для досрочного окончания outcome=`stopped`, фактический итог обязателен.
+4. Employee: `POST /participations/{id}/employee-feedback {"expected_revision":2,"accepted":false,"note":"Расписание требует уточнения"}`.
+   Несогласие не переписывает текст владельца.
+5. Employee: `POST /participations/{id}/result-package {"purpose":"Развитие: планирование практики","share_allowed":true}`.
+   Сохраняется снимок с автором итога и отдельным ответом сотрудника. Личные комментарии
+   интереса и причины согласования времени исключены. `share_allowed=false` означает
+   личную копию без права передачи. Обе версии остаются `delivery_status=not_sent`:
+   автоматической отправки нет. GET участия возвращает пакеты только сотруднику.
+6. Отдельно employee: `POST /vacancy-interests {"vacancy_ref":"fixture:internal-analyst-v1","publication_revision":1,"comment":"Хочу обсудить переход"}`.
+   Статус prepared; кадровая должность не меняется.
+7. HR: `POST /vacancy-interests/{id}/record-consideration {"expected_revision":1,"consideration_ref":"fixture:recruitment-case-77","confirmation_basis":"Учебное рассмотрение зарегистрировано вручную"}`.
+   GET возвращает recorded, source_mode=`manual-confirmed`, автора и основание.
+   Это запись подтверждения рассмотрения, а не решение о переводе.
+
+`uv run pytest tests/test_4c.py -q` проходит этот путь, проверяет запрет начала без
+согласия, неизменность начатых условий, приватность и сохранение после рестарта.
+Полный адресный набор сервиса — `uv run pytest -q`; это три коротких сценария,
+без стрессовых прогонов и без запуска полного тестового набора продукта.
+
+Для следующего потребителя: [OpenAPI всех трёх частей](../../docs/reports/wave-4c-mobility-openapi.json),
+[примеры](../../docs/reports/wave-4c-mobility-examples.json),
+[протокол и границы проверки](../../docs/reports/wave-4-mobility.md).
