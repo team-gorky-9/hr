@@ -15,6 +15,7 @@ import uvicorn
 from feedback.api import create_app
 from feedback.store import seed_demo
 from tests.test_cycle import call, cycle_path
+from tests.test_publication import publication_path
 
 
 @contextmanager
@@ -42,17 +43,21 @@ def serve(app):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--part", choices=["5a"], default="5a")
+    parser.add_argument("--part", choices=["5a", "5b"], default="5a")
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix="feedback-smoke-") as directory:
         db = Path(directory) / "feedback.db"
         seed_demo(db)
         with serve(create_app(db)) as client:
-            result = cycle_path(client, db)
+            result = {"5a": cycle_path, "5b": publication_path}[args.part](client, db)
             spec = client.get("/openapi.json").json()
         with serve(create_app(db)) as client:
-            saved = call(client, "GET", f"/cycles/{result['cycle_id']}/form", None)
-            assert saved["status"] == "closed"
+            if args.part == "5a":
+                saved = call(client, "GET", f"/cycles/{result['cycle_id']}/form", None)
+                assert saved["status"] == "closed"
+            else:
+                saved = call(client, "GET", f"/publications/{result['publication_id']}")
+                assert saved == result["publication"]
             result["reopened_status"] = saved["status"]
     reports = Path(__file__).resolve().parents[3] / "docs" / "reports"
     (reports / f"wave-{args.part}-feedback-openapi.json").write_text(

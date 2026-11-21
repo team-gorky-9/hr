@@ -54,6 +54,10 @@ def initialize(path):
         )
         db.execute("CREATE INDEX IF NOT EXISTS records_kind_org ON records(kind, organization_id)")
         db.execute(
+            "CREATE UNIQUE INDEX IF NOT EXISTS publication_cycle "
+            "ON records(json_extract(data,'$.cycle_id')) WHERE kind='publication'"
+        )
+        db.execute(
             "CREATE TABLE IF NOT EXISTS history (record_id TEXT REFERENCES records(id), "
             "revision INTEGER NOT NULL, actor_id TEXT NOT NULL, action TEXT NOT NULL, "
             "snapshot TEXT NOT NULL, PRIMARY KEY(record_id,revision))"
