@@ -22,8 +22,8 @@ export const RoleHeader: React.FC<RoleHeaderProps> = ({
   onLogoClick,
 }) => (
   <header className="w-full bg-white border-b border-[#E1E5EB] sticky top-0 z-40">
-    <div className="max-w-[1240px] mx-auto px-4 sm:px-6 h-[72px] flex items-center justify-between">
-      <div className="flex items-center gap-6 lg:gap-10">
+    <div className="max-w-[1240px] mx-auto px-4 sm:px-6 min-h-[72px] py-3 flex flex-wrap gap-y-2 items-center justify-between">
+      <div className="flex flex-wrap items-center gap-4 lg:gap-6">
         <button
           type="button"
           onClick={onLogoClick}
@@ -34,7 +34,7 @@ export const RoleHeader: React.FC<RoleHeaderProps> = ({
             GorkyCode - team 9
           </span>
         </button>
-        <nav className="hidden md:flex items-center gap-1.5">
+        <nav className="hidden md:flex flex-wrap items-center gap-1.5">
           {tabs.map((tab) => (
             <button
               key={tab.id}

@@ -8,6 +8,9 @@ import ReserveCtaBanner from './components/portal/ReserveCtaBanner';
 import VacancyPage from './pages/VacancyPage';
 import CandidateCabinetPage from './pages/CandidateCabinetPage';
 import StudentsPage from './pages/StudentsPage';
+import StudentsWorkspace from './components/students/StudentsWorkspace';
+import SupportPage from './components/support/SupportPage';
+import DevelopmentPage from './components/development/DevelopmentPage';
 
 import HeaderHR, { HRNavTab } from './components/hr/HeaderHR';
 import CandidatesDatabase, { CandidateRecord } from './components/hr/CandidatesDatabase';
@@ -31,6 +34,8 @@ import VacancyShowcase from './components/employee/VacancyShowcase';
 
 export type AppMode = 'portal' | 'hr' | 'head' | 'director' | 'dept' | 'employee';
 
+const initialWorkspace = new URLSearchParams(window.location.search).get('workspace');
+
 const MODES: { id: AppMode; label: string }[] = [
   { id: 'portal', label: 'Портал соискателя' },
   { id: 'hr', label: 'Кабинет HR-менеджера' },
@@ -40,18 +45,18 @@ const MODES: { id: AppMode; label: string }[] = [
   { id: 'employee', label: 'Сотрудник' },
 ];
 
-export type PortalRoute = 'home' | 'vacancies' | 'students' | 'cabinet';
+export type PortalRoute = 'home' | 'vacancies' | 'students' | 'practice' | 'cabinet';
 
 export const App: React.FC = () => {
   // Mode: 'portal' (Соискатель) vs 'hr' (HR-менеджер)
-  const [appMode, setAppMode] = useState<AppMode>('portal');
+  const [appMode, setAppMode] = useState<AppMode>(initialWorkspace === 'support' || initialWorkspace === 'development' ? 'employee' : 'portal');
   const [headTab, setHeadTab] = useState<string>('summary');
   const [directorTab, setDirectorTab] = useState<string>('analytics');
-  const [employeeTab, setEmployeeTab] = useState<string>('workspace');
+  const [employeeTab, setEmployeeTab] = useState<string>(initialWorkspace === 'support' || initialWorkspace === 'development' ? initialWorkspace : 'workspace');
   const [hrAnalyticsView, setHrAnalyticsView] = useState<'dashboard' | 'report'>('dashboard');
 
   // Portal Routing State (Главная по умолчанию)
-  const [portalRoute, setPortalRoute] = useState<PortalRoute>('home');
+  const [portalRoute, setPortalRoute] = useState<PortalRoute>(initialWorkspace === 'practice' ? 'practice' : 'home');
 
   // HR Manager Routing State
   const [hrTab, setHrTab] = useState<HRNavTab>('database');
@@ -68,6 +73,8 @@ export const App: React.FC = () => {
   const handlePortalNav = (navId: string) => {
     if (navId === 'vacancies') {
       setPortalRoute('vacancies');
+    } else if (navId === 'practice') {
+      setPortalRoute('practice');
     } else if (navId === 'students') {
       setPortalRoute('students');
     } else if (navId === 'cabinet') {
@@ -172,12 +179,14 @@ export const App: React.FC = () => {
             {portalRoute === 'students' && (
               <StudentsPage
                 onApplyPractice={() => {
-                  setPortalRoute('vacancies');
+                  setPortalRoute('practice');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 onRegisterEvent={(title) => alert(`Запись на мероприятие: ${title}`)}
               />
             )}
+
+            {portalRoute === 'practice' && <StudentsWorkspace />}
 
             {/* ЛИЧНЫЙ КАБИНЕТ КАНДИДАТА (макет 5) */}
             {portalRoute === 'cabinet' && (
@@ -384,17 +393,21 @@ export const App: React.FC = () => {
             tabs={[
               { id: 'workspace', label: 'Рабочее пространство' },
               { id: 'care', label: 'Забота и мотивация' },
+              { id: 'support', label: 'Материальная помощь' },
+              { id: 'development', label: 'Развитие' },
               { id: 'surveys', label: 'Опросы' },
               { id: 'vacancies', label: 'Витрина вакансий' },
             ]}
             activeTab={employeeTab}
             onTabChange={setEmployeeTab}
-            roleLabel="Специалист департамента экономики · Кирилл Л."
+            roleLabel={employeeTab === 'support' || employeeTab === 'development' ? 'Личный кабинет' : 'Специалист департамента экономики · Кирилл Л.'}
             onLogoClick={() => setEmployeeTab('workspace')}
           />
           <main className="flex-1 w-full">
             {employeeTab === 'workspace' && <Workspace onNavigate={setEmployeeTab} />}
             {employeeTab === 'care' && <Care />}
+            {employeeTab === 'support' && <SupportPage />}
+            {employeeTab === 'development' && <DevelopmentPage />}
             {employeeTab === 'surveys' && <Surveys />}
             {employeeTab === 'vacancies' && <VacancyShowcase />}
           </main>

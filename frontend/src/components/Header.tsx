@@ -18,6 +18,7 @@ export const Header: React.FC<HeaderProps> = ({
   const navItems = [
     { id: 'vacancies', label: 'Вакансии', href: '#' },
     { id: 'students', label: 'Студентам', href: '#' },
+    { id: 'practice', label: 'Моя практика', href: '#' },
     { id: 'reserve', label: 'Кадровый резерв', href: '#' },
     { id: 'administration', label: 'Работа в администрации', href: '#' },
   ];
