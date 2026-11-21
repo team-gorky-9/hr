@@ -10,6 +10,7 @@ from sqlalchemy import create_engine, event, select
 from sqlalchemy.orm import Session
 
 from workforce.models import Actor, Department, Organization
+from workforce.onboarding.seed import seed_templates
 
 
 def make_engine(url):
@@ -77,3 +78,4 @@ def seed(engine, settings):
                         password_hash=password_hash(item["password"]),
                     )
                 )
+        seed_templates(session)
