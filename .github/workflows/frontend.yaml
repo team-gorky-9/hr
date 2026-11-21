@@ -2,13 +2,14 @@ name: Frontend delivery
 on:
   push:
     branches: [main]
-    paths: ['frontend/**', 'deploy/frontend*', '.github/workflows/frontend.yaml']
+    paths: ['frontend/**', 'deploy/frontend*', 'deploy/test_frontend_release.py', '.github/workflows/frontend.yaml']
   pull_request:
     branches: [main]
-    paths: ['frontend/**', 'deploy/frontend*', '.github/workflows/frontend.yaml']
+    paths: ['frontend/**', 'deploy/frontend*', 'deploy/test_frontend_release.py', '.github/workflows/frontend.yaml']
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: frontend-${{ github.ref }}
   cancel-in-progress: false
@@ -16,9 +17,10 @@ jobs:
   frontend:
     runs-on: ubuntu-latest
     environment: frontend
-    timeout-minutes: 10
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+      - run: python3 deploy/test_frontend_release.py
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -37,6 +39,15 @@ jobs:
           VITE_DEVELOPMENT_API_BASE: /workforce/api/v1
           VITE_HIRING_API_BASE: /hiring/api/v1
           VITE_REQUIREMENTS_API_BASE: /requirements/api/v1
+      - name: Wait for matching backend release when this commit changes it
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          run_id=$(gh run list --workflow backend.yaml --commit "$GITHUB_SHA" --event push --json databaseId --jq '.[0].databaseId // empty')
+          if [ -n "$run_id" ]; then
+            gh run watch "$run_id" --exit-status --interval 15
+          fi
       - name: Deploy frontend
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         env:

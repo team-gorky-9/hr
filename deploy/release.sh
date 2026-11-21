@@ -12,11 +12,17 @@ cd "/opt/hr/releases/$release"
 export RELEASE="$release" IMAGE_PREFIX="$prefix"
 compose=(docker compose --env-file /opt/hr/runtime.env -f compose.yaml)
 "${compose[@]}" config --quiet
+# Remove only unused build cache/dangling images; never volumes or running images.
+docker builder prune -f >/dev/null
+docker image prune -f >/dev/null
 "${compose[@]}" pull
 if [[ -L /opt/hr/current ]]; then
   # Backup with the previous release's configuration before any new migrations.
   previous=$(readlink /opt/hr/current)
   RELEASE=$(basename "$previous") bash "$previous/backup.sh" /opt/hr/runtime.env "/opt/hr/backups/$(date -u +%Y%m%dT%H%M%SZ)-$release"
+else
+  # First managed release still backs up the existing Compose project and volumes.
+  bash backup.sh /opt/hr/runtime.env "/opt/hr/backups/$(date -u +%Y%m%dT%H%M%SZ)-$release"
 fi
 "${compose[@]}" up -d --wait --wait-timeout 240
 python3 smoke.py

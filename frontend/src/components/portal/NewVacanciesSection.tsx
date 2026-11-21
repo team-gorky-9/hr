@@ -1,5 +1,6 @@
-import React from 'react';
-import type { PortalSearchFilters } from './HeroSection';
+import React, { useEffect, useState } from "react";
+import { publicVacancies, type PublicVacancy } from "../../api/portal";
+import type { PortalSearchFilters } from "./HeroSection";
 
 interface NewVacanciesSectionProps {
   filters?: PortalSearchFilters;
@@ -12,64 +13,46 @@ export const NewVacanciesSection: React.FC<NewVacanciesSectionProps> = ({
   onResetFilters,
   onSelectVacancy,
 }) => {
-  const vacancies = [
-    {
-      id: 'python-dev',
-      department: 'Цифрового развития',
-      district: 'Нижегородский район',
-      tags: [
-        { label: 'Цифрового развития', bg: 'bg-[#EEF3FE] text-[#1F4FD1]' },
-        { label: 'Нижегородский район', bg: 'bg-[#F1F3F5] text-[#4A5363]' },
-      ],
-      title: 'Python-разработчик',
-      experience: 'Опыт от 2 лет, тестирование API',
-      salary: '60 000 – 90 000 ₽',
-    },
-    {
-      id: 'data-analyst',
-      department: 'Цифрового развития',
-      district: 'Нижегородский район',
-      tags: [
-        { label: 'Цифрового развития', bg: 'bg-[#EEF3FE] text-[#1F4FD1]' },
-        { label: 'Нижегородский район', bg: 'bg-[#F1F3F5] text-[#4A5363]' },
-      ],
-      title: 'Аналитик данных',
-      experience: 'Высшее образование, SQL, Power BI',
-      salary: '55 000 – 80 000 ₽',
-    },
-    {
-      id: 'pto-engineer',
-      department: 'Строительства',
-      district: 'Нижегородский район',
-      tags: [
-        { label: 'Строительства', bg: 'bg-[#EEF3FE] text-[#1F4FD1]' },
-        { label: 'Нижегородский район', bg: 'bg-[#F1F3F5] text-[#4A5363]' },
-      ],
-      title: 'Инженер ПТО',
-      experience: 'Высшее техническое, опыт от 3 лет',
-      salary: '55 000 – 85 000 ₽',
-    },
-  ];
+  const [vacancies, setVacancies] = useState<PublicVacancy[]>([]);
+  const [loading, setLoading] = useState(true),
+    [error, setError] = useState("");
+  const [refresh, setRefresh] = useState(0);
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError("");
+    publicVacancies(controller.signal)
+      .then(setVacancies)
+      .catch((e) => {
+        if (!controller.signal.aborted)
+          setError(e instanceof Error ? e.message : "Ошибка загрузки");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [refresh]);
 
-  const q = (filters?.query || '').trim().toLowerCase();
+  const q = (filters?.query || "").trim().toLowerCase();
   const filteredVacancies = vacancies.filter((v) => {
-    if (filters?.department && v.department !== filters.department) return false;
-    if (filters?.district && v.district !== filters.district) return false;
+    if (filters?.department && v.department_id !== filters.department)
+      return false;
     if (q) {
-      const hay = `${v.title} ${v.experience} ${v.department} ${v.district}`.toLowerCase();
+      const hay =
+        `${v.title} ${v.description} ${v.position_code}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
     return true;
   });
 
-  const hasActiveFilters = Boolean(q || filters?.department || filters?.district);
+  const hasActiveFilters = Boolean(
+    q || filters?.department || filters?.district,
+  );
 
   return (
     <section id="new-vacancies" className="scroll-mt-24">
       <div className="flex items-center justify-between gap-4 mb-4">
-        <h2 className="text-[20px] font-bold text-[#141A24]">
-          Новые вакансии
-        </h2>
+        <h2 className="text-[20px] font-bold text-[#141A24]">Новые вакансии</h2>
         {hasActiveFilters && onResetFilters && (
           <button
             type="button"
@@ -81,7 +64,21 @@ export const NewVacanciesSection: React.FC<NewVacanciesSectionProps> = ({
         )}
       </div>
 
-      {filteredVacancies.length === 0 ? (
+      {loading ? (
+        <p className="text-[#616977] p-6" role="status">
+          Загружаем вакансии…
+        </p>
+      ) : error ? (
+        <div className="bg-white border border-[#E1E5EB] rounded-2xl p-6">
+          <p role="alert">{error}</p>
+          <button
+            className="text-[#1F4FD1] mt-3"
+            onClick={() => setRefresh((x) => x + 1)}
+          >
+            Повторить
+          </button>
+        </div>
+      ) : filteredVacancies.length === 0 ? (
         <div className="bg-white border border-[#E1E5EB] rounded-2xl p-6 text-center space-y-3">
           <p className="text-[14px] text-[#616977]">
             По выбранным параметрам вакансий не найдено.
@@ -108,14 +105,9 @@ export const NewVacanciesSection: React.FC<NewVacanciesSectionProps> = ({
               <div>
                 {/* Badges */}
                 <div className="flex flex-wrap items-center gap-2 mb-3">
-                  {v.tags.map((t) => (
-                    <span
-                      key={t.label}
-                      className={`px-2.5 py-1 rounded-md text-[12px] font-medium ${t.bg}`}
-                    >
-                      {t.label}
-                    </span>
-                  ))}
+                  <span className="px-2.5 py-1 rounded-md text-[12px] font-medium bg-[#EEF3FE] text-[#1F4FD1]">
+                    {v.department_name || "Открытая вакансия"}
+                  </span>
                 </div>
 
                 {/* Title */}
@@ -125,16 +117,14 @@ export const NewVacanciesSection: React.FC<NewVacanciesSectionProps> = ({
 
                 {/* Experience / Description */}
                 <p className="text-[13px] text-[#616977] mb-6">
-                  {v.experience}
+                  {v.description}
                 </p>
               </div>
 
               {/* Salary */}
               <div className="text-[16px] font-bold text-[#141A24]">
-                {v.salary}{' '}
-                <span className="text-[12px] text-[#616977] font-normal">
-                  до вычета налогов
-                </span>
+                Опубликовано{" "}
+                {new Date(v.published_at).toLocaleDateString("ru-RU")}
               </div>
             </button>
           ))}

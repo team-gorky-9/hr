@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from "react";
+import { publicVacancies } from "../../api/portal";
 
 export interface PortalSearchFilters {
   query: string;
@@ -13,10 +14,31 @@ interface HeroSectionProps {
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({
-  filters = { query: '', department: '', district: '' },
+  filters = { query: "", department: "", district: "" },
   onFiltersChange,
   onSearch,
 }) => {
+  const [departments, setDepartments] = useState<[string, string][]>([]);
+  useEffect(() => {
+    const controller = new AbortController();
+    publicVacancies(controller.signal)
+      .then((items) =>
+        setDepartments([
+          ...new Map(
+            items
+              .filter((v) => v.department_name)
+              .map(
+                (v) =>
+                  [v.department_id, v.department_name!] as [string, string],
+              ),
+          ).entries(),
+        ]),
+      )
+      .catch(() => {
+        /* Catalog displays its load error and retry. */
+      });
+    return () => controller.abort();
+  }, []);
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSearch?.();
@@ -31,7 +53,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
       {/* Subtitle */}
       <p className="text-[15px] sm:text-[16px] text-white/90 max-w-3xl mb-8 leading-relaxed">
-        Вакансии администрации, практика для студентов и кадровый резерв в одном месте. Откликнуться можно за пару минут.
+        Вакансии администрации, практика для студентов и кадровый резерв в одном
+        месте. Откликнуться можно за пару минут.
       </p>
 
       {/* Search Bar Card */}
@@ -44,7 +67,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           <input
             type="text"
             value={filters.query}
-            onChange={(e) => onFiltersChange?.({ ...filters, query: e.target.value })}
+            onChange={(e) =>
+              onFiltersChange?.({ ...filters, query: e.target.value })
+            }
             placeholder="Должность или навык"
             className="w-full h-11 px-4 text-[14px] bg-white border border-[#E1E5EB] rounded-lg text-[#141A24] placeholder-[#8E939D] focus:outline-none focus:border-[#1F4FD1]"
           />
@@ -54,13 +79,19 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         <div className="relative md:w-56">
           <select
             aria-label="Департамент"
+            disabled={!departments.length}
             value={filters.department}
-            onChange={(e) => onFiltersChange?.({ ...filters, department: e.target.value })}
+            onChange={(e) =>
+              onFiltersChange?.({ ...filters, department: e.target.value })
+            }
             className="w-full h-11 pl-4 pr-10 text-[14px] bg-white border border-[#E1E5EB] rounded-lg text-[#141A24] appearance-none cursor-pointer focus:outline-none focus:border-[#1F4FD1]"
           >
             <option value="">Все департаменты</option>
-            <option value="Цифрового развития">Цифрового развития</option>
-            <option value="Строительства">Строительства</option>
+            {departments.map(([id, name]) => (
+              <option key={id} value={id}>
+                {name}
+              </option>
+            ))}
           </select>
           <img
             src="/icons/chevron-down.svg"
@@ -73,12 +104,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         <div className="relative md:w-48">
           <select
             aria-label="Район"
+            disabled
+            title="Районы не указаны в опубликованных вакансиях"
             value={filters.district}
-            onChange={(e) => onFiltersChange?.({ ...filters, district: e.target.value })}
+            onChange={(e) =>
+              onFiltersChange?.({ ...filters, district: e.target.value })
+            }
             className="w-full h-11 pl-4 pr-10 text-[14px] bg-white border border-[#E1E5EB] rounded-lg text-[#141A24] appearance-none cursor-pointer focus:outline-none focus:border-[#1F4FD1]"
           >
             <option value="">Все районы</option>
-            <option value="Нижегородский район">Нижегородский район</option>
           </select>
           <img
             src="/icons/chevron-down.svg"

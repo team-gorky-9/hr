@@ -36,6 +36,14 @@ def editable(unit, row):
 
 
 def register_agreements(app, store):
+    @app.get(PREFIX + "/proposals")
+    def proposals(actor: ActorDep):
+        with store.transaction(actor) as unit:
+            return {"items": [r for r in unit.all("proposal")
+                if actor["actor_id"] in {r["owner_actor_id"], r["employee_actor_id"]}
+                or (actor["actor_id"] == r["manager_actor_id"] and manager_current(store, r)
+                    and r["employee_response"] == "accepted")]}
+
     @app.post(PREFIX + "/interests/{ident}/proposal", status_code=201)
     def propose(ident: UUID, body: ProposalIn, actor: ActorDep):
         with store.transaction(actor, True) as unit:

@@ -23,6 +23,7 @@ def test_vacancy_http_path_and_boundaries(make_settings):
         vacancy_id = created.json()["id"]
         path = f"/api/v1/catalog/vacancies/{vacancy_id}"
         assert client.get("/api/v1/public/vacancies").json() == {"items": []}
+        assert client.get(f"/api/v1/public/vacancies/{vacancy_id}").status_code == 404
         assert client.get(path, headers=other).status_code == 404
         assert client.get("/api/v1/catalog/vacancies", headers=other).json() == {"items": []}
         assert client.post("/api/v1/catalog/vacancies", headers=auth_headers("employee"),
@@ -40,13 +41,17 @@ def test_vacancy_http_path_and_boundaries(make_settings):
         assert published.json()["profile_version"] == 1
         public = client.get("/api/v1/public/vacancies").json()["items"]
         assert len(public) == 1 and public[0]["id"] == vacancy_id
-        assert set(public[0]) == {"id", "title", "description", "position_code", "published_at"}
+        assert set(public[0]) == {"id", "title", "description", "position_code", "published_at", "organization_id", "department_id", "department_name", "revision", "status"}
         assert public[0]["title"] == "Экономист отдела"
         assert client.patch(path, headers=hr, json={"expected_revision": 3, "title": "Нельзя"}).status_code == 409
         assert client.post(path + "/close", headers=hr, json={"expected_revision": 3, "reason": " "}).status_code == 422
         closed = client.post(path + "/close", headers=hr, json={"expected_revision": 3, "reason": "Учебный набор завершён"})
         assert closed.status_code == 200 and closed.json()["status"] == "closed"
         assert client.get("/api/v1/public/vacancies").json() == {"items": []}
+        public_closed = client.get(f"/api/v1/public/vacancies/{vacancy_id}").json()
+        assert public_closed["status"] == "closed" and public_closed["revision"] == 3
+        assert "profile_id" not in public_closed and "close_reason" not in public_closed
+        assert public_closed["organization_id"] == created.json()["organization_id"]
         saved = client.get(path, headers=hr).json()
         assert saved["revision"] == 4
         assert [h["action"] for h in saved["history"]] == ["created", "edited", "published", "closed"]

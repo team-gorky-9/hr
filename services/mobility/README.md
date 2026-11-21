@@ -101,3 +101,14 @@ Manager не читает предложение до разрешения со�
 Для следующего потребителя: [OpenAPI всех трёх частей](../../docs/reports/wave-4c-mobility-openapi.json),
 [примеры](../../docs/reports/wave-4c-mobility-examples.json),
 [протокол и границы проверки](../../docs/reports/wave-4-mobility.md).
+
+
+## Employee frontend integration (2026-11-21)
+
+The existing employee pages now use this service's stored data, revisions and commands.
+The service still uses its original training authentication; it is not a Workforce production-session integration.
+The UI explicitly identifies the training account, and does not treat the global role selector as authorization.
+Added authenticated directories expose only the records visible to the same actor under existing detail access rules.
+No access codes, token hashes or anonymous survey answers are included in directories.
+
+`GET /api/v1/mobility/session`, `/colleagues`, `/manager-assignments`, `/interests`, `/proposals`, `/participations`, `/vacancy-interests` supply the employee workflow. Owners see manager assignments only for applicants to their tasks. A manager sees proposals only after the employee accepts and while the appointment remains valid. Permanent-vacancy interest references the published requirements ID as `requirements:<UUID>` and its publication revision; it is not automatically a registered recruitment consideration.

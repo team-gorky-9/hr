@@ -23,6 +23,19 @@ def read_vacancy_interest(unit, ident):
 
 
 def register_participation(app, store):
+    @app.get(PREFIX + "/participations")
+    def participations(actor: ActorDep):
+        with store.transaction(actor) as unit:
+            return {"items": [r for r in unit.all("participation")
+                if actor["actor_id"] in {r["employee_actor_id"], r["owner_actor_id"]}
+                or (actor["actor_id"] == r["manager_actor_id"] and manager_current(store, r))]}
+
+    @app.get(PREFIX + "/vacancy-interests")
+    def vacancy_interests(actor: ActorDep):
+        with store.transaction(actor) as unit:
+            return {"items": [r for r in unit.all("vacancy_interest")
+                if r["employee_actor_id"] == actor["actor_id"] or has_role(actor, "hr")]}
+
     @app.post(PREFIX + "/proposals/{ident}/start", status_code=201)
     def start(ident: UUID, body: Revision, actor: ActorDep):
         with store.transaction(actor, True) as unit:

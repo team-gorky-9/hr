@@ -2,6 +2,7 @@
 """Root-owned receiver. The dedicated SSH key can only publish static frontend files."""
 import fcntl
 import io
+import hashlib
 import os
 from pathlib import Path
 import re
@@ -45,8 +46,14 @@ with open('/run/lock/hr-frontend.lock', 'w') as lock:
             Path(directory).chmod(0o755)
         release = root / sha
         if release.exists():
-            raise ValueError('Release already exists; do not overwrite immutable assets')
-        staging.rename(release)
+            def fingerprint(folder):
+                return {str(p.relative_to(folder)): hashlib.sha256(p.read_bytes()).hexdigest()
+                        for p in folder.rglob('*') if p.is_file()}
+            if fingerprint(release) != fingerprint(staging):
+                raise ValueError('Existing release has different contents')
+            shutil.rmtree(staging)
+        else:
+            staging.rename(release)
         live = Path('/var/www/hr-frontend')
         previous = os.readlink(live) if live.is_symlink() else None
         temporary = Path('/var/www/.hr-frontend-next')

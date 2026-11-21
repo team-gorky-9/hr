@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect, useState } from "react";
+import { studentsRequest, type Opportunity } from "../api/students";
 
 interface StudentsPageProps {
   onApplyPractice?: (title: string) => void;
@@ -9,50 +10,49 @@ export const StudentsPage: React.FC<StudentsPageProps> = ({
   onApplyPractice,
   onRegisterEvent,
 }) => {
-  const practices = [
-    {
-      id: 'p1',
-      title: 'Практика в правовом управлении',
-      department: 'Правовое управление · 2 месяца',
-      description: 'Подготовка проектов ответов на обращения граждан.',
-    },
-    {
-      id: 'p2',
-      title: 'Стажировка: аналитика данных',
-      department: 'Департамент цифрового развития · 3 месяца',
-      description: 'Дашборды по обращениям жителей, Power BI и SQL.',
-    },
-    {
-      id: 'p3',
-      title: 'Практика в департаменте строительства',
-      department: 'Департамент строительства · 1 месяц',
-      description: 'Технический надзор, проектная документация.',
-    },
-  ];
-
-  const events = [
-    {
-      id: 'e1',
-      day: '04',
-      month: 'ДЕК',
-      title: 'День карьеры в администрации',
-      subtitle: 'Для студентов всех вузов',
-    },
-    {
-      id: 'e2',
-      day: '12',
-      month: 'ДЕК',
-      title: 'Хакатон по городским сервисам',
-      subtitle: 'Онлайн и в IT-парке',
-    },
-    {
-      id: 'e3',
-      day: '22',
-      month: 'ЯНВ',
-      title: 'Экскурсия «Как устроена администрация»',
-      subtitle: 'Для групп от 10 человек',
-    },
-  ];
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [loading, setLoading] = useState(true),
+    [error, setError] = useState("");
+  const [refresh, setRefresh] = useState(0);
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setError("");
+    studentsRequest<{ items: Opportunity[] }>(
+      "candidate",
+      "/opportunities",
+      undefined,
+      controller.signal,
+    )
+      .then((data) =>
+        setOpportunities(
+          data.items.filter((item) => item.status === "published"),
+        ),
+      )
+      .catch((e) => {
+        if (!controller.signal.aborted)
+          setError(
+            e instanceof Error
+              ? e.message
+              : "Не удалось получить места практики",
+          );
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [refresh]);
+  const practices = opportunities.map((item) => ({
+    ...item,
+    department: `${item.starts_on} — ${item.ends_on} · мест: ${item.available_places ?? item.capacity}`,
+  }));
+  const events: {
+    id: string;
+    day: string;
+    month: string;
+    title: string;
+    subtitle: string;
+  }[] = [];
 
   return (
     <div className="space-y-10">
@@ -65,7 +65,8 @@ export const StudentsPage: React.FC<StudentsPageProps> = ({
           Практика в администрации — не для галочки
         </h1>
         <p className="text-[15px] sm:text-[16px] text-white/95 leading-relaxed max-w-2xl">
-          Реальные задачи города, наставник из департамента и шанс попасть в студенческий резерв.
+          Реальные задачи города, наставник из департамента и шанс попасть в
+          студенческий резерв.
         </p>
       </section>
 
@@ -75,6 +76,21 @@ export const StudentsPage: React.FC<StudentsPageProps> = ({
           Практика и стажировки
         </h2>
 
+        {loading && <p role="status">Загружаем места практики…</p>}
+        {error && (
+          <p role="alert">
+            {error}{" "}
+            <button
+              onClick={() => setRefresh((n) => n + 1)}
+              className="text-[#1F4FD1]"
+            >
+              Повторить
+            </button>
+          </p>
+        )}
+        {!loading && !error && !practices.length && (
+          <p>Открытых мест практики пока нет.</p>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
           {practices.map((p) => (
             <div
@@ -99,7 +115,7 @@ export const StudentsPage: React.FC<StudentsPageProps> = ({
               <div>
                 <button
                   type="button"
-                  onClick={() => onApplyPractice?.(p.title)}
+                  onClick={() => onApplyPractice?.(p.id)}
                   className="px-6 py-2.5 bg-[#1F4FD1] hover:bg-[#1841B2] text-white text-[14px] font-medium rounded-lg transition-colors shadow-sm"
                 >
                   Откликнуться
@@ -117,6 +133,11 @@ export const StudentsPage: React.FC<StudentsPageProps> = ({
         </h2>
 
         <div className="space-y-3.5">
+          {!events.length && (
+            <p className="text-[#616977]">
+              Расписание студенческих мероприятий пока не опубликовано.
+            </p>
+          )}
           {events.map((ev) => (
             <div
               key={ev.id}
@@ -138,9 +159,7 @@ export const StudentsPage: React.FC<StudentsPageProps> = ({
                   <h3 className="text-[16px] font-bold text-[#141A24] mb-0.5">
                     {ev.title}
                   </h3>
-                  <p className="text-[13px] text-[#616977]">
-                    {ev.subtitle}
-                  </p>
+                  <p className="text-[13px] text-[#616977]">{ev.subtitle}</p>
                 </div>
               </div>
 
@@ -151,7 +170,7 @@ export const StudentsPage: React.FC<StudentsPageProps> = ({
                 disabled={!onRegisterEvent}
                 className="px-6 py-2.5 text-[14px] font-medium rounded-lg transition-colors whitespace-nowrap shadow-sm shrink-0 text-[#616977] bg-white border border-[#E1E5EB] disabled:cursor-default"
               >
-                {onRegisterEvent ? 'Записаться' : 'Запись пока недоступна'}
+                {onRegisterEvent ? "Записаться" : "Запись пока недоступна"}
               </button>
             </div>
           ))}
