@@ -47,3 +47,27 @@ OpenAPI доступен на `/openapi.json`, Swagger — `/docs`.
 
 Устройство — [описание модуля](../../docs/modules/mobility-service.md),
 операции — [контракт](../../docs/contracts/wave-4-mobility-stage-1.md).
+
+## 4B: версия условий и согласование
+
+1. Owner создаёт `POST /interests/{id}/proposal`:
+   `{"starts_on":"2026-12-01","ends_on":"2026-12-31","time_percent":20,"manager_actor_id":"00000000-0000-4000-8000-000000000103","manager_source_reference":"fixture:mobility-training-v1:employee-manager"}`.
+2. Employee: `POST /proposals/{id}/employee-response {"expected_revision":1,"accepted":true}`.
+3. Manager: `POST /proposals/{id}/manager-response {"expected_revision":2,"accepted":false,"reason":"Прошу начало позже"}`.
+4. Owner: `PATCH /proposals/{id} {"expected_revision":3,"starts_on":"2026-12-15","reason":"Период уточнён"}`.
+5. Employee подтверждает revision 4; manager подтверждает revision 5. GET показывает
+   `agreed`, revision 6 и точные даты; оба ответа относятся к `conditions_revision=2`.
+
+`uv run pytest tests/test_4b.py -q` воспроизводит этот путь, смену подтверждённого
+назначения в отдельной копии fixture и перечитывание после рестарта. Произвольная
+строка source_reference не даёт полномочия. Согласование собственного времени запрещено.
+
+При смене руководителя локальный источник должен подтвердить новое назначение и
+отозвать прежнее. Владелец вызывает существующий POST proposal с новым адресатом/
+источником: старое предложение становится withdrawn, новое ссылается на него.
+История не переносит согласия. Повтор того же POST возвращает существующее предложение.
+Для новых дат прежнего адресата используется PATCH. После start условия неизменяемы.
+
+Manager не читает предложение до разрешения сотрудника; PATCH снова закрывает ему
+новые условия до согласия сотрудника. Из истории ему доступны только раскрытые
+редакции его назначения; интерес и комментарий сотрудника не возвращаются.

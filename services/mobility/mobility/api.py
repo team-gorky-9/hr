@@ -30,7 +30,7 @@ def create_app(settings=None):
         yield
         store.engine.dispose()
 
-    app = FastAPI(title="Internal mobility", version="4A", lifespan=lifespan)
+    app = FastAPI(title="Internal mobility", version="4B", lifespan=lifespan)
     app.state.store = store
 
     @app.exception_handler(Problem)
@@ -139,4 +139,6 @@ def create_app(settings=None):
             row.update(status="not_selected", reason=body.reason)
             return unit.save("interest", row, "not_selected")
 
+    from .agreements import register_agreements
+    register_agreements(app, store)
     return app
