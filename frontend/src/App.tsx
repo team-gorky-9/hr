@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Header from './components/Header';
-import HeroSection from './components/portal/HeroSection';
+import HeroSection, { PortalSearchFilters } from './components/portal/HeroSection';
 import CategoryCards from './components/portal/CategoryCards';
 import NewVacanciesSection from './components/portal/NewVacanciesSection';
 import WhyUsSection from './components/portal/WhyUsSection';
@@ -48,18 +48,25 @@ const MODES: { id: AppMode; label: string }[] = [
   { id: 'employee', label: 'Сотрудник' },
 ];
 
-export type PortalRoute = 'home' | 'vacancies' | 'students' | 'practice' | 'cabinet';
+export type PortalRoute = 'home' | 'vacancies' | 'students' | 'practice' | 'reserve' | 'cabinet';
 
 export const App: React.FC = () => {
   // Mode: 'portal' (Соискатель) vs 'hr' (HR-менеджер)
   const [appMode, setAppMode] = useState<AppMode>(initialWorkspace === 'support' || initialWorkspace === 'development' || initialWorkspace === 'workforce' || initialWorkspace === 'onboarding' ? 'employee' : 'portal');
   const [headTab, setHeadTab] = useState<string>('summary');
   const [directorTab, setDirectorTab] = useState<string>('analytics');
+  const [directorDbView, setDirectorDbView] = useState<'list' | 'profile'>('list');
   const [employeeTab, setEmployeeTab] = useState<string>(initialWorkspace === 'support' || initialWorkspace === 'development' || initialWorkspace === 'workforce' || initialWorkspace === 'onboarding' ? initialWorkspace : 'workspace');
   const [hrAnalyticsView, setHrAnalyticsView] = useState<'dashboard' | 'report'>('dashboard');
 
   // Portal Routing State (Главная по умолчанию)
   const [portalRoute, setPortalRoute] = useState<PortalRoute>(initialWorkspace === 'practice' ? 'practice' : 'home');
+  const [selectedPortalVacancyId, setSelectedPortalVacancyId] = useState<string>('python-dev');
+  const [portalSearchFilters, setPortalSearchFilters] = useState<PortalSearchFilters>({
+    query: '',
+    department: '',
+    district: '',
+  });
 
   // HR Manager Routing State
   const [hrTab, setHrTab] = useState<HRNavTab>('database');
@@ -68,8 +75,20 @@ export const App: React.FC = () => {
   const [selectedResponseVacancyId] = useState<string>('v1');
   const [selectedCandidateId, setSelectedCandidateId] = useState<string>('r1');
 
+  const scrollToSection = (sectionId: string) => {
+    setPortalRoute('home');
+    setTimeout(() => {
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: 'smooth' });
+    }, 50);
+  };
+
   const handlePortalHome = () => {
     setPortalRoute('home');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleOpenPortalReserve = () => {
+    setPortalRoute('reserve');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -80,6 +99,11 @@ export const App: React.FC = () => {
       setPortalRoute('practice');
     } else if (navId === 'students') {
       setPortalRoute('students');
+    } else if (navId === 'reserve') {
+      setPortalRoute('reserve');
+    } else if (navId === 'administration') {
+      scrollToSection('why-us');
+      return;
     } else if (navId === 'cabinet') {
       setPortalRoute('cabinet');
     } else if (navId === 'home') {
@@ -143,19 +167,29 @@ export const App: React.FC = () => {
             {/* ГЛАВНАЯ СТРАНИЦА ПОРТАЛА (макет 1. Главная портала.png) */}
             {portalRoute === 'home' && (
               <>
-                <HeroSection />
+                <HeroSection
+                  filters={portalSearchFilters}
+                  onFiltersChange={setPortalSearchFilters}
+                  onSearch={() => scrollToSection('new-vacancies')}
+                />
 
                 <CategoryCards
                   onSelectCategory={(id) => {
                     if (id === 'vacancies') setPortalRoute('vacancies');
                     else if (id === 'students') setPortalRoute('students');
+                    else if (id === 'reserve') setPortalRoute('reserve');
                     else setPortalRoute('home');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                 />
 
                 <NewVacanciesSection
-                  onSelectVacancy={() => {
+                  filters={portalSearchFilters}
+                  onResetFilters={() =>
+                    setPortalSearchFilters({ query: '', department: '', district: '' })
+                  }
+                  onSelectVacancy={(vacancyId) => {
+                    setSelectedPortalVacancyId(vacancyId);
                     setPortalRoute('vacancies');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
@@ -163,14 +197,16 @@ export const App: React.FC = () => {
 
                 <WhyUsSection />
 
-                <ReserveCtaBanner />
+                <ReserveCtaBanner onOpenReserve={handleOpenPortalReserve} />
               </>
             )}
 
             {/* ВАКАНСИЯ: ФОРМА ОТКЛИКА И ОТКЛИК ОТПРАВЛЕН (макеты 2 и 3) */}
             {portalRoute === 'vacancies' && (
               <VacancyPage
+                vacancyId={selectedPortalVacancyId}
                 onGoHome={handlePortalHome}
+                onGoVacancies={() => scrollToSection('new-vacancies')}
                 onGoCabinet={() => {
                   setPortalRoute('cabinet');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -185,11 +221,13 @@ export const App: React.FC = () => {
                   setPortalRoute('practice');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
-                onRegisterEvent={(title) => alert(`Запись на мероприятие: ${title}`)}
               />
             )}
 
             {portalRoute === 'practice' && <StudentsWorkspace />}
+
+            {/* КАДРОВЫЙ РЕЗЕРВ: КОНКУРС И СТУДЕНЧЕСКИЙ РЕЗЕРВ */}
+            {portalRoute === 'reserve' && <TalentReserve />}
 
             {/* ЛИЧНЫЙ КАБИНЕТ КАНДИДАТА (макет 5) */}
             {portalRoute === 'cabinet' && (
@@ -239,7 +277,8 @@ export const App: React.FC = () => {
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 onOpenInterview={() => {
-                  setHrTab('interview');
+                  setHrTab('vacancies');
+                  setHrView('list');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 onOpenReserve={() => {
@@ -269,8 +308,10 @@ export const App: React.FC = () => {
                   setHrView('list');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
-                onRequestClarification={() => alert('Запрос на уточнение отправлен')}
-                onReject={() => alert('Отклонение с причиной')}
+                onRequestClarification={() => {
+                  setHrTab('interview');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
               />
             )}
 
@@ -279,8 +320,8 @@ export const App: React.FC = () => {
               <TelephoneInterview
                 applicationId={selectedCandidateId}
                 onBackToCard={() => {
-                  setHrTab('database');
-                  setDbView('profile');
+                  setHrTab('vacancies');
+                  setHrView('card');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
               />
@@ -336,7 +377,16 @@ export const App: React.FC = () => {
           <main className="flex-1 w-full">
             {headTab === 'summary' && <HeadSummary />}
             {headTab === 'reserve' && <TalentReserve />}
-            {headTab === 'analytics' && <DirectorAnalytics onExportReport={() => setAppMode('hr')} />}
+            {headTab === 'analytics' && (
+              <DirectorAnalytics
+                onExportReport={() => {
+                  setHrTab('analytics');
+                  setHrAnalyticsView('report');
+                  setAppMode('hr');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+              />
+            )}
           </main>
         </>
       )}
@@ -351,9 +401,16 @@ export const App: React.FC = () => {
               { id: 'database', label: 'Единая база' },
             ]}
             activeTab={directorTab}
-            onTabChange={setDirectorTab}
+            onTabChange={(tab) => {
+              setDirectorTab(tab);
+              setDirectorDbView('list');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
             roleLabel="Директор департамента кадров · Елена В."
-            onLogoClick={() => setDirectorTab('analytics')}
+            onLogoClick={() => {
+              setDirectorTab('analytics');
+              setDirectorDbView('list');
+            }}
           />
           <main className="flex-1 w-full">
             {directorTab === 'analytics' && (
@@ -362,11 +419,32 @@ export const App: React.FC = () => {
                   setHrTab('analytics');
                   setHrAnalyticsView('report');
                   setAppMode('hr');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
               />
             )}
             {directorTab === 'reserve' && <TalentReserve />}
-            {directorTab === 'database' && <CandidatesDatabase onSelectCandidate={() => {}} />}
+            {directorTab === 'database' && directorDbView === 'list' && (
+              <CandidatesDatabase
+                onSelectCandidate={() => {
+                  setDirectorDbView('profile');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+              />
+            )}
+            {directorTab === 'database' && directorDbView === 'profile' && (
+              <CandidateProfile
+                onBackToDatabase={() => {
+                  setDirectorDbView('list');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                onOpenReserve={() => {
+                  setDirectorTab('reserve');
+                  setDirectorDbView('list');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+              />
+            )}
           </main>
         </>
       )}

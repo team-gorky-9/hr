@@ -5,6 +5,7 @@ export type AnalyticsView = 'dashboard' | 'config' | 'ready';
 export const AnalyticsDashboard: React.FC = () => {
   const [view, setView] = useState<AnalyticsView>('dashboard');
   const [activePeriod, setActivePeriod] = useState<string>('Месяц');
+  const [configPeriod, setConfigPeriod] = useState<string>('Свой период');
   const [reportFormat, setReportFormat] = useState<'PDF' | 'Excel' | 'Презентация'>('PDF');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -478,8 +479,9 @@ export const AnalyticsDashboard: React.FC = () => {
                     <button
                       key={p}
                       type="button"
+                      onClick={() => setConfigPeriod(p)}
                       className={`px-3 py-1 text-[13px] font-medium rounded-md transition-all whitespace-nowrap ${
-                        p === 'Свой период'
+                        configPeriod === p
                           ? 'bg-white text-[#141A24] shadow-sm font-semibold'
                           : 'text-[#616977] hover:text-[#141A24]'
                       }`}

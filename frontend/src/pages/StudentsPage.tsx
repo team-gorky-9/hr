@@ -148,9 +148,10 @@ export const StudentsPage: React.FC<StudentsPageProps> = ({
               <button
                 type="button"
                 onClick={() => onRegisterEvent?.(ev.title)}
-                className="px-6 py-2.5 text-[14px] font-medium text-[#141A24] bg-white border border-[#E1E5EB] rounded-lg hover:bg-[#F3F5F8] transition-colors whitespace-nowrap shadow-sm shrink-0"
+                disabled={!onRegisterEvent}
+                className="px-6 py-2.5 text-[14px] font-medium rounded-lg transition-colors whitespace-nowrap shadow-sm shrink-0 text-[#616977] bg-white border border-[#E1E5EB] disabled:cursor-default"
               >
-                Записаться
+                {onRegisterEvent ? 'Записаться' : 'Запись пока недоступна'}
               </button>
             </div>
           ))}

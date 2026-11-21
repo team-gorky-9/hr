@@ -2,10 +2,10 @@ name: Frontend delivery
 on:
   push:
     branches: [main]
-    paths: ['frontend/**', 'deploy/frontend-release.sh', '.github/workflows/frontend.yaml']
+    paths: ['frontend/**', 'deploy/frontend*', '.github/workflows/frontend.yaml']
   pull_request:
     branches: [main]
-    paths: ['frontend/**', 'deploy/frontend-release.sh', '.github/workflows/frontend.yaml']
+    paths: ['frontend/**', 'deploy/frontend*', '.github/workflows/frontend.yaml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -15,7 +15,8 @@ concurrency:
 jobs:
   frontend:
     runs-on: ubuntu-latest
-    environment: backend
+    environment: frontend
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -37,18 +38,18 @@ jobs:
           VITE_HIRING_API_BASE: /hiring/api/v1
           VITE_REQUIREMENTS_API_BASE: /requirements/api/v1
       - name: Deploy frontend
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         env:
-          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_KEY: ${{ secrets.FRONTEND_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.FRONTEND_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ secrets.FRONTEND_HOST }}
+          DEPLOY_USER: ${{ secrets.FRONTEND_USER }}
         run: |
           umask 077
           mkdir -p ~/.ssh
           printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/id_ed25519
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
-          ssh -o BatchMode=yes "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p /opt/hr/frontend/$GITHUB_SHA"
-          scp -r frontend/dist/. "$DEPLOY_USER@$DEPLOY_HOST:/opt/hr/frontend/$GITHUB_SHA/"
-          scp deploy/frontend-release.sh "$DEPLOY_USER@$DEPLOY_HOST:/opt/hr/frontend-release.sh"
-          ssh -o BatchMode=yes "$DEPLOY_USER@$DEPLOY_HOST" "bash /opt/hr/frontend-release.sh $GITHUB_SHA"
+          test -n "$DEPLOY_KEY" && test -n "$KNOWN_HOSTS" && test -n "$DEPLOY_HOST" && test -n "$DEPLOY_USER"
+          tar -czf /tmp/frontend.tar.gz -C frontend/dist .
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" "$GITHUB_SHA" < /tmp/frontend.tar.gz
+          curl --fail --retry 3 https://gorky.bond/version.json | grep -F "$GITHUB_SHA"
