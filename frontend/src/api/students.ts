@@ -1,7 +1,4 @@
 export type StudentRole = 'candidate' | 'hr' | 'department';
-export const studentRoles: Record<StudentRole, string> = {
-  candidate: 'Студент', hr: 'Организатор практики', department: 'Наставник',
-};
 const env = (import.meta as ImportMeta & { env: Record<string, string> }).env;
 const base = env.VITE_STUDENTS_API_BASE || '/api/v1/students';
 export const fixtureMentorId = '00000000-0000-4000-8000-000000000103';
@@ -39,12 +36,12 @@ export interface CareerPackage {
   purpose: string; contact_basis: string; interest_withdrawn: boolean;
 }
 
-export async function studentsRequest<T>(role: StudentRole, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
+export async function studentsRequest<T>(token: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {
   let response: Response;
   try {
     response = await fetch(base + path, {
       method: body === undefined ? 'GET' : 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer fixture:' + role },
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
       credentials: 'same-origin', signal,
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
@@ -54,6 +51,6 @@ export async function studentsRequest<T>(role: StudentRole, path: string, body?:
   }
   const data = await response.json().catch(() => null);
   if (!response.ok) throw new Error(data?.error?.message || 'Ошибка сервиса практики (' + response.status + ').');
-  if (!data) throw new Error('Сервис вернул пустой ответ.');
+  if (!data) throw new Error('Не удалось прочитать данные практики. Повторите запрос.');
   return data as T;
 }

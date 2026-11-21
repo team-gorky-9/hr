@@ -4,6 +4,7 @@ import {
   developmentRequest as api, type Session, type Goal, type Plan, type Submission,
   type Progress, type ResultPackage, type ReviewResult,
 } from '../../api/development';
+import { useSession } from '../../api/session';
 
 const input = 'w-full rounded-lg border border-[#C9D0DB] bg-white px-3 py-2 text-[14px] text-[#141A24]';
 const statusNames: Record<string, string> = {
@@ -15,27 +16,6 @@ const statusNames: Record<string, string> = {
 };
 const message = (error: unknown) => error instanceof Error ? error.message : 'Не удалось выполнить действие.';
 type Run = (action: () => Promise<unknown>) => Promise<void>;
-
-function Login({ onLogin }: { onLogin: (session: Session) => void }) {
-  const [login, setLogin] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [busy, setBusy] = useState(false);
-  return <Card className="max-w-[520px] space-y-4">
-    <h2 className="text-[18px] font-bold">Вход в развитие сотрудника</h2>
-    <p className="text-[14px] text-[#4A5363]">Используйте учётную запись Workforce. Цели и планы доступны назначенным участникам.</p>
-    <form className="space-y-3" onSubmit={async (event) => {
-      event.preventDefault(); setBusy(true); setError('');
-      try { onLogin(await api<Session>(null, '/sessions', { login, password })); }
-      catch (e) { setError(message(e)); } finally { setBusy(false); }
-    }}>
-      <label className="block">Логин<input className={input} autoComplete="username" value={login} onChange={(e) => setLogin(e.target.value)} required /></label>
-      <label className="block">Пароль<input className={input} type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required /></label>
-      <Btn type="submit" variant="primary" disabled={busy}>{busy ? 'Входим…' : 'Войти'}</Btn>
-      {error && <p role="alert" className="text-[#A3171B]">{error}</p>}
-    </form>
-  </Card>;
-}
 
 function GoalPanel({ goal, session, run, busy, onChanged }: {
   goal: Goal; session: Session; run: Run; busy: boolean; onChanged: () => Promise<void>;
@@ -233,7 +213,7 @@ function PlanPanel({ plan, session, run, busy, refreshLists }: {
 }
 
 export default function DevelopmentPage() {
-  const [session, setSession] = useState<Session | null>(null);
+  const { session, loading, error: sessionError } = useSession();
   const [goals, setGoals] = useState<Goal[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [selected, setSelected] = useState<{ kind: 'goal' | 'plan'; id: string } | null>(null);
@@ -250,9 +230,10 @@ export default function DevelopmentPage() {
     setGoals(goalList.items); setPlans(planList.items);
   }
   useEffect(() => {
+    setGoals([]); setPlans([]); setSelected(null); setError('');
+    setTitle(''); setDescription('');
     if (!session) return;
     const controller = new AbortController();
-    setGoals([]); setPlans([]); setSelected(null); setError('');
     Promise.all([
       api<{items: Goal[]}>(session.access_token, '/development/goals', undefined, 'GET', controller.signal),
       api<{items: Plan[]}>(session.access_token, '/development/plans', undefined, 'GET', controller.signal),
@@ -269,13 +250,10 @@ export default function DevelopmentPage() {
   const employee = session?.actor.grants.some((grant) => grant.role === 'employee');
   return <div className="max-w-[1240px] mx-auto px-4 sm:px-6 py-8 space-y-5">
     <PageTitle title="Развитие сотрудника" subtitle="Цель, договорённость о работе и подтверждённый результат." />
-    {!session ? <Login onLogin={setSession} /> : <>
-      <div className="flex justify-between items-center gap-4 text-[14px]">
-        <div><strong>{session.actor.login}</strong><span className="text-[#4A5363]"> · код для назначения {session.actor.actor_id}</span></div>
-        <Btn disabled={busy} onClick={() => void run(async () => { await api(session.access_token, '/session', undefined, 'DELETE'); setSession(null); })}>Выйти</Btn>
-      </div>
+    {!session ? <Card>{sessionError || (loading ? 'Проверяем вход…' : 'Войдите в кабинет сотрудника, чтобы увидеть цели и планы.')}</Card> : <>
+      <p className="break-all text-[14px] text-[#4A5363]">Код учётной записи для назначения {session.actor.actor_id}</p>
       {error && <div role="alert" className="bg-[#FCE8E8] rounded-xl p-4">{error} <Btn onClick={() => void run(refresh)} disabled={busy}>Обновить данные</Btn></div>}
-      <div className="grid grid-cols-[300px_minmax(0,1fr)] items-start gap-5">
+      <div className="grid lg:grid-cols-[300px_minmax(0,1fr)] items-start gap-5">
         <Card className="space-y-3">
           <h2 className="text-[17px] font-bold">Цели и планы</h2>
           {employee && <Btn onClick={() => setSelected(null)}>Новая цель</Btn>}

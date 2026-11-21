@@ -185,8 +185,8 @@ export default function ArchivePage() {
   return (
     <div className="max-w-[1240px] mx-auto px-4 sm:px-6 py-8">
       <div className="mb-5 flex justify-between items-start gap-4">
-        <div><h1 className="text-[26px] font-bold">Архив резюме</h1><p className="text-[14px] text-[#616977]">Поиск под новую вакансию и повторное рассмотрение.</p></div>
-        <Badge>{contour === 'training' ? 'API · учебные записи' : 'API · рабочие записи'}</Badge>
+        <div><h1 className="text-[26px] font-bold">Архив кадров</h1><p className="text-[14px] text-[#616977]">Поиск под новую вакансию и повторное рассмотрение.</p></div>
+        <Badge>{contour === 'training' ? 'Учебные записи' : 'Рабочие записи'}</Badge>
       </div>
       {selected && vacancy ? <CandidateArchive key={selected.candidate_id + vacancyId} hit={selected} vacancy={vacancy} onBack={() => setSelected(null)} /> : (
         <div className="space-y-5">

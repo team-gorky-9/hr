@@ -62,7 +62,8 @@ Vacancy содержит id,organization_id,department_id UUID,position_code,tit
 | PATCH /catalog/vacancies/{id} | {expected_revision,title?,description?,profile_id?} → Vacancy | Только draft, неизменяемая история прежней редакции сохраняется |
 | POST /catalog/vacancies/{id}/publish | {expected_revision} → Vacancy | draft → published, проверить текущую применимость утверждённого профиля. Нет подходящего — 409 PROFILE_NOT_READY |
 | POST /catalog/vacancies/{id}/close | {expected_revision,reason} → Vacancy | draft/published → closed. Причина обязательна, существующие отклики от этого автоматически не меняются |
-| GET /public/vacancies | → items {id,title,description,position_code,published_at} | Только published; публичная проекция без внутренних источников, акторов и комментариев |
+| GET /public/vacancies | → items {id,title,description,position_code,revision,published_at} | Только published; опциональный `organization_id` сужает выборку, публичная проекция без внутренних источников, акторов и комментариев |
+| GET /public/vacancies/{id} | → {id,title,description,position_code,revision,published_at} | Та же проекция одной публикации; для отсутствующей, чужой при заданном `organization_id` или закрытой записи — 404 |
 
 Публикация даёт открытый API каталога портала. Размещение на HH/Работе России здесь не заявляется. После закрытия запись исчезает из публичного списка, HR видит историю. Опубликованные условия в этой задаче неизменяемы; для существенного изменения закрыть и создать новое объявление со своими данными. Поддержка версий открытого объявления — последующая задача.
 

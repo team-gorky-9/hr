@@ -19,6 +19,7 @@ from hiring.database import at_head, make_engine
 from hiring.domain import Hiring, document_view
 from hiring.portal import Portal
 from hiring.portal import public_vacancies as portal_public_vacancies
+from hiring.vacancy_catalog import list_publications, read_publication
 from hiring.errors import Problem, forbidden
 from hiring.models import Document, IdempotentCommand
 from hiring.interaction_window import InteractionWindow
@@ -237,6 +238,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     def portal_command(request: Request, body, action, status: int = 200):
         return command(request, body, lambda h: action(Portal(h.session, h.actor, h.settings)), status)
+
+    @app.get(f"{api}/candidate-portal/public-vacancies")
+    def list_portal_publications():
+        return {"items": list_publications(settings)}
+
+    @app.get(f"{api}/candidate-portal/public-vacancies/{{vacancy_id}}")
+    def read_portal_publication(vacancy_id: uuid.UUID):
+        return read_publication(settings, vacancy_id)
 
     @app.get(f"{api}/candidate-portal/vacancies")
     def portal_vacancies(request: Request):

@@ -153,7 +153,7 @@ def hiring(stand: Stand) -> str:
 
 
 def students(stand: Stand) -> str:
-    api, hr = "/students/api/v1/students", stand.fixture("hr")
+    api, hr = "/students/api/v1/students", stand.session("hr")
     if stand.call("GET", f"{api}/opportunities", headers=hr)["items"]:
         return "practice places already present"
     places = []
@@ -166,12 +166,12 @@ def students(stand: Stand) -> str:
             "ends_on": "2027-03-31", "capacity": 2, "mentor_actor_id": MENTOR})
         places.append(stand.call("POST", f"{api}/opportunities/{row['id']}/publish", headers=hr,
                                  body={"expected_revision": row["revision"]}))
-    application = stand.call("POST", f"{api}/applications", headers=stand.fixture("candidate"), body={
+    application = stand.call("POST", f"{api}/applications", headers=stand.session("candidate"), body={
         "opportunity_id": places[0]["id"], "university_label": "ННГУ им. Лобачевского (учебно)",
         "programme_label": "Экономика", "comment": "Интересна работа с муниципальным бюджетом"})
     placement = stand.call("POST", f"{api}/applications/{application['id']}/assign", headers=hr, body={
         "expected_revision": application["revision"], "confirmation_basis": f"Даты и наставник сверены {MARK}"})
-    stand.call("POST", f"{api}/placements/{placement['id']}/tasks", headers=stand.fixture("department"), body=TASK)
+    stand.call("POST", f"{api}/placements/{placement['id']}/tasks", headers=stand.session("department"), body=TASK)
     return "2 places published, one student assigned with a task"
 
 

@@ -24,6 +24,10 @@ class Settings:
     )
     auth_mode: str = field(default_factory=lambda: _env("AUTH_MODE", "fixture"))
     workforce_url: str = field(default_factory=lambda: _env("WORKFORCE_URL", "http://localhost:8101"))
+    requirements_url: str = field(default_factory=lambda: _env("REQUIREMENTS_URL", "http://localhost:8102"))
+    portal_legacy_url: str = field(default_factory=lambda: _env("PORTAL_LEGACY_URL", ""))
+    portal_training_organization_id: str = field(default_factory=lambda: _env(
+        "PORTAL_TRAINING_ORGANIZATION_ID", "00000000-0000-4000-8000-000000000001"))
     source_mode: str = field(default_factory=lambda: _env("SELECTION_SOURCE", "fixture"))
     fixture_dir: Path = field(
         default_factory=lambda: Path(_env("FIXTURE_DIR", str(REPO_ROOT / "fixtures/wave-1")))
@@ -38,7 +42,7 @@ class Settings:
     extra_actors_file: Path | None = field(
         default_factory=lambda: Path(_env("EXTRA_ACTORS_FILE", str(SERVICE_ROOT / "fixtures/extra-actors.json")))
     )
-    # Учебный снимок публичных вакансий для candidate-portal, пока каталог вакансий не подключён.
+    # Самостоятельный учебный снимок для ссылок system=catalog.
     public_vacancies_file: Path = field(
         default_factory=lambda: Path(
             _env("PUBLIC_VACANCIES_FILE", str(SERVICE_ROOT / "fixtures/public-vacancies.json"))

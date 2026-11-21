@@ -130,6 +130,9 @@ services:
       DATABASE_URL: postgresql+psycopg://hiring:${HIRING_DB_PASSWORD}@postgres:5432/hiring
       AUTH_MODE: workforce
       WORKFORCE_URL: http://workforce:8000
+      REQUIREMENTS_URL: http://requirements:8000
+      PORTAL_LEGACY_URL: http://legacy:8000
+      PORTAL_TRAINING_ORGANIZATION_ID: 00000000-0000-4000-8000-000000000001
       SELECTION_SOURCE: manual-confirmed
       FILE_ROOT: /data/files
     volumes: [hiring-files:/data]
@@ -147,6 +150,8 @@ services:
     build: {context: .., dockerfile: deploy/Dockerfile, args: {SERVICE_PATH: services/students, SERVICE_ID: students}}
     environment: &students-env
       STUDENTS_DATABASE_URL: sqlite:////data/students.db
+      STUDENTS_AUTH_MODE: workforce
+      STUDENTS_WORKFORCE_URL: http://workforce:8000
     volumes: [students:/data]
     depends_on: {students-migrate: {condition: service_completed_successfully}}
   students-migrate:

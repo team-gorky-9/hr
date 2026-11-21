@@ -5,7 +5,8 @@ interface HeaderProps {
   onLogoClick?: () => void;
   onNavClick?: (nav: string) => void;
   onLoginClick?: () => void;
-  onRegisterClick?: () => void;
+  authenticated?: boolean;
+  onLogoutClick?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -13,21 +14,17 @@ export const Header: React.FC<HeaderProps> = ({
   onLogoClick,
   onNavClick,
   onLoginClick,
-  onRegisterClick,
+  authenticated = false,
+  onLogoutClick,
 }) => {
   const navItems = [
     { id: 'vacancies', label: 'Вакансии', href: '#' },
     { id: 'students', label: 'Студентам', href: '#' },
-    { id: 'practice', label: 'Моя практика', href: '#' },
-    { id: 'reserve', label: 'Кадровый резерв', href: '#' },
-    { id: 'administration', label: 'Работа в администрации', href: '#' },
   ];
 
   return (
     <header className="w-full bg-white border-b border-[#E1E5EB] sticky top-0 z-50">
-      <div className="max-w-[1230px] mx-auto px-6 h-[72px] flex items-center justify-between">
-        {/* Left Side: Logo & Navigation */}
-        <div className="flex items-center gap-4 lg:gap-8">
+      <div className="max-w-[1230px] mx-auto px-4 sm:px-6 min-h-[72px] py-2.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
           {/* Logo with Exact Vector SVG Emblem from _design-refs/Header 2/Mark.svg */}
           <button
             type="button"
@@ -35,22 +32,22 @@ export const Header: React.FC<HeaderProps> = ({
               e.preventDefault();
               onLogoClick?.();
             }}
-            className="flex items-center gap-3 group cursor-pointer text-left focus:outline-none"
+            className="min-w-0 flex items-center gap-2 sm:gap-3 group cursor-pointer text-left"
           >
             <img
               src="/images/Header/Mark.svg"
               alt="GorkyCode"
               className="w-9 h-9 shrink-0 transition-transform group-hover:scale-105"
             />
-            <span className="text-[16px] font-bold text-[#141A24] tracking-tight whitespace-nowrap">
+            <span className="text-[16px] font-bold text-[#141A24] tracking-tight">
               GorkyCode - team 9
             </span>
           </button>
 
           {/* Navigation Links */}
-          <nav className="hidden md:flex items-center gap-3.5 lg:gap-6">
+          <nav aria-label="Разделы портала" className="order-last sm:order-none w-full sm:w-auto sm:mr-auto flex flex-wrap items-center gap-3.5 lg:gap-6">
             {navItems.map((item) => {
-              const isActive = activeNav === item.id;
+              const isActive = activeNav === item.id || item.id === 'students' && activeNav === 'practice';
               return (
                 <a
                   key={item.id}
@@ -70,24 +67,13 @@ export const Header: React.FC<HeaderProps> = ({
               );
             })}
           </nav>
-        </div>
-
-        {/* Right Side: Auth Buttons */}
-        <div className="flex items-center gap-3 shrink-0">
-          <button
-            type="button"
-            onClick={onLoginClick}
-            className="px-5 py-2 text-[14px] font-medium text-[#141A24] bg-white border border-[#E1E5EB] rounded-lg hover:bg-[#F3F5F8] transition-colors whitespace-nowrap"
-          >
-            Войти
-          </button>
-          <button
-            type="button"
-            onClick={onRegisterClick}
-            className="px-5 py-2 text-[14px] font-medium text-white bg-[#1F4FD1] rounded-lg hover:bg-[#1841B2] transition-colors shadow-sm whitespace-nowrap"
-          >
-            Регистрация
-          </button>
+        <div className="flex items-center gap-2 sm:gap-3">
+          {authenticated ? <>
+            <button type="button" onClick={() => onNavClick?.('cabinet')} className="px-2.5 sm:px-5 py-2 text-[14px] font-medium text-white bg-[#1F4FD1] rounded-lg hover:bg-[#1841B2] transition-colors shadow-sm">Кабинет</button>
+            <button type="button" onClick={onLogoutClick} className="px-2.5 sm:px-5 py-2 text-[14px] font-medium text-[#141A24] bg-white border border-[#E1E5EB] rounded-lg hover:bg-[#F3F5F8] transition-colors">Выйти</button>
+          </> : (
+            <button type="button" onClick={onLoginClick} className="px-5 py-2 text-[14px] font-medium text-white bg-[#1F4FD1] rounded-lg hover:bg-[#1841B2] transition-colors shadow-sm">Войти</button>
+          )}
         </div>
       </div>
     </header>

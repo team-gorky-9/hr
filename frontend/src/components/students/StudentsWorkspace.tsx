@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Badge, Btn, Card } from '../shared/ui';
 import {
-  fixtureMentorId, studentRoles, studentsRequest,
+  fixtureMentorId, studentsRequest,
   type StudentRole, type Opportunity, type StudentApplication, type Placement,
   type Task, type Submission, type ReviewResult, type CareerPackage,
 } from '../../api/students';
@@ -16,7 +16,7 @@ const statusLabels: Record<string, string> = {
   not_verified: 'Результат не подтверждён', confirmed: 'Результат подтверждён',
   passed: 'Зачёт получен', not_passed: 'Зачёт не получен', unknown: 'Результат вуза ещё не получен',
 };
-const label = (value: string) => statusLabels[value] || value;
+const label = (value: string) => statusLabels[value] || 'Статус уточняется';
 const date = (value: string) => new Date(value).toLocaleDateString('ru-RU');
 const message = (error: unknown) => error instanceof Error ? error.message : 'Не удалось выполнить действие.';
 type Perform = (path: string, body: unknown) => Promise<unknown>;
@@ -148,7 +148,7 @@ function PlacementResult({ placement, role, perform, busy }: { placement: Placem
   </Card>;
 }
 
-function PracticeDetail({ id, role, onBack }: { id: string; role: StudentRole; onBack: () => void }) {
+function PracticeDetail({ id, role, token, onBack }: { id: string; role: StudentRole; token: string; onBack: () => void }) {
   const [placement, setPlacement] = useState<Placement | null>(null);
   const [task, setTask] = useState<Task | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -165,18 +165,18 @@ function PracticeDetail({ id, role, onBack }: { id: string; role: StudentRole; o
   useEffect(() => {
     const controller = new AbortController(); setError('');
     Promise.all([
-      studentsRequest<Placement>(role, path, undefined, controller.signal),
-      studentsRequest<{ current: Task | null; items: Task[] }>(role, path + '/tasks', undefined, controller.signal),
-      studentsRequest<{ items: Submission[] }>(role, path + '/submissions', undefined, controller.signal),
+      studentsRequest<Placement>(token, path, undefined, controller.signal),
+      studentsRequest<{ current: Task | null; items: Task[] }>(token, path + '/tasks', undefined, controller.signal),
+      studentsRequest<{ items: Submission[] }>(token, path + '/submissions', undefined, controller.signal),
     ]).then(([participation, assignment, work]) => {
       setPlacement(participation); setTask(assignment.current); setTasks(assignment.items); setSubmissions(work.items);
     }).catch((e) => { if (!controller.signal.aborted) setError(message(e)); });
     return () => controller.abort();
-  }, [id, role, revision, path]);
+  }, [id, token, revision, path]);
   const perform: Perform = async (url, body) => {
     setBusy(true); setError(''); setNotice('');
     try {
-      const result = await studentsRequest<unknown>(role, url, body);
+      const result = await studentsRequest<unknown>(token, url, body);
       setNotice('Изменение сохранено.'); setRevision((value) => value + 1); return result;
     } catch (e) { setError(message(e)); return null; }
     finally { setBusy(false); }
@@ -230,8 +230,11 @@ function PracticeDetail({ id, role, onBack }: { id: string; role: StudentRole; o
   </div>;
 }
 
-export default function StudentsWorkspace() {
-  const [role, setRole] = useState<StudentRole>('candidate');
+export default function StudentsWorkspace({ token, role = 'candidate' }: { token: string; role?: StudentRole }) {
+  return <PracticeWorkspace key={token + ':' + role} token={token} role={role} />;
+}
+
+function PracticeWorkspace({ token, role }: { token: string; role: StudentRole }) {
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [applications, setApplications] = useState<StudentApplication[]>([]);
   const [placements, setPlacements] = useState<Placement[]>([]);
@@ -246,18 +249,18 @@ export default function StudentsWorkspace() {
   useEffect(() => {
     const controller = new AbortController(); setLoading(true); setError('');
     Promise.all([
-      role === 'department' ? Promise.resolve({ items: [] as Opportunity[] }) : studentsRequest<{ items: Opportunity[] }>(role, '/opportunities', undefined, controller.signal),
-      role === 'department' ? Promise.resolve({ items: [] as StudentApplication[] }) : studentsRequest<{ items: StudentApplication[] }>(role, '/applications', undefined, controller.signal),
-      studentsRequest<{ items: Placement[] }>(role, '/placements', undefined, controller.signal),
+      role === 'department' ? Promise.resolve({ items: [] as Opportunity[] }) : studentsRequest<{ items: Opportunity[] }>(token, '/opportunities', undefined, controller.signal),
+      role === 'department' ? Promise.resolve({ items: [] as StudentApplication[] }) : studentsRequest<{ items: StudentApplication[] }>(token, '/applications', undefined, controller.signal),
+      studentsRequest<{ items: Placement[] }>(token, '/placements', undefined, controller.signal),
     ]).then(([places, requests, assigned]) => { setOpportunities(places.items); setApplications(requests.items); setPlacements(assigned.items); })
       .catch((e) => { if (!controller.signal.aborted) setError(message(e)); })
       .finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [role, refresh]);
+  }, [role, token, refresh]);
   const perform: Perform = async (path, body) => {
     setBusy(true); setError(''); setNotice('');
     try {
-      const result = await studentsRequest<unknown>(role, path, body);
+      const result = await studentsRequest<unknown>(token, path, body);
       setNotice('Изменение сохранено.'); setApplying(''); setCreateOpen(false); setRefresh((value) => value + 1); return result;
     } catch (e) { setError(message(e)); return null; }
     finally { setBusy(false); }
@@ -265,15 +268,8 @@ export default function StudentsWorkspace() {
   return <div className="max-w-[1240px] mx-auto px-4 sm:px-6 py-8 space-y-5">
     <div className="flex items-center justify-between gap-5">
       <div><h1 className="text-[26px] font-bold">Практика студентов</h1><p className="text-[14px] text-[#616977]">Место, задание и подтверждённый результат.</p></div>
-      <div className="flex items-center gap-3"><Badge>API · учебные участники</Badge>
-        <select className={field} aria-label="Роль в практике" value={role} disabled={busy} onChange={(e) => {
-          if (e.target.value === role) return;
-          setRole(e.target.value as StudentRole); setSelected(''); setApplying(''); setCreateOpen(false); setNotice('');
-          setOpportunities([]); setApplications([]); setPlacements([]);
-        }}>{Object.entries(studentRoles).map(([value, title]) => <option key={value} value={value}>{title}</option>)}</select>
-      </div>
     </div>
-    {selected ? <PracticeDetail key={role + selected} id={selected} role={role} onBack={() => { setSelected(''); setRefresh((value) => value + 1); }} /> : <>
+    {selected ? <PracticeDetail key={role + selected} id={selected} role={role} token={token} onBack={() => { setSelected(''); setRefresh((value) => value + 1); }} /> : <>
       {error && <div role="alert" className="bg-[#FCE8E8] p-4 rounded-xl text-[#A3171B]">{error} <Btn onClick={() => setRefresh((value) => value + 1)}>Повторить</Btn></div>}
       {notice && <div role="status" className="bg-[#E3F2E7] p-4 rounded-xl text-[#1D7A40]">{notice}</div>}
       {loading ? <Card>Загружаем практику…</Card> : <>
@@ -293,7 +289,8 @@ export default function StudentsWorkspace() {
             </Card>;
           })}
         </div>}
-        {applications.length > 0 && <Card className="space-y-4"><h2 className="text-[20px] font-bold">{role === 'hr' ? 'Заявки на практику' : 'Мои заявки'}</h2>
+        {role !== 'department' && <Card className="space-y-4"><h2 className="text-[20px] font-bold">{role === 'hr' ? 'Заявки на практику' : 'Мои заявки'}</h2>
+          {!applications.length && <p className="text-[#4A5363]">Заявок на практику пока нет.</p>}
           {applications.map((item) => <div key={item.id} className="border-t border-[#E1E5EB] pt-3">
             <div className="flex justify-between gap-3"><strong>{opportunities.find((place) => place.id === item.opportunity_id)?.title || 'Заявка на практику'}</strong><Badge>{label(item.status)}</Badge></div>
             <p className="text-[14px] text-[#4A5363]">{item.university_label} · {item.programme_label}</p>

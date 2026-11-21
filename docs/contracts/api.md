@@ -95,6 +95,12 @@ AssessmentOut дополнен algorithm_version, calculation_as_of и competenc
 ## 2. Маршруты Этапа 1 (только чтение — первый сквозной срез)
 
 ### 2.1. `GET /api/v1/vacancies`
+
+#### Единая база кандидатов
+
+`GET /api/v1/candidates?contour=working|training&vacancy_id=<uuid>` требует кадрового доступа (`hr` или `admin`), контур по умолчанию `working`. Ответ `200 {"items":[]}` включает одну строку на `candidate_id`, в том числе для кандидата без откликов, когда не задан `vacancy_id`. Фильтр выбирает кандидатов, у которых есть рассмотрение по точному UUID вакансии. Для найденных кандидатов сохраняются все их отклики, в том числе прежняя история с `vacancy_id: null`.
+
+Строка содержит `candidate_id`, `candidate_code`, `headline`, `channel`, `is_training`, `current_text_id`, `in_archive` (действующая запись для повторного контакта) и массив `applications`. В отклике есть `application_id`, `vacancy_id`, `vacancy_title`, `source`, `stage_title` и `applied_at`. Контакты и текст резюме отсутствуют. Для чтения карточки, оценки, цитаты и срока используются существующие API отклика, текста и передач. Ответ имеет `Cache-Control: private, no-store`.
 Список вакансий для выбора на стартовом экране.
 
 **Ответ `200 OK`:**

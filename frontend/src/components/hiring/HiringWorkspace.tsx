@@ -3,7 +3,7 @@ import { PageTitle, Btn, Card } from '../shared/ui';
 import { hiringToken, type Audience } from '../../api/hiring';
 import { Requests } from './Requests';
 import { Cases } from './Cases';
-export function HiringWorkspace({ audience = 'staff', token }: { audience?: Audience; token?: string }) {
+export function HiringWorkspace({ audience = 'staff', token, initialRequestId }: { audience?: Audience; token?: string; initialRequestId?: string }) {
   const [tab, setTab] = useState<'requests' | 'cases'>('requests'), [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const auth = hiringToken(audience, token);
@@ -17,7 +17,7 @@ export function HiringWorkspace({ audience = 'staff', token }: { audience?: Audi
     <div className="flex gap-3"><Btn variant={tab === 'requests' ? 'primary' : 'secondary'} onClick={() => setTab('requests')}>Обращения</Btn><Btn variant={tab === 'cases' ? 'primary' : 'secondary'} onClick={() => setTab('cases')}>Оформление</Btn></div>
     {error && <Card className="!bg-[#FCE8E8] !border-[#F3B8B8]"><p role="alert" className="text-[#A3171B]">{error}</p><p className="text-sm mt-2">Введённые данные сохранены в форме. Обновите список для перечитывания серверного состояния.</p></Card>}
     {busy && <p role="status" className="text-sm text-[#616977]">Обращаемся к сервису…</p>}
-    {tab === 'requests' ? <Requests key={auth} token={auth} audience={audience} busy={busy} run={run} /> : <Cases key={auth} token={auth} audience={audience} busy={busy} run={run} />}
+    {tab === 'requests' ? <Requests key={auth} token={auth} audience={audience} busy={busy} run={run} initialRequestId={initialRequestId} /> : <Cases key={auth} token={auth} audience={audience} busy={busy} run={run} />}
   </div>;
 }
 export function CandidateCabinet({ token }: { token?: string }) { return <HiringWorkspace audience="candidate" token={token} />; }

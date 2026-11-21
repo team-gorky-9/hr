@@ -19,11 +19,12 @@ export const TelephoneInterview: React.FC<TelephoneInterviewProps> = ({ applicat
   useEffect(() => {
     if (!chosen) { setLoading(false); return; }
     let live = true; setLoading(true); setError('');
-    Promise.all([api.guide(applicationId).catch(e => { if (e instanceof ApiError && e.status === 404) return null; throw e; }), api.interviews(applicationId)])
+    Promise.all([api.guide(applicationId).catch(e => { if (e instanceof ApiError && e.status === 404 && e.code !== 'APPLICATION_NOT_FOUND') return null; throw e; }), api.interviews(applicationId)])
       .then(([g, meetings]) => { if (live) { if (g) updateGuide(g); else setGuide(null); setInterviews(meetings.items); setLoading(false); } })
       .catch(e => { if (live) { setError(errorMessage(e)); setLoading(false); } });
     return () => { live = false; };
   }, [applicationId, chosen, reload]);
+  useEffect(() => { setNotes({}); setResult('continue'); setSummary(''); setNotice(''); }, [applicationId]);
   const action = async (work: () => Promise<void>) => { setBusy(true); setError(''); setNotice(''); try { await work(); } catch(e) { setError(errorMessage(e)); } finally { setBusy(false); } };
   const createGuide = () => action(async () => { updateGuide(await request<Guide>(`/applications/${applicationId}/interview-guide`, 'hr', { kind: 'phone', regenerate: false, request_id: crypto.randomUUID() })); setInterviews((await api.interviews(applicationId)).items); });
   const current = interviews.find(i => i.id === guide?.interview_id);

@@ -1,4 +1,4 @@
-"""Students HTTP API, isolated fixture mode."""
+"""Students HTTP API."""
 from contextlib import asynccontextmanager
 from typing import Annotated
 from uuid import UUID
@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 
 from .core import (Problem, Settings, Store, active, check_revision, fail, mentor_available,
-                   organizer, placement_visible, read_placement, require, roles)
+                   candidate, organizer, placement_visible, read_placement, require)
 from .schemas import ApplicationIn, Assignment, OpportunityIn, Reason, Revision
 
 PREFIX = "/api/v1/students"
@@ -42,7 +42,7 @@ def create_app(settings=None):
 
     @app.get("/health")
     def health():
-        return {"status": "ok", "implementation_stage": 1, "auth_mode": "fixture",
+        return {"status": "ok", "implementation_stage": 1, "auth_mode": store.settings.auth_mode,
                 "integration_mode": "standalone", "mentor_capacity": store.settings.mentor_capacity}
 
     @app.post(PREFIX + "/opportunities", status_code=201)
@@ -65,7 +65,7 @@ def create_app(settings=None):
 
     @app.get(PREFIX + "/opportunities")
     def opportunities(actor: ActorDep):
-        require(organizer(actor) or "candidate" in roles(actor))
+        require(organizer(actor) or candidate(actor))
         with store.transaction(actor) as unit:
             placements = unit.all("placement")
             items = []
@@ -78,7 +78,7 @@ def create_app(settings=None):
 
     @app.post(PREFIX + "/applications", status_code=201)
     def apply(body: ApplicationIn, actor: ActorDep):
-        require("candidate" in roles(actor))
+        require(candidate(actor))
         with store.transaction(actor, True) as unit:
             opportunity = unit.get("opportunity", body.opportunity_id)
             if opportunity["status"] != "published":

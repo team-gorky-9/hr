@@ -40,13 +40,18 @@ def test_vacancy_http_path_and_boundaries(make_settings):
         assert published.json()["profile_version"] == 1
         public = client.get("/api/v1/public/vacancies").json()["items"]
         assert len(public) == 1 and public[0]["id"] == vacancy_id
-        assert set(public[0]) == {"id", "title", "description", "position_code", "published_at"}
+        assert set(public[0]) == {"id", "title", "description", "position_code", "revision", "published_at"}
+        assert public[0]["revision"] == published.json()["revision"]
+        public_path = f"/api/v1/public/vacancies/{vacancy_id}"
+        assert client.get(public_path).json() == public[0]
+        assert client.get(public_path, params={"organization_id": "00000000-0000-4000-8000-000000000099"}).status_code == 404
         assert public[0]["title"] == "Экономист отдела"
         assert client.patch(path, headers=hr, json={"expected_revision": 3, "title": "Нельзя"}).status_code == 409
         assert client.post(path + "/close", headers=hr, json={"expected_revision": 3, "reason": " "}).status_code == 422
         closed = client.post(path + "/close", headers=hr, json={"expected_revision": 3, "reason": "Учебный набор завершён"})
         assert closed.status_code == 200 and closed.json()["status"] == "closed"
         assert client.get("/api/v1/public/vacancies").json() == {"items": []}
+        assert client.get(public_path).status_code == 404
         saved = client.get(path, headers=hr).json()
         assert saved["revision"] == 4
         assert [h["action"] for h in saved["history"]] == ["created", "edited", "published", "closed"]

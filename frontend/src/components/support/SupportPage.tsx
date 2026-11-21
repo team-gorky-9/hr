@@ -226,7 +226,7 @@ export default function SupportPage() {
   }
   const rule = rules.find((entry) => entry.id === detail?.rule_version_id);
   return <div className="mx-auto max-w-[1240px] space-y-5 px-4 py-8 sm:px-6">
-    <PageTitle title="Материальная помощь" subtitle="Заявление, документы и личный результат рассмотрения." right={<Badge>API · учебные условия</Badge>} />
+    <PageTitle title="Материальная помощь" subtitle="Заявление, документы и личный результат рассмотрения." right={<Badge>Учебные условия</Badge>} />
     <div className="flex items-center gap-4">
       <label htmlFor="support-role" className="text-[14px] text-[#4A5363]">Учебная роль</label>
       <select id="support-role" className={field + ' !mt-0 !w-auto'} value={role} disabled={busy} onChange={(e) => {

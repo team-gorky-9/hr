@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { logoutSession, useSession } from './api/session';
 import Header from './components/Header';
 import HeroSection from './components/portal/HeroSection';
 import CategoryCards from './components/portal/CategoryCards';
 import NewVacanciesSection from './components/portal/NewVacanciesSection';
 import WhyUsSection from './components/portal/WhyUsSection';
-import ReserveCtaBanner from './components/portal/ReserveCtaBanner';
 import VacancyPage from './pages/VacancyPage';
-import StudentsPage from './pages/StudentsPage';
 import StudentsWorkspace from './components/students/StudentsWorkspace';
 import SupportPage from './components/support/SupportPage';
 import DevelopmentPage from './components/development/DevelopmentPage';
@@ -21,41 +20,45 @@ import CandidateProfile from './components/hr/CandidateProfile';
 import VacancyResponses from './components/hr/VacancyResponses';
 import CandidateCard from './components/hr/CandidateCard';
 import TelephoneInterview from './components/hr/TelephoneInterview';
-import TalentReserve from './components/hr/TalentReserve';
 import ArchivePage from './components/hr/ArchivePage';
 import AnalyticsDashboard from './components/hr/AnalyticsDashboard';
 
 import RoleHeader from './components/shared/RoleHeader';
 import MyCandidates from './components/dept/MyCandidates';
-import HeadSummary from './components/hrhead/HeadSummary';
-import DirectorAnalytics from './components/hrhead/DirectorAnalytics';
 import ReportPage from './components/report/ReportPage';
 import Workspace from './components/employee/Workspace';
 import Care from './components/employee/Care';
 import Surveys from './components/employee/Surveys';
 import VacancyShowcase from './components/employee/VacancyShowcase';
 
-export type AppMode = 'portal' | 'hr' | 'head' | 'director' | 'dept' | 'employee';
+export type AppMode = 'portal' | 'hr' | 'dept' | 'employee';
 
 const initialWorkspace = new URLSearchParams(window.location.search).get('workspace');
+const employeeWorkspaces = ['support', 'development', 'workforce', 'onboarding', 'surveys'];
+const initialEmployeeWorkspace = employeeWorkspaces.includes(initialWorkspace || '') ? initialWorkspace! : null;
 
 const MODES: { id: AppMode; label: string }[] = [
   { id: 'portal', label: 'Портал соискателя' },
   { id: 'hr', label: 'Кабинет HR-менеджера' },
-  { id: 'head', label: 'Начальник ОК' },
-  { id: 'director', label: 'Директор департамента кадров' },
   { id: 'dept', label: 'Руководитель департамента' },
   { id: 'employee', label: 'Сотрудник' },
 ];
 
-export type PortalRoute = 'home' | 'vacancies' | 'students' | 'practice' | 'cabinet';
+export type PortalRoute = 'home' | 'vacancies' | 'students' | 'practice' | 'cabinet' | 'login';
 
 export const App: React.FC = () => {
+  const { session } = useSession();
+  const [sessionError, setSessionError] = useState('');
+  const [portalVacancyId, setPortalVacancyId] = useState<string | null>(null);
+  const [portalQuery, setPortalQuery] = useState('');
+  const [requestId, setRequestId] = useState<string | undefined>();
+  const [loginReturn, setLoginReturn] = useState<PortalRoute>('cabinet');
+  const [databaseCandidate, setDatabaseCandidate] = useState<CandidateRecord | null>(null);
+  const [databaseVacancyId, setDatabaseVacancyId] = useState('');
+  const [interviewReturn, setInterviewReturn] = useState<'database' | 'vacancies'>('vacancies');
   // Mode: 'portal' (Соискатель) vs 'hr' (HR-менеджер)
-  const [appMode, setAppMode] = useState<AppMode>(initialWorkspace === 'support' || initialWorkspace === 'development' || initialWorkspace === 'workforce' || initialWorkspace === 'onboarding' ? 'employee' : 'portal');
-  const [headTab, setHeadTab] = useState<string>('summary');
-  const [directorTab, setDirectorTab] = useState<string>('analytics');
-  const [employeeTab, setEmployeeTab] = useState<string>(initialWorkspace === 'support' || initialWorkspace === 'development' || initialWorkspace === 'workforce' || initialWorkspace === 'onboarding' ? initialWorkspace : 'workspace');
+  const [appMode, setAppMode] = useState<AppMode>(initialEmployeeWorkspace ? 'employee' : 'portal');
+  const [employeeTab, setEmployeeTab] = useState<string>(initialEmployeeWorkspace || 'workspace');
   const [hrAnalyticsView, setHrAnalyticsView] = useState<'dashboard' | 'report'>('dashboard');
 
   // Portal Routing State (Главная по умолчанию)
@@ -65,8 +68,19 @@ export const App: React.FC = () => {
   const [hrTab, setHrTab] = useState<HRNavTab>('database');
   const [dbView, setDbView] = useState<'list' | 'profile'>('list');
   const [hrView, setHrView] = useState<'list' | 'card'>('list');
-  const [selectedResponseVacancyId] = useState<string>('v1');
-  const [selectedCandidateId, setSelectedCandidateId] = useState<string>('r1');
+  const [selectedResponseVacancyId, setSelectedResponseVacancyId] = useState<string>('');
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string>('');
+
+  useEffect(() => {
+    if (session?.actor.grants.some(grant => grant.role === 'candidate') && portalRoute === 'login') setPortalRoute(loginReturn);
+  }, [session, portalRoute, loginReturn]);
+  const openVacancy = (id: string) => { setPortalVacancyId(id); setPortalRoute('vacancies'); window.scrollTo(0, 0); };
+  const openCandidate = (candidate: CandidateRecord) => {
+    setDatabaseCandidate(candidate);
+    setSelectedCandidateId(candidate.applicationId || '');
+    setDbView('profile');
+    window.scrollTo(0, 0);
+  };
 
   const handlePortalHome = () => {
     setPortalRoute('home');
@@ -75,6 +89,8 @@ export const App: React.FC = () => {
 
   const handlePortalNav = (navId: string) => {
     if (navId === 'vacancies') {
+      setPortalVacancyId(null);
+      setPortalQuery('');
       setPortalRoute('vacancies');
     } else if (navId === 'practice') {
       setPortalRoute('practice');
@@ -91,8 +107,8 @@ export const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#F3F5F8] text-[#141A24] flex flex-col font-sans">
       {/* ПЕРЕКЛЮЧАТЕЛЬ РЕЖИМОВ (ПОРТАЛ СОИСКАТЕЛЯ / КАБИНЕТ HR) */}
-      <div className="bg-[#141A24] text-white text-[12px] px-6 py-2 flex items-center justify-between z-50">
-        <div className="flex items-center gap-3">
+      <div className="bg-[#141A24] text-white text-[12px] px-4 sm:px-6 py-2 flex flex-wrap gap-2 items-center justify-between z-50">
+        <div className="flex flex-wrap min-w-0 items-center gap-3">
           <span className="text-[#8E939D]">Режим:</span>
           <div className="inline-flex flex-wrap rounded-lg bg-[#232832] p-0.5">
             {MODES.map((m) => (
@@ -118,7 +134,9 @@ export const App: React.FC = () => {
         <div className="text-[#8E939D] text-xs hidden sm:block">
           GorkyCode · team 9
         </div>
+        {session && appMode !== 'portal' && <button type="button" className="text-xs text-white" onClick={async () => { try { await logoutSession(); setSessionError(''); } catch (error) { setSessionError(error instanceof Error ? error.message : 'Не удалось выйти'); } }}>Выйти</button>}
       </div>
+      {sessionError && <p role="alert" className="px-6 py-2 text-red-700">{sessionError}</p>}
 
       {/* ======================================================== */}
       {/* 1. ПОРТАЛ СОИСКАТЕЛЯ                                     */}
@@ -126,14 +144,12 @@ export const App: React.FC = () => {
       {appMode === 'portal' && (
         <>
           <Header
+            authenticated={Boolean(session)}
+            onLogoutClick={() => { void logoutSession().catch(error => setSessionError(String(error))); }}
             activeNav={portalRoute === 'home' ? '' : portalRoute}
             onLogoClick={handlePortalHome}
             onNavClick={handlePortalNav}
             onLoginClick={() => {
-              setPortalRoute('cabinet');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            onRegisterClick={() => {
               setPortalRoute('cabinet');
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
@@ -143,11 +159,11 @@ export const App: React.FC = () => {
             {/* ГЛАВНАЯ СТРАНИЦА ПОРТАЛА (макет 1. Главная портала.png) */}
             {portalRoute === 'home' && (
               <>
-                <HeroSection />
+                <HeroSection onSearch={(query: string) => { setPortalQuery(query); setPortalVacancyId(null); setPortalRoute('vacancies'); }} />
 
                 <CategoryCards
                   onSelectCategory={(id) => {
-                    if (id === 'vacancies') setPortalRoute('vacancies');
+                    if (id === 'vacancies') { setPortalVacancyId(null); setPortalRoute('vacancies'); }
                     else if (id === 'students') setPortalRoute('students');
                     else setPortalRoute('home');
                     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -155,23 +171,24 @@ export const App: React.FC = () => {
                 />
 
                 <NewVacanciesSection
-                  onSelectVacancy={() => {
-                    setPortalRoute('vacancies');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
+                  onSelectVacancy={openVacancy}
                 />
 
                 <WhyUsSection />
 
-                <ReserveCtaBanner />
               </>
             )}
 
             {/* ВАКАНСИЯ: ФОРМА ОТКЛИКА И ОТКЛИК ОТПРАВЛЕН (макеты 2 и 3) */}
-            {portalRoute === 'vacancies' && (
+            {portalRoute === 'vacancies' && !portalVacancyId && <NewVacanciesSection catalog query={portalQuery} onSelectVacancy={openVacancy} />}
+            {portalRoute === 'vacancies' && portalVacancyId && (
               <VacancyPage
-                onGoHome={handlePortalHome}
-                onGoCabinet={() => {
+                vacancyId={portalVacancyId}
+                token={session?.actor.grants.some(grant => grant.role === 'candidate') ? session.access_token : undefined}
+                onLogin={() => { setLoginReturn('vacancies'); setPortalRoute('login'); }}
+                onGoHome={() => { setPortalVacancyId(null); setPortalRoute('vacancies'); }}
+                onGoCabinet={(id?: string) => {
+                  setRequestId(id);
                   setPortalRoute('cabinet');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
@@ -179,21 +196,14 @@ export const App: React.FC = () => {
             )}
 
             {/* СТУДЕНТАМ: ПРАКТИКА И МЕРОПРИЯТИЯ (макет 6) */}
-            {portalRoute === 'students' && (
-              <StudentsPage
-                onApplyPractice={() => {
-                  setPortalRoute('practice');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                onRegisterEvent={(title) => alert(`Запись на мероприятие: ${title}`)}
-              />
-            )}
-
-            {portalRoute === 'practice' && <StudentsWorkspace />}
+            {(portalRoute === 'students' || portalRoute === 'practice') && <ServiceAccess initialLogin="candidate" allowedRoles={['candidate']}>
+              {(token) => <StudentsWorkspace token={token} role="candidate" />}
+            </ServiceAccess>}
+            {portalRoute === 'login' && <ServiceAccess initialLogin="candidate" allowedRoles={['candidate']}>{() => <p>Вход выполнен…</p>}</ServiceAccess>}
 
             {/* ЛИЧНЫЙ КАБИНЕТ КАНДИДАТА (макет 5) */}
             {portalRoute === 'cabinet' && (
-              <ServiceAccess initialLogin="candidate">{(token) => <HiringWorkspace audience="candidate" token={token} />}</ServiceAccess>
+              <ServiceAccess initialLogin="candidate" allowedRoles={['candidate']}>{(token) => <HiringWorkspace audience="candidate" token={token} initialRequestId={requestId} />}</ServiceAccess>
             )}
           </main>
         </>
@@ -205,6 +215,7 @@ export const App: React.FC = () => {
       {appMode === 'hr' && (
         <>
           <HeaderHR
+            managerName={session?.actor.grants.some(grant => ['hr', 'admin'].includes(grant.role)) ? `HR-менеджер · ${session.actor.login}` : 'HR-менеджер'}
             activeTab={hrTab}
             onTabChange={(tab) => {
               setHrTab(tab);
@@ -224,26 +235,28 @@ export const App: React.FC = () => {
             {/* 1. ЕДИНАЯ БАЗА: ТАБЛИЦА (макет 1) И ПРОФИЛЬ КАНДИДАТА (макеты 13–19) */}
             {hrTab === 'database' && dbView === 'list' && (
               <CandidatesDatabase
-                onSelectCandidate={(_c: CandidateRecord) => {
-                  setDbView('profile');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
+                vacancyId={databaseVacancyId}
+                onVacancyChange={setDatabaseVacancyId}
+                onSelectCandidate={openCandidate}
               />
             )}
 
             {/* МАКЕТЫ 13–19: ПРОФИЛЬ КАНДИДАТА И ДЕЙСТВИЯ */}
-            {hrTab === 'database' && dbView === 'profile' && (
+            {hrTab === 'database' && dbView === 'profile' && databaseCandidate && (
               <CandidateProfile
+                candidate={databaseCandidate}
                 onBackToDatabase={() => {
                   setDbView('list');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
-                onOpenInterview={() => {
+                onOpenInterview={(applicationId: string) => {
+                  setSelectedCandidateId(applicationId);
+                  setInterviewReturn('database');
                   setHrTab('interview');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 onOpenReserve={() => {
-                  setHrTab('reserve');
+                  setHrTab('archive');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
               />
@@ -253,7 +266,8 @@ export const App: React.FC = () => {
             {hrTab === 'vacancies' && hrView === 'list' && (
               <VacancyResponses
                 initialVacancyId={selectedResponseVacancyId}
-                onOpenCard={(responseId: string) => {
+                onOpenCard={(responseId: string, vacancyId: string) => {
+                  setSelectedResponseVacancyId(vacancyId);
                   setSelectedCandidateId(responseId);
                   setHrView('card');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -269,8 +283,8 @@ export const App: React.FC = () => {
                   setHrView('list');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
-                onRequestClarification={() => alert('Запрос на уточнение отправлен')}
-                onReject={() => alert('Отклонение с причиной')}
+                onRequestClarification={() => { setInterviewReturn('vacancies'); setHrTab('interview'); }}
+                onOpenArchive={() => setHrTab('archive')}
               />
             )}
 
@@ -279,8 +293,9 @@ export const App: React.FC = () => {
               <TelephoneInterview
                 applicationId={selectedCandidateId}
                 onBackToCard={() => {
-                  setHrTab('database');
-                  setDbView('profile');
+                  setHrTab(interviewReturn);
+                  if (interviewReturn === 'database') setDbView('profile');
+                  else setHrView('card');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
               />
@@ -288,11 +303,8 @@ export const App: React.FC = () => {
 
             {/* 24 & 25. КАДРОВЫЙ РЕЗЕРВ: КОНКУРС И СТУДЕНТЫ (макеты 24 и 25) */}
             {hrTab === 'archive' && <ArchivePage />}
-            {hrTab === 'hiring' && <ServiceAccess>{(token) => <HiringWorkspace token={token} />}</ServiceAccess>}
-            {hrTab === 'requirements' && <ServiceAccess>{(_token, role) => <RequirementsPage role={role === 'department' ? 'department' : 'hr'} />}</ServiceAccess>}
-            {hrTab === 'reserve' && (
-              <TalentReserve />
-            )}
+            {hrTab === 'hiring' && <ServiceAccess allowedRoles={['hr', 'admin']}>{(token) => <HiringWorkspace token={token} />}</ServiceAccess>}
+            {hrTab === 'requirements' && <ServiceAccess allowedRoles={['hr', 'admin', 'department']}>{(_token, role) => <RequirementsPage role={role === 'department' ? 'department' : 'hr'} />}</ServiceAccess>}
 
             {/* 21, 22, 23. АНАЛИТИКА И ОТЧЁТЫ (макеты 21, 22, 23) */}
             {hrTab === 'analytics' && (
@@ -319,58 +331,6 @@ export const App: React.FC = () => {
           </main>
         </>
       )}
-      {/* НАЧАЛЬНИК ОТДЕЛА КАДРОВ: Сводка / Архив кадров / Аналитика */}
-      {appMode === 'head' && (
-        <>
-          <RoleHeader
-            tabs={[
-              { id: 'summary', label: 'Сводка' },
-              { id: 'reserve', label: 'Архив кадров' },
-              { id: 'analytics', label: 'Аналитика' },
-            ]}
-            activeTab={headTab}
-            onTabChange={setHeadTab}
-            roleLabel="Начальник отдела кадров · Ирина Б."
-            onLogoClick={() => setHeadTab('summary')}
-          />
-          <main className="flex-1 w-full">
-            {headTab === 'summary' && <HeadSummary />}
-            {headTab === 'reserve' && <TalentReserve />}
-            {headTab === 'analytics' && <DirectorAnalytics onExportReport={() => setAppMode('hr')} />}
-          </main>
-        </>
-      )}
-
-      {/* ДИРЕКТОР ДЕПАРТАМЕНТА КАДРОВ: Аналитика / Архив кадров / Единая база */}
-      {appMode === 'director' && (
-        <>
-          <RoleHeader
-            tabs={[
-              { id: 'analytics', label: 'Аналитика' },
-              { id: 'reserve', label: 'Архив кадров' },
-              { id: 'database', label: 'Единая база' },
-            ]}
-            activeTab={directorTab}
-            onTabChange={setDirectorTab}
-            roleLabel="Директор департамента кадров · Елена В."
-            onLogoClick={() => setDirectorTab('analytics')}
-          />
-          <main className="flex-1 w-full">
-            {directorTab === 'analytics' && (
-              <DirectorAnalytics
-                onExportReport={() => {
-                  setHrTab('analytics');
-                  setHrAnalyticsView('report');
-                  setAppMode('hr');
-                }}
-              />
-            )}
-            {directorTab === 'reserve' && <TalentReserve />}
-            {directorTab === 'database' && <CandidatesDatabase onSelectCandidate={() => {}} />}
-          </main>
-        </>
-      )}
-
       {/* РУКОВОДИТЕЛЬ ДЕПАРТАМЕНТА: Мои кандидаты */}
       {appMode === 'dept' && (
         <>
@@ -378,7 +338,7 @@ export const App: React.FC = () => {
             tabs={[{ id: 'mine', label: 'Мои кандидаты' }]}
             activeTab="mine"
             onTabChange={() => {}}
-            roleLabel="Директор департамента цифрового развития · Андрей Г."
+            roleLabel="Руководитель департамента"
           />
           <main className="flex-1 w-full">
             <MyCandidates />
@@ -399,16 +359,18 @@ export const App: React.FC = () => {
             ]}
             activeTab={employeeTab}
             onTabChange={setEmployeeTab}
-            roleLabel={employeeTab === 'support' || employeeTab === 'development' ? 'Личный кабинет' : 'Специалист департамента экономики · Кирилл Л.'}
+            roleLabel="Кабинет сотрудника"
             onLogoClick={() => setEmployeeTab('workspace')}
           />
           <main className="flex-1 w-full">
-            {employeeTab === 'workspace' && <Workspace onNavigate={setEmployeeTab} />}
-            {employeeTab === 'care' && <Care />}
+            {employeeTab === 'workspace' && <ServiceAccess initialLogin="employee" allowedRoles={['employee']}>
+              {() => <Workspace onNavigate={setEmployeeTab} />}
+            </ServiceAccess>}
+            {employeeTab === 'care' && <Care onNavigate={setEmployeeTab} />}
             {employeeTab === 'support' && <SupportPage />}
-            {employeeTab === 'development' && <DevelopmentPage />}
-            {employeeTab === 'workforce' && <WorkforcePage />}
-            {employeeTab === 'onboarding' && <WorkforcePage initialTab="onboarding" />}
+            {employeeTab === 'development' && <ServiceAccess initialLogin="employee" allowedRoles={['employee', 'department', 'hr', 'admin']}>{() => <DevelopmentPage />}</ServiceAccess>}
+            {employeeTab === 'workforce' && <ServiceAccess initialLogin="hr" allowedRoles={['hr', 'admin']}>{() => <WorkforcePage />}</ServiceAccess>}
+            {employeeTab === 'onboarding' && <ServiceAccess initialLogin="employee" allowedRoles={['employee', 'hr', 'admin']}>{() => <WorkforcePage initialTab="onboarding" />}</ServiceAccess>}
             {employeeTab === 'surveys' && <Surveys />}
             {employeeTab === 'vacancies' && <VacancyShowcase />}
           </main>

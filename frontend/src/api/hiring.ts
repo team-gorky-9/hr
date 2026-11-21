@@ -3,10 +3,10 @@ const base = (env.VITE_HIRING_API_BASE || '/hiring-api').replace(/\/$/, '');
 export type Audience = 'staff' | 'candidate';
 export interface VacancyRef { system: string; id: string; revision: number }
 export interface Vacancy { ref: VacancyRef; title: string; description: string }
-export interface Document { id: string; original_name: string; kind: string }
+export interface Document { id: string; original_name: string; kind: string; media_type?: string; sha256?: string; size_bytes?: number }
 export interface CandidateRequest {
   id: string; number: string | null; revision: number; status: string; message: string;
-  contact: { channel: string; value: string }; vacancy: { title: string } | null; vacancy_ref: VacancyRef | null;
+  contact: { channel: string; value: string }; vacancy: { title: string; is_synthetic?: boolean; source?: string } | null; vacancy_ref: VacancyRef | null;
   target_question: string | null; documents: Document[]; unread_messages: number;
   information_request: { public_message: string; requested_items: string[]; answered: boolean } | null;
   information_request_ref: { request_id: string; event_sequence: number } | null;
@@ -32,13 +32,13 @@ export const hiringStatus: Record<string, string> = {
 export function hiringToken(audience: Audience, token?: string) {
   return token || env.VITE_HIRING_TOKEN || `fixture:${audience === 'staff' ? 'hr' : 'candidate'}`;
 }
-export async function hiringRequest<T>(token: string, path: string, body?: unknown, method?: string): Promise<T> {
+export async function hiringRequest<T>(token: string, path: string, body?: unknown, method?: string, requestKey?: string): Promise<T> {
   const multipart = body instanceof FormData;
   let response: Response;
   try {
     response = await fetch(base + path, {
       method: method || (body === undefined ? 'GET' : 'POST'),
-      headers: { Authorization: `Bearer ${token}`, ...(body === undefined ? {} : { 'Idempotency-Key': crypto.randomUUID() }),
+      headers: { Authorization: `Bearer ${token}`, ...(body === undefined ? {} : { 'Idempotency-Key': requestKey ?? crypto.randomUUID() }),
         ...(!multipart && body !== undefined ? { 'Content-Type': 'application/json' } : {}) },
       ...(body === undefined ? {} : { body: multipart ? body : JSON.stringify(body) }),
     });
@@ -46,14 +46,21 @@ export async function hiringRequest<T>(token: string, path: string, body?: unkno
   const data = await response.json().catch(() => null);
   if (!response.ok) {
     if (data?.error?.code === 'STALE_REVISION') throw new Error('Запись изменена в другой вкладке. Обновите данные и повторите действие.');
+    if (response.status === 401) throw new Error('Сеанс завершён. Войдите в кабинет снова.');
+    if (response.status === 413) throw new Error('Размер файла превышает допустимый предел.');
+    if (response.status === 422 && data?.error?.field === 'file') throw new Error('Выберите непустой файл PDF, JPEG или PNG.');
     throw new Error(data?.error?.message || `Ошибка сервиса (${response.status}).`);
   }
-  if (!data) throw new Error('Сервис вернул пустой ответ.');
+  if (!data) throw new Error('Сервис вернул неожиданный ответ. Повторите запрос.');
   return data as T;
 }
-export async function hiringDownload(token: string, path: string, name: string) {
+export async function hiringDownload(token: string, path: string, name: string, mediaType?: string) {
   const response = await fetch(base + path, { headers: { Authorization: `Bearer ${token}` } });
   if (!response.ok) throw new Error(`Документ недоступен (${response.status}).`);
+  const contentType = response.headers.get('Content-Type')?.split(';')[0];
+  if (!contentType || contentType === 'text/html' || mediaType && contentType !== mediaType) {
+    throw new Error('Сервис вернул неожиданный тип документа.');
+  }
   const url = URL.createObjectURL(await response.blob());
   const link = document.createElement('a'); link.href = url; link.download = name; link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
