@@ -5,6 +5,7 @@ from alembic import context
 from sqlalchemy import create_engine
 
 import app.db.models  # noqa: F401  регистрирует все таблицы в Base.metadata
+import app.assessment.artifacts  # noqa: F401
 from app.config import settings
 from app.db.base import Base
 

@@ -103,14 +103,14 @@ class OpenAICompatClient:
 
         if self.config.llm_structured_mode == "prompt_json":
             self._mode = "prompt_json"
-        key = self.config.yandex_api_key.get_secret_value() if self.config.yandex_api_key else None
+        key = self.config.api_key()
         if not key:
-            raise LLMUnavailableError("не задан YANDEX_API_KEY в .env")
+            raise LLMUnavailableError("не задан ключ выбранного провайдера LLM")
         self._openai = openai
         self._sdk = openai.OpenAI(
             api_key=key,
             base_url=self.config.llm_base_url,
-            project=self.config.yandex_folder_id,
+            project=self.config.yandex_folder_id if self.config.llm_provider == "yandexgpt" else None,
             timeout=self.config.llm_timeout_sec,
             max_retries=0,  # повторы считаем сами, чтобы видеть их в журнале
         )
@@ -126,7 +126,7 @@ class OpenAICompatClient:
             inner = body.get("error", body)
             text = inner.get("message") if isinstance(inner, dict) else str(inner)
         text = str(text or getattr(error, "message", "") or "")
-        key = self.config.yandex_api_key.get_secret_value() if self.config.yandex_api_key else ""
+        key = self.config.api_key() or ""
         if key:
             text = text.replace(key, "***")
         text = " ".join(text.split())[:300]
@@ -158,7 +158,7 @@ class OpenAICompatClient:
                         transient_left -= 1
                         time.sleep(1.0)
                         continue
-                    raise LLMUnavailableError(f"модель недоступна: {type(error).__name__}") from None
+                    raise LLMUnavailableError(f"модель недоступна: {type(error).__name__}{self._detail(error)}") from None
                 except self._openai.APIStatusError as error:
                     raise LLMUnavailableError(f"модель недоступна: HTTP {error.status_code}{self._detail(error)}") from None
                 if usage is not None:
