@@ -27,3 +27,21 @@ class AnnualReportRelease(Base):
     preparation: Mapped[dict[str, Any]] = mapped_column(JSONB)
     created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class PlanSnapshot(Base):
+    """Плановый срез потребностей (раздел 4C): неизменяемый ввод HR и рассчитанный результат.
+
+    Строка только добавляется: исправление — новый срез. input_sha256 — отпечаток нормализованного
+    ввода, по нему видно, что два среза построены на одном пакете."""
+    __tablename__ = "plan_snapshots"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    target_date: Mapped[date] = mapped_column(Date)
+    scope_label: Mapped[str] = mapped_column(Text)
+    coverage_note: Mapped[str] = mapped_column(Text)
+    input: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    input_sha256: Mapped[str] = mapped_column(String(64))
+    result: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    created_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
