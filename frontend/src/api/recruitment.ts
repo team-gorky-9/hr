@@ -114,6 +114,8 @@ export interface Handoff {
   handed_off_at: string;
   deadline_status: string;
   business_days_left: number | null;
+  business_days_elapsed?: number;
+  business_days_total?: number;
   status: string;
   latest_feedback: Feedback | null;
   extensions_count: number;

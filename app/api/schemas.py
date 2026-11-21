@@ -719,6 +719,8 @@ class HandoffAttemptOut(BaseModel):
     extensions_count: int = 0
     deadline_status: DeadlineStatus
     business_days_left: int | None = None
+    business_days_elapsed: int = 0
+    business_days_total: int = 1
     is_overdue: bool = False
     overdue_notice: str | None = None
     cross_assessments_url: str | None = None
