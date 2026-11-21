@@ -16,6 +16,17 @@
 3. `generate.generate_core` — вопросы по строкам профиля этапа `interview`, пачками по 12. Их генерируют один раз на версию профиля. Готовую рубрику передают в `build_guide(core_cache=…)`: тогда у всех кандидатов одинаковое ядро и нет повторных вызовов.
 4. `service.build_guide` собирает `GuideDraft` по полям контракта и пишет вызовы модели в `audit_log`. Сам ничего не сохраняет и не делает commit.
 
+## Итог телефонной встречи (wave-2)
+
+Кадровик завершает звонок действием `POST /api/v1/interviews/{id}/outcome`: `continue`, `stop` или `no_answer`, время и пояснение. Сохраняются дата, кто звонил и время записи сервером. Прочитать итог можно через `GET /api/v1/applications/{id}/interviews`. Гайд и записанные ответы встречу сами не завершают. Итог не меняет этап отклика. История записи хранится в `audit_log` (`event = interview.outcome_recorded`). Поля и коды ошибок описаны в [контракте](../contracts/interview.md#итог-телефонной-встречи-wave-2-миграция-0010).
+
+Проверка через HTTP на учебной базе, модель не вызывается:
+
+```bash
+uv run uvicorn app.main:app &
+uv run python scripts/check_interview_outcome.py   # py-9101: continue, py-9102: no_answer
+```
+
 ## Запуск
 
 ```bash

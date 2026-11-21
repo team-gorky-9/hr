@@ -29,6 +29,9 @@ from app.api.schemas import (
     ConfirmIn,
     InterviewGuideIn,
     InterviewGuideOut,
+    InterviewListOut,
+    InterviewOut,
+    InterviewOutcomeIn,
     InterviewKindIn,
     ApplicationDetailOut,
     ApplicationListOut,
@@ -287,6 +290,19 @@ def add_interview_answer(interview_id: uuid.UUID, question_id: uuid.UUID, body: 
     if not created:
         response.status_code = 200  # повтор запроса с тем же request_id
     return answer
+
+
+@router.get("/applications/{application_id}/interviews", response_model=InterviewListOut)
+def list_interviews(application_id: uuid.UUID, session: SessionDep, user: StaffUser):
+    """Встречи отклика с итогом: отсюда интерфейс читает факт проведения (wave-2-stage-1)."""
+    return interview.list_interviews(session, application_id)
+
+
+@router.post("/interviews/{interview_id}/outcome", response_model=InterviewOut)
+def record_interview_outcome(interview_id: uuid.UUID, body: InterviewOutcomeIn, session: SessionDep,
+                             user: StaffUser):
+    """Завершить телефонную встречу: continue / stop / no_answer. Этап отклика не меняется."""
+    return interview.record_outcome(session, interview_id, body, user)
 
 
 @router.get("/interviews/{interview_id}/questions/{question_id}/answers", response_model=AnswerListOut)

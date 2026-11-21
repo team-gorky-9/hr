@@ -561,10 +561,12 @@ def test_openapi_has_stage_2_routes_and_no_pii_route(client):
     for path, methods in expected.items():
         assert set(paths[path]) == methods, path
     assert not [p for p in paths if "pii" in p]
-    # Маршруты интервью — только из interview-01 (interview.md v0.4).
+    # Маршруты интервью — из interview-01 (interview.md v0.4) и итог встречи (wave-2-stage-1).
     assert {p for p in paths if "interview" in p} == {
         "/api/v1/applications/{application_id}/interview-guide",
         "/api/v1/interviews/{interview_id}/questions/{question_id}/answers",
+        "/api/v1/applications/{application_id}/interviews",
+        "/api/v1/interviews/{interview_id}/outcome",
     }
 
 

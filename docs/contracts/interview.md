@@ -211,6 +211,26 @@
 | `409 ASSESSMENT_CHANGED` | оценка сменилась, пока шёл вызов модели | повторить запрос |
 | `503 LLM_UNAVAILABLE` | модель недоступна, а она нужна (есть пробелы или нет рубрики ядра) | ранее сохранённый гайд с ответами остаётся доступен по `GET`; новый не создан |
 
+### Итог телефонной встречи (wave-2, миграция 0010)
+
+Операции заданы [wave-2-stage-1](wave-2-stage-1.md), раздел «Илья». Реализация — `app/api/interview.py` (`list_interviews`, `record_outcome`), итог — [docs/reports/wave-2-interview-outcome.md](../reports/wave-2-interview-outcome.md). Права прежние: `X-User-Login`, кадровик или администратор (`department` — 403).
+
+- `GET /api/v1/applications/{application_id}/interviews` → `{application_id, items: [Interview]}`. Встречи отклика в порядке создания. Этот маршрут интерфейс читает для факта проведения. `Interview` = `{id, application_id, kind, scheduled_at, held_at, attempt_at, result, summary, interviewer_user_id, outcome_recorded_at, revision}`.
+- `POST /api/v1/interviews/{interview_id}/outcome` с телом `{expected_revision, result: continue|stop|no_answer, occurred_at, summary}` → `200 Interview`.
+  - Только `kind = phone` в состоянии `pending`.
+  - `continue`/`stop`: `held_at = attempt_at = occurred_at`.
+  - `no_answer`: `attempt_at = occurred_at`, `held_at = null`.
+  - `interviewer_user_id` — текущий пользователь, `outcome_recorded_at` — время сервера, `revision + 1`.
+  - Этап отклика, отказ и резерв не меняются.
+  - Повтор той же команды того же пользователя возвращает прежний результат.
+- Ошибки:
+  - `409 INTERVIEW_ALREADY_COMPLETED` — иной итог завершённой встречи;
+  - `409 STALE_REVISION` — устаревшая `expected_revision`;
+  - `409 UNSUPPORTED_INTERVIEW_KIND` — встреча не телефонная;
+  - `404 INTERVIEW_NOT_FOUND` — встречи нет;
+  - `422` — неверный вход: время без зоны или в будущем (`INVALID_OCCURRED_AT`), пустое пояснение, лишнее поле.
+- Генерация гайда после завершённой встречи открывает следующую `pending` штатным путём (`open_interview`). Гайд и ответы прошлой встречи остаются доступны по её `interview_id`.
+
 ## 5. Хранение — миграция 0009 (часть Дениса)
 
 База — [database.md](database.md) v2.0 на `main`: миграции `0007_posting_sources` (v1.9, requirements-03) и `0008` (v2.0, workflow-01). Миграция гайда — `0009` с `down_revision = '0008'`, описание — database.md v2.1, раздел 22 [Денис, v0.4; в v0.2–v0.3 здесь стоял номер `0006`, затем `0007`; номера заняли backend-02, requirements-03 и workflow-01].
