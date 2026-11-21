@@ -1,0 +1,56 @@
+name: Frontend delivery
+on:
+  push:
+    branches: [main]
+    paths: ['frontend/**', 'deploy/frontend-release.sh', '.github/workflows/frontend.yaml']
+  pull_request:
+    branches: [main]
+    paths: ['frontend/**', 'deploy/frontend-release.sh', '.github/workflows/frontend.yaml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    environment: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --no-audit --no-fund
+        working-directory: frontend
+      - run: node --experimental-strip-types --test tests/handoffDeadline.test.ts
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
+        env:
+          VITE_ARCHIVE_API_BASE: /legacy/api/v1
+          VITE_RECRUITMENT_API_BASE: /legacy/api/v1
+          VITE_RECRUITMENT_RECIPIENT_ID: ${{ vars.RECRUITMENT_RECIPIENT_ID }}
+          VITE_STUDENTS_API_BASE: /students/api/v1/students
+          VITE_SUPPORT_API_BASE: /social-support/api/v1/support
+          VITE_DEVELOPMENT_API_BASE: /workforce/api/v1
+          VITE_HIRING_API_BASE: /hiring/api/v1
+          VITE_REQUIREMENTS_API_BASE: /requirements/api/v1
+      - name: Deploy frontend
+        if: github.event_name != 'pull_request'
+        env:
+          DEPLOY_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          ssh -o BatchMode=yes "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p /opt/hr/frontend/$GITHUB_SHA"
+          scp -r frontend/dist/. "$DEPLOY_USER@$DEPLOY_HOST:/opt/hr/frontend/$GITHUB_SHA/"
+          scp deploy/frontend-release.sh "$DEPLOY_USER@$DEPLOY_HOST:/opt/hr/frontend-release.sh"
+          ssh -o BatchMode=yes "$DEPLOY_USER@$DEPLOY_HOST" "bash /opt/hr/frontend-release.sh $GITHUB_SHA"

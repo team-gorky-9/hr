@@ -47,6 +47,17 @@ class Settings:
     file_root: Path = field(default_factory=lambda: Path(_env("FILE_ROOT", str(SERVICE_ROOT / ".files"))))
     file_max_bytes: int = field(default_factory=lambda: int(_env("FILE_MAX_BYTES", str(20 * 1024 * 1024))))
     auth_timeout_seconds: float = field(default_factory=lambda: float(_env("AUTH_TIMEOUT_SECONDS", "3")))
+    interaction_enabled: bool = field(default_factory=lambda: _env("INTERACTION_ENABLED", "false").lower() == "true")
+    interaction_mapping_file: Path = field(default_factory=lambda: Path(_env("INTERACTION_MAPPING_FILE", str(SERVICE_ROOT / "fixtures/interaction-mapping.json"))))
+    interaction_legacy_url: str = field(default_factory=lambda: _env("INTERACTION_LEGACY_URL", "http://legacy:8000"))
+    interaction_legacy_instance: str = field(default_factory=lambda: _env("INTERACTION_INSTANCE_ID", "training-legacy"))
+    interaction_organization_id: str = field(default_factory=lambda: _env("INTERACTION_ORGANIZATION_ID", ""))
+    interaction_gateway_key: str = field(default_factory=lambda: _env("INTERACTION_GATEWAY_KEY", ""))
+    interaction_cursor_secret: str = field(default_factory=lambda: _env("INTERACTION_CURSOR_SECRET", ""))
+    interaction_connect_seconds: float = field(default_factory=lambda: float(_env("INTERACTION_CONNECT_SECONDS", "1")))
+    interaction_read_seconds: float = field(default_factory=lambda: float(_env("INTERACTION_READ_SECONDS", "2")))
+    interaction_overall_seconds: float = field(default_factory=lambda: float(_env("INTERACTION_OVERALL_SECONDS", "3")))
+    interaction_max_bytes: int = field(default_factory=lambda: int(_env("INTERACTION_MAX_BYTES", "262144")))
 
     def __post_init__(self):
         if self.auth_mode not in AUTH_MODES:
@@ -55,3 +66,14 @@ class Settings:
             raise ValueError(f"SELECTION_SOURCE must be one of {sorted(SOURCE_MODES)} in stage 1")
         if self.file_max_bytes <= 0:
             raise ValueError("FILE_MAX_BYTES must be positive")
+        if self.interaction_enabled:
+            from urllib.parse import urlsplit
+            import uuid
+            uuid.UUID(self.interaction_organization_id)
+            url = urlsplit(self.interaction_legacy_url)
+            if url.scheme not in {"http", "https"} or not url.hostname or url.username or url.query or url.fragment or url.path not in {"", "/"}:
+                raise ValueError("INTERACTION_LEGACY_URL must be an internal HTTP origin")
+            if not self.interaction_gateway_key or not self.interaction_cursor_secret:
+                raise ValueError("Interaction window requires gateway and cursor secrets")
+            if min(self.interaction_connect_seconds, self.interaction_read_seconds, self.interaction_overall_seconds, self.interaction_max_bytes) <= 0:
+                raise ValueError("Interaction budgets must be positive")

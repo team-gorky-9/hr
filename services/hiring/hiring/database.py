@@ -9,8 +9,13 @@ from sqlalchemy import create_engine
 SERVICE_ROOT = Path(__file__).resolve().parents[1]
 
 
-def make_engine(url: str):
-    return create_engine(url, pool_pre_ping=True)
+def make_engine(url: str, *, connect_timeout: float | None = None):
+    options = {}
+    if connect_timeout is not None and url.startswith("postgresql"):
+        from math import ceil
+        options = {"connect_args": {"connect_timeout": max(1, ceil(connect_timeout))},
+                   "pool_timeout": connect_timeout}
+    return create_engine(url, pool_pre_ping=True, **options)
 
 
 def migration_config() -> Config:

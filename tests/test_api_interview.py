@@ -436,6 +436,29 @@ def test_guide_errors(session, client, use_llm):  # noqa: F811
     assert profile.id  # профиль утверждён, но оценки нет — отличие от NO_APPROVED_PROFILE
 
 
+def test_stand_without_model_key_answers_409_and_503_not_500(session, client, monkeypatch):  # noqa: F811
+    """Настоящая зависимость маршрута, ключа модели нет (как на стенде без YANDEX_API_KEY).
+
+    Раньше клиент собирался в зависимости FastAPI и любой POST гайда давал 500 INTERNAL_ERROR."""
+    from app.ai.client import build_client
+    from app.ai.config import LLMConfig
+    no_key = LLMConfig(_env_file=None, llm_provider="yandexgpt", yandex_api_key=None)
+    monkeypatch.setattr(interview_api, "build_client", lambda: build_client(no_key))
+    client.app.dependency_overrides.pop(interview_api.get_llm_client, None)
+    profile = training_profile(session)
+    candidate = _candidate(session, "py-9072", BASE)
+    application = repo.create_application(session, candidate_id=candidate.id, source=ApplicationSource.RESPONSE,
+                                          vacancy_id=f.vacancy(session).id)
+    confirm_response(session, application, "python-dev")
+    session.commit()
+    not_assessed = post_guide(client, application.id)
+    assert (not_assessed.status_code, code(not_assessed)) == (409, "ASSESSMENT_REQUIRED")
+    ready = case(session, profile, "py-9073")
+    no_model = post_guide(client, ready["application_id"])
+    assert (no_model.status_code, code(no_model)) == (503, "LLM_UNAVAILABLE")
+    assert rows(session, InterviewGuide) == 0
+
+
 # --- Хранение -----------------------------------------------------------------------------------
 
 def test_open_interview_is_one_per_application_and_kind(session, posting_registry):  # noqa: F811

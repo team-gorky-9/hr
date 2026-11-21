@@ -362,6 +362,13 @@ class HandoffAttempt(Base):
     """Конкретная передача отклика получателю с замороженным снимком сводки и ожиданием ответа (workflow-01)."""
     __tablename__ = "handoff_attempts"
 
+    assignment_revision: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    access_revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    access_revoked_by_user_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    access_revocation_reason: Mapped[str | None] = mapped_column(Text)
+    revoke_request_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), unique=True)
+    revoke_request_payload: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+
     id: Mapped[uuid.UUID] = uuid_pk()
     application_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("applications.id", ondelete="CASCADE"), index=True

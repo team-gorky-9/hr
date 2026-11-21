@@ -12,6 +12,21 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       host: true,
       proxy: {
+        '/api/v1/reports/annual': { target: env.REPORT_API_TARGET || 'http://127.0.0.1:18590', changeOrigin: true },
+        '/api/v1/students': {
+          target: env.STUDENTS_API_TARGET || 'http://127.0.0.1:8105',
+          changeOrigin: true,
+        },
+        '/support-api': {
+          target: env.SUPPORT_API_TARGET || 'http://127.0.0.1:8106',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/support-api/, '/api/v1/support'),
+        },
+        '/workforce-api': {
+          target: env.WORKFORCE_API_TARGET || 'http://127.0.0.1:8101',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/workforce-api/, '/api/v1'),
+        },
         '/api/v1': {
           target: env.ARCHIVE_API_TARGET || 'http://127.0.0.1:8000',
           changeOrigin: true,

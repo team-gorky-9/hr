@@ -22,6 +22,8 @@ def main(argv=None) -> int:
     api = Client(parser.parse_args(argv).base_url)
 
     def act(login, row, action, **body):
+        if action == "addendum":
+            body.setdefault("information_request_ref", row["information_request_ref"])
         response = api.call(login, "POST", f"/candidate-requests/{row['id']}/{action}",
                             json={"expected_revision": row["revision"]} | body)
         return response, response.json()

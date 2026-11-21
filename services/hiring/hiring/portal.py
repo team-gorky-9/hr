@@ -121,6 +121,9 @@ class Portal:
         info = row.information_request
         body["information_request"] = None if info is None else {
             k: info[k] for k in ("public_message", "requested_items", "requested_at", "answered")}
+        body["information_request_ref"] = (
+            {"request_id": uid(row.id), "event_sequence": info["event_sequence"]}
+            if info and info.get("event_sequence") is not None else None)
         body["addenda"] = [{k: a[k] for k in ("text", "document_ids", "added_at")} for a in row.addenda]
         public = ("outcome", "public_explanation", "next_action", "decided_at")
         if self.actor.is_hr():
@@ -144,7 +147,7 @@ class Portal:
                 "selected_vacancy": consideration["selected_vacancy"]}
         return body
 
-    def record(self, row: CandidateRequest, event_type: str, data: dict) -> None:
+    def record(self, row: CandidateRequest, event_type: str, data: dict) -> int:
         self.session.flush()
         sequence = (self.session.scalar(select(func.max(CandidateRequestEvent.sequence))
                                         .where(CandidateRequestEvent.request_id == row.id)) or 0) + 1
@@ -152,6 +155,7 @@ class Portal:
             request_id=row.id, sequence=sequence, request_revision=row.revision, event_type=event_type,
             actor_id=self.actor.actor_id, actor_role=self.actor.role,
             data=json.loads(json.dumps(data, default=str))))
+        return sequence
 
     def history(self, request_id: uuid.UUID) -> dict:
         row = self.load(request_id)
@@ -159,7 +163,8 @@ class Portal:
                                       .order_by(CandidateRequestEvent.sequence))
         hr = self.actor.is_hr()
         return {"items": [{"sequence": e.sequence, "event_type": e.event_type, "request_revision": e.request_revision,
-                           "actor_role": e.actor_role, "created_at": iso(e.created_at), "data": e.data,
+                           "actor_role": e.actor_role, "created_at": iso(e.created_at),
+                           "data": e.data if hr else candidate_event_data(e.event_type, e.data),
                            **({"actor_id": uid(e.actor_id)} if hr else {})} for e in events]}
 
     # --- операции
@@ -286,8 +291,9 @@ class Portal:
         if previous == "ready":
             row.review = None  # готовность снята: сведения снова неполны
         row.revision += 1
-        self.record(row, "information.requested", {"public_message": body.public_message,
+        sequence = self.record(row, "information.requested", {"public_message": body.public_message,
                                                    "requested_items": body.requested_items, "previous": previous})
+        row.information_request = {**row.information_request, "event_sequence": sequence}
         self.message(row, "information_request", "Нужны дополнительные сведения",
                      body.public_message + "\nЧто нужно: " + "; ".join(body.requested_items),
                      "Ответьте дополнением в кабинете")
@@ -296,12 +302,22 @@ class Portal:
     def add_addendum(self, request_id, body: s.Addendum) -> dict:
         row = self.own(request_id)
         self.check(row, body.expected_revision, ("needs_information",), "Addendum")
+        active_sequence = row.information_request.get("event_sequence")
+        reference = body.information_request_ref
+        if active_sequence is not None:
+            if reference is None or reference.request_id != row.id or reference.event_sequence != active_sequence:
+                raise stale("information_request_ref")
+        elif reference is not None:
+            # Historical requests have no proven event correlation; never guess from timestamps.
+            raise stale("information_request_ref")
         own_documents = {d.id for d in self.documents(row)}
         unknown = [str(d) for d in body.document_ids if d not in own_documents]
         if unknown:
             raise Problem(422, "VALIDATION_ERROR", "document_ids must be documents of this request", "document_ids")
         addendum = {"text": body.text, "document_ids": [str(d) for d in body.document_ids], "added_at": iso(now()),
                     "answers_request_at": row.information_request["requested_at"]}
+        if reference is not None:
+            addendum["information_request_ref"] = reference.model_dump(mode="json")
         row.addenda = [*row.addenda, addendum]  # прежние материалы и подача сохраняются
         row.information_request = {**row.information_request, "answered": True}
         row.status = "submitted"
@@ -414,6 +430,24 @@ class Portal:
         self.session.flush()
         self.session.refresh(message)  # первый ответ и повтор показывают одно сохранённое значение
         return message_view(message)
+
+
+def candidate_event_data(event_type: str, data: dict) -> dict:
+    """Public history is a DTO, never an internal event payload with a few fields removed."""
+    allowed = {
+        "request.created": ("vacancy_ref", "target_question"),
+        "request.updated": ("changed_fields",),
+        "request.submitted": ("number", "target_question", "document_ids"),
+        "document.added": ("document_id", "kind", "after_submit"),
+        "information.requested": ("public_message", "requested_items", "previous"),
+        "addendum.added": ("text", "document_ids", "added_at", "information_request_ref"),
+        "vacancy.chosen": ("vacancy_ref",),
+        "consideration.recorded": ("recorded_at", "selected_vacancy"),
+        "outcome.published": ("outcome", "public_explanation", "next_action", "decided_at"),
+        "request.withdrawn": ("reason", "withdrawn_at", "notice"),
+        "message.read": ("message_id",),
+    }
+    return {key: data[key] for key in allowed.get(event_type, ()) if key in data}
 
 
 def message_view(message: CandidateRequestMessage) -> dict:

@@ -9,6 +9,8 @@ APPLICATION = "00000000-0000-4000-8000-000000000d11"
 
 
 def post(api, login, row, action, **body):
+    if action == "addendum" and row.get("information_request_ref"):
+        body.setdefault("information_request_ref", row["information_request_ref"])
     return api.post(login, f"{PATH}/{row['id']}/{action}", {"expected_revision": row["revision"]} | body)
 
 

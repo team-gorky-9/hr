@@ -39,7 +39,11 @@ def migrate(service):
 
 
 def check(service):
-    with urllib.request.urlopen("http://127.0.0.1:8000/openapi.json", timeout=5) as response:
+    headers = {}
+    if service == "legacy" and os.environ.get("INTERACTION_GATEWAY_KEY"):
+        headers["X-Interaction-Gateway-Key"] = os.environ["INTERACTION_GATEWAY_KEY"]
+    probe = urllib.request.Request("http://127.0.0.1:8000/openapi.json", headers=headers)
+    with urllib.request.urlopen(probe, timeout=5) as response:
         assert json.load(response)["openapi"]
     sqlite_paths = {
         "social-support": Path(os.environ.get("SUPPORT_DATA_DIR", "/data")) / "support.sqlite3",

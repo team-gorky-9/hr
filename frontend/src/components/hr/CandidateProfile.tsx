@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import HandoffDeadlinePanel from './HandoffDeadlinePanel';
+import { addWorkingDays, deadlineProgress, displayDay, isDateOnly } from './handoffDeadline';
+import { newProfileHandoff, useProfileHandoff } from './useProfileHandoff';
 
 export type ActionState =
   | 'idle' // 13. Профиль кандидата
@@ -12,6 +15,7 @@ export type ActionState =
   | 'reject_done'; // 19. Отклонить с причиной_ отправлено
 
 interface CandidateProfileProps {
+  candidateId?: string;
   initialActionState?: ActionState;
   onBackToDatabase?: () => void;
   onOpenInterview?: () => void;
@@ -19,12 +23,33 @@ interface CandidateProfileProps {
 }
 
 export const CandidateProfile: React.FC<CandidateProfileProps> = ({
-  initialActionState = 'reserve_form',
+  candidateId = 'c1',
+  initialActionState = 'idle',
   onBackToDatabase,
   onOpenInterview: _onOpenInterview,
   onOpenReserve,
 }) => {
-  const [actionState, setActionState] = useState<ActionState>(initialActionState);
+  const { handoff, saveHandoff, today, error: storageError } = useProfileHandoff(candidateId);
+  const [actionState, setActionState] = useState<ActionState>(handoff ? 'forward_done' : initialActionState);
+  const [previewExpired, setPreviewExpired] = useState(initialActionState === 'forward_expired');
+  const [department, setDepartment] = useState(handoff?.department || 'Департамент цифрового развития');
+  const [recipient, setRecipient] = useState(handoff?.recipient || 'Андрей Г., директор департамента');
+  const [newDueOn, setNewDueOn] = useState('');
+  const [extensionReason, setExtensionReason] = useState('');
+  const effectiveHandoff = handoff || newProfileHandoff(today);
+  const visibleHandoff = previewExpired
+    ? { ...effectiveHandoff, ...newProfileHandoff(addWorkingDays(today, -11)),
+        department: effectiveHandoff.department, recipient: effectiveHandoff.recipient }
+    : effectiveHandoff;
+  const progress = deadlineProgress(visibleHandoff.sentOn, visibleHandoff.dueOn, today);
+  const waitingForResponse = actionState === 'forward_done' || actionState === 'forward_expired';
+  const minimumDueOn = addWorkingDays(visibleHandoff.dueOn > today ? visibleHandoff.dueOn : today, 1);
+
+  const openExtension = () => {
+    setNewDueOn(addWorkingDays(visibleHandoff.dueOn > today ? visibleHandoff.dueOn : today, 5));
+    setExtensionReason('');
+    setActionState('extend_form');
+  };
   const [rejectReason, setRejectReason] = useState<string>('Не хватает опыта');
   const [offerOtherVacancy, setOfferOtherVacancy] = useState<boolean>(true);
   const [reserveConsent, setReserveConsent] = useState<boolean>(true);
@@ -37,6 +62,11 @@ export const CandidateProfile: React.FC<CandidateProfileProps> = ({
 
   // Status badge logic based on actionState
   const getStatusBadge = () => {
+    if (waitingForResponse && progress.status !== 'on_track') {
+      return <span className={`px-3 py-1 rounded-full text-[12px] font-medium whitespace-nowrap ${
+        progress.status === 'overdue' ? 'bg-[#FDE8E8] text-[#C5221F]' : 'bg-[#FFF8E6] text-[#92400E]'
+      }`}>{progress.status === 'overdue' ? 'Просрочен ответ департамента' : 'Срок ответа скоро истечёт'}</span>;
+    }
     switch (actionState) {
       case 'forward_done':
         return (
@@ -324,7 +354,8 @@ export const CandidateProfile: React.FC<CandidateProfileProps> = ({
                   </label>
                   <input
                     type="text"
-                    defaultValue="Департамент цифрового развития"
+                    value={department}
+                    onChange={event => setDepartment(event.target.value)}
                     className="w-full px-3 py-2 text-[13px] border border-[#D2D4D8] rounded-lg bg-white text-[#141A24] focus:outline-none focus:border-[#1F4FD1]"
                   />
                 </div>
@@ -334,7 +365,8 @@ export const CandidateProfile: React.FC<CandidateProfileProps> = ({
                   </label>
                   <input
                     type="text"
-                    defaultValue="Андрей Г., директор департамента"
+                    value={recipient}
+                    onChange={event => setRecipient(event.target.value)}
                     className="w-full px-3 py-2 text-[13px] border border-[#D2D4D8] rounded-lg bg-white text-[#141A24] focus:outline-none focus:border-[#1F4FD1]"
                   />
                 </div>
@@ -344,7 +376,8 @@ export const CandidateProfile: React.FC<CandidateProfileProps> = ({
                   </label>
                   <input
                     type="text"
-                    defaultValue="3 рабочих дня (норма)"
+                    value="10 рабочих дней (норма)"
+                    readOnly
                     className="w-full px-3 py-2 text-[13px] border border-[#D2D4D8] rounded-lg bg-white text-[#141A24] focus:outline-none focus:border-[#1F4FD1]"
                   />
                 </div>
@@ -362,9 +395,12 @@ export const CandidateProfile: React.FC<CandidateProfileProps> = ({
                   <button
                     type="button"
                     onClick={() => {
+                      saveHandoff({ ...newProfileHandoff(today), department: department.trim(), recipient: recipient.trim() });
+                      setPreviewExpired(false);
                       setActionState('forward_done');
                       showToast('Кандидат направлен в департамент');
                     }}
+                    disabled={!department.trim() || !recipient.trim()}
                     className="flex-1 py-2 text-[13px] font-medium text-white bg-[#1F4FD1] rounded-lg hover:bg-[#1841B2] transition-colors shadow-sm text-center"
                   >
                     Направить
@@ -380,33 +416,20 @@ export const CandidateProfile: React.FC<CandidateProfileProps> = ({
               </div>
             )}
 
-            {/* МАКЕТ 15а: СРОК ОТВЕТА ДЕПАРТАМЕНТА ИСТЁК */}
-            {(actionState === 'forward_expired' || actionState === 'extend_form') && (
+            {storageError && <p role="alert" className="text-[12px] text-[#A3171B] mb-3">{storageError}</p>}
+
+            {actionState === 'extend_form' && (
               <div className="space-y-3">
-                {actionState === 'forward_expired' ? (
-                  <div className="bg-[#FCE8E8] border border-[#F3B8B8] rounded-xl p-4">
-                    <h3 className="text-[14px] font-bold text-[#A3171B] mb-1">Срок ответа департамента истёк</h3>
-                    <p className="text-[12px] text-[#A3171B] mb-2">Ответственный: Андрей Г. · срок был до 04.12</p>
-                    <div className="h-[6px] rounded-full bg-[#9B1C1C] mb-2" />
-                    <p className="text-[12px] text-[#A3171B] leading-relaxed mb-3">
-                      Прошло 11 из 10 рабочих дней. Напоминание отправлено 05.12, ответа пока нет.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setActionState('extend_form')}
-                      className="px-4 py-2 text-[13px] font-medium text-white bg-[#1F4FD1] rounded-lg hover:bg-[#1841B2]"
-                    >
-                      Продлить и напомнить
-                    </button>
-                  </div>
-                ) : (
                   <div className="border border-[#BFDBFE] rounded-xl p-4 bg-[#F8FAFF] space-y-3">
                     <h3 className="text-[14px] font-bold text-[#141A24]">Продлить срок ответа</h3>
                     <div>
                       <label className="block text-[12px] font-medium text-[#4A5363] mb-1">Новый срок</label>
                       <input
-                        type="text"
-                        placeholder="11.12.2026 · +5 рабочих дней"
+                        type="date"
+                        aria-label="Новый срок"
+                        min={minimumDueOn}
+                        value={newDueOn}
+                        onChange={event => setNewDueOn(event.target.value)}
                         className="w-full px-3 py-2 text-[13px] border border-[#D2D4D8] rounded-lg bg-white focus:outline-none focus:border-[#1F4FD1]"
                       />
                     </div>
@@ -415,33 +438,39 @@ export const CandidateProfile: React.FC<CandidateProfileProps> = ({
                       <input
                         type="text"
                         placeholder="Руководитель в командировке до 08.12"
+                        aria-label="Причина продления"
+                        value={extensionReason}
+                        onChange={event => setExtensionReason(event.target.value)}
                         className="w-full px-3 py-2 text-[13px] border border-[#D2D4D8] rounded-lg bg-white focus:outline-none focus:border-[#1F4FD1]"
                       />
                     </div>
                     <p className="text-[12px] text-[#4A5363]">
-                      Андрей Г. получит напоминание с новым сроком. Продление попадёт в историю и в аналитику сроков.
+                      Срок в этой демонстрационной карточке сохранится в браузере. Напоминание автоматически не отправляется.
                     </p>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
+                        disabled={!isDateOnly(newDueOn) || newDueOn < minimumDueOn || !extensionReason.trim()}
                         onClick={() => {
+                          if (!isDateOnly(newDueOn) || newDueOn < minimumDueOn || !extensionReason.trim()) return;
+                          saveHandoff({ ...effectiveHandoff, dueOn: newDueOn });
+                          setPreviewExpired(false);
                           setActionState('forward_done');
-                          showToast('Срок продлён, напоминание отправлено');
+                          showToast('Срок продлён');
                         }}
-                        className="px-4 py-2 text-[13px] font-medium text-white bg-[#1F4FD1] rounded-lg hover:bg-[#1841B2]"
+                        className="px-4 py-2 text-[13px] font-medium text-white bg-[#1F4FD1] rounded-lg hover:bg-[#1841B2] disabled:opacity-50"
                       >
-                        Продлить и напомнить
+                        Продлить срок
                       </button>
                       <button
                         type="button"
-                        onClick={() => setActionState('forward_expired')}
+                        onClick={() => setActionState('forward_done')}
                         className="px-4 py-2 text-[13px] font-medium text-[#4A5363] bg-white border border-[#E1E5EB] rounded-lg hover:bg-[#F3F5F8]"
                       >
                         Отмена
                       </button>
                     </div>
                   </div>
-                )}
                 <button
                   type="button"
                   onClick={() => setActionState('reserve_form')}
@@ -461,26 +490,17 @@ export const CandidateProfile: React.FC<CandidateProfileProps> = ({
             )}
 
             {/* МАКЕТ 15: НАПРАВЛЕНИЕ ОТПРАВЛЕНО */}
-            {actionState === 'forward_done' && (
+            {waitingForResponse && (
               <div className="space-y-3">
-                <div className="bg-[#EBF7EE] border border-[#C6E7D2] rounded-xl p-4">
-                  <h3 className="text-[14px] font-bold text-[#166534] mb-1">
-                    Направлен в департамент цифрового развития
-                  </h3>
-                  <p className="text-[12px] text-[#14532D] font-medium mb-2">
-                    Ответственный: Андрей Г. · срок ответа до 25.11
-                  </p>
-                  <p className="text-[12px] text-[#14532D] leading-relaxed">
-                    Прошло 0 из 3 дней. Без ответа срок станет жёлтым, потом красным, а ответственному придёт напоминание.
-                  </p>
+                <HandoffDeadlinePanel handoff={visibleHandoff} today={today} onExtend={previewExpired ? undefined : openExtension} />
+                <p className="text-[12px] text-[#616977]">{previewExpired ? 'Предпросмотр просрочки · сохранённый срок не изменён.' : 'Демонстрационная карточка · срок хранится в этом браузере.'}</p>
                   <button
                     type="button"
-                    onClick={() => setActionState('forward_expired')}
-                    className="mt-2 text-[12px] text-[#166534] underline"
+                    onClick={() => setPreviewExpired(value => !value)}
+                    className="text-[12px] text-[#616977] underline"
                   >
-                    Демо: показать истёкший срок (макет 15а)
+                    {previewExpired ? 'Вернуться к текущему сроку' : 'Демо: показать истёкший срок'}
                   </button>
-                </div>
 
                 <button
                   type="button"
@@ -564,6 +584,7 @@ export const CandidateProfile: React.FC<CandidateProfileProps> = ({
                     <button
                       type="button"
                       onClick={() => {
+                        saveHandoff(null);
                         setActionState('reserve_done');
                       }}
                       className="flex-1 py-2 text-[13px] font-medium text-white bg-[#1F4FD1] rounded-lg hover:bg-[#1841B2] transition-colors shadow-sm text-center"
@@ -679,6 +700,7 @@ export const CandidateProfile: React.FC<CandidateProfileProps> = ({
                   <button
                     type="button"
                     onClick={() => {
+                      saveHandoff(null);
                       setActionState('reject_done');
                       showToast('Отказ отправлен кандидату');
                     }}
@@ -781,8 +803,8 @@ export const CandidateProfile: React.FC<CandidateProfileProps> = ({
             <div className="space-y-2 text-[13px] text-[#4A5363] leading-relaxed">
               <div>18.11 · Отклик получен с HH.ru</div>
               <div>18.11 · ИИ сравнил резюме с профилем должности</div>
-              {actionState === 'forward_done' && (
-                <div>20.11 · Направлен в департамент, срок 3 дня</div>
+              {handoff && (
+                <div>{displayDay(handoff.sentOn)} · Направлен в департамент, срок до {displayDay(handoff.dueOn)}</div>
               )}
               {actionState === 'reserve_done' && (
                 <div>20.11 · Марина С. перенесла резюме в архив кадров</div>
