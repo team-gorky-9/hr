@@ -1,0 +1,95 @@
+{
+  "is_synthetic": true,
+  "source": "support-training-v1",
+  "actors": [
+    {
+      "login": "employee",
+      "actor_id": "50000000-0000-0000-0000-000000000001",
+      "organization_id": "50000000-0000-0000-0001-000000000001",
+      "active": true,
+      "roles": [
+        "employee"
+      ]
+    },
+    {
+      "login": "employee2",
+      "actor_id": "50000000-0000-0000-0000-000000000002",
+      "organization_id": "50000000-0000-0000-0001-000000000001",
+      "active": true,
+      "roles": [
+        "employee"
+      ]
+    },
+    {
+      "login": "specialist",
+      "actor_id": "50000000-0000-0000-0000-000000000003",
+      "organization_id": "50000000-0000-0000-0001-000000000001",
+      "active": true,
+      "roles": [
+        "employee",
+        "specialist"
+      ]
+    },
+    {
+      "login": "secretary",
+      "actor_id": "50000000-0000-0000-0000-000000000004",
+      "organization_id": "50000000-0000-0000-0001-000000000001",
+      "active": true,
+      "roles": [
+        "employee",
+        "secretary"
+      ]
+    },
+    {
+      "login": "secretary2",
+      "actor_id": "50000000-0000-0000-0000-000000000005",
+      "organization_id": "50000000-0000-0000-0001-000000000001",
+      "active": true,
+      "roles": [
+        "employee",
+        "secretary"
+      ]
+    },
+    {
+      "login": "coordinator",
+      "actor_id": "50000000-0000-0000-0000-000000000006",
+      "organization_id": "50000000-0000-0000-0001-000000000001",
+      "active": true,
+      "roles": [
+        "employee",
+        "coordinator"
+      ]
+    },
+    {
+      "login": "executor",
+      "actor_id": "50000000-0000-0000-0000-000000000007",
+      "organization_id": "50000000-0000-0000-0001-000000000001",
+      "active": true,
+      "roles": [
+        "employee",
+        "executor"
+      ]
+    },
+    {
+      "login": "manager",
+      "actor_id": "50000000-0000-0000-0000-000000000008",
+      "organization_id": "50000000-0000-0000-0001-000000000001",
+      "active": true,
+      "roles": [
+        "employee",
+        "manager"
+      ]
+    },
+    {
+      "login": "other_org",
+      "actor_id": "50000000-0000-0000-0000-000000000009",
+      "organization_id": "50000000-0000-0000-0001-000000000002",
+      "active": true,
+      "roles": [
+        "employee",
+        "coordinator",
+        "specialist"
+      ]
+    }
+  ]
+}
