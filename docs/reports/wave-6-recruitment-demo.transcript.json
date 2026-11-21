@@ -1,0 +1,1480 @@
+{
+  "ids": {
+    "request_id": "2eb66a6c-bc87-4c8e-b094-8f76e9751aec",
+    "resume_document_id": "3b1842fd-97c9-40e1-aa60-28c91e17b1b6",
+    "request_number": "ОБР-000001",
+    "information_message_id": "c12017a6-c69a-41cf-9f1f-35e0eeaef964",
+    "addendum_document_id": "400a1d67-9e54-439d-ba9a-9463ecf84b47",
+    "prepared_candidate_code": "search-9001",
+    "prepared_candidate_id": "d2895829-ca66-4a38-b82a-cdbbf3436528",
+    "prepared_application_id": "f0f62a96-5844-45b1-92f8-7d5aa3608e05",
+    "prepared_fragment": "Сбор функциональных требований к СЭД, BPMN, постановка задач подрядчику.",
+    "outcome_message_id": "ada732a2-3f00-425e-af71-f2765119acfd"
+  },
+  "steps": [
+    {
+      "step": "1. Кандидат создаёт обращение по вакансии",
+      "service": "hiring",
+      "actor": "candidate",
+      "method": "POST",
+      "path": "/api/v1/candidate-requests",
+      "request": {
+        "vacancy_ref": {
+          "system": "catalog",
+          "id": "00000000-0000-4000-8000-000000000c01",
+          "revision": 1
+        },
+        "message": "Хочу работать экономистом в администрации (учебно)",
+        "contact": {
+          "channel": "email",
+          "value": "candidate@example.test"
+        }
+      },
+      "status": 201,
+      "response": {
+        "id": "2eb66a6c-bc87-4c8e-b094-8f76e9751aec",
+        "number": null,
+        "status": "draft",
+        "revision": 1,
+        "vacancy_ref": {
+          "system": "catalog",
+          "id": "00000000-0000-4000-8000-000000000c01",
+          "revision": 1
+        },
+        "vacancy": {
+          "title": "Экономист отдела планирования (учебная)",
+          "status": "published",
+          "position_code": "economist-training",
+          "source": "training_snapshot",
+          "observed_at": "2026-11-21T09:00:00+03:00"
+        },
+        "target_question": null,
+        "message": "Хочу работать экономистом в администрации (учебно)",
+        "contact": {
+          "channel": "email",
+          "value": "candidate@example.test",
+          "source": "candidate_reported",
+          "verified": false
+        },
+        "documents": [],
+        "created_at": "2026-11-21T01:45:57.668008+00:00",
+        "updated_at": "2026-11-21T01:45:57.668014+00:00",
+        "submitted_at": null,
+        "information_request": null,
+        "addenda": [],
+        "outcomes": [],
+        "withdrawal": null,
+        "unread_messages": 0,
+        "consideration": null
+      }
+    },
+    {
+      "step": "1. Кандидат прикладывает новое резюме (оригинал, без извлечения)",
+      "service": "hiring",
+      "actor": "candidate",
+      "method": "POST",
+      "path": "/api/v1/candidate-requests/2eb66a6c-bc87-4c8e-b094-8f76e9751aec/documents",
+      "request": {
+        "multipart": {
+          "kind": "candidate_resume",
+          "file": "resume-new.pdf"
+        }
+      },
+      "status": 201,
+      "response": {
+        "id": "3b1842fd-97c9-40e1-aa60-28c91e17b1b6",
+        "kind": "candidate_resume",
+        "original_name": "resume-new.pdf",
+        "media_type": "application/pdf",
+        "size_bytes": 54,
+        "sha256": "d6d84aedd04123bef9313b48aad66bdc3ac37c3ffc7b5adc9c1a0b0c4eea22ce",
+        "created_at": "2026-11-21T01:45:57.693991+00:00",
+        "request_id": "2eb66a6c-bc87-4c8e-b094-8f76e9751aec",
+        "request_revision": 2
+      }
+    },
+    {
+      "step": "1. Кандидат отправляет обращение",
+      "service": "hiring",
+      "actor": "candidate",
+      "method": "POST",
+      "path": "/api/v1/candidate-requests/2eb66a6c-bc87-4c8e-b094-8f76e9751aec/submit",
+      "request": {
+        "expected_revision": 2
+      },
+      "status": 200,
+      "response": {
+        "id": "2eb66a6c-bc87-4c8e-b094-8f76e9751aec",
+        "number": "ОБР-000001",
+        "status": "submitted",
+        "revision": 3,
+        "vacancy_ref": {
+          "id": "00000000-0000-4000-8000-000000000c01",
+          "system": "catalog",
+          "revision": 1
+        },
+        "vacancy": {
+          "title": "Экономист отдела планирования (учебная)",
+          "status": "published",
+          "position_code": "economist-training",
+          "source": "training_snapshot",
+          "observed_at": "2026-11-21T09:00:00+03:00"
+        },
+        "target_question": null,
+        "message": "Хочу работать экономистом в администрации (учебно)",
+        "contact": {
+          "value": "candidate@example.test",
+          "source": "candidate_reported",
+          "channel": "email",
+          "verified": false
+        },
+        "documents": [
+          {
+            "id": "3b1842fd-97c9-40e1-aa60-28c91e17b1b6",
+            "kind": "candidate_resume",
+            "original_name": "resume-new.pdf",
+            "media_type": "application/pdf",
+            "size_bytes": 54,
+            "sha256": "d6d84aedd04123bef9313b48aad66bdc3ac37c3ffc7b5adc9c1a0b0c4eea22ce",
+            "created_at": "2026-11-21T04:45:57.693991+03:00"
+          }
+        ],
+        "created_at": "2026-11-21T04:45:57.668008+03:00",
+        "updated_at": "2026-11-21T01:45:57.704724+00:00",
+        "submitted_at": "2026-11-21T01:45:57.701960+00:00",
+        "information_request": null,
+        "addenda": [],
+        "outcomes": [],
+        "withdrawal": null,
+        "unread_messages": 0,
+        "consideration": null
+      }
+    },
+    {
+      "step": "2. Очередь HR",
+      "service": "hiring",
+      "actor": "hr",
+      "method": "GET",
+      "path": "/api/v1/candidate-requests?status=submitted",
+      "request": null,
+      "status": 200,
+      "response": {
+        "items": [
+          {
+            "id": "2eb66a6c-bc87-4c8e-b094-8f76e9751aec",
+            "number": "ОБР-000001",
+            "status": "submitted",
+            "revision": 3,
+            "vacancy_ref": {
+              "id": "00000000-0000-4000-8000-000000000c01",
+              "system": "catalog",
+              "revision": 1
+            },
+            "vacancy": {
+              "title": "Экономист отдела планирования (учебная)",
+              "source": "training_snapshot",
+              "status": "published",
+              "observed_at": "2026-11-21T09:00:00+03:00",
+              "position_code": "economist-training"
+            },
+            "target_question": null,
+            "message": "Хочу работать экономистом в администрации (учебно)",
+            "contact": {
+              "value": "candidate@example.test",
+              "source": "candidate_reported",
+              "channel": "email",
+              "verified": false
+            },
+            "documents": [
+              {
+                "id": "3b1842fd-97c9-40e1-aa60-28c91e17b1b6",
+                "kind": "candidate_resume",
+                "original_name": "resume-new.pdf",
+                "media_type": "application/pdf",
+                "size_bytes": 54,
+                "sha256": "d6d84aedd04123bef9313b48aad66bdc3ac37c3ffc7b5adc9c1a0b0c4eea22ce",
+                "created_at": "2026-11-21T04:45:57.693991+03:00"
+              }
+            ],
+            "created_at": "2026-11-21T04:45:57.668008+03:00",
+            "updated_at": "2026-11-21T04:45:57.704724+03:00",
+            "submitted_at": "2026-11-21T04:45:57.701960+03:00",
+            "information_request": null,
+            "addenda": [],
+            "organization_id": "00000000-0000-4000-8000-000000000001",
+            "author_actor_id": "00000000-0000-4000-8000-000000000105",
+            "submitted_snapshot": {
+              "contact": {
+                "value": "candidate@example.test",
+                "source": "candidate_reported",
+                "channel": "email",
+                "verified": false
+              },
+              "message": "Хочу работать экономистом в администрации (учебно)",
+              "vacancy": {
+                "title": "Экономист отдела планирования (учебная)",
+                "source": "training_snapshot",
+                "status": "published",
+                "observed_at": "2026-11-21T09:00:00+03:00",
+                "position_code": "economist-training"
+              },
+              "vacancy_ref": {
+                "id": "00000000-0000-4000-8000-000000000c01",
+                "system": "catalog",
+                "revision": 1
+              },
+              "document_ids": [
+                "3b1842fd-97c9-40e1-aa60-28c91e17b1b6"
+              ],
+              "submitted_at": "2026-11-21T01:45:57.701960+00:00",
+              "target_question": null
+            },
+            "review": null,
+            "consideration": null,
+            "outcomes": [],
+            "withdrawal": null,
+            "unread_messages": 0
+          }
+        ]
+      }
+    },
+    {
+      "step": "2. HR запрашивает уточнение",
+      "service": "hiring",
+      "actor": "hr",
+      "method": "POST",
+      "path": "/api/v1/candidate-requests/2eb66a6c-bc87-4c8e-b094-8f76e9751aec/information-request",
+      "request": {
+        "expected_revision": 3,
+        "public_message": "Опишите опыт работы с требованиями к информационным системам",
+        "requested_items": [
+          "опыт работы",
+          "обновлённое резюме"
+        ]
+      },
+      "status": 200,
+      "response": {
+        "id": "2eb66a6c-bc87-4c8e-b094-8f76e9751aec",
+        "number": "ОБР-000001",
+        "status": "needs_information",
+        "revision": 4,
+        "vacancy_ref": {
+          "id": "00000000-0000-4000-8000-000000000c01",
+          "system": "catalog",
+          "revision": 1
+        },
+        "vacancy": {
+          "title": "Экономист отдела планирования (учебная)",
+          "source": "training_snapshot",
+          "status": "published",
+          "observed_at": "2026-11-21T09:00:00+03:00",
+          "position_code": "economist-training"
+        },
+        "target_question": null,
+        "message": "Хочу работать экономистом в администрации (учебно)",
+        "contact": {
+          "value": "candidate@example.test",
+          "source": "candidate_reported",
+          "channel": "email",
+          "verified": false
+        },
+        "documents": [
+          {
+            "id": "3b1842fd-97c9-40e1-aa60-28c91e17b1b6",
+            "kind": "candidate_resume",
+            "original_name": "resume-new.pdf",
+            "media_type": "application/pdf",
+            "size_bytes": 54,
+            "sha256": "d6d84aedd04123bef9313b48aad66bdc3ac37c3ffc7b5adc9c1a0b0c4eea22ce",
+            "created_at": "2026-11-21T04:45:57.693991+03:00"
+          }
+        ],
+        "created_at": "2026-11-21T04:45:57.668008+03:00",
+        "updated_at": "2026-11-21T01:45:57.722079+00:00",
+        "submitted_at": "2026-11-21T04:45:57.701960+03:00",
+        "information_request": {
+          "public_message": "Опишите опыт работы с требованиями к информационным системам",
+          "requested_items": [
+            "опыт работы",
+            "обновлённое резюме"
+          ],
+          "requested_at": "2026-11-21T01:45:57.721522+00:00",
+          "answered": false
+        },
+        "addenda": [],
+        "organization_id": "00000000-0000-4000-8000-000000000001",
+        "author_actor_id": "00000000-0000-4000-8000-000000000105",
+        "submitted_snapshot": {
+          "contact": {
+            "value": "candidate@example.test",
+            "source": "candidate_reported",
+            "channel": "email",
+            "verified": false
+          },
+          "message": "Хочу работать экономистом в администрации (учебно)",
+          "vacancy": {
+            "title": "Экономист отдела планирования (учебная)",
+            "source": "training_snapshot",
+            "status": "published",
+            "observed_at": "2026-11-21T09:00:00+03:00",
+            "position_code": "economist-training"
+          },
+          "vacancy_ref": {
+            "id": "00000000-0000-4000-8000-000000000c01",
+            "system": "catalog",
+            "revision": 1
+          },
+          "document_ids": [
+            "3b1842fd-97c9-40e1-aa60-28c91e17b1b6"
+          ],
+          "submitted_at": "2026-11-21T01:45:57.701960+00:00",
+          "target_question": null
+        },
+        "review": null,
+        "consideration": null,
+        "outcomes": [],
+        "withdrawal": null,
+        "unread_messages": 1
+      }
+    },
+    {
+      "step": "3. Кандидат видит сообщение",
+      "service": "hiring",
+      "actor": "candidate",
+      "method": "GET",
+      "path": "/api/v1/candidate-requests/2eb66a6c-bc87-4c8e-b094-8f76e9751aec/messages",
+      "request": null,
+      "status": 200,
+      "response": {
+        "items": [
+          {
+            "id": "c12017a6-c69a-41cf-9f1f-35e0eeaef964",
+            "kind": "information_request",
+            "title": "Нужны дополнительные сведения",
+            "body": "Опишите опыт работы с требованиями к информационным системам\nЧто нужно: опыт работы; обновлённое резюме",
+            "next_action": "Ответьте дополнением в кабинете",
+            "created_at": "2026-11-21T04:45:57.725015+03:00",
+            "read_at": null
+          }
+        ]
+      }
+    },
+    {
+      "step": "3. Кандидат отмечает прочтение",
+      "service": "hiring",
+      "actor": "candidate",
+      "method": "POST",
+      "path": "/api/v1/candidate-requests/2eb66a6c-bc87-4c8e-b094-8f76e9751aec/messages/c12017a6-c69a-41cf-9f1f-35e0eeaef964/read",
+      "request": null,
+      "status": 200,
+      "response": {
+        "id": "c12017a6-c69a-41cf-9f1f-35e0eeaef964",
+        "kind": "information_request",
+        "title": "Нужны дополнительные сведения",
+        "body": "Опишите опыт работы с требованиями к информационным системам\nЧто нужно: опыт работы; обновлённое резюме",
+        "next_action": "Ответьте дополнением в кабинете",
+        "created_at": "2026-11-21T04:45:57.725015+03:00",
+        "read_at": "2026-11-21T04:45:57.740262+03:00"
+      }
+    },
+    {
+      "step": "3. Кандидат прикладывает обновлённое резюме",
+      "service": "hiring",
+      "actor": "candidate",
+      "method": "POST",
+      "path": "/api/v1/candidate-requests/2eb66a6c-bc87-4c8e-b094-8f76e9751aec/documents",
+      "request": {
+        "multipart": {
+          "kind": "candidate_addendum",
+          "file": "resume-updated.pdf"
+        }
+      },
+      "status": 201,
+      "response": {
+        "id": "400a1d67-9e54-439d-ba9a-9463ecf84b47",
+        "kind": "candidate_addendum",
+        "original_name": "resume-updated.pdf",
+        "media_type": "application/pdf",
+        "size_bytes": 54,
+        "sha256": "c880e3763fad1c96ab70a70480c9e47ee0704d571692ff54d8a336736da6bd3e",
+        "created_at": "2026-11-21T01:45:57.755345+00:00",
+        "request_id": "2eb66a6c-bc87-4c8e-b094-8f76e9751aec",
+        "request_revision": 5
+      }
+    },
+    {
+      "step": "3. Кандидат отправляет дополнение",
+      "service": "hiring",
+      "actor": "candidate",
+      "method": "POST",
+      "path": "/api/v1/candidate-requests/2eb66a6c-bc87-4c8e-b094-8f76e9751aec/addendum",
+      "request": {
+        "expected_revision": 5,
+        "text": "Собирала функциональные требования к СЭД и согласовывала их с подрядчиком (учебно)",
+        "document_ids": [
+          "400a1d67-9e54-439d-ba9a-9463ecf84b47"
+        ]
+      },
+      "status": 200,
+      "response": {
+        "id": "2eb66a6c-bc87-4c8e-b094-8f76e9751aec",
+        "number": "ОБР-000001",
+        "status": "submitted",
+        "revision": 6,
+        "vacancy_ref": {
+          "id": "00000000-0000-4000-8000-000000000c01",
+          "system": "catalog",
+          "revision": 1
+        },
+        "vacancy": {
+          "title": "Экономист отдела планирования (учебная)",
+          "source": "training_snapshot",
+          "status": "published",
+          "observed_at": "2026-11-21T09:00:00+03:00",
+          "position_code": "economist-training"
+        },
+        "target_question": null,
+        "message": "Хочу работать экономистом в администрации (учебно)",
+        "contact": {
+          "value": "candidate@example.test",
+          "source": "candidate_reported",
+          "channel": "email",
+          "verified": false
+        },
+        "documents": [
+          {
+            "id": "3b1842fd-97c9-40e1-aa60-28c91e17b1b6",
+            "kind": "candidate_resume",
+            "original_name": "resume-new.pdf",
+            "media_type": "application/pdf",
+            "size_bytes": 54,
+            "sha256": "d6d84aedd04123bef9313b48aad66bdc3ac37c3ffc7b5adc9c1a0b0c4eea22ce",
+            "created_at": "2026-11-21T04:45:57.693991+03:00"
+          },
+          {
+            "id": "400a1d67-9e54-439d-ba9a-9463ecf84b47",
+            "kind": "candidate_addendum",
+            "original_name": "resume-updated.pdf",
+            "media_type": "application/pdf",
+            "size_bytes": 54,
+            "sha256": "c880e3763fad1c96ab70a70480c9e47ee0704d571692ff54d8a336736da6bd3e",
+            "created_at": "2026-11-21T04:45:57.755345+03:00"
+          }
+        ],
+        "created_at": "2026-11-21T04:45:57.668008+03:00",
+        "updated_at": "2026-11-21T01:45:57.763126+00:00",
+        "submitted_at": "2026-11-21T04:45:57.701960+03:00",
+        "information_request": {
+          "public_message": "Опишите опыт работы с требованиями к информационным системам",
+          "requested_items": [
+            "опыт работы",
+            "обновлённое резюме"
+          ],
+          "requested_at": "2026-11-21T01:45:57.721522+00:00",
+          "answered": true
+        },
+        "addenda": [
+          {
+            "text": "Собирала функциональные требования к СЭД и согласовывала их с подрядчиком (учебно)",
+            "document_ids": [
+              "400a1d67-9e54-439d-ba9a-9463ecf84b47"
+            ],
+            "added_at": "2026-11-21T01:45:57.762629+00:00"
+          }
+        ],
+        "outcomes": [],
+        "withdrawal": null,
+        "unread_messages": 0,
+        "consideration": null
+      }
+    },
+    {
+      "step": "4. HR отмечает готовность",
+      "service": "hiring",
+      "actor": "hr",
+      "method": "POST",
+      "path": "/api/v1/candidate-requests/2eb66a6c-bc87-4c8e-b094-8f76e9751aec/ready",
+      "request": {
+        "expected_revision": 6,
+        "review_basis": "Опыт и обновлённое резюме получены (учебно)"
+      },
+      "status": 200,
+      "response": {
+        "id": "2eb66a6c-bc87-4c8e-b094-8f76e9751aec",
+        "number": "ОБР-000001",
+        "status": "ready",
+        "revision": 7,
+        "vacancy_ref": {
+          "id": "00000000-0000-4000-8000-000000000c01",
+          "system": "catalog",
+          "revision": 1
+        },
+        "vacancy": {
+          "title": "Экономист отдела планирования (учебная)",
+          "source": "training_snapshot",
+          "status": "published",
+          "observed_at": "2026-11-21T09:00:00+03:00",
+          "position_code": "economist-training"
+        },
+        "target_question": null,
+        "message": "Хочу работать экономистом в администрации (учебно)",
+        "contact": {
+          "value": "candidate@example.test",
+          "source": "candidate_reported",
+          "channel": "email",
+          "verified": false
+        },
+        "documents": [
+          {
+            "id": "3b1842fd-97c9-40e1-aa60-28c91e17b1b6",
+            "kind": "candidate_resume",
+            "original_name": "resume-new.pdf",
+            "media_type": "application/pdf",
+            "size_bytes": 54,
+            "sha256": "d6d84aedd04123bef9313b48aad66bdc3ac37c3ffc7b5adc9c1a0b0c4eea22ce",
+            "created_at": "2026-11-21T04:45:57.693991+03:00"
+          },
+          {
+            "id": "400a1d67-9e54-439d-ba9a-9463ecf84b47",
+            "kind": "candidate_addendum",
+            "original_name": "resume-updated.pdf",
+            "media_type": "application/pdf",
+            "size_bytes": 54,
+            "sha256": "c880e3763fad1c96ab70a70480c9e47ee0704d571692ff54d8a336736da6bd3e",
+            "created_at": "2026-11-21T04:45:57.755345+03:00"
+          }
+        ],
+        "created_at": "2026-11-21T04:45:57.668008+03:00",
+        "updated_at": "2026-11-21T01:45:57.772424+00:00",
+        "submitted_at": "2026-11-21T04:45:57.701960+03:00",
+        "information_request": {
+          "public_message": "Опишите опыт работы с требованиями к информационным системам",
+          "requested_items": [
+            "опыт работы",
+            "обновлённое резюме"
+          ],
+          "requested_at": "2026-11-21T01:45:57.721522+00:00",
+          "answered": true
+        },
+        "addenda": [
+          {
+            "text": "Собирала функциональные требования к СЭД и согласовывала их с подрядчиком (учебно)",
+            "document_ids": [
+              "400a1d67-9e54-439d-ba9a-9463ecf84b47"
+            ],
+            "added_at": "2026-11-21T01:45:57.762629+00:00"
+          }
+        ],
+        "organization_id": "00000000-0000-4000-8000-000000000001",
+        "author_actor_id": "00000000-0000-4000-8000-000000000105",
+        "submitted_snapshot": {
+          "contact": {
+            "value": "candidate@example.test",
+            "source": "candidate_reported",
+            "channel": "email",
+            "verified": false
+          },
+          "message": "Хочу работать экономистом в администрации (учебно)",
+          "vacancy": {
+            "title": "Экономист отдела планирования (учебная)",
+            "source": "training_snapshot",
+            "status": "published",
+            "observed_at": "2026-11-21T09:00:00+03:00",
+            "position_code": "economist-training"
+          },
+          "vacancy_ref": {
+            "id": "00000000-0000-4000-8000-000000000c01",
+            "system": "catalog",
+            "revision": 1
+          },
+          "document_ids": [
+            "3b1842fd-97c9-40e1-aa60-28c91e17b1b6"
+          ],
+          "submitted_at": "2026-11-21T01:45:57.701960+00:00",
+          "target_question": null
+        },
+        "review": {
+          "review_basis": "Опыт и обновлённое резюме получены (учебно)",
+          "reviewed_by_actor_id": "00000000-0000-4000-8000-000000000101",
+          "reviewed_at": "2026-11-21T01:45:57.772006+00:00"
+        },
+        "consideration": null,
+        "outcomes": [],
+        "withdrawal": null,
+        "unread_messages": 0
+      }
+    },
+    {
+      "step": "4. HR ищет подготовленную запись в учебном корпусе подбора",
+      "service": "legacy-hr",
+      "actor": "hr_demo",
+      "method": "POST",
+      "path": "/api/v1/search/candidates",
+      "request": {
+        "contour": "training",
+        "query": "функциональные требования к СЭД",
+        "limit": 3
+      },
+      "status": 200,
+      "response": {
+        "contour": "training",
+        "mode": "lexical",
+        "semantic_status": "unavailable",
+        "items": [
+          {
+            "candidate_id": "d2895829-ca66-4a38-b82a-cdbbf3436528",
+            "candidate_code": "search-9001",
+            "score": 0.01639344262295082,
+            "match_kind": "lexical",
+            "evidence": {
+              "candidate_text_id": "c5514e3f-a8d2-4419-8124-b521407e237d",
+              "chunk_kind": "experience",
+              "fragment": "Сбор функциональных требований к СЭД, BPMN, постановка задач подрядчику.",
+              "start_offset": 14,
+              "end_offset": 86,
+              "utf16_start": 15,
+              "utf16_end": 87
+            },
+            "matched_required_terms": [],
+            "filter_matches": [],
+            "in_reserve": false,
+            "applications": [
+              {
+                "application_id": "f0f62a96-5844-45b1-92f8-7d5aa3608e05",
+                "source": "response",
+                "vacancy_id": "6a70d6ee-9317-40e4-9911-4e0a682e45b8",
+                "position_id": "9268f81e-503c-4c79-879b-eced0dc2ffce",
+                "position_title": "Консультант сектора подбора кадров отдела подбора кадров и мотивации департамента кадровой политики и развития муниципального управления",
+                "posting_title": "Аналитик требований · архивная публикация",
+                "external_position_title": null,
+                "applied_at": "2026-11-19",
+                "stage_code": "new",
+                "is_active": true
+              },
+              {
+                "application_id": "f41513d9-cff0-47dd-a648-bb866c979a99",
+                "source": "manual",
+                "vacancy_id": "07a92c6f-471c-4aba-827e-3bcfb2bcadab",
+                "position_id": "f43dc57b-912b-46cb-b1ed-9c50a460a63d",
+                "position_title": "Python-разработчик",
+                "posting_title": null,
+                "external_position_title": null,
+                "applied_at": "2026-11-19",
+                "stage_code": "new",
+                "is_active": true
+              },
+              {
+                "application_id": "5c5cd0e8-2a06-47bf-b231-41314651fdb5",
+                "source": "history",
+                "vacancy_id": null,
+                "position_id": null,
+                "position_title": null,
+                "posting_title": null,
+                "external_position_title": "Специалист по архиву · старая публикация",
+                "applied_at": "2026-08-01",
+                "stage_code": "new",
+                "is_active": false
+              }
+            ]
+          },
+          {
+            "candidate_id": "bbfbc006-3f75-4389-857b-9b6dc35b2717",
+            "candidate_code": "search-9015",
+            "score": 0.016129032258064516,
+            "match_kind": "lexical",
+            "evidence": {
+              "candidate_text_id": "fbcdb398-c2c0-46fb-9e6c-14e23fff5c61",
+              "chunk_kind": "experience",
+              "fragment": "Анализ и согласование требований к ИС при модернизации портала. Описывала сценарии использования.",
+              "start_offset": 12,
+              "end_offset": 109,
+              "utf16_start": 12,
+              "utf16_end": 109
+            },
+            "matched_required_terms": [],
+            "filter_matches": [],
+            "in_reserve": false,
+            "applications": []
+          }
+        ]
+      }
+    },
+    {
+      "step": "5. HR вручную записывает рассмотрение (учебная связь)",
+      "service": "hiring",
+      "actor": "hr",
+      "method": "POST",
+      "path": "/api/v1/candidate-requests/2eb66a6c-bc87-4c8e-b094-8f76e9751aec/record-consideration",
+      "request": {
+        "expected_revision": 7,
+        "candidate_ref": {
+          "system": "legacy-hr-training",
+          "id": "d2895829-ca66-4a38-b82a-cdbbf3436528"
+        },
+        "application_ref": {
+          "system": "legacy-hr-training",
+          "id": "f0f62a96-5844-45b1-92f8-7d5aa3608e05"
+        },
+        "selected_vacancy_ref": {
+          "system": "catalog",
+          "id": "00000000-0000-4000-8000-000000000c01",
+          "revision": 1
+        },
+        "identity_basis": "Учебная связь для показа с подготовленной записью search-9001; реальная сверка личности не выполнялась",
+        "source_reference": "POST /api/v1/search/candidates (training, «функциональные требования к СЭД»): «Сбор функциональных требований к СЭД, BPMN, постановка задач подрядчику.»"
+      },
+      "status": 200,
+      "response": {
+        "id": "2eb66a6c-bc87-4c8e-b094-8f76e9751aec",
+        "number": "ОБР-000001",
+        "status": "forwarded",
+        "revision": 8,
+        "vacancy_ref": {
+          "id": "00000000-0000-4000-8000-000000000c01",
+          "system": "catalog",
+          "revision": 1
+        },
+        "vacancy": {
+          "title": "Экономист отдела планирования (учебная)",
+          "source": "training_snapshot",
+          "status": "published",
+          "observed_at": "2026-11-21T09:00:00+03:00",
+          "position_code": "economist-training"
+        },
+        "target_question": null,
+        "message": "Хочу работать экономистом в администрации (учебно)",
+        "contact": {
+          "value": "candidate@example.test",
+          "source": "candidate_reported",
+          "channel": "email",
+          "verified": false
+        },
+        "documents": [
+          {
+            "id": "3b1842fd-97c9-40e1-aa60-28c91e17b1b6",
+            "kind": "candidate_resume",
+            "original_name": "resume-new.pdf",
+            "media_type": "application/pdf",
+            "size_bytes": 54,
+            "sha256": "d6d84aedd04123bef9313b48aad66bdc3ac37c3ffc7b5adc9c1a0b0c4eea22ce",
+            "created_at": "2026-11-21T04:45:57.693991+03:00"
+          },
+          {
+            "id": "400a1d67-9e54-439d-ba9a-9463ecf84b47",
+            "kind": "candidate_addendum",
+            "original_name": "resume-updated.pdf",
+            "media_type": "application/pdf",
+            "size_bytes": 54,
+            "sha256": "c880e3763fad1c96ab70a70480c9e47ee0704d571692ff54d8a336736da6bd3e",
+            "created_at": "2026-11-21T04:45:57.755345+03:00"
+          }
+        ],
+        "created_at": "2026-11-21T04:45:57.668008+03:00",
+        "updated_at": "2026-11-21T01:45:58.110941+00:00",
+        "submitted_at": "2026-11-21T04:45:57.701960+03:00",
+        "information_request": {
+          "public_message": "Опишите опыт работы с требованиями к информационным системам",
+          "requested_items": [
+            "опыт работы",
+            "обновлённое резюме"
+          ],
+          "requested_at": "2026-11-21T01:45:57.721522+00:00",
+          "answered": true
+        },
+        "addenda": [
+          {
+            "text": "Собирала функциональные требования к СЭД и согласовывала их с подрядчиком (учебно)",
+            "document_ids": [
+              "400a1d67-9e54-439d-ba9a-9463ecf84b47"
+            ],
+            "added_at": "2026-11-21T01:45:57.762629+00:00"
+          }
+        ],
+        "organization_id": "00000000-0000-4000-8000-000000000001",
+        "author_actor_id": "00000000-0000-4000-8000-000000000105",
+        "submitted_snapshot": {
+          "contact": {
+            "value": "candidate@example.test",
+            "source": "candidate_reported",
+            "channel": "email",
+            "verified": false
+          },
+          "message": "Хочу работать экономистом в администрации (учебно)",
+          "vacancy": {
+            "title": "Экономист отдела планирования (учебная)",
+            "source": "training_snapshot",
+            "status": "published",
+            "observed_at": "2026-11-21T09:00:00+03:00",
+            "position_code": "economist-training"
+          },
+          "vacancy_ref": {
+            "id": "00000000-0000-4000-8000-000000000c01",
+            "system": "catalog",
+            "revision": 1
+          },
+          "document_ids": [
+            "3b1842fd-97c9-40e1-aa60-28c91e17b1b6"
+          ],
+          "submitted_at": "2026-11-21T01:45:57.701960+00:00",
+          "target_question": null
+        },
+        "review": {
+          "reviewed_at": "2026-11-21T01:45:57.772006+00:00",
+          "review_basis": "Опыт и обновлённое резюме получены (учебно)",
+          "reviewed_by_actor_id": "00000000-0000-4000-8000-000000000101"
+        },
+        "consideration": {
+          "candidate_ref": {
+            "system": "legacy-hr-training",
+            "id": "d2895829-ca66-4a38-b82a-cdbbf3436528"
+          },
+          "application_ref": {
+            "system": "legacy-hr-training",
+            "id": "f0f62a96-5844-45b1-92f8-7d5aa3608e05"
+          },
+          "selected_vacancy_ref": {
+            "system": "catalog",
+            "id": "00000000-0000-4000-8000-000000000c01",
+            "revision": 1
+          },
+          "selected_vacancy": {
+            "title": "Экономист отдела планирования (учебная)",
+            "position_code": "economist-training"
+          },
+          "identity_basis": "Учебная связь для показа с подготовленной записью search-9001; реальная сверка личности не выполнялась",
+          "source_reference": "POST /api/v1/search/candidates (training, «функциональные требования к СЭД»): «Сбор функциональных требований к СЭД, BPMN, постановка задач подрядчику.»",
+          "confirmation_method": "manual-confirmed",
+          "recorded_by_actor_id": "00000000-0000-4000-8000-000000000101",
+          "recorded_at": "2026-11-21T01:45:58.110177+00:00"
+        },
+        "outcomes": [],
+        "withdrawal": null,
+        "unread_messages": 0
+      }
+    },
+    {
+      "step": "6. HR публикует исход",
+      "service": "hiring",
+      "actor": "hr",
+      "method": "POST",
+      "path": "/api/v1/candidate-requests/2eb66a6c-bc87-4c8e-b094-8f76e9751aec/public-outcome",
+      "request": {
+        "expected_revision": 8,
+        "outcome": "continue",
+        "public_explanation": "Обращение передано на собеседование в отдел планирования.",
+        "next_action": "Ожидайте приглашения в течение 10 рабочих дней",
+        "source_reference": "Решение HR после проверки дополнения (учебно)"
+      },
+      "status": 200,
+      "response": {
+        "id": "2eb66a6c-bc87-4c8e-b094-8f76e9751aec",
+        "number": "ОБР-000001",
+        "status": "forwarded",
+        "revision": 9,
+        "vacancy_ref": {
+          "id": "00000000-0000-4000-8000-000000000c01",
+          "system": "catalog",
+          "revision": 1
+        },
+        "vacancy": {
+          "title": "Экономист отдела планирования (учебная)",
+          "source": "training_snapshot",
+          "status": "published",
+          "observed_at": "2026-11-21T09:00:00+03:00",
+          "position_code": "economist-training"
+        },
+        "target_question": null,
+        "message": "Хочу работать экономистом в администрации (учебно)",
+        "contact": {
+          "value": "candidate@example.test",
+          "source": "candidate_reported",
+          "channel": "email",
+          "verified": false
+        },
+        "documents": [
+          {
+            "id": "3b1842fd-97c9-40e1-aa60-28c91e17b1b6",
+            "kind": "candidate_resume",
+            "original_name": "resume-new.pdf",
+            "media_type": "application/pdf",
+            "size_bytes": 54,
+            "sha256": "d6d84aedd04123bef9313b48aad66bdc3ac37c3ffc7b5adc9c1a0b0c4eea22ce",
+            "created_at": "2026-11-21T04:45:57.693991+03:00"
+          },
+          {
+            "id": "400a1d67-9e54-439d-ba9a-9463ecf84b47",
+            "kind": "candidate_addendum",
+            "original_name": "resume-updated.pdf",
+            "media_type": "application/pdf",
+            "size_bytes": 54,
+            "sha256": "c880e3763fad1c96ab70a70480c9e47ee0704d571692ff54d8a336736da6bd3e",
+            "created_at": "2026-11-21T04:45:57.755345+03:00"
+          }
+        ],
+        "created_at": "2026-11-21T04:45:57.668008+03:00",
+        "updated_at": "2026-11-21T01:45:58.123014+00:00",
+        "submitted_at": "2026-11-21T04:45:57.701960+03:00",
+        "information_request": {
+          "public_message": "Опишите опыт работы с требованиями к информационным системам",
+          "requested_items": [
+            "опыт работы",
+            "обновлённое резюме"
+          ],
+          "requested_at": "2026-11-21T01:45:57.721522+00:00",
+          "answered": true
+        },
+        "addenda": [
+          {
+            "text": "Собирала функциональные требования к СЭД и согласовывала их с подрядчиком (учебно)",
+            "document_ids": [
+              "400a1d67-9e54-439d-ba9a-9463ecf84b47"
+            ],
+            "added_at": "2026-11-21T01:45:57.762629+00:00"
+          }
+        ],
+        "organization_id": "00000000-0000-4000-8000-000000000001",
+        "author_actor_id": "00000000-0000-4000-8000-000000000105",
+        "submitted_snapshot": {
+          "contact": {
+            "value": "candidate@example.test",
+            "source": "candidate_reported",
+            "channel": "email",
+            "verified": false
+          },
+          "message": "Хочу работать экономистом в администрации (учебно)",
+          "vacancy": {
+            "title": "Экономист отдела планирования (учебная)",
+            "source": "training_snapshot",
+            "status": "published",
+            "observed_at": "2026-11-21T09:00:00+03:00",
+            "position_code": "economist-training"
+          },
+          "vacancy_ref": {
+            "id": "00000000-0000-4000-8000-000000000c01",
+            "system": "catalog",
+            "revision": 1
+          },
+          "document_ids": [
+            "3b1842fd-97c9-40e1-aa60-28c91e17b1b6"
+          ],
+          "submitted_at": "2026-11-21T01:45:57.701960+00:00",
+          "target_question": null
+        },
+        "review": {
+          "reviewed_at": "2026-11-21T01:45:57.772006+00:00",
+          "review_basis": "Опыт и обновлённое резюме получены (учебно)",
+          "reviewed_by_actor_id": "00000000-0000-4000-8000-000000000101"
+        },
+        "consideration": {
+          "recorded_at": "2026-11-21T01:45:58.110177+00:00",
+          "candidate_ref": {
+            "id": "d2895829-ca66-4a38-b82a-cdbbf3436528",
+            "system": "legacy-hr-training"
+          },
+          "identity_basis": "Учебная связь для показа с подготовленной записью search-9001; реальная сверка личности не выполнялась",
+          "application_ref": {
+            "id": "f0f62a96-5844-45b1-92f8-7d5aa3608e05",
+            "system": "legacy-hr-training"
+          },
+          "selected_vacancy": {
+            "title": "Экономист отдела планирования (учебная)",
+            "position_code": "economist-training"
+          },
+          "source_reference": "POST /api/v1/search/candidates (training, «функциональные требования к СЭД»): «Сбор функциональных требований к СЭД, BPMN, постановка задач подрядчику.»",
+          "confirmation_method": "manual-confirmed",
+          "recorded_by_actor_id": "00000000-0000-4000-8000-000000000101",
+          "selected_vacancy_ref": {
+            "id": "00000000-0000-4000-8000-000000000c01",
+            "system": "catalog",
+            "revision": 1
+          }
+        },
+        "outcomes": [
+          {
+            "outcome": "continue",
+            "public_explanation": "Обращение передано на собеседование в отдел планирования.",
+            "next_action": "Ожидайте приглашения в течение 10 рабочих дней",
+            "source_reference": "Решение HR после проверки дополнения (учебно)",
+            "origin": "hr_decision",
+            "decided_by_actor_id": "00000000-0000-4000-8000-000000000101",
+            "decided_at": "2026-11-21T01:45:58.122429+00:00"
+          }
+        ],
+        "withdrawal": null,
+        "unread_messages": 1
+      }
+    },
+    {
+      "step": "7. Кандидат перечитывает обращение",
+      "service": "hiring",
+      "actor": "candidate",
+      "method": "GET",
+      "path": "/api/v1/candidate-requests/2eb66a6c-bc87-4c8e-b094-8f76e9751aec",
+      "request": null,
+      "status": 200,
+      "response": {
+        "id": "2eb66a6c-bc87-4c8e-b094-8f76e9751aec",
+        "number": "ОБР-000001",
+        "status": "forwarded",
+        "revision": 9,
+        "vacancy_ref": {
+          "id": "00000000-0000-4000-8000-000000000c01",
+          "system": "catalog",
+          "revision": 1
+        },
+        "vacancy": {
+          "title": "Экономист отдела планирования (учебная)",
+          "source": "training_snapshot",
+          "status": "published",
+          "observed_at": "2026-11-21T09:00:00+03:00",
+          "position_code": "economist-training"
+        },
+        "target_question": null,
+        "message": "Хочу работать экономистом в администрации (учебно)",
+        "contact": {
+          "value": "candidate@example.test",
+          "source": "candidate_reported",
+          "channel": "email",
+          "verified": false
+        },
+        "documents": [
+          {
+            "id": "3b1842fd-97c9-40e1-aa60-28c91e17b1b6",
+            "kind": "candidate_resume",
+            "original_name": "resume-new.pdf",
+            "media_type": "application/pdf",
+            "size_bytes": 54,
+            "sha256": "d6d84aedd04123bef9313b48aad66bdc3ac37c3ffc7b5adc9c1a0b0c4eea22ce",
+            "created_at": "2026-11-21T04:45:57.693991+03:00"
+          },
+          {
+            "id": "400a1d67-9e54-439d-ba9a-9463ecf84b47",
+            "kind": "candidate_addendum",
+            "original_name": "resume-updated.pdf",
+            "media_type": "application/pdf",
+            "size_bytes": 54,
+            "sha256": "c880e3763fad1c96ab70a70480c9e47ee0704d571692ff54d8a336736da6bd3e",
+            "created_at": "2026-11-21T04:45:57.755345+03:00"
+          }
+        ],
+        "created_at": "2026-11-21T04:45:57.668008+03:00",
+        "updated_at": "2026-11-21T04:45:58.123014+03:00",
+        "submitted_at": "2026-11-21T04:45:57.701960+03:00",
+        "information_request": {
+          "public_message": "Опишите опыт работы с требованиями к информационным системам",
+          "requested_items": [
+            "опыт работы",
+            "обновлённое резюме"
+          ],
+          "requested_at": "2026-11-21T01:45:57.721522+00:00",
+          "answered": true
+        },
+        "addenda": [
+          {
+            "text": "Собирала функциональные требования к СЭД и согласовывала их с подрядчиком (учебно)",
+            "document_ids": [
+              "400a1d67-9e54-439d-ba9a-9463ecf84b47"
+            ],
+            "added_at": "2026-11-21T01:45:57.762629+00:00"
+          }
+        ],
+        "outcomes": [
+          {
+            "outcome": "continue",
+            "public_explanation": "Обращение передано на собеседование в отдел планирования.",
+            "next_action": "Ожидайте приглашения в течение 10 рабочих дней",
+            "decided_at": "2026-11-21T01:45:58.122429+00:00"
+          }
+        ],
+        "withdrawal": null,
+        "unread_messages": 1,
+        "consideration": {
+          "status": "registered",
+          "recorded_at": "2026-11-21T01:45:58.110177+00:00",
+          "selected_vacancy": {
+            "title": "Экономист отдела планирования (учебная)",
+            "position_code": "economist-training"
+          }
+        }
+      }
+    },
+    {
+      "step": "7. Кандидат видит сообщение об исходе",
+      "service": "hiring",
+      "actor": "candidate",
+      "method": "GET",
+      "path": "/api/v1/candidate-requests/2eb66a6c-bc87-4c8e-b094-8f76e9751aec/messages",
+      "request": null,
+      "status": 200,
+      "response": {
+        "items": [
+          {
+            "id": "c12017a6-c69a-41cf-9f1f-35e0eeaef964",
+            "kind": "information_request",
+            "title": "Нужны дополнительные сведения",
+            "body": "Опишите опыт работы с требованиями к информационным системам\nЧто нужно: опыт работы; обновлённое резюме",
+            "next_action": "Ответьте дополнением в кабинете",
+            "created_at": "2026-11-21T04:45:57.725015+03:00",
+            "read_at": "2026-11-21T04:45:57.740262+03:00"
+          },
+          {
+            "id": "ada732a2-3f00-425e-af71-f2765119acfd",
+            "kind": "outcome",
+            "title": "Рассмотрение продолжается",
+            "body": "Обращение передано на собеседование в отдел планирования.",
+            "next_action": "Ожидайте приглашения в течение 10 рабочих дней",
+            "created_at": "2026-11-21T04:45:58.125247+03:00",
+            "read_at": null
+          }
+        ]
+      }
+    },
+    {
+      "step": "7. Кандидат отмечает прочтение исхода",
+      "service": "hiring",
+      "actor": "candidate",
+      "method": "POST",
+      "path": "/api/v1/candidate-requests/2eb66a6c-bc87-4c8e-b094-8f76e9751aec/messages/ada732a2-3f00-425e-af71-f2765119acfd/read",
+      "request": null,
+      "status": 200,
+      "response": {
+        "id": "ada732a2-3f00-425e-af71-f2765119acfd",
+        "kind": "outcome",
+        "title": "Рассмотрение продолжается",
+        "body": "Обращение передано на собеседование в отдел планирования.",
+        "next_action": "Ожидайте приглашения в течение 10 рабочих дней",
+        "created_at": "2026-11-21T04:45:58.125247+03:00",
+        "read_at": "2026-11-21T04:45:58.142579+03:00"
+      }
+    },
+    {
+      "step": "7. Повторное чтение сохранённого результата",
+      "service": "hiring",
+      "actor": "candidate",
+      "method": "GET",
+      "path": "/api/v1/candidate-requests/2eb66a6c-bc87-4c8e-b094-8f76e9751aec",
+      "request": null,
+      "status": 200,
+      "response": {
+        "id": "2eb66a6c-bc87-4c8e-b094-8f76e9751aec",
+        "number": "ОБР-000001",
+        "status": "forwarded",
+        "revision": 9,
+        "vacancy_ref": {
+          "id": "00000000-0000-4000-8000-000000000c01",
+          "system": "catalog",
+          "revision": 1
+        },
+        "vacancy": {
+          "title": "Экономист отдела планирования (учебная)",
+          "source": "training_snapshot",
+          "status": "published",
+          "observed_at": "2026-11-21T09:00:00+03:00",
+          "position_code": "economist-training"
+        },
+        "target_question": null,
+        "message": "Хочу работать экономистом в администрации (учебно)",
+        "contact": {
+          "value": "candidate@example.test",
+          "source": "candidate_reported",
+          "channel": "email",
+          "verified": false
+        },
+        "documents": [
+          {
+            "id": "3b1842fd-97c9-40e1-aa60-28c91e17b1b6",
+            "kind": "candidate_resume",
+            "original_name": "resume-new.pdf",
+            "media_type": "application/pdf",
+            "size_bytes": 54,
+            "sha256": "d6d84aedd04123bef9313b48aad66bdc3ac37c3ffc7b5adc9c1a0b0c4eea22ce",
+            "created_at": "2026-11-21T04:45:57.693991+03:00"
+          },
+          {
+            "id": "400a1d67-9e54-439d-ba9a-9463ecf84b47",
+            "kind": "candidate_addendum",
+            "original_name": "resume-updated.pdf",
+            "media_type": "application/pdf",
+            "size_bytes": 54,
+            "sha256": "c880e3763fad1c96ab70a70480c9e47ee0704d571692ff54d8a336736da6bd3e",
+            "created_at": "2026-11-21T04:45:57.755345+03:00"
+          }
+        ],
+        "created_at": "2026-11-21T04:45:57.668008+03:00",
+        "updated_at": "2026-11-21T04:45:58.123014+03:00",
+        "submitted_at": "2026-11-21T04:45:57.701960+03:00",
+        "information_request": {
+          "public_message": "Опишите опыт работы с требованиями к информационным системам",
+          "requested_items": [
+            "опыт работы",
+            "обновлённое резюме"
+          ],
+          "requested_at": "2026-11-21T01:45:57.721522+00:00",
+          "answered": true
+        },
+        "addenda": [
+          {
+            "text": "Собирала функциональные требования к СЭД и согласовывала их с подрядчиком (учебно)",
+            "document_ids": [
+              "400a1d67-9e54-439d-ba9a-9463ecf84b47"
+            ],
+            "added_at": "2026-11-21T01:45:57.762629+00:00"
+          }
+        ],
+        "outcomes": [
+          {
+            "outcome": "continue",
+            "public_explanation": "Обращение передано на собеседование в отдел планирования.",
+            "next_action": "Ожидайте приглашения в течение 10 рабочих дней",
+            "decided_at": "2026-11-21T01:45:58.122429+00:00"
+          }
+        ],
+        "withdrawal": null,
+        "unread_messages": 0,
+        "consideration": {
+          "status": "registered",
+          "recorded_at": "2026-11-21T01:45:58.110177+00:00",
+          "selected_vacancy": {
+            "title": "Экономист отдела планирования (учебная)",
+            "position_code": "economist-training"
+          }
+        }
+      }
+    },
+    {
+      "step": "8. candidate2 открывает чужое обращение",
+      "service": "hiring",
+      "actor": "candidate2",
+      "method": "GET",
+      "path": "/api/v1/candidate-requests/2eb66a6c-bc87-4c8e-b094-8f76e9751aec",
+      "request": null,
+      "status": 404,
+      "response": {
+        "error": {
+          "code": "NOT_FOUND",
+          "message": "Candidate request not found",
+          "field": null,
+          "request_id": "16b34128-da09-44a1-a74d-288355326978"
+        }
+      }
+    },
+    {
+      "step": "8. candidate2 читает чужие сообщения",
+      "service": "hiring",
+      "actor": "candidate2",
+      "method": "GET",
+      "path": "/api/v1/candidate-requests/2eb66a6c-bc87-4c8e-b094-8f76e9751aec/messages",
+      "request": null,
+      "status": 404,
+      "response": {
+        "error": {
+          "code": "NOT_FOUND",
+          "message": "Candidate request not found",
+          "field": null,
+          "request_id": "2f8100c9-72b2-4a91-aa2b-107af29ea3f1"
+        }
+      }
+    },
+    {
+      "step": "8. candidate2 открывает чужой файл",
+      "service": "hiring",
+      "actor": "candidate2",
+      "method": "GET",
+      "path": "/api/v1/candidate-requests/2eb66a6c-bc87-4c8e-b094-8f76e9751aec/documents/3b1842fd-97c9-40e1-aa60-28c91e17b1b6/content",
+      "request": null,
+      "status": 404,
+      "response": {
+        "error": {
+          "code": "NOT_FOUND",
+          "message": "Candidate request not found",
+          "field": null,
+          "request_id": "89d793f2-f9bd-4cf6-967c-8e0845582491"
+        }
+      }
+    },
+    {
+      "step": "История обращения (HR)",
+      "service": "hiring",
+      "actor": "hr",
+      "method": "GET",
+      "path": "/api/v1/candidate-requests/2eb66a6c-bc87-4c8e-b094-8f76e9751aec/history",
+      "request": null,
+      "status": 200,
+      "response": {
+        "items": [
+          {
+            "sequence": 1,
+            "event_type": "request.created",
+            "request_revision": 1,
+            "actor_role": "candidate",
+            "created_at": "2026-11-21T04:45:57.672984+03:00",
+            "data": {
+              "vacancy_ref": {
+                "id": "00000000-0000-4000-8000-000000000c01",
+                "system": "catalog",
+                "revision": 1
+              },
+              "target_question": null
+            },
+            "actor_id": "00000000-0000-4000-8000-000000000105"
+          },
+          {
+            "sequence": 2,
+            "event_type": "document.added",
+            "request_revision": 2,
+            "actor_role": "candidate",
+            "created_at": "2026-11-21T04:45:57.695986+03:00",
+            "data": {
+              "kind": "candidate_resume",
+              "document_id": "3b1842fd-97c9-40e1-aa60-28c91e17b1b6",
+              "after_submit": false
+            },
+            "actor_id": "00000000-0000-4000-8000-000000000105"
+          },
+          {
+            "sequence": 3,
+            "event_type": "request.submitted",
+            "request_revision": 3,
+            "actor_role": "candidate",
+            "created_at": "2026-11-21T04:45:57.706374+03:00",
+            "data": {
+              "number": "ОБР-000001",
+              "document_ids": [
+                "3b1842fd-97c9-40e1-aa60-28c91e17b1b6"
+              ],
+              "target_question": null
+            },
+            "actor_id": "00000000-0000-4000-8000-000000000105"
+          },
+          {
+            "sequence": 4,
+            "event_type": "information.requested",
+            "request_revision": 4,
+            "actor_role": "hr",
+            "created_at": "2026-11-21T04:45:57.723719+03:00",
+            "data": {
+              "previous": "submitted",
+              "public_message": "Опишите опыт работы с требованиями к информационным системам",
+              "requested_items": [
+                "опыт работы",
+                "обновлённое резюме"
+              ]
+            },
+            "actor_id": "00000000-0000-4000-8000-000000000101"
+          },
+          {
+            "sequence": 5,
+            "event_type": "message.read",
+            "request_revision": 4,
+            "actor_role": "candidate",
+            "created_at": "2026-11-21T04:45:57.741749+03:00",
+            "data": {
+              "message_id": "c12017a6-c69a-41cf-9f1f-35e0eeaef964"
+            },
+            "actor_id": "00000000-0000-4000-8000-000000000105"
+          },
+          {
+            "sequence": 6,
+            "event_type": "document.added",
+            "request_revision": 5,
+            "actor_role": "candidate",
+            "created_at": "2026-11-21T04:45:57.756818+03:00",
+            "data": {
+              "kind": "candidate_addendum",
+              "document_id": "400a1d67-9e54-439d-ba9a-9463ecf84b47",
+              "after_submit": true
+            },
+            "actor_id": "00000000-0000-4000-8000-000000000105"
+          },
+          {
+            "sequence": 7,
+            "event_type": "addendum.added",
+            "request_revision": 6,
+            "actor_role": "candidate",
+            "created_at": "2026-11-21T04:45:57.764863+03:00",
+            "data": {
+              "text": "Собирала функциональные требования к СЭД и согласовывала их с подрядчиком (учебно)",
+              "added_at": "2026-11-21T01:45:57.762629+00:00",
+              "document_ids": [
+                "400a1d67-9e54-439d-ba9a-9463ecf84b47"
+              ],
+              "answers_request_at": "2026-11-21T01:45:57.721522+00:00"
+            },
+            "actor_id": "00000000-0000-4000-8000-000000000105"
+          },
+          {
+            "sequence": 8,
+            "event_type": "request.ready",
+            "request_revision": 7,
+            "actor_role": "hr",
+            "created_at": "2026-11-21T04:45:57.773777+03:00",
+            "data": {
+              "review_basis": "Опыт и обновлённое резюме получены (учебно)"
+            },
+            "actor_id": "00000000-0000-4000-8000-000000000101"
+          },
+          {
+            "sequence": 9,
+            "event_type": "consideration.recorded",
+            "request_revision": 8,
+            "actor_role": "hr",
+            "created_at": "2026-11-21T04:45:58.112778+03:00",
+            "data": {
+              "recorded_at": "2026-11-21T01:45:58.110177+00:00",
+              "candidate_ref": {
+                "id": "d2895829-ca66-4a38-b82a-cdbbf3436528",
+                "system": "legacy-hr-training"
+              },
+              "identity_basis": "Учебная связь для показа с подготовленной записью search-9001; реальная сверка личности не выполнялась",
+              "application_ref": {
+                "id": "f0f62a96-5844-45b1-92f8-7d5aa3608e05",
+                "system": "legacy-hr-training"
+              },
+              "selected_vacancy": {
+                "title": "Экономист отдела планирования (учебная)",
+                "position_code": "economist-training"
+              },
+              "source_reference": "POST /api/v1/search/candidates (training, «функциональные требования к СЭД»): «Сбор функциональных требований к СЭД, BPMN, постановка задач подрядчику.»",
+              "confirmation_method": "manual-confirmed",
+              "recorded_by_actor_id": "00000000-0000-4000-8000-000000000101",
+              "selected_vacancy_ref": {
+                "id": "00000000-0000-4000-8000-000000000c01",
+                "system": "catalog",
+                "revision": 1
+              }
+            },
+            "actor_id": "00000000-0000-4000-8000-000000000101"
+          },
+          {
+            "sequence": 10,
+            "event_type": "outcome.published",
+            "request_revision": 9,
+            "actor_role": "hr",
+            "created_at": "2026-11-21T04:45:58.124776+03:00",
+            "data": {
+              "origin": "hr_decision",
+              "outcome": "continue",
+              "decided_at": "2026-11-21T01:45:58.122429+00:00",
+              "next_action": "Ожидайте приглашения в течение 10 рабочих дней",
+              "source_reference": "Решение HR после проверки дополнения (учебно)",
+              "public_explanation": "Обращение передано на собеседование в отдел планирования.",
+              "decided_by_actor_id": "00000000-0000-4000-8000-000000000101"
+            },
+            "actor_id": "00000000-0000-4000-8000-000000000101"
+          },
+          {
+            "sequence": 11,
+            "event_type": "message.read",
+            "request_revision": 9,
+            "actor_role": "candidate",
+            "created_at": "2026-11-21T04:45:58.144005+03:00",
+            "data": {
+              "message_id": "ada732a2-3f00-425e-af71-f2765119acfd"
+            },
+            "actor_id": "00000000-0000-4000-8000-000000000105"
+          }
+        ]
+      }
+    }
+  ]
+}
