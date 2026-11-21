@@ -164,6 +164,9 @@ INTERVIEW_ROUTES = {
     "/api/v1/matching/suggestions",  # 3C: сохранённая подборка после публикации
     "/api/v1/matching/suggestions/{suggestion_id}",
     "/api/v1/management/overview",  # wave-4 4A: текущая работа и факты интервью
+    "/api/v1/management/annual-reports",  # wave-4 4B: годовой выпуск из фактов legacy-hr
+    "/api/v1/management/annual-reports/{snapshot_id}",
+    "/api/v1/management/annual-reports/{snapshot_id}/xlsx",
 }
 
 WORKFLOW_01_ROUTES = {
