@@ -73,6 +73,17 @@ def initialize(path):
             "cycle_id TEXT NOT NULL REFERENCES records(id), group_key TEXT NOT NULL, "
             "used INTEGER NOT NULL DEFAULT 0 CHECK(used IN (0,1)))"
         )
+        # Named cases have their own storage and history, with no foreign key to pulse data.
+        db.execute(
+            "CREATE TABLE IF NOT EXISTS confidential_cases (id TEXT PRIMARY KEY, "
+            "organization_id TEXT NOT NULL, author_actor_id TEXT NOT NULL REFERENCES actors(id), "
+            "recipient_actor_id TEXT NOT NULL REFERENCES actors(id), data TEXT NOT NULL)"
+        )
+        db.execute(
+            "CREATE TABLE IF NOT EXISTS confidential_history (case_id TEXT NOT NULL "
+            "REFERENCES confidential_cases(id), revision INTEGER NOT NULL, actor_id TEXT NOT NULL, "
+            "action TEXT NOT NULL, snapshot TEXT NOT NULL, PRIMARY KEY(case_id,revision))"
+        )
 
 
 def seed_demo(path):

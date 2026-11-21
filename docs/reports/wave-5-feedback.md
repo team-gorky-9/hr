@@ -41,3 +41,18 @@ HTTP-сценарий использует обычный httpx и uvicorn.
 Проверены чужая группа, скрытая тема, постороннее изменение, отсутствие причины,
 устаревшая ревизия и несопоставимость v1/v2. Ruff pass.
 [OpenAPI 5C](wave-5c-feedback-openapi.json) · [ID и результат](wave-5c-feedback-examples.json).
+
+## 5D
+
+База — `ecf5794` (PR #76). `uv run pytest tests/test_confidential.py -q` — 1 passed
+за 0,78 с. `uv run python -m tests.smoke --part 5d` — выбор адресата, обращение,
+ответ, история, закрытие с причиной и перечитывание после перезапуска сервера.
+Проверены отсутствие назначения, запрещённая связь response_id, 404 обычным manager,
+hr, organizer, bob и outsider по прямому ID, пустые списки посторонних, запрет ответа
+автором, пустой причины, устаревшей ревизии и ответа в закрытом деле.
+В SQLite после этого пути responses и records пусты; именное дело не создало пульс.
+[OpenAPI 5D](wave-5d-feedback-openapi.json) · [ID и учебная история](wave-5d-feedback-examples.json).
+
+Финальный короткий набор нового сервиса: `uv run pytest -q` — **4 passed за 1,91 с**;
+`uv run ruff check feedback tests` — pass. Это только четыре сценария feedback,
+не полный набор продукта. Все четыре части дополнительно прошли свой loopback HTTP-путь.

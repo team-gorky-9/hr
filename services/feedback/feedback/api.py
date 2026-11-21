@@ -6,6 +6,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from feedback.actions import router as actions_router
+from feedback.confidential import router as confidential_router
 from feedback.cycles import router
 from feedback.publications import router as publications_router
 from feedback.store import initialize
@@ -30,4 +31,5 @@ def create_app(database_path=None):
     app.include_router(router, prefix="/api/v1/feedback", tags=["Pulse cycles"])
     app.include_router(publications_router, prefix="/api/v1/feedback", tags=["Fixed publications"])
     app.include_router(actions_router, prefix="/api/v1/feedback", tags=["Measures and outcomes"])
+    app.include_router(confidential_router, prefix="/api/v1/feedback", tags=["Confidential cases"])
     return app
