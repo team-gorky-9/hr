@@ -1,0 +1,223 @@
+name: hr-backend
+
+x-app: &app
+  restart: unless-stopped
+  init: true
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
+  logging:
+    driver: json-file
+    options: {max-size: "10m", max-file: "3"}
+  healthcheck:
+    test: [CMD, python, /srv/runtime.py, check]
+    interval: 20s
+    timeout: 10s
+    retries: 6
+    start_period: 30s
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: ${DB_ADMIN_PASSWORD:?Set DB_ADMIN_PASSWORD}
+      LEGACY_DB_PASSWORD: ${LEGACY_DB_PASSWORD:?Set LEGACY_DB_PASSWORD}
+      WORKFORCE_DB_PASSWORD: ${WORKFORCE_DB_PASSWORD:?Set WORKFORCE_DB_PASSWORD}
+      REQUIREMENTS_DB_PASSWORD: ${REQUIREMENTS_DB_PASSWORD:?Set REQUIREMENTS_DB_PASSWORD}
+      HIRING_DB_PASSWORD: ${HIRING_DB_PASSWORD:?Set HIRING_DB_PASSWORD}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+      - ./init-databases.sh:/docker-entrypoint-initdb.d/10-databases.sh:ro
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+
+  rabbitmq:
+    image: rabbitmq:4.1.8-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: workforce
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Set RABBITMQ_PASSWORD}
+    volumes: [rabbitmq:/var/lib/rabbitmq]
+    healthcheck:
+      test: [CMD, rabbitmq-diagnostics, -q, ping]
+      interval: 10s
+      timeout: 10s
+      retries: 15
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+
+  legacy:
+    <<: *app
+    image: ${IMAGE_PREFIX:-hr-backend}-legacy:${RELEASE:?Set RELEASE}
+    build: {context: .., dockerfile: deploy/Dockerfile, args: {SERVICE_PATH: ., SERVICE_ID: legacy}}
+    environment: &legacy-env
+      DATABASE_URL: postgresql+psycopg://legacy:${LEGACY_DB_PASSWORD}@postgres:5432/legacy
+      CORS_ORIGINS: '[]'
+      HR_SEARCH_SEMANTIC_ENABLED: 'false'
+    depends_on: {legacy-migrate: {condition: service_completed_successfully}}
+  legacy-migrate:
+    image: ${IMAGE_PREFIX:-hr-backend}-legacy:${RELEASE}
+    command: [migrate]
+    environment: *legacy-env
+    depends_on: {postgres: {condition: service_healthy}}
+    restart: 'no'
+
+  workforce:
+    <<: *app
+    image: ${IMAGE_PREFIX:-hr-backend}-workforce:${RELEASE}
+    build: {context: .., dockerfile: deploy/Dockerfile, args: {SERVICE_PATH: services/workforce, SERVICE_ID: workforce}}
+    environment: &workforce-env
+      DATABASE_URL: postgresql+psycopg://workforce:${WORKFORCE_DB_PASSWORD}@postgres:5432/workforce
+      RABBITMQ_URL: amqp://workforce:${RABBITMQ_PASSWORD}@rabbitmq:5672/%2F
+      AUTH_MODE: workforce
+    depends_on: {workforce-migrate: {condition: service_completed_successfully}}
+  workforce-migrate:
+    image: ${IMAGE_PREFIX:-hr-backend}-workforce:${RELEASE}
+    command: [migrate]
+    environment: *workforce-env
+    depends_on: {postgres: {condition: service_healthy}}
+    restart: 'no'
+  workforce-worker:
+    image: ${IMAGE_PREFIX:-hr-backend}-workforce:${RELEASE}
+    entrypoint: [python, -m, workforce.worker]
+    environment: *workforce-env
+    depends_on:
+      workforce-migrate: {condition: service_completed_successfully}
+      rabbitmq: {condition: service_healthy}
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+
+  requirements:
+    <<: *app
+    image: ${IMAGE_PREFIX:-hr-backend}-requirements:${RELEASE}
+    build: {context: .., dockerfile: deploy/Dockerfile, args: {SERVICE_PATH: services/requirements, SERVICE_ID: requirements}}
+    environment: &requirements-env
+      DATABASE_URL: postgresql+psycopg://requirements:${REQUIREMENTS_DB_PASSWORD}@postgres:5432/requirements
+      AUTH_MODE: workforce
+      WORKFORCE_BASE_URL: http://workforce:8000
+      FILE_ROOT: /data/files
+      SEED_ON_STARTUP: 'false'
+      OUTBOX_POLL_INTERVAL_SEC: '0'
+    volumes: [requirements-files:/data]
+    depends_on: {requirements-migrate: {condition: service_completed_successfully}}
+  requirements-migrate:
+    image: ${IMAGE_PREFIX:-hr-backend}-requirements:${RELEASE}
+    command: [migrate]
+    environment: *requirements-env
+    depends_on: {postgres: {condition: service_healthy}}
+    restart: 'no'
+
+  hiring:
+    <<: *app
+    image: ${IMAGE_PREFIX:-hr-backend}-hiring:${RELEASE}
+    build: {context: .., dockerfile: deploy/Dockerfile, args: {SERVICE_PATH: services/hiring, SERVICE_ID: hiring}}
+    environment: &hiring-env
+      DATABASE_URL: postgresql+psycopg://hiring:${HIRING_DB_PASSWORD}@postgres:5432/hiring
+      AUTH_MODE: workforce
+      WORKFORCE_URL: http://workforce:8000
+      SELECTION_SOURCE: manual-confirmed
+      FILE_ROOT: /data/files
+    volumes: [hiring-files:/data]
+    depends_on: {hiring-migrate: {condition: service_completed_successfully}}
+  hiring-migrate:
+    image: ${IMAGE_PREFIX:-hr-backend}-hiring:${RELEASE}
+    command: [migrate]
+    environment: *hiring-env
+    depends_on: {postgres: {condition: service_healthy}}
+    restart: 'no'
+
+  students:
+    <<: *app
+    image: ${IMAGE_PREFIX:-hr-backend}-students:${RELEASE}
+    build: {context: .., dockerfile: deploy/Dockerfile, args: {SERVICE_PATH: services/students, SERVICE_ID: students}}
+    environment: &students-env
+      STUDENTS_DATABASE_URL: sqlite:////data/students.db
+    volumes: [students:/data]
+    depends_on: {students-migrate: {condition: service_completed_successfully}}
+  students-migrate:
+    image: ${IMAGE_PREFIX:-hr-backend}-students:${RELEASE}
+    command: [migrate]
+    environment: *students-env
+    volumes: [students:/data]
+    restart: 'no'
+
+  mobility:
+    <<: *app
+    image: ${IMAGE_PREFIX:-hr-backend}-mobility:${RELEASE}
+    build: {context: .., dockerfile: deploy/Dockerfile, args: {SERVICE_PATH: services/mobility, SERVICE_ID: mobility}}
+    environment: &mobility-env
+      MOBILITY_DATABASE_URL: sqlite:////data/mobility.db
+    volumes: [mobility:/data]
+    depends_on: {mobility-migrate: {condition: service_completed_successfully}}
+  mobility-migrate:
+    image: ${IMAGE_PREFIX:-hr-backend}-mobility:${RELEASE}
+    command: [migrate]
+    environment: *mobility-env
+    volumes: [mobility:/data]
+    restart: 'no'
+
+  social-support:
+    <<: *app
+    image: ${IMAGE_PREFIX:-hr-backend}-social-support:${RELEASE}
+    build: {context: .., dockerfile: deploy/Dockerfile, args: {SERVICE_PATH: services/social-support, SERVICE_ID: social-support}}
+    environment: {SUPPORT_DATA_DIR: /data}
+    volumes: [social-support:/data]
+
+  recognition:
+    <<: *app
+    image: ${IMAGE_PREFIX:-hr-backend}-recognition:${RELEASE}
+    build: {context: .., dockerfile: deploy/Dockerfile, args: {SERVICE_PATH: services/recognition, SERVICE_ID: recognition}}
+    environment: {RECOGNITION_DB: /data/recognition.db}
+    volumes: [recognition:/data]
+
+  feedback:
+    <<: *app
+    image: ${IMAGE_PREFIX:-hr-backend}-feedback:${RELEASE}
+    build: {context: .., dockerfile: deploy/Dockerfile, args: {SERVICE_PATH: services/feedback, SERVICE_ID: feedback}}
+    environment: {FEEDBACK_DB: /data/feedback.db}
+    volumes: [feedback:/data]
+
+  gateway:
+    image: nginx:1.28-alpine
+    restart: unless-stopped
+    # Private integration listener; public TLS is a separate host configuration.
+    ports: ["127.0.0.1:${GATEWAY_PORT:-8080}:8080"]
+    volumes: ["./nginx.conf:/etc/nginx/nginx.conf:ro"]
+    depends_on:
+      legacy: {condition: service_healthy}
+      workforce: {condition: service_healthy}
+      requirements: {condition: service_healthy}
+      hiring: {condition: service_healthy}
+      students: {condition: service_healthy}
+      mobility: {condition: service_healthy}
+      social-support: {condition: service_healthy}
+      recognition: {condition: service_healthy}
+      feedback: {condition: service_healthy}
+    healthcheck:
+      test: [CMD-SHELL, "wget -q -O /dev/null http://127.0.0.1:8080/workforce/openapi.json"]
+      interval: 20s
+      timeout: 5s
+      retries: 6
+    logging:
+      driver: json-file
+      options: {max-size: "10m", max-file: "3"}
+
+volumes:
+  postgres:
+  rabbitmq:
+  requirements-files:
+  hiring-files:
+  students:
+  mobility:
+  social-support:
+  recognition:
+  feedback:
