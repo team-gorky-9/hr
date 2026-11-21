@@ -20,6 +20,7 @@ Opportunity = {id,title,description,starts_on,ends_on,capacity:int>=1,mentor_act
 |---|---|
 | POST /opportunities | HR создаёт draft из title,description,starts_on,ends_on,capacity,mentor_actor_id |
 | POST /opportunities/{id}/publish | HR, {expected_revision} → published |
+| POST /opportunities/{id}/close | Организатор, `{expected_revision,reason}` → `closed`. Открытые заявки или активные участия дают `409 OPPORTUNITY_IN_USE`. Закрытие сохраняет причину и историю, место остаётся в списке организатора. |
 | GET /opportunities | Студент видит published с доступными местами; HR — свои состояния |
 | POST /applications | Студент подаёт {opportunity_id,university_label,programme_label,comment}; одна открытая заявка на пару студент/возможность |
 | GET /applications и GET /applications/{id} | HR своей области и собственный студент |

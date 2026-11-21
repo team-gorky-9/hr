@@ -254,7 +254,7 @@ export default function AnalyticsDashboard() {
                 : 'text-[#4A5363] hover:text-[#141A24]'
             }`}
           >
-            Дашборд
+            Обзор
           </button>
           <button
             type="button"

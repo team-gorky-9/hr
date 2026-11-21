@@ -18,7 +18,6 @@ export const HeaderHR: React.FC<HeaderHRProps> = ({
   const tabs: { id: HRNavTab; label: string }[] = [
     { id: 'database', label: 'Единая база' },
     { id: 'vacancies', label: 'Отклики по вакансиям' },
-    { id: 'interview', label: 'Интервью' },
     { id: 'archive', label: 'Архив кадров' },
     { id: 'hiring', label: 'Оформление' },
     { id: 'requirements', label: 'Требования и вакансии' },

@@ -12,14 +12,17 @@ POST гайда завершает чтение через rollback, а в те�
 """
 import re
 import uuid
+from types import SimpleNamespace
 
 import pytest
 from sqlalchemy import delete, func, select
 
 from app.ai import FakeLLMClient, LLMUnavailableError
 from app.api import interview as interview_api
+from app.api.errors import ApiError
 from app.assessment.fixtures import FIXTURES_DIR, create_fixture_profile, load
 from app.assessment.service import assess_candidate
+from app.assessment.state import AssessmentState, AssessmentStatus
 from app.db import repository as repo
 from app.db.enums import (
     AnswerSource, ApplicationSource, Channel, CheckResult, DocumentKind, FileFormat, VerificationMethod,
@@ -422,6 +425,8 @@ def test_guide_errors(session, client, use_llm):  # noqa: F811
     session.commit()
     mapping = post_guide(client, unresolved.id)
     assert (mapping.status_code, code(mapping)) == (409, "MAPPING_REQUIRED")
+    assert mapping.json()["error"]["details"]["resolution_reason"] == "missing_context"
+    assert "ещё не сопоставлена" in mapping.json()["error"]["message"]
     not_assessed = post_guide(client, application.id)
     assert (not_assessed.status_code, code(not_assessed)) == (409, "ASSESSMENT_REQUIRED")
     absent = get_guide(client, application.id)
@@ -434,6 +439,33 @@ def test_guide_errors(session, client, use_llm):  # noqa: F811
     outside = post_guide(client, history.id)
     assert (outside.status_code, code(outside)) == (409, "NOT_WORKING_APPLICATION")
     assert profile.id  # профиль утверждён, но оценки нет — отличие от NO_APPROVED_PROFILE
+
+
+@pytest.mark.parametrize(
+    ("status", "resolution_reason", "expected_code", "expected_message"),
+    [
+        (AssessmentStatus.MAPPING_REQUIRED, "unknown_publication", "MAPPING_REQUIRED", "ещё не сопоставлена"),
+        (AssessmentStatus.NOT_APPLICABLE, "no_matching_position", "NOT_APPLICABLE", "неприменим"),
+    ],
+)
+def test_guide_distinguishes_unresolved_publication_from_inapplicable_profile(
+    status, resolution_reason, expected_code, expected_message,
+):
+    context = SimpleNamespace(
+        state=AssessmentState(status),
+        resolution=SimpleNamespace(reason=resolution_reason, mapping=SimpleNamespace(explanation="Нужна сверка.")),
+    )
+    with pytest.raises(ApiError) as result:
+        interview_api.require_ready_assessment(context)
+    assert (result.value.status_code, result.value.code) == (409, expected_code)
+    assert expected_message in result.value.message
+    assert result.value.details["resolution_reason"] == resolution_reason
+
+
+def test_guide_gate_returns_current_assessment_for_resolved_application():
+    assessment = Assessment()
+    context = SimpleNamespace(state=AssessmentState(AssessmentStatus.READY, assessment))
+    assert interview_api.require_ready_assessment(context) is assessment
 
 
 def test_stand_without_model_key_answers_409_and_503_not_500(session, client, monkeypatch):  # noqa: F811

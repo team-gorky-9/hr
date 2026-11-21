@@ -7,6 +7,7 @@ export interface Opportunity {
   id: string; revision: number; title: string; description: string;
   starts_on: string; ends_on: string; capacity: number; available_places?: number;
   mentor_actor_id: string; status: string;
+  close_reason?: string;
 }
 export interface StudentApplication {
   id: string; revision: number; opportunity_id: string; status: string;

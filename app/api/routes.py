@@ -99,6 +99,7 @@ def list_vacancies(session: SessionDep, contour: ContourQuery = Contour.WORKING,
 def list_applications(
     vacancy_id: uuid.UUID,
     session: SessionDep,
+    response: Response,
     contour: ContourQuery = Contour.WORKING,
     stage_code: str | None = None,
     formal_result: CheckResult | None = None,
@@ -116,7 +117,19 @@ def list_applications(
         formal_preliminary=formal_preliminary,
         assessment_status=assessment_status,
     )
-    return services.list_applications(session, vacancy_id, contour, filters, sort=sort)
+    result = services.list_applications(session, vacancy_id, contour, filters, sort=sort)
+    response.headers['Cache-Control'] = 'private, no-store'
+    response.headers['Vary'] = 'X-User-Login'
+    if user is not None and user.role in (UserRole.HR, UserRole.ADMIN):
+        names = {}
+        for item in result.items:
+            if item.candidate_id not in names:
+                pii = repo.get_candidate_pii(session, item.candidate_id, user_id=user.id,
+                                            purpose='список откликов: имя кандидата')
+                names[item.candidate_id] = pii.full_name if pii else None
+            item.full_name = names[item.candidate_id]
+        session.commit()
+    return result
 
 
 @router.get("/applications/{application_id}", response_model=ApplicationDetailOut)

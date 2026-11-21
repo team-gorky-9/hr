@@ -15,10 +15,10 @@ export interface CrossAssessmentItem {
   assessment: { formal_result: string; formal_preliminary: boolean } | null;
   vacancies: { vacancy_id: string; title: string; status: string }[];
 }
-export interface ApplicationRow { application_id: string; candidate_code: string; headline: string | null; applied_at: string | null; current_stage_title: string; formal_result: string | null; rank_group: string; assessment_status: string; rank_reason: string }
+export interface ApplicationRow { full_name?: string | null; application_id: string; candidate_code: string; headline: string | null; applied_at: string | null; current_stage_title: string; formal_result: string | null; rank_group: string; assessment_status: string; rank_reason: string }
 export interface Evidence { candidate_text_id: string; quote: string; utf16_start: number; utf16_end: number }
 export interface Check { requirement_id: string; description: string; result: string; basis: string; is_preliminary: boolean; explanation: string | null; evidence: Evidence[] }
-export interface ApplicationDetail { application_id: string; stage: Stage; vacancy: { vacancy_id: string; position_code: string; title: string } | null; posting_title: string | null; assessment_status: string; candidate: { candidate_id: string; code: string; headline: string | null; current_text_id: string | null; is_training: boolean; pii_hidden?: boolean; contacts?: { full_name: string | null; phone: string | null; email: string | null; city: string | null } | null; card: Record<string, unknown> | null }; assessment: { assessment_id: string; version: number; is_stale: boolean; formal_result: string; summary: string | null; formal_checks: Check[]; competency_scores: { name: string; explanation: string | null; evidence: Evidence[] }[] } | null }
+export interface ApplicationDetail { application_id: string; stage: Stage; vacancy: { vacancy_id: string; position_code: string; title: string } | null; posting_title: string | null; target_position_code?: string | null; applicability?: { explanation: string } | null; assessment_status: string; candidate: { candidate_id: string; code: string; headline: string | null; current_text_id: string | null; is_training: boolean; pii_hidden?: boolean; contacts?: { full_name: string | null; phone: string | null; email: string | null; city: string | null } | null; card: Record<string, unknown> | null }; assessment: { assessment_id: string; version: number; is_stale: boolean; formal_result: string; summary: string | null; formal_checks: Check[]; competency_scores: { name: string; explanation: string | null; evidence: Evidence[] }[] } | null }
 export interface History { last_seq: number | null; source: string; items: { seq: number; to_stage: Stage; comment: string | null; created_at: string; actor: { login: string } | null; rejection_reason: { title: string } | null }[] }
 export interface Feedback { feedback_id: string; outcome: string; comment: string | null; rejection_reason: { title: string } | null; interview_status: string; received_at: string }
 export interface Handoff { attempt_id: string; candidate_id: string; application_id: string; vacancy_id: string | null; candidate_code: string; vacancy_title: string | null; recipient_name: string; recipient_department: string; initial_due_date: string; due_date: string; handed_off_at: string; deadline_status: string; business_days_left: number | null; deadline_business_days: number; status: string; latest_feedback: Feedback | null; extensions_count: number; overdue_notice: string | null; access_revoked_at: string | null }
@@ -43,9 +43,9 @@ export interface HandoffSummary {
   warnings: string[];
 }
 export interface HandoffPreview { summary_revision: string; summary: HandoffSummary }
-export interface Guide { interview_id: string; guide_version: number; is_stale: boolean; core: Question[]; clarifications: Question[]; document_requests: { requirement_id: string; title: string; reason: string | null }[] }
+export interface Guide { interview_id: string; application_id: string; kind: string; guide_version: number; is_stale: boolean; core: Question[]; clarifications: Question[]; document_requests: { requirement_id: string; title: string; reason: string | null }[] }
 export interface Question { question_id: string; question: string; gap: string | null; criterion: { good_answer: string | null; insufficient_answer: string | null } | null; answer: { text: string; revision: number } | null }
-export interface Interview { id: string; revision: number; result: string; summary: string | null; held_at: string | null; attempt_at: string | null }
+export interface Interview { id: string; application_id: string; kind: string; revision: number; result: string; summary: string | null; held_at: string | null; attempt_at: string | null }
 export interface Reason { code: string; title: string; side: string }
 export class ApiError extends Error { constructor(message: string, public status: number, public code: string) { super(message); } }
 export async function request<T>(path: string, role: Role = 'hr', body?: unknown, signal?: AbortSignal): Promise<T> {
@@ -65,7 +65,7 @@ export const api = {
     return request<{ items: CandidateRow[] }>(`/candidates?${query}`, 'hr', undefined, signal);
   },
   applications: (id: string, signal?: AbortSignal) => request<{ items: ApplicationRow[] }>(`/vacancies/${id}/applications?contour=${recruitmentContour}`, 'hr', undefined, signal),
-  application: (id: string) => request<ApplicationDetail>(`/applications/${id}`),
+  application: (id: string, signal?: AbortSignal) => request<ApplicationDetail>(`/applications/${id}`, 'hr', undefined, signal),
   crossAssessments: (id: string, signal?: AbortSignal) =>
     request<{ items: CrossAssessmentItem[] }>(`/candidates/${id}/cross-assessments`, 'hr', undefined, signal),
   history: (id: string) => request<History>(`/applications/${id}/history`),
@@ -85,8 +85,8 @@ export const api = {
     }),
   stages: () => request<{ items: Stage[] }>('/references/stages'),
   reasons: () => request<{ items: Reason[] }>('/references/rejection-reasons'),
-  guide: (id: string) => request<Guide>(`/applications/${id}/interview-guide`),
-  interviews: (id: string) => request<{ items: Interview[] }>(`/applications/${id}/interviews`),
+  guide: (id: string, signal?: AbortSignal) => request<Guide>(`/applications/${id}/interview-guide`, 'hr', undefined, signal),
+  interviews: (id: string, signal?: AbortSignal) => request<{ application_id: string; items: Interview[] }>(`/applications/${id}/interviews`, 'hr', undefined, signal),
 };
 export const resultLabel = (value: string | null) => ({ met: 'Выполнено', not_met: 'Не выполнено', unknown: 'Нужно уточнить' }[value || ''] || 'Не оценено');
 export const assessmentLabel = (value: string) => ({ ready: 'Оценка актуальна', stale: 'Оценка устарела', no_approved_profile: 'Нет утверждённого профиля', mapping_required: 'Требуется сопоставить публикацию', not_applicable: 'Профиль неприменим', pending: 'Оценка не готова', no_assessment: 'Оценки нет', not_assessed: 'Отклик ещё не оценён' }[value] || 'Нет сведений об оценке');

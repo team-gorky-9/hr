@@ -56,7 +56,7 @@ export function Requests({ token, audience, run, busy, initialRequestId }: { tok
     ? [...vacancyField.options!, [selectedKey, r?.vacancy?.title || 'Ранее выбранная вакансия'] as [string, string]]
     : vacancyField.options;
   return <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-    <div className="lg:col-span-4 space-y-4">
+    <div className="lg:col-span-4 min-w-0 space-y-4">
       <Card><div className="flex justify-between items-center mb-4"><h2 className="text-xl font-bold">{candidate ? 'Мои обращения' : 'Обращения кандидатов'}</h2><Btn disabled={busy} variant="link" onClick={() => { void run(load).catch(() => {}); void loadCatalog(); }}>Обновить</Btn></div>
         {loaded && !rows.length && <p className="text-[#616977]">Обращений пока нет.</p>}
         {rows.map(row => <button key={row.id} onClick={() => void run(() => open(row.id)).catch(() => {})} className={`block w-full text-left rounded-xl border p-4 mb-3 ${row.id === r?.id ? 'border-[#1F4FD1] bg-[#EEF3FE]' : 'border-[#E1E5EB]'}`}>
@@ -71,7 +71,7 @@ export function Requests({ token, audience, run, busy, initialRequestId }: { tok
         await load(); await open(row.id);
       })} /></Card>}
     </div>
-    <div className="lg:col-span-8 space-y-4">
+    <div className="lg:col-span-8 min-w-0 space-y-4 [overflow-wrap:anywhere]">
       {!r && <Card><h2 className="text-xl font-bold">{candidate ? 'Личный кабинет' : 'Рассмотрение обращения'}</h2><p className="text-[#616977] mt-2">Выберите обращение, чтобы увидеть документы, уточнения и результат.</p></Card>}
       {r && <>
         <Card><div className="flex justify-between gap-3"><h2 className="text-xl font-bold">{r.vacancy?.title || 'Без выбранной вакансии'}</h2><Badge tone="blue">{hiringStatus[r.status]}</Badge></div>

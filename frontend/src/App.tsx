@@ -39,7 +39,7 @@ const initialEmployeeWorkspace = employeeWorkspaces.includes(initialWorkspace ||
 
 const MODES: { id: AppMode; label: string }[] = [
   { id: 'portal', label: 'Портал соискателя' },
-  { id: 'hr', label: 'Кабинет HR-менеджера' },
+  { id: 'hr', label: 'Сотрудник по подбору персонала' },
   { id: 'dept', label: 'ОПК' },
   { id: 'employee', label: 'Сотрудник' },
 ];
@@ -57,7 +57,7 @@ export const App: React.FC = () => {
   const [databaseCandidate, setDatabaseCandidate] = useState<CandidateRecord | null>(null);
   const [databaseVacancyId, setDatabaseVacancyId] = useState('');
   const [interviewReturn, setInterviewReturn] = useState<'database' | 'vacancies'>('vacancies');
-  // Mode: 'portal' (Соискатель) vs 'hr' (HR-менеджер)
+  // Mode: 'portal' (Соискатель) vs 'hr' (Сотрудник по подбору персонала)
   const [appMode, setAppMode] = useState<AppMode>(initialEmployeeWorkspace ? 'employee' : 'portal');
   const [employeeTab, setEmployeeTab] = useState<string>(initialEmployeeWorkspace || 'workspace');
   const [hrAnalyticsView, setHrAnalyticsView] = useState<'dashboard' | 'report'>('dashboard');
@@ -230,8 +230,8 @@ export const App: React.FC = () => {
       {roleReady && appMode === 'hr' && (
         <>
           <HeaderHR
-            managerName={session?.actor.grants.some(grant => ['hr', 'admin'].includes(grant.role)) ? `HR-менеджер · ${session.actor.login}` : 'HR-менеджер'}
-            activeTab={hrTab}
+            managerName={session?.actor.grants.some(grant => ['hr', 'admin'].includes(grant.role)) ? `Сотрудник по подбору персонала · ${session.actor.login}` : 'Сотрудник по подбору персонала'}
+            activeTab={hrTab === 'interview' ? interviewReturn : hrTab}
             onTabChange={(tab) => {
               setHrTab(tab);
               setDbView('list');
@@ -307,6 +307,7 @@ export const App: React.FC = () => {
             {/* 20. ТЕЛЕФОННОЕ ИНТЕРВЬЮ (макет 20. Телефонное интервью.png) */}
             {hrTab === 'interview' && (
               <TelephoneInterview
+                key={selectedCandidateId}
                 applicationId={selectedCandidateId}
                 onBackToCard={() => {
                   setHrTab(interviewReturn);
