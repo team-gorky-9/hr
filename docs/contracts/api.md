@@ -558,3 +558,12 @@ AssessmentOut дополнен algorithm_version, calculation_as_of и competenc
   - `422` `VALIDATION_ERROR` (`basis = resume`, пустой `comment`), `CONFIRM_REJECTED` (профиль в архиве и другие правила оценки).
 
 Проверки прав, принадлежности и ревизии выполняются до записи. При отказе строк не появляется.
+# Уточнение имён в списке откликов · 21.11.2026
+
+`GET /api/v1/vacancies/{vacancy_id}/applications` дополнительно возвращает
+`items[].full_name: string|null`. Поле заполняется только для HR/admin из CandidatePii;
+открытие журналируется с целью «список откликов: имя кандидата». Анонимное чтение
+получает null, department по-прежнему не имеет доступа к общему списку.
+Ответ имеет Cache-Control private, no-store и Vary X-User-Login.
+Отсутствующее имя не подменяется вымышленным на фронте: отображается candidate_code.
+

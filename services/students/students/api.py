@@ -63,6 +63,20 @@ def create_app(settings=None):
             opportunity["status"] = "published"
             return unit.save("opportunity", opportunity, "published")
 
+    @app.post(PREFIX + "/opportunities/{ident}/close")
+    def close_opportunity(ident: UUID, body: Reason, actor: ActorDep):
+        require(organizer(actor))
+        with store.transaction(actor, True) as unit:
+            opportunity = unit.get("opportunity", ident)
+            check_revision(opportunity, body.expected_revision)
+            if opportunity["status"] != "published":
+                fail("INVALID_STATE", "Можно закрыть только опубликованное место.")
+            for kind, status in (("application", "submitted"), ("placement", "active")):
+                if any(row["opportunity_id"] == str(ident) and row["status"] == status for row in unit.all(kind)):
+                    fail("OPPORTUNITY_IN_USE", "Сначала завершите открытые заявки или участия.")
+            opportunity.update(status="closed", close_reason=body.reason)
+            return unit.save("opportunity", opportunity, "closed")
+
     @app.get(PREFIX + "/opportunities")
     def opportunities(actor: ActorDep):
         require(organizer(actor) or candidate(actor))
@@ -71,7 +85,7 @@ def create_app(settings=None):
             items = []
             for opportunity in unit.all("opportunity"):
                 used = sum(p["opportunity_id"] == opportunity["id"] for p in placements)
-                opportunity["available_places"] = max(0, opportunity["capacity"] - used)
+                opportunity["available_places"] = max(0, opportunity["capacity"] - used) if opportunity["status"] != "closed" else 0
                 if organizer(actor) or (opportunity["status"] == "published" and opportunity["available_places"]):
                     items.append(opportunity)
             return {"items": items}

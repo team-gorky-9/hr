@@ -260,6 +260,9 @@ function PracticeWorkspace({ token, role }: { token: string; role: StudentRole }
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState('');
+  const [showApplicationHistory, setShowApplicationHistory] = useState(false);
+  const visibleApplications = applications.filter((item) => role !== 'candidate' ||
+    showApplicationHistory === ['withdrawn', 'not_assigned'].includes(item.status));
   useEffect(() => {
     const controller = new AbortController(); setLoading(true); setError('');
     Promise.all([
@@ -312,16 +315,20 @@ function PracticeWorkspace({ token, role }: { token: string; role: StudentRole }
               </article>;
             }
             return <Card key={opportunity.id}>
-              <div className="flex items-start justify-between gap-4"><div><h3 className="text-[18px] font-bold">{opportunity.title}</h3><p className="text-[14px] text-[#4A5363] mt-1">{opportunity.description}</p></div><Badge>{label(opportunity.status)}</Badge></div>
+              <div className="flex items-start justify-between gap-4"><div><h3 className="text-[18px] font-bold">{opportunity.title}</h3><p className="text-[14px] text-[#4A5363] mt-1">{opportunity.description}</p></div><Badge>{opportunity.status === 'closed' ? 'Место закрыто' : label(opportunity.status)}</Badge></div>
               <p className="my-3 text-[14px]">{date(opportunity.starts_on)} — {date(opportunity.ends_on)} · свободных мест {opportunity.available_places ?? 0}</p>
+              {opportunity.close_reason && <p className="text-[14px] text-[#4A5363]">{opportunity.close_reason}</p>}
               {role === 'hr' && opportunity.status === 'draft' && <Btn disabled={busy} onClick={() => void perform('/opportunities/' + opportunity.id + '/publish', { expected_revision: opportunity.revision })}>Опубликовать место</Btn>}
             </Card>;
           })}
           </div>
         </section>}
-        {role !== 'department' && <Card className="space-y-4"><h2 className="text-[20px] font-bold">{role === 'hr' ? 'Заявки на практику' : 'Мои заявки'}</h2>
-          {!applications.length && <p className="text-[#4A5363]">Заявок на практику пока нет.</p>}
-          {applications.map((item) => <div key={item.id} className="border-t border-[#E1E5EB] pt-3">
+        {role !== 'department' && <Card className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-[20px] font-bold">{role === 'hr' ? 'Заявки на практику' : showApplicationHistory ? 'История заявок' : 'Мои заявки'}</h2>
+            {role === 'candidate' && <Btn variant="link" aria-pressed={showApplicationHistory} onClick={() => setShowApplicationHistory((value) => !value)}>{showApplicationHistory ? 'Текущие заявки' : 'История заявок'}</Btn>}
+          </div>
+          {!visibleApplications.length && <p className="text-[#4A5363]">{showApplicationHistory ? 'В истории пока нет заявок.' : 'Текущих заявок на практику пока нет.'}</p>}
+          {visibleApplications.map((item) => <div key={item.id} className="border-t border-[#E1E5EB] pt-3">
             <div className="flex justify-between gap-3"><strong>{opportunities.find((place) => place.id === item.opportunity_id)?.title || 'Заявка на практику'}</strong><Badge>{label(item.status)}</Badge></div>
             <p className="text-[14px] text-[#4A5363]">{item.university_label} · {item.programme_label}</p>
             {item.comment && <p className="text-[14px]">{item.comment}</p>}{item.reason && <p className="text-[14px]">{item.reason}</p>}

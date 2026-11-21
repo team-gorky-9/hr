@@ -51,7 +51,7 @@ export const HeadSummary: React.FC = () => {
         <table className="w-full text-left min-w-[860px]">
           <thead>
             <tr className="text-[14px] text-[#4A5363] border-b border-[#E1E5EB]">
-              {['Вакансия', 'Откликов', 'Нужно уточнить', 'Проверить вручную', 'Передано руководителю', 'Ожидание ответа', 'HR-менеджер'].map((h) => (
+              {['Вакансия', 'Откликов', 'Нужно уточнить', 'Проверить вручную', 'Передано руководителю', 'Ожидание ответа', 'Сотрудник по подбору персонала'].map((h) => (
                 <th key={h} className="py-4 pr-4 font-semibold align-bottom">{h}</th>
               ))}
             </tr>

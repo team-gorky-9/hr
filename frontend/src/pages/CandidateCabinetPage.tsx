@@ -73,11 +73,11 @@ export const CandidateCabinetPage: React.FC<CandidateCabinetPageProps> = ({
         </div>
       )}
 
-      {/* State 5: Баннер подтверждения «Ответ отправлен HR-менеджеру» */}
+      {/* State 5: Баннер подтверждения «Ответ отправлен сотруднику по подбору персонала» */}
       {isAnswered && (
         <div className="bg-[#E6F4EA] border border-[#A8DAB5] rounded-2xl p-5 shadow-sm">
           <h2 className="text-[16px] font-bold text-[#137333] mb-1">
-            Ответ отправлен HR-менеджеру
+            Ответ отправлен сотруднику по подбору персонала
           </h2>
           <p className="text-[14px] text-[#137333]">
             Отклик перешёл к следующему шагу: телефонное интервью.
@@ -280,7 +280,7 @@ export const CandidateCabinetPage: React.FC<CandidateCabinetPageProps> = ({
             </div>
 
             <p className="text-[13px] text-[#4A5363] leading-relaxed mb-4">
-              Для вакансии «Python-разработчик» нужно пройти 3 коротких теста. Результаты увидит HR-менеджер, они дополняют резюме, но не решают за вас.
+              Для вакансии «Python-разработчик» нужно пройти 3 коротких теста. Результаты увидит Сотрудник по подбору персонала, они дополняют резюме, но не решают за вас.
             </p>
 
             <div className="space-y-3 mb-4">

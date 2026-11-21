@@ -63,7 +63,7 @@ from app.interview import build_guide
 from app.interview.gaps import assemble_gaps
 from app.interview.generate import GUIDE_PROMPT_VERSION, QuestionItem
 from app.interview.service import GuideError
-from app.postings.service import resolve_application, resolved_state
+from app.postings.service import ApplicationResolution, resolve_application, resolved_state
 
 
 class _LazyLLMClient:
@@ -107,6 +107,7 @@ class ApplicationContext:
     candidate: Candidate
     profile: RequirementProfile | None   # утверждённый профиль должности в контуре кандидата
     state: AssessmentState               # как в карточке отклика, с учётом применимости
+    resolution: ApplicationResolution    # решение реестра по этому отклику
 
 
 def application_context(session: Session, application: Application) -> ApplicationContext:
@@ -120,7 +121,7 @@ def application_context(session: Session, application: Application) -> Applicati
     resolution = resolve_application(session, application.id)
     state = resolved_state(session, resolution, imported_position_code=position.code if position else None)
     profile = session.get(RequirementProfile, resolution.profile_id) if resolution.profile_id else None
-    return ApplicationContext(application, candidate, profile, state)
+    return ApplicationContext(application, candidate, profile, state, resolution)
 
 
 def require_ready_assessment(context: ApplicationContext) -> Assessment:
@@ -131,8 +132,13 @@ def require_ready_assessment(context: ApplicationContext) -> Assessment:
     if status == AssessmentStatus.NO_APPROVED_PROFILE:
         raise ApiError(409, "NO_APPROVED_PROFILE", "У вакансии нет утверждённого профиля в этом контуре")
     if status in (AssessmentStatus.NOT_APPLICABLE, AssessmentStatus.MAPPING_REQUIRED):
-        raise ApiError(409, str(status).upper(), "Отклик не относится к профилю этой должности",
-                       {"assessment_status": str(status)})
+        details = {"assessment_status": str(status), "resolution_reason": context.resolution.reason}
+        if status == AssessmentStatus.MAPPING_REQUIRED:
+            raise ApiError(409, "MAPPING_REQUIRED",
+                           "Публикация этого отклика ещё не сопоставлена с должностью. "
+                           + context.resolution.mapping.explanation, details)
+        raise ApiError(409, "NOT_APPLICABLE",
+                       "По решению реестра профиль этой должности неприменим к публикации отклика.", details)
     if status == AssessmentStatus.STALE:
         raise ApiError(409, "ASSESSMENT_STALE", "Оценка устарела: переоцените отклик",
                        {"stale_reason": str(context.state.stale_reason)})

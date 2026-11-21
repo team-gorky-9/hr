@@ -20,7 +20,7 @@ export const StudentsPage: React.FC<StudentsPageProps> = ({
       id: 'p2',
       title: 'Стажировка: аналитика данных',
       department: 'Департамент цифрового развития · 3 месяца',
-      description: 'Дашборды по обращениям жителей, Power BI и SQL.',
+      description: 'Обзоры по обращениям жителей, Power BI и SQL.',
     },
     {
       id: 'p3',

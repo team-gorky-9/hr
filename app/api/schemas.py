@@ -82,6 +82,7 @@ class VacancyListOut(BaseModel):
 # --- GET /vacancies/{id}/applications -----------------------------------------
 
 class ApplicationListItemOut(BaseModel):
+    full_name: str | None = None  # HR/admin only; anonymous and department never receive it.
     posting_resolution: ApplicationResolution | None = None
     posting_title: str | None = None
     target_position_code: str | None = None
