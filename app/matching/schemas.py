@@ -151,3 +151,53 @@ class VacanciesForCandidateOut(BaseModel):
     items: list[VacancyMatch]
     needs_evaluation: list[VacancyNeedsEvaluation]
     excluded: list[VacancyExcluded]
+
+
+# --- 3C · подборка HR по новой публикации ------------------------------------------------------
+
+class SuggestionUser(BaseModel):
+    user_id: UUID
+    login: str
+
+
+class SuggestionEvidence(BaseModel):
+    """Ссылка на версию источника. fragment и границы UTF-16 отдаются, только пока источник доступен."""
+    candidate_text_id: UUID
+    chunk_kind: str
+    start_offset: int
+    end_offset: int
+    fragment: str | None
+    utf16_start: int | None
+    utf16_end: int | None
+
+
+class SuggestionItem(BaseModel):
+    candidate_id: UUID
+    candidate_code: str | None
+    score: float | None
+    match_kind: str
+    evidence: SuggestionEvidence | None
+    # available — текущий текст кандидата; superseded — текст заменён новой версией;
+    # unavailable — кандидат или текст удалены/отозваны. Во втором и третьем случае фрагмент не отдаётся.
+    source_status: Literal["available", "superseded", "unavailable"]
+    matched_required_terms: list[str]
+    qualification_status: QualificationStatus
+    qualification_reason: QualificationReason
+    assessment_id: UUID | None
+
+
+class SuggestionOut(BaseModel):
+    id: UUID
+    vacancy_ref: VacancyRef
+    vacancy_revision: int
+    vacancy_title: str
+    observed_at: datetime
+    created_at: datetime
+    created_by: SuggestionUser | None
+    contour: Contour
+    source_mode: Literal["provided", "catalog_api"]
+    search_query: str
+    mode: SearchMode
+    semantic_status: SemanticStatus
+    items: list[SuggestionItem]
+    qualification_note: str

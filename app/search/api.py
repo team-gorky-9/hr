@@ -32,13 +32,14 @@ def require_search_access(contour: Contour, credentials: HTTPAuthorizationCreden
             raise ApiError(401, "SEARCH_AUTH_REQUIRED", "Требуется доступ к рабочему поиску")
 
 
-def run_search(session: Session, body: SearchRequest) -> SearchResponse:
-    """Поиск в снимке только для чтения; сбой базы — 503 SEARCH_UNAVAILABLE, а не пустая выдача."""
+def run_search(session: Session, body: SearchRequest, *, read_only: bool = True) -> SearchResponse:
+    """Поиск в снимке только для чтения; сбой базы — 503 SEARCH_UNAVAILABLE, а не пустая выдача.
+    read_only=False — для операции, которая в той же транзакции сохраняет результат (подборка 3C)."""
     factory = get_local_encoder if settings.hr_search_semantic_enabled else None
     try:
         # API открывает свежую Session. При переданном тестовом Connection
         # внешняя транзакция уже контролирует снимок и точки сохранения.
-        if isinstance(session.get_bind(), Engine) and not session.in_transaction():
+        if read_only and isinstance(session.get_bind(), Engine) and not session.in_transaction():
             session.connection(execution_options={
                 "isolation_level": "REPEATABLE READ", "postgresql_readonly": True,
             })

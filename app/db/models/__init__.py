@@ -11,6 +11,7 @@ from app.db.models.positions import (
     RequirementProfile,
     Vacancy,
 )
+from app.db.models.matching import MatchingSuggestion
 from app.db.models.search import Embedding
 from app.db.models.selection import (
     Application,
@@ -33,6 +34,7 @@ from app.db.models.postings import ApplicationPostingSource
 from app.db.models.users import AuditLog, User
 
 __all__ = [
+    "MatchingSuggestion",
     "Application",
     "ApplicationPostingSource",
     "Assessment",
