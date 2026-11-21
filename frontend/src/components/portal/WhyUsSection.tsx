@@ -29,7 +29,7 @@ export const WhyUsSection: React.FC = () => {
   ];
 
   return (
-    <section>
+    <section id="why-us" className="scroll-mt-24">
       <h2 className="text-[20px] font-bold text-[#141A24] mb-4">
         Почему у нас
       </h2>

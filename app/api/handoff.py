@@ -708,6 +708,10 @@ def _attempt_out(
         extensions_count=attempt.extensions_count,
         deadline_status=deadline_status,
         business_days_left=business_days_left,
+        business_days_elapsed=max(0, prod_calendar.business_days_diff(
+            _moscow_date(attempt.handed_off_at), _moscow_date(end_dt), overrides)),
+        business_days_total=max(1, prod_calendar.business_days_diff(
+            _moscow_date(attempt.handed_off_at), attempt.due_date, overrides)),
         is_overdue=is_overdue,
         overdue_notice=overdue_notice,
         cross_assessments_url=cross_assessments_url,

@@ -44,6 +44,7 @@ class Settings:
             _env("PUBLIC_VACANCIES_FILE", str(SERVICE_ROOT / "fixtures/public-vacancies.json"))
         )
     )
+    requirements_url: str = field(default_factory=lambda: _env("REQUIREMENTS_URL", ""))
     file_root: Path = field(default_factory=lambda: Path(_env("FILE_ROOT", str(SERVICE_ROOT / ".files"))))
     file_max_bytes: int = field(default_factory=lambda: int(_env("FILE_MAX_BYTES", str(20 * 1024 * 1024))))
     auth_timeout_seconds: float = field(default_factory=lambda: float(_env("AUTH_TIMEOUT_SECONDS", "3")))

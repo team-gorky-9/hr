@@ -108,7 +108,8 @@ Compose этапа 1 запускает PostgreSQL и API без RabbitMQ. Дл�
 - GET/PATCH /api/v1/catalog/vacancies/{id} — прочитать (включая history) / изменить черновик.
 - POST /api/v1/catalog/vacancies/{id}/publish — опубликовать по текущему approved-профилю.
 - POST /api/v1/catalog/vacancies/{id}/close — закрыть с reason.
-- GET /api/v1/public/vacancies — без авторизации, только опубликованные объявления с полями id/title/description/position_code/published_at.
+- GET /api/v1/public/vacancies — без авторизации, только опубликованные объявления с полями id/title/description/position_code/published_at, organization_id, department_id/department_name, revision и status. revision — точная редакция публикации для обращения кандидата.
+- GET /api/v1/public/vacancies/{id} — ранее опубликованный снимок, включая закрытую вакансию: сохраняет редакцию публикации, но возвращает актуальный status=closed. Черновики недоступны (404), внутренние profile_id и причина закрытия не раскрываются.
 
 HR использует `Authorization: Bearer fixture:hr`. Учебное подразделение: 00000000-0000-4000-8000-000000000011. Передать реальный ID утверждённого профиля, полученный через API первой волны. При смене текущего профиля публикация прежнего черновика возвращает 409 PROFILE_NOT_READY; HR явно выбирает новый profile_id через PATCH. Опубликованные условия неизменяемы. Публичный каталог намеренно включает опубликованные объявления всех организаций, но не внутренние сведения.
 

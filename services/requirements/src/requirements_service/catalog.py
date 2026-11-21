@@ -120,8 +120,13 @@ class VacancyList(BaseModel):
 
 
 class PublicVacancy(BaseModel):
+    department_name: str | None = None
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
+    organization_id: uuid.UUID
+    department_id: uuid.UUID
+    revision: int
+    status: Literal["published", "closed"]
     title: str
     description: str
     position_code: str
@@ -249,7 +254,28 @@ def close(vacancy_id: uuid.UUID, body: CloseVacancy, actor: ActorDep, session: S
     return persist(session, row, actor, "closed")
 
 
+def public_department(settings, department_id):
+    departments = json.loads(settings.fixture_org_path.read_text(encoding="utf-8"))["departments"]
+    return next((item.get("name") or item.get("title") for item in departments if item["id"] == str(department_id)), None)
+
+
 @router.get("/public/vacancies", response_model=PublicList)
-def list_public(session: SessionDep):
-    return {"items": list(session.scalars(select(Vacancy).where(
-        Vacancy.status == "published").order_by(Vacancy.published_at, Vacancy.id)))}
+def list_public(session: SessionDep, settings: SettingsDep):
+    rows = session.scalars(select(Vacancy).where(
+        Vacancy.status == "published").order_by(Vacancy.published_at, Vacancy.id))
+    return {"items": [{**PublicVacancy.model_validate(row).model_dump(),
+                       "department_name": public_department(settings, row.department_id)} for row in rows]}
+
+
+@router.get("/public/vacancies/{vacancy_id}", response_model=PublicVacancy)
+def read_public(vacancy_id: uuid.UUID, session: SessionDep, settings: SettingsDep):
+    # Only a previously published snapshot is public. Internal draft/reason/profile data stay private.
+    row = session.scalar(select(Vacancy).where(Vacancy.id == vacancy_id, Vacancy.published_at.is_not(None)))
+    if row is None:
+        raise ServiceError(404, "NOT_FOUND", "Опубликованная вакансия не найдена.")
+    published = session.scalar(select(VacancyHistory).where(
+        VacancyHistory.vacancy_id == vacancy_id, VacancyHistory.action == "published")
+        .order_by(VacancyHistory.revision.desc()))
+    if published is None:
+        raise ServiceError(404, "NOT_FOUND", "Редакция публикации не найдена.")
+    return {**published.snapshot, "status": row.status, "department_name": public_department(settings, row.department_id)}

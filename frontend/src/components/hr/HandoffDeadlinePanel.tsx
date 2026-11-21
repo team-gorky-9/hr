@@ -7,10 +7,13 @@ const colors = {
   overdue: { card: 'bg-[#FCE8E8] border-[#F3B8B8] text-[#A3171B]', bar: 'bg-[#9B1C1C]' },
 };
 
-export default function HandoffDeadlinePanel({ handoff, today, onExtend }: {
+export default function HandoffDeadlinePanel({ handoff, today, onExtend, serverProgress }: {
   handoff: ProfileHandoff; today: string; onExtend?: () => void;
+  serverProgress?: { elapsed: number; total: number; status: 'on_track' | 'due_soon' | 'overdue' };
 }) {
-  const progress = deadlineProgress(handoff.sentOn, handoff.dueOn, today);
+  const progress = serverProgress
+    ? { ...serverProgress, percent: Math.min(100, Math.max(0, serverProgress.elapsed / Math.max(1, serverProgress.total) * 100)) }
+    : deadlineProgress(handoff.sentOn, handoff.dueOn, today);
   const color = colors[progress.status];
   return <div className={`border rounded-xl p-4 ${color.card}`}>
     <h3 className="text-[14px] font-bold mb-1">

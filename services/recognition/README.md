@@ -96,3 +96,14 @@ SQLite-таблицы actors, records и history: индексируемые к�
 Чтения также используют короткую транзакцию; высокая нагрузка и распределённый запуск
 не проверены. Версии схемы и перенос на общую инфраструктуру — продолжение этапа 2.
 Учебные сценарии не доказывают эффект на мотивацию или пригодность рабочих регламентов.
+
+
+## Employee frontend integration (2026-11-21)
+
+The existing employee pages now use this service's stored data, revisions and commands.
+The service still uses its original training authentication; it is not a Workforce production-session integration.
+The UI explicitly identifies the training account, and does not treat the global role selector as authorization.
+Added authenticated directories expose only the records visible to the same actor under existing detail access rules.
+No access codes, token hashes or anonymous survey answers are included in directories.
+
+`GET /api/v1/recognition/session`, `/colleagues`, `/nominations` and `/thanks?view=moderation` supply readable choices and work lists. The colleague directory contains names and IDs in the same organization. Nominations retain participant/reviewer visibility. Moderation includes only items whose recipient agreed to organization visibility; it exposes no historical private snapshots.

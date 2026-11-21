@@ -2,10 +2,10 @@ name: Backend delivery
 on:
   pull_request:
     branches: [main]
-    paths-ignore: ["frontend/**", "docs/**", ".github/workflows/frontend.yaml", "deploy/frontend-*"]
+    paths-ignore: ["frontend/**", "docs/**", ".github/workflows/frontend.yaml", "deploy/frontend-*", "deploy/FRONTEND.md"]
   push:
     branches: [main]
-    paths-ignore: ["frontend/**", "docs/**", ".github/workflows/frontend.yaml", "deploy/frontend-*"]
+    paths-ignore: ["frontend/**", "docs/**", ".github/workflows/frontend.yaml", "deploy/frontend-*", "deploy/FRONTEND.md"]
   workflow_dispatch:
 
 permissions:
@@ -73,6 +73,7 @@ jobs:
             deploy/init-databases.sh
             deploy/smoke.py
             deploy/release.sh
+            deploy/registry-release.sh
             deploy/backup.sh
             deploy/seed-roles.sh
             deploy/seed-demo.sh
@@ -86,6 +87,9 @@ jobs:
 
   deploy:
     needs: integration
+    permissions:
+      contents: read
+      packages: read
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -112,8 +116,11 @@ jobs:
           DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           REPOSITORY: ${{ github.repository }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           test -n "$DEPLOY_HOST" && test -n "$DEPLOY_USER"
           ssh -o BatchMode=yes -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" "mkdir -p /opt/hr/releases/$GITHUB_SHA"
-          scp -o BatchMode=yes -o StrictHostKeyChecking=yes bundle/* "$DEPLOY_USER@$DEPLOY_HOST:/opt/hr/releases/$GITHUB_SHA/"
-          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" "bash /opt/hr/releases/$GITHUB_SHA/release.sh '$GITHUB_SHA' 'ghcr.io/${REPOSITORY,,}'"
+          # The artifact includes deploy/ and services/ paths under their common root.
+          test -f bundle/deploy/compose.yaml
+          scp -o BatchMode=yes -o StrictHostKeyChecking=yes bundle/deploy/* "$DEPLOY_USER@$DEPLOY_HOST:/opt/hr/releases/$GITHUB_SHA/"
+          printf '%s' "$REGISTRY_TOKEN" | ssh -o BatchMode=yes -o StrictHostKeyChecking=yes "$DEPLOY_USER@$DEPLOY_HOST" "bash /opt/hr/releases/$GITHUB_SHA/registry-release.sh '$GITHUB_SHA' 'ghcr.io/${REPOSITORY,,}' '$GITHUB_ACTOR'"

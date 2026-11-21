@@ -126,3 +126,14 @@ PUBLICATION_PENDING. Числовых разностей и причинного
 [OpenAPI 5D](../../docs/reports/wave-5d-feedback-openapi.json) ·
 [полный учебный путь 5D](../../docs/reports/wave-5d-feedback-examples.json).
 Общий короткий набор только этого сервиса: `uv run pytest -q` (четыре сценария).
+
+
+## Employee frontend integration (2026-11-21)
+
+The existing employee pages now use this service's stored data, revisions and commands.
+The service still uses its original training authentication; it is not a Workforce production-session integration.
+The UI explicitly identifies the training account, and does not treat the global role selector as authorization.
+Added authenticated directories expose only the records visible to the same actor under existing detail access rules.
+No access codes, token hashes or anonymous survey answers are included in directories.
+
+`GET /api/v1/feedback/session`, `/cycles`, `/publications`, `/measure-owners` support the employee and organizer UI. Cycles omit invitation groups for ordinary participants; publications retain the fixed disclosure policy and group scope. The employee submits answers without Authorization or cookies and supplies the one-time code separately. Invitation codes are shown only to the organizer immediately after issuance, never persisted by the browser.

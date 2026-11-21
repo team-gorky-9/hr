@@ -1,92 +1,159 @@
-import React, { useState } from 'react';
-import Header from './components/Header';
-import HeroSection from './components/portal/HeroSection';
-import CategoryCards from './components/portal/CategoryCards';
-import NewVacanciesSection from './components/portal/NewVacanciesSection';
-import WhyUsSection from './components/portal/WhyUsSection';
-import ReserveCtaBanner from './components/portal/ReserveCtaBanner';
-import VacancyPage from './pages/VacancyPage';
-import StudentsPage from './pages/StudentsPage';
-import StudentsWorkspace from './components/students/StudentsWorkspace';
-import SupportPage from './components/support/SupportPage';
-import DevelopmentPage from './components/development/DevelopmentPage';
-import WorkforcePage from './components/workforce/WorkforcePage';
-import HiringWorkspace from './components/hiring/HiringWorkspace';
-import RequirementsPage from './components/requirements/RequirementsPage';
-import ServiceAccess from './components/shared/ServiceAccess';
+import React, { useState } from "react";
+import Header from "./components/Header";
+import HeroSection, {
+  PortalSearchFilters,
+} from "./components/portal/HeroSection";
+import CategoryCards from "./components/portal/CategoryCards";
+import NewVacanciesSection from "./components/portal/NewVacanciesSection";
+import WhyUsSection from "./components/portal/WhyUsSection";
+import ReserveCtaBanner from "./components/portal/ReserveCtaBanner";
+import VacancyPage from "./pages/VacancyPage";
+import StudentsPage from "./pages/StudentsPage";
+import StudentsWorkspace from "./components/students/StudentsWorkspace";
+import SupportPage from "./components/support/SupportPage";
+import DevelopmentPage from "./components/development/DevelopmentPage";
+import WorkforcePage from "./components/workforce/WorkforcePage";
+import HiringWorkspace from "./components/hiring/HiringWorkspace";
+import RequirementsPage from "./components/requirements/RequirementsPage";
+import ServiceAccess from "./components/shared/ServiceAccess";
 
-import HeaderHR, { HRNavTab } from './components/hr/HeaderHR';
-import CandidatesDatabase, { CandidateRecord } from './components/hr/CandidatesDatabase';
-import CandidateProfile from './components/hr/CandidateProfile';
-import VacancyResponses from './components/hr/VacancyResponses';
-import CandidateCard from './components/hr/CandidateCard';
-import TelephoneInterview from './components/hr/TelephoneInterview';
-import TalentReserve from './components/hr/TalentReserve';
-import ArchivePage from './components/hr/ArchivePage';
-import AnalyticsDashboard from './components/hr/AnalyticsDashboard';
+import HeaderHR, { HRNavTab } from "./components/hr/HeaderHR";
+import CandidatesDatabase, {
+  CandidateRecord,
+} from "./components/hr/CandidatesDatabase";
+import CandidateProfile from "./components/hr/CandidateProfile";
+import VacancyResponses from "./components/hr/VacancyResponses";
+import CandidateCard from "./components/hr/CandidateCard";
+import TelephoneInterview from "./components/hr/TelephoneInterview";
+import TalentReserve from "./components/hr/TalentReserve";
+import ArchivePage from "./components/hr/ArchivePage";
+import AnalyticsDashboard from "./components/hr/AnalyticsDashboard";
 
-import RoleHeader from './components/shared/RoleHeader';
-import MyCandidates from './components/dept/MyCandidates';
-import HeadSummary from './components/hrhead/HeadSummary';
-import DirectorAnalytics from './components/hrhead/DirectorAnalytics';
-import ReportPage from './components/report/ReportPage';
-import Workspace from './components/employee/Workspace';
-import Care from './components/employee/Care';
-import Surveys from './components/employee/Surveys';
-import VacancyShowcase from './components/employee/VacancyShowcase';
+import RoleHeader from "./components/shared/RoleHeader";
+import MyCandidates from "./components/dept/MyCandidates";
+import HeadSummary from "./components/hrhead/HeadSummary";
+import DirectorAnalytics from "./components/hrhead/DirectorAnalytics";
+import ReportPage from "./components/report/ReportPage";
+import Workspace from "./components/employee/Workspace";
+import Care from "./components/employee/Care";
+import Surveys from "./components/employee/Surveys";
+import VacancyShowcase from "./components/employee/VacancyShowcase";
 
-export type AppMode = 'portal' | 'hr' | 'head' | 'director' | 'dept' | 'employee';
+export type AppMode =
+  | "portal"
+  | "hr"
+  | "head"
+  | "director"
+  | "dept"
+  | "employee";
 
-const initialWorkspace = new URLSearchParams(window.location.search).get('workspace');
+const initialWorkspace = new URLSearchParams(window.location.search).get(
+  "workspace",
+);
 
 const MODES: { id: AppMode; label: string }[] = [
-  { id: 'portal', label: 'Портал соискателя' },
-  { id: 'hr', label: 'Кабинет HR-менеджера' },
-  { id: 'head', label: 'Начальник ОК' },
-  { id: 'director', label: 'Директор департамента кадров' },
-  { id: 'dept', label: 'Руководитель департамента' },
-  { id: 'employee', label: 'Сотрудник' },
+  { id: "portal", label: "Портал соискателя" },
+  { id: "hr", label: "Кабинет HR-менеджера" },
+  { id: "head", label: "Начальник ОК" },
+  { id: "director", label: "Директор департамента кадров" },
+  { id: "dept", label: "Руководитель департамента" },
+  { id: "employee", label: "Сотрудник" },
 ];
 
-export type PortalRoute = 'home' | 'vacancies' | 'students' | 'practice' | 'cabinet';
+export type PortalRoute =
+  | "home"
+  | "vacancies"
+  | "students"
+  | "practice"
+  | "reserve"
+  | "cabinet";
 
 export const App: React.FC = () => {
   // Mode: 'portal' (Соискатель) vs 'hr' (HR-менеджер)
-  const [appMode, setAppMode] = useState<AppMode>(initialWorkspace === 'support' || initialWorkspace === 'development' || initialWorkspace === 'workforce' || initialWorkspace === 'onboarding' ? 'employee' : 'portal');
-  const [headTab, setHeadTab] = useState<string>('summary');
-  const [directorTab, setDirectorTab] = useState<string>('analytics');
-  const [employeeTab, setEmployeeTab] = useState<string>(initialWorkspace === 'support' || initialWorkspace === 'development' || initialWorkspace === 'workforce' || initialWorkspace === 'onboarding' ? initialWorkspace : 'workspace');
-  const [hrAnalyticsView, setHrAnalyticsView] = useState<'dashboard' | 'report'>('dashboard');
+  const [appMode, setAppMode] = useState<AppMode>(
+    initialWorkspace === "support" ||
+      initialWorkspace === "development" ||
+      initialWorkspace === "workforce" ||
+      initialWorkspace === "onboarding"
+      ? "employee"
+      : "portal",
+  );
+  const [headTab, setHeadTab] = useState<string>("summary");
+  const [directorTab, setDirectorTab] = useState<string>("analytics");
+  const [directorDbView, setDirectorDbView] = useState<"list" | "profile">(
+    "list",
+  );
+  const [employeeTab, setEmployeeTab] = useState<string>(
+    initialWorkspace === "support" ||
+      initialWorkspace === "development" ||
+      initialWorkspace === "workforce" ||
+      initialWorkspace === "onboarding"
+      ? initialWorkspace
+      : "workspace",
+  );
+  const [hrAnalyticsView, setHrAnalyticsView] = useState<
+    "dashboard" | "report"
+  >("dashboard");
 
   // Portal Routing State (Главная по умолчанию)
-  const [portalRoute, setPortalRoute] = useState<PortalRoute>(initialWorkspace === 'practice' ? 'practice' : 'home');
+  const [portalRoute, setPortalRoute] = useState<PortalRoute>(
+    initialWorkspace === "practice" ? "practice" : "home",
+  );
+  const [selectedPortalVacancyId, setSelectedPortalVacancyId] =
+    useState<string>("");
+  const [selectedPracticeId, setSelectedPracticeId] = useState("");
+  const [portalSearchFilters, setPortalSearchFilters] =
+    useState<PortalSearchFilters>({
+      query: "",
+      department: "",
+      district: "",
+    });
 
   // HR Manager Routing State
-  const [hrTab, setHrTab] = useState<HRNavTab>('database');
-  const [dbView, setDbView] = useState<'list' | 'profile'>('list');
-  const [databaseCandidateId, setDatabaseCandidateId] = useState('c1');
-  const [hrView, setHrView] = useState<'list' | 'card'>('list');
-  const [selectedResponseVacancyId] = useState<string>('v1');
-  const [selectedCandidateId, setSelectedCandidateId] = useState<string>('r1');
+  const [hrTab, setHrTab] = useState<HRNavTab>("database");
+  const [dbView, setDbView] = useState<"list" | "profile">("list");
+  const [hrView, setHrView] = useState<"list" | "card">("list");
+  const [selectedResponseVacancyId] = useState<string>("v1");
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string>("");
+
+  const scrollToSection = (sectionId: string) => {
+    setPortalRoute("home");
+    setTimeout(() => {
+      document
+        .getElementById(sectionId)
+        ?.scrollIntoView({ behavior: "smooth" });
+    }, 50);
+  };
 
   const handlePortalHome = () => {
-    setPortalRoute('home');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setPortalRoute("home");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const handleOpenPortalReserve = () => {
+    setPortalRoute("reserve");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const handlePortalNav = (navId: string) => {
-    if (navId === 'vacancies') {
-      setPortalRoute('vacancies');
-    } else if (navId === 'practice') {
-      setPortalRoute('practice');
-    } else if (navId === 'students') {
-      setPortalRoute('students');
-    } else if (navId === 'cabinet') {
-      setPortalRoute('cabinet');
-    } else if (navId === 'home') {
-      setPortalRoute('home');
+    if (navId === "vacancies") {
+      scrollToSection("new-vacancies");
+      return;
+    } else if (navId === "practice") {
+      setPortalRoute("practice");
+    } else if (navId === "students") {
+      setPortalRoute("students");
+    } else if (navId === "reserve") {
+      setPortalRoute("reserve");
+    } else if (navId === "administration") {
+      scrollToSection("why-us");
+      return;
+    } else if (navId === "cabinet") {
+      setPortalRoute("cabinet");
+    } else if (navId === "home") {
+      setPortalRoute("home");
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
@@ -102,12 +169,12 @@ export const App: React.FC = () => {
                 type="button"
                 onClick={() => {
                   setAppMode(m.id);
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
                 className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
                   appMode === m.id
-                    ? 'bg-[#1F4FD1] text-white shadow-sm'
-                    : 'text-[#BBBFC5] hover:text-white'
+                    ? "bg-[#1F4FD1] text-white shadow-sm"
+                    : "text-[#BBBFC5] hover:text-white"
                 }`}
               >
                 {m.label}
@@ -124,77 +191,107 @@ export const App: React.FC = () => {
       {/* ======================================================== */}
       {/* 1. ПОРТАЛ СОИСКАТЕЛЯ                                     */}
       {/* ======================================================== */}
-      {appMode === 'portal' && (
+      {appMode === "portal" && (
         <>
           <Header
-            activeNav={portalRoute === 'home' ? '' : portalRoute}
+            activeNav={portalRoute === "home" ? "" : portalRoute}
             onLogoClick={handlePortalHome}
             onNavClick={handlePortalNav}
             onLoginClick={() => {
-              setPortalRoute('cabinet');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+              setPortalRoute("cabinet");
+              window.scrollTo({ top: 0, behavior: "smooth" });
             }}
             onRegisterClick={() => {
-              setPortalRoute('cabinet');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+              setPortalRoute("cabinet");
+              window.scrollTo({ top: 0, behavior: "smooth" });
             }}
           />
 
           <main className="flex-1 max-w-[1216px] mx-auto px-4 sm:px-6 py-6 w-full space-y-8">
             {/* ГЛАВНАЯ СТРАНИЦА ПОРТАЛА (макет 1. Главная портала.png) */}
-            {portalRoute === 'home' && (
+            {portalRoute === "home" && (
               <>
-                <HeroSection />
+                <HeroSection
+                  filters={portalSearchFilters}
+                  onFiltersChange={setPortalSearchFilters}
+                  onSearch={() => scrollToSection("new-vacancies")}
+                />
 
                 <CategoryCards
                   onSelectCategory={(id) => {
-                    if (id === 'vacancies') setPortalRoute('vacancies');
-                    else if (id === 'students') setPortalRoute('students');
-                    else setPortalRoute('home');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    if (id === "vacancies") {
+                      scrollToSection("new-vacancies");
+                      return;
+                    } else if (id === "students") setPortalRoute("students");
+                    else if (id === "reserve") setPortalRoute("reserve");
+                    else setPortalRoute("home");
+                    window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
                 />
 
                 <NewVacanciesSection
-                  onSelectVacancy={() => {
-                    setPortalRoute('vacancies');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  filters={portalSearchFilters}
+                  onResetFilters={() =>
+                    setPortalSearchFilters({
+                      query: "",
+                      department: "",
+                      district: "",
+                    })
+                  }
+                  onSelectVacancy={(vacancyId) => {
+                    setSelectedPortalVacancyId(vacancyId);
+                    setPortalRoute("vacancies");
+                    window.scrollTo({ top: 0, behavior: "smooth" });
                   }}
                 />
 
                 <WhyUsSection />
 
-                <ReserveCtaBanner />
+                <ReserveCtaBanner onOpenReserve={handleOpenPortalReserve} />
               </>
             )}
 
             {/* ВАКАНСИЯ: ФОРМА ОТКЛИКА И ОТКЛИК ОТПРАВЛЕН (макеты 2 и 3) */}
-            {portalRoute === 'vacancies' && (
+            {portalRoute === "vacancies" && (
               <VacancyPage
+                vacancyId={selectedPortalVacancyId}
                 onGoHome={handlePortalHome}
+                onGoVacancies={() => scrollToSection("new-vacancies")}
                 onGoCabinet={() => {
-                  setPortalRoute('cabinet');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  setPortalRoute("cabinet");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
               />
             )}
 
             {/* СТУДЕНТАМ: ПРАКТИКА И МЕРОПРИЯТИЯ (макет 6) */}
-            {portalRoute === 'students' && (
+            {portalRoute === "students" && (
               <StudentsPage
-                onApplyPractice={() => {
-                  setPortalRoute('practice');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                onApplyPractice={(id) => {
+                  setSelectedPracticeId(id);
+                  setPortalRoute("practice");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
-                onRegisterEvent={(title) => alert(`Запись на мероприятие: ${title}`)}
               />
             )}
 
-            {portalRoute === 'practice' && <StudentsWorkspace />}
+            {portalRoute === "practice" && (
+              <StudentsWorkspace initialOpportunityId={selectedPracticeId} />
+            )}
+
+            {/* КАДРОВЫЙ РЕЗЕРВ: КОНКУРС И СТУДЕНЧЕСКИЙ РЕЗЕРВ */}
+            {portalRoute === "reserve" && <TalentReserve />}
 
             {/* ЛИЧНЫЙ КАБИНЕТ КАНДИДАТА (макет 5) */}
-            {portalRoute === 'cabinet' && (
-              <ServiceAccess initialLogin="candidate">{(token) => <HiringWorkspace audience="candidate" token={token} />}</ServiceAccess>
+            {portalRoute === "cabinet" && (
+              <ServiceAccess
+                initialLogin="candidate"
+                requiredRoles={["candidate"]}
+              >
+                {(token) => (
+                  <HiringWorkspace audience="candidate" token={token} />
+                )}
+              </ServiceAccess>
             )}
           </main>
         </>
@@ -203,113 +300,138 @@ export const App: React.FC = () => {
       {/* ======================================================== */}
       {/* 2. КАБИНЕТ HR-МЕНЕДЖЕРА                                 */}
       {/* ======================================================== */}
-      {appMode === 'hr' && (
+      {appMode === "hr" && (
         <>
           <HeaderHR
             activeTab={hrTab}
             onTabChange={(tab) => {
               setHrTab(tab);
-              setDbView('list');
-              setHrView('list');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+              setDbView("list");
+              setHrView("list");
+              window.scrollTo({ top: 0, behavior: "smooth" });
             }}
             onLogoClick={() => {
-              setHrTab('database');
-              setDbView('list');
-              setHrView('list');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+              setHrTab("database");
+              setDbView("list");
+              setHrView("list");
+              window.scrollTo({ top: 0, behavior: "smooth" });
             }}
           />
 
           <main className="flex-1 w-full">
             {/* 1. ЕДИНАЯ БАЗА: ТАБЛИЦА (макет 1) И ПРОФИЛЬ КАНДИДАТА (макеты 13–19) */}
-            {hrTab === 'database' && dbView === 'list' && (
+            {hrTab === "database" && dbView === "list" && (
               <CandidatesDatabase
-                onSelectCandidate={(candidate: CandidateRecord) => {
-                  setDatabaseCandidateId(candidate.id);
-                  setDbView('profile');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                onSelectCandidate={(c: CandidateRecord) => {
+                  setSelectedCandidateId(c.id);
+                  setDbView("profile");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
               />
             )}
 
             {/* МАКЕТЫ 13–19: ПРОФИЛЬ КАНДИДАТА И ДЕЙСТВИЯ */}
-            {hrTab === 'database' && dbView === 'profile' && (
+            {hrTab === "database" && dbView === "profile" && (
               <CandidateProfile
-                key={databaseCandidateId}
-                candidateId={databaseCandidateId}
+                applicationId={selectedCandidateId}
                 onBackToDatabase={() => {
-                  setDbView('list');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  setDbView("list");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
                 onOpenInterview={() => {
-                  setHrTab('interview');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  setHrTab("interview");
+                  setHrView("card");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
                 onOpenReserve={() => {
-                  setHrTab('reserve');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  setHrTab("reserve");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
               />
             )}
 
             {/* 2 & 3. ОТКЛИКИ ПО ВАКАНСИЯМ + МАКЕТЫ 4 (Загрузка) и 5 (Ошибка) */}
-            {hrTab === 'vacancies' && hrView === 'list' && (
+            {hrTab === "vacancies" && hrView === "list" && (
               <VacancyResponses
                 initialVacancyId={selectedResponseVacancyId}
                 onOpenCard={(responseId: string) => {
                   setSelectedCandidateId(responseId);
-                  setHrView('card');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  setHrView("card");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
               />
             )}
 
             {/* КАРТОЧКА КАНДИДАТА: МАКЕТЫ 6–12 */}
-            {hrTab === 'vacancies' && hrView === 'card' && (
+            {hrTab === "vacancies" && hrView === "card" && (
               <CandidateCard
                 candidateId={selectedCandidateId}
                 onBack={() => {
-                  setHrView('list');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  setHrView("list");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
-                onRequestClarification={() => alert('Запрос на уточнение отправлен')}
-                onReject={() => alert('Отклонение с причиной')}
+                onRequestClarification={() => {
+                  setHrTab("interview");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
               />
             )}
 
             {/* 20. ТЕЛЕФОННОЕ ИНТЕРВЬЮ (макет 20. Телефонное интервью.png) */}
-            {hrTab === 'interview' && (
+            {hrTab === "interview" && (
               <TelephoneInterview
                 applicationId={selectedCandidateId}
                 onBackToCard={() => {
-                  setHrTab('database');
-                  setDbView('profile');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                  setHrTab("vacancies");
+                  setHrView("card");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
               />
             )}
 
             {/* 24 & 25. КАДРОВЫЙ РЕЗЕРВ: КОНКУРС И СТУДЕНТЫ (макеты 24 и 25) */}
-            {hrTab === 'archive' && <ArchivePage />}
-            {hrTab === 'hiring' && <ServiceAccess>{(token) => <HiringWorkspace token={token} />}</ServiceAccess>}
-            {hrTab === 'requirements' && <ServiceAccess>{(_token, role) => <RequirementsPage role={role === 'department' ? 'department' : 'hr'} />}</ServiceAccess>}
-            {hrTab === 'reserve' && (
-              <TalentReserve />
+            {hrTab === "archive" && <ArchivePage />}
+            {hrTab === "hiring" && (
+              <ServiceAccess requiredRoles={["hr", "admin"]}>
+                {(token) => <HiringWorkspace token={token} />}
+              </ServiceAccess>
             )}
+            {hrTab === "requirements" && (
+              <ServiceAccess requiredRoles={["hr", "admin", "department"]}>
+                {(_token, _login, actor) => (
+                  <RequirementsPage
+                    role={
+                      actor.grants.some(
+                        (g) => g.role === "hr" || g.role === "admin",
+                      )
+                        ? "hr"
+                        : "department"
+                    }
+                  />
+                )}
+              </ServiceAccess>
+            )}
+            {hrTab === "reserve" && <TalentReserve />}
 
             {/* 21, 22, 23. АНАЛИТИКА И ОТЧЁТЫ (макеты 21, 22, 23) */}
-            {hrTab === 'analytics' && (
+            {hrTab === "analytics" && (
               <>
                 <div className="max-w-[1240px] mx-auto px-4 sm:px-6 pt-6">
                   <div className="inline-flex bg-[#E8ECF2] rounded-xl p-1">
-                    {([['dashboard', 'Аналитика подбора'], ['report', 'Годовой доклад']] as const).map(([id, l]) => (
+                    {(
+                      [
+                        ["dashboard", "Аналитика подбора"],
+                        ["report", "Годовой доклад"],
+                      ] as const
+                    ).map(([id, l]) => (
                       <button
                         key={id}
                         type="button"
                         onClick={() => setHrAnalyticsView(id)}
                         className={`px-4 py-2 rounded-lg text-[14px] font-semibold ${
-                          hrAnalyticsView === id ? 'bg-white text-[#141A24] shadow-sm' : 'text-[#4A5363]'
+                          hrAnalyticsView === id
+                            ? "bg-white text-[#141A24] shadow-sm"
+                            : "text-[#4A5363]"
                         }`}
                       >
                         {l}
@@ -317,69 +439,112 @@ export const App: React.FC = () => {
                     ))}
                   </div>
                 </div>
-                {hrAnalyticsView === 'dashboard' ? <AnalyticsDashboard /> : <ReportPage />}
+                {hrAnalyticsView === "dashboard" ? (
+                  <AnalyticsDashboard />
+                ) : (
+                  <ReportPage />
+                )}
               </>
             )}
           </main>
         </>
       )}
       {/* НАЧАЛЬНИК ОТДЕЛА КАДРОВ: Сводка / Архив кадров / Аналитика */}
-      {appMode === 'head' && (
+      {appMode === "head" && (
         <>
           <RoleHeader
             tabs={[
-              { id: 'summary', label: 'Сводка' },
-              { id: 'reserve', label: 'Архив кадров' },
-              { id: 'analytics', label: 'Аналитика' },
+              { id: "summary", label: "Сводка" },
+              { id: "reserve", label: "Архив кадров" },
+              { id: "analytics", label: "Аналитика" },
             ]}
             activeTab={headTab}
             onTabChange={setHeadTab}
             roleLabel="Начальник отдела кадров · Ирина Б."
-            onLogoClick={() => setHeadTab('summary')}
+            onLogoClick={() => setHeadTab("summary")}
           />
           <main className="flex-1 w-full">
-            {headTab === 'summary' && <HeadSummary />}
-            {headTab === 'reserve' && <TalentReserve />}
-            {headTab === 'analytics' && <DirectorAnalytics onExportReport={() => setAppMode('hr')} />}
+            {headTab === "summary" && <HeadSummary />}
+            {headTab === "reserve" && <TalentReserve />}
+            {headTab === "analytics" && (
+              <DirectorAnalytics
+                onExportReport={() => {
+                  setHrTab("analytics");
+                  setHrAnalyticsView("report");
+                  setAppMode("hr");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              />
+            )}
           </main>
         </>
       )}
 
       {/* ДИРЕКТОР ДЕПАРТАМЕНТА КАДРОВ: Аналитика / Архив кадров / Единая база */}
-      {appMode === 'director' && (
+      {appMode === "director" && (
         <>
           <RoleHeader
             tabs={[
-              { id: 'analytics', label: 'Аналитика' },
-              { id: 'reserve', label: 'Архив кадров' },
-              { id: 'database', label: 'Единая база' },
+              { id: "analytics", label: "Аналитика" },
+              { id: "reserve", label: "Архив кадров" },
+              { id: "database", label: "Единая база" },
             ]}
             activeTab={directorTab}
-            onTabChange={setDirectorTab}
+            onTabChange={(tab) => {
+              setDirectorTab(tab);
+              setDirectorDbView("list");
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
             roleLabel="Директор департамента кадров · Елена В."
-            onLogoClick={() => setDirectorTab('analytics')}
+            onLogoClick={() => {
+              setDirectorTab("analytics");
+              setDirectorDbView("list");
+            }}
           />
           <main className="flex-1 w-full">
-            {directorTab === 'analytics' && (
+            {directorTab === "analytics" && (
               <DirectorAnalytics
                 onExportReport={() => {
-                  setHrTab('analytics');
-                  setHrAnalyticsView('report');
-                  setAppMode('hr');
+                  setHrTab("analytics");
+                  setHrAnalyticsView("report");
+                  setAppMode("hr");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
                 }}
               />
             )}
-            {directorTab === 'reserve' && <TalentReserve />}
-            {directorTab === 'database' && <CandidatesDatabase onSelectCandidate={() => {}} />}
+            {directorTab === "reserve" && <TalentReserve />}
+            {directorTab === "database" && directorDbView === "list" && (
+              <CandidatesDatabase
+                onSelectCandidate={(c: CandidateRecord) => {
+                  setSelectedCandidateId(c.id);
+                  setDirectorDbView("profile");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              />
+            )}
+            {directorTab === "database" && directorDbView === "profile" && (
+              <CandidateProfile
+                applicationId={selectedCandidateId}
+                onBackToDatabase={() => {
+                  setDirectorDbView("list");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                onOpenReserve={() => {
+                  setDirectorTab("reserve");
+                  setDirectorDbView("list");
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+              />
+            )}
           </main>
         </>
       )}
 
       {/* РУКОВОДИТЕЛЬ ДЕПАРТАМЕНТА: Мои кандидаты */}
-      {appMode === 'dept' && (
+      {appMode === "dept" && (
         <>
           <RoleHeader
-            tabs={[{ id: 'mine', label: 'Мои кандидаты' }]}
+            tabs={[{ id: "mine", label: "Мои кандидаты" }]}
             activeTab="mine"
             onTabChange={() => {}}
             roleLabel="Директор департамента цифрового развития · Андрей Г."
@@ -391,30 +556,38 @@ export const App: React.FC = () => {
       )}
 
       {/* СОТРУДНИК ДЕПАРТАМЕНТА */}
-      {appMode === 'employee' && (
+      {appMode === "employee" && (
         <>
           <RoleHeader
             tabs={[
-              { id: 'workspace', label: 'Рабочее пространство' },
-              { id: 'care', label: 'Забота и мотивация' },
-              { id: 'support', label: 'Материальная помощь' },
-              { id: 'surveys', label: 'Опросы' },
-              { id: 'vacancies', label: 'Витрина вакансий' },
+              { id: "workspace", label: "Рабочее пространство" },
+              { id: "care", label: "Забота и мотивация" },
+              { id: "support", label: "Материальная помощь" },
+              { id: "surveys", label: "Опросы" },
+              { id: "vacancies", label: "Витрина вакансий" },
             ]}
             activeTab={employeeTab}
             onTabChange={setEmployeeTab}
-            roleLabel={employeeTab === 'support' || employeeTab === 'development' ? 'Личный кабинет' : 'Специалист департамента экономики · Кирилл Л.'}
-            onLogoClick={() => setEmployeeTab('workspace')}
+            roleLabel={
+              employeeTab === "support" || employeeTab === "development"
+                ? "Личный кабинет"
+                : "Специалист департамента экономики · Кирилл Л."
+            }
+            onLogoClick={() => setEmployeeTab("workspace")}
           />
           <main className="flex-1 w-full">
-            {employeeTab === 'workspace' && <Workspace onNavigate={setEmployeeTab} />}
-            {employeeTab === 'care' && <Care />}
-            {employeeTab === 'support' && <SupportPage />}
-            {employeeTab === 'development' && <DevelopmentPage />}
-            {employeeTab === 'workforce' && <WorkforcePage />}
-            {employeeTab === 'onboarding' && <WorkforcePage initialTab="onboarding" />}
-            {employeeTab === 'surveys' && <Surveys />}
-            {employeeTab === 'vacancies' && <VacancyShowcase />}
+            {employeeTab === "workspace" && (
+              <Workspace onNavigate={setEmployeeTab} />
+            )}
+            {employeeTab === "care" && <Care />}
+            {employeeTab === "support" && <SupportPage />}
+            {employeeTab === "development" && <DevelopmentPage />}
+            {employeeTab === "workforce" && <WorkforcePage />}
+            {employeeTab === "onboarding" && (
+              <WorkforcePage initialTab="onboarding" />
+            )}
+            {employeeTab === "surveys" && <Surveys />}
+            {employeeTab === "vacancies" && <VacancyShowcase />}
           </main>
         </>
       )}

@@ -145,3 +145,15 @@ def outcome(cycle_id: UUID, request: Request, ctx: Context, compare_cycle_id: UU
         "comparison": compare(db, cycle, compare_cycle_id, actor) if compare_cycle_id else None,
         "notice": "Завершение меры не доказывает влияние на настроение или текучесть.",
     }
+
+
+@router.get("/measure-owners")
+def measure_owners(request: Request, ctx: Context):
+    fixed_view(request)
+    db, actor = ctx
+    return {"items": [
+        {"id": r["id"], "name": r["name"], "group_key": r["group_key"]}
+        for r in db.execute("SELECT id,name,group_key,roles FROM actors WHERE organization_id=? ORDER BY name",
+                            (actor["organization_id"],))
+        if "employee" in json.loads(r["roles"]) and manages_group(actor, r["group_key"])
+    ]}
