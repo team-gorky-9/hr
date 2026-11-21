@@ -9,6 +9,7 @@ export interface CandidateRequest {
   contact: { channel: string; value: string }; vacancy: { title: string } | null; vacancy_ref: VacancyRef | null;
   target_question: string | null; documents: Document[]; unread_messages: number;
   information_request: { public_message: string; requested_items: string[]; answered: boolean } | null;
+  information_request_ref: { request_id: string; event_sequence: number } | null;
   addenda: { text: string; document_ids: string[]; added_at: string }[];
   outcomes: { outcome: string; public_explanation: string; next_action: string | null }[];
   withdrawal: { reason: string; notice?: string } | null;

@@ -12,7 +12,7 @@
 python -m pytest --import-mode=importlib --noconftest -p no:cacheprovider -q -s tests/test_interaction_http.py tests/test_interaction_legacy.py services/hiring/tests/test_interaction_portal.py services/hiring/tests/test_interaction_window.py
 ```
 
-Результат: **4 passed за 3,11 с**. Python 3.13.7, FastAPI 0.165.0, SQLAlchemy 2.0.58, pytest 8.4.2. Полный набор не запускался по указанию участника.
+Результат: **4 passed за 3,11 с**. Python 3.13.7, FastAPI 0.165.0, SQLAlchemy 2.0.58, pytest 8.4.2. Полный набор не запускался по указанию участника. После объединения с main `d10bf96` обновлена существующая форма дополнения кандидата: тип DTO и тело запроса дополнены Q-ref. Локальный `tsc --noEmit` не запустился из-за отсутствия Node в среде; сборка frontend остаётся существующему CI. Новый UI окна не создавался; визуальный прогон не выполнялся.
 
 - Q1 → прочтение → дополнение → отдельный ready HR. C2 не получает чужое обращение. Загрузка файла меняет revision, сохраняя Q; старый/отсутствующий Q-ref нового запроса отклоняется. Кандидатская история не раскрывает внутреннюю связь и основания HR; исторический Q получает `basis_unknown`.
 - Реальный POST feedback закрывает H1, оставляя H2 и этап A1 без изменений. Continue-waiting review повторяем; новое тело того же request_id запрещено. Новая версия feedback делает старый review недостаточным. Устаревший этап не сохраняет review/StageEvent; stage_changed сохраняет оба атомарно на проверенном переходе department_interview.
