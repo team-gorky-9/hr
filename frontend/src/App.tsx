@@ -184,7 +184,7 @@ export const App: React.FC = () => {
             {portalRoute === 'vacancies' && portalVacancyId && (
               <VacancyPage
                 vacancyId={portalVacancyId}
-                token={session?.access_token}
+                token={session?.actor.grants.some(grant => grant.role === 'candidate') ? session.access_token : undefined}
                 onLogin={() => { setLoginReturn('vacancies'); setPortalRoute('login'); }}
                 onGoHome={() => { setPortalVacancyId(null); setPortalRoute('vacancies'); }}
                 onGoCabinet={(id?: string) => {
