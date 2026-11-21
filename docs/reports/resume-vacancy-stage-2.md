@@ -12,7 +12,9 @@ Yandex configuration remains the product default. Local Gemini 3.5 Flash uses an
 
 ## Checks performed
 
-- PostgreSQL 16 + pgvector: migration 0014 applied through the complete migration chain on a new dedicated database. No existing database was dropped.
+Before publication, merged current main `e243e2f` including David's interaction window. Resolved the revision collision by moving this migration to **0015 after 0014**. A fresh isolated PostgreSQL run applied both migrations and passed **54 targeted tests in 12.57 s** (resume chain, matching, artifact storage, evaluator, catalog adapter and LLM client). No new live model requests were made for this integration check.
+
+- PostgreSQL 16 + pgvector: migration 0015 applied through the complete migration chain on a new dedicated database. No existing database was dropped.
 - 37 targeted PostgreSQL checks passed in 7.39 s: new chain, previous matching behavior, artifact storage and existing assessment service.
 - After adding the provider-outage regression: both HTTP-chain variants passed in 5.16 s, including preservation of extraction on retry, fact correction, source-text invalidation, closed-vacancy/empty-catalog handling and run rereading.
 - 62 targeted provider/artifact/rule/evidence tests passed earlier; 4 artifact/catalog boundary tests passed in 0.87 s. These batches overlap and are not added into a fictitious total.

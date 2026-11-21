@@ -30,7 +30,7 @@ The binding JSON is a list with `catalog_profile_id`, `catalog_version`, `organi
 
 ## Storage, reuse and errors
 
-Migration 0014 adds immutable processing_artifacts. Source record/contour is part of every key. Extraction key includes source version/content, extractor configuration and schema. HR corrections create effective facts IDs. Semantic checks include effective facts, prompt, model/provider/configuration, exact query and schema. Formal requirements and competency indicators are checked separately; deterministic numeric calculations keep the existing code. The original text remains a fallback, so omissions in extraction cannot become mandatory negative filters.
+Migration 0015 adds immutable processing_artifacts. Source record/contour is part of every key. Extraction key includes source version/content, extractor configuration and schema. HR corrections create effective facts IDs. Semantic checks include effective facts, prompt, model/provider/configuration, exact query and schema. Formal requirements and competency indicators are checked separately; deterministic numeric calculations keep the existing code. The original text remains a fallback, so omissions in extraction cannot become mandatory negative filters.
 
 Model failures/invalid schemas do not become cached unknown. Grounding errors reject extraction. A candidate row lock serializes processing/corrections for that source; unique artifact keys prevent duplicate accepted records. This does not promise exactly one paid call across a crash. Old successful stages survive a provider error. No external LLM call is performed on a fully cached repeat.
 
