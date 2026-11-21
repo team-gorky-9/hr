@@ -76,3 +76,31 @@ GET /cases/{id}/extract выдаёт id,case_id,version,outcome,public_explanati
 POST /decision-corrections требует те же поля и correction_reason, создаёт новую
 запись. Старое решение сохранено. needs_information возвращает дело к комплектности.
 Проверка: uv run pytest tests/test_5c.py -q.
+
+## 5D: исполнение, закрытие, отзыв
+
+Координатор POST /cases/{id}/executor-assignment с expected_revision,
+executor_actor_id,assignment_basis назначает отдельного регистратора исполнения.
+Исполнитель читает только минимальную карточку, личный итог и события исполнения;
+комплект и заявление ему не открываются. POST /execution принимает status
+unknown/failed/confirmed,source_reference,source_author,occurred_on,note и
+expected_revision. Разрешён только после approved; это запись внешнего факта,
+не автоматический платёж. История хранит все версии и ID решения.
+
+Заявитель видит status и дату исполнения без внутренних реквизитов и заметки.
+POST /close выполняет специалист с expected_revision,reason. Явное основание
+организационного закрытия обязательно; unknown остаётся unknown. POST /withdraw
+доступен заявителю до окончательного решения; файл и история не удаляются.
+Отозванный личный черновик не появляется в очереди координатора.
+Исправление решения сбрасывает текущий статус исполнения в unknown, сохраняя
+старое свидетельство в истории: оно не подтверждает новую редакцию решения.
+
+uv run pytest tests/test_5d.py -q — путь 5D.
+uv run pytest tests/test_5a.py tests/test_5b.py tests/test_5c.py tests/test_5d.py -q —
+короткая проверка четырёх частей (4 теста). Финальный OpenAPI и ответы находятся в
+../../docs/reports/wave-5d-support-openapi.json и wave-5d-support-examples.json.
+
+Части сохранены отдельными зависимыми ветками 5A → 5B → 5C → 5D. При интеграции
+после предыдущей части следующую нужно перенести на актуальный main. Рабочие правила,
+настоящая идентификация, сроки хранения, аварийное восстановление и интеграция
+с кадровым/платёжным источником остаются архитектурным продолжением этапа 2.

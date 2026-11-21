@@ -2,15 +2,11 @@
 from uuid import UUID
 from fastapi import APIRouter, Request
 from .api import Actor
-from .core import (can_read, case_view, check_revision, fail, not_found, now,
+from .core import (extract_view, can_read, case_view, check_revision, fail, not_found, now,
                    require_assigned, state, uid)
 from .schemas import Decision, DecisionCorrection
 
 router = APIRouter(prefix="/api/v1/support")
-
-def extract_view(decision):
-    return {k: decision[k] for k in ("id", "case_id", "version", "outcome",
-                                    "public_explanation", "decided_on")}
 
 def record(tx, case, body, actor, correction=False):
     require_assigned(case, actor, "secretary")

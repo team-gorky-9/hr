@@ -51,3 +51,17 @@ class Decision(Revision):
 
 class DecisionCorrection(Decision):
     correction_reason: Text
+
+class ExecutorAssignment(Revision):
+    executor_actor_id: UUID
+    assignment_basis: Text
+
+class Execution(Revision):
+    status: Literal["confirmed", "failed", "unknown"]
+    source_reference: Text
+    source_author: Text
+    occurred_on: date | None
+    note: Text
+
+class Reason(Revision):
+    reason: Text
