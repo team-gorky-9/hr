@@ -1,252 +1,46 @@
-import React, { useState } from 'react';
-import { Card, Btn, Chip, PageTitle } from '../shared/ui';
-
-type Status = 'overdue' | 'open' | 'closed';
-
-interface Item {
-  id: string;
-  day: string;
-  month: string;
-  name: string;
-  position: string;
-  status: Status;
-  daysLeft?: number;
-  sentBy: string;
-  sentOn: string;
-  deadline: string;
-  requirement: string;
-  competency: string;
-  comment: string;
-}
-
-// Заглушка: данные из макетов 1–3 (бэкенд: GET /api/v1/handoffs/mine)
-const initialItems: Item[] = [
-  {
-    id: 'tikhonov', day: '18', month: 'НОЯ', name: 'Тихонов Роман',
-    position: 'Начальник отдела цифровизации', status: 'overdue',
-    sentBy: 'Марина С.', sentOn: '04.11', deadline: '18.11',
-    requirement: 'Выполнено: опыт 5 лет', competency: 'Управление проектами · 78',
-    comment: 'Опыт подтвердил по телефону.',
-  },
-  {
-    id: 'orlov', day: '24', month: 'НОЯ', name: 'Орлов Павел',
-    position: 'Аналитик данных', status: 'open', daysLeft: 2,
-    sentBy: 'Ольга К.', sentOn: '10.11', deadline: '24.11',
-    requirement: 'Выполнено: опыт 2 года', competency: 'SQL · 80',
-    comment: 'Хорошо знает отчётность.',
-  },
-  {
-    id: 'kovaleva', day: '02', month: 'ДЕК', name: 'Ковалёва Анна',
-    position: 'Python-разработчик', status: 'open', daysLeft: 8,
-    sentBy: 'Марина С.', sentOn: '18.11', deadline: '02.12',
-    requirement: 'Выполнено: опыт 3 года', competency: 'Тестирование API · 85',
-    comment: 'Опыт подтвердил по телефону, интересуется городскими сервисами.',
-  },
-];
-
-const reasons = ['Не хватает опыта', 'Другая специализация', 'Выбран другой кандидат', 'Другая причина'];
-
-type Panel = 'idle' | 'reject' | 'close';
-
+import React, { useEffect, useState } from 'react';
+import { Card, Btn, Badge, PageTitle } from '../shared/ui';
+import { api, request, recruitmentContour, deadlineLabel, feedbackLabel, errorMessage, type Handoff } from '../../api/recruitment';
 export const MyCandidates: React.FC = () => {
-  const [items, setItems] = useState<Item[]>(initialItems);
-  const [selectedId, setSelectedId] = useState('kovaleva');
-  const [panel, setPanel] = useState<Panel>('idle');
-  const [reason, setReason] = useState<string | null>(null);
-  const [otherText, setOtherText] = useState('');
-  const [outcome, setOutcome] = useState('');
-  const [report, setReport] = useState('');
-  const [result, setResult] = useState<Record<string, string>>({});
-
-  const selected = items.find((i) => i.id === selectedId)!;
-  const overdue = items.filter((i) => i.status === 'overdue').length;
-  const isClosed = selected.status === 'closed';
-
-  const canSend = reason !== null && (reason !== 'Другая причина' || otherText.trim().length > 0);
-
-  const select = (id: string) => {
-    setSelectedId(id);
-    setPanel('idle');
-    setReason(null);
-    setOtherText('');
+  const [items, setItems] = useState<Handoff[]>([]);
+  const [selectedId, setSelectedId] = useState('');
+  const [detail, setDetail] = useState<Handoff | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [reload, setReload] = useState(0);
+  const [outcome, setOutcome] = useState('fit');
+  const [interview, setInterview] = useState('not_reported');
+  const [comment, setComment] = useState('');
+  const [reason, setReason] = useState('');
+  // Codes are defined by the legacy seed; department cannot read the HR-only reference endpoint.
+  const reasons = [{ code: 'experience', title: 'Недостаточно опыта' }, { code: 'other', title: 'Другая причина (пояснить)' }];
+  useEffect(() => {
+    let live = true; setLoading(true); setError('');
+    api.handoffs('dept').then(({ items: rows }) => { if (live) { setItems(rows); setSelectedId(id => rows.some(r => r.attempt_id === id) ? id : rows[0]?.attempt_id || ''); setLoading(false); } }).catch(e => { if(live) { setError(errorMessage(e)); setLoading(false); } });
+    return () => { live = false; };
+  }, [reload]);
+  useEffect(() => {
+    let live = true; setDetail(null); setComment(''); setReason('');
+    if (selectedId) api.handoff(selectedId, 'dept').then(d => { if(live) setDetail(d); }).catch(e => { if(live) setError(errorMessage(e)); });
+    return () => { live = false; };
+  }, [selectedId, reload]);
+  const submit = async () => {
+    if (!detail) return; setBusy(true); setError('');
+    try {
+      await request(`/applications/${detail.application_id}/feedback`, 'dept', { attempt_id: detail.attempt_id, outcome, interview_status: interview, contact_status: interview === 'yes' ? 'yes' : 'not_reported', comment, rejection_reason_code: outcome === 'not_fit' ? reason : null, supersedes_id: detail.latest_feedback?.feedback_id || null, request_id: crypto.randomUUID() });
+      setNotice('Ответ сохранён и доступен HR. Итог рассмотрения принимает HR.'); setReload(n => n + 1);
+    } catch(e) { setError(errorMessage(e)); } finally { setBusy(false); }
   };
-
-  const closeItem = (text: string) => {
-    setItems((prev) => prev.map((i) => (i.id === selectedId ? { ...i, status: 'closed' } : i)));
-    setResult((r) => ({ ...r, [selectedId]: text }));
-    setPanel('idle');
-  };
-
-  return (
-    <div className="max-w-[1240px] mx-auto px-4 sm:px-6 py-8 space-y-5">
-      <PageTitle
-        title="Кандидаты, направленные к вам"
-        subtitle="Вы видите только своих кандидатов. Решение и причина сразу уходят HR-менеджеру."
-      />
-      <div className="text-[16px] text-[#4A5363]">
-        Ответить до ·{' '}
-        <span className="font-bold text-[#A3171B]">
-          {overdue > 0 ? `${overdue} срок уже прошёл` : 'просроченных нет'}
-        </span>
-      </div>
-
-      <div className="grid lg:grid-cols-[360px_1fr] gap-5 items-start">
-        <Card className="space-y-3 !p-3">
-          {items.map((i) => {
-            const active = i.id === selectedId;
-            return (
-              <button
-                key={i.id}
-                type="button"
-                onClick={() => select(i.id)}
-                className={`w-full flex gap-4 text-left rounded-xl border p-3 transition-colors ${
-                  active ? 'border-[#1F4FD1] bg-[#EEF3FE]' : 'border-[#E1E5EB] bg-white hover:bg-[#F8F9FB]'
-                }`}
-              >
-                <div
-                  className={`w-[56px] h-[56px] shrink-0 rounded-xl flex flex-col items-center justify-center ${
-                    i.status === 'overdue' ? 'bg-[#FCE8E8] text-[#A3171B]' : 'bg-[#F3F5F8] text-[#141A24]'
-                  }`}
-                >
-                  <span className="text-[22px] font-bold leading-none">{i.day}</span>
-                  <span className="text-[11px] font-bold mt-0.5">{i.month}</span>
-                </div>
-                <div className="min-w-0">
-                  <div className="text-[16px] font-bold text-[#141A24]">{i.name}</div>
-                  <div className="text-[14px] text-[#4A5363]">{i.position}</div>
-                  {i.status === 'overdue' && (
-                    <div className="text-[14px] font-semibold text-[#A3171B]">просрочено</div>
-                  )}
-                  {i.status === 'open' && (
-                    <div className="text-[14px] text-[#4A5363]">осталось {i.daysLeft} дн.</div>
-                  )}
-                  {i.status === 'closed' && <div className="text-[14px] text-[#4A5363]">закрыто</div>}
-                </div>
-              </button>
-            );
-          })}
-        </Card>
-
-        <Card className="space-y-5">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-[22px] font-bold text-[#141A24]">
-              {selected.position} · {selected.name}
-            </h2>
-            <div className="text-[14px] text-[#4A5363]">
-              Направила {selected.sentBy} {selected.sentOn} · срок до {selected.deadline}
-            </div>
-          </div>
-
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div className="bg-[#F6F7F9] rounded-xl p-4">
-              <div className="text-[14px] text-[#4A5363]">Обязательные требования</div>
-              <div className="text-[16px] font-bold text-[#141A24]">{selected.requirement}</div>
-            </div>
-            <div className="bg-[#F6F7F9] rounded-xl p-4">
-              <div className="text-[14px] text-[#4A5363]">Ключевая компетенция</div>
-              <div className="text-[16px] font-bold text-[#141A24]">{selected.competency}</div>
-            </div>
-          </div>
-
-          <div className="rounded-xl border-2 border-[#B7C7F2] bg-[#E8EEFC] p-4">
-            <div className="text-[16px] font-bold text-[#1F4FD1]">Комментарий HR-менеджера</div>
-            <div className="text-[16px] text-[#1F4FD1] mt-1">{selected.comment}</div>
-          </div>
-
-          {isClosed ? (
-            <div className="rounded-xl border-2 border-[#9FD0AC] bg-[#E3F2E7] p-4">
-              <div className="text-[17px] font-bold text-[#1D7A40]">
-                Заявка рассмотрена, отчёт отправлен HR-менеджеру
-              </div>
-              <div className="text-[16px] text-[#1D7A40] mt-1">Итог: {result[selectedId]}</div>
-            </div>
-          ) : (
-            <>
-              {panel !== 'close' && (
-                <div className="flex flex-wrap gap-3">
-                  <Btn variant="primary" onClick={() => setPanel('close')}>
-                    Пригласить на собеседование
-                  </Btn>
-                  <Btn
-                    onClick={() => setPanel(panel === 'reject' ? 'idle' : 'reject')}
-                    className={panel === 'reject' ? '!border-[#1F4FD1] !border-2 !text-[#1F4FD1]' : ''}
-                  >
-                    Не подходит
-                  </Btn>
-                </div>
-              )}
-
-              {panel === 'reject' && (
-                <div className="rounded-xl border border-[#E1E5EB] bg-[#F8F9FB] p-5 space-y-4">
-                  <div className="text-[18px] font-bold text-[#141A24]">Почему кандидат не подходит?</div>
-                  <div className="flex flex-wrap gap-3">
-                    {reasons.map((r) => (
-                      <Chip key={r} active={reason === r} onClick={() => setReason(r)}>
-                        {r}
-                      </Chip>
-                    ))}
-                  </div>
-                  {reason === 'Другая причина' && (
-                    <div>
-                      <label className="block text-[16px] font-bold text-[#141A24] mb-2">Опишите причину</label>
-                      <input
-                        value={otherText}
-                        onChange={(e) => setOtherText(e.target.value)}
-                        placeholder="Например: кандидат не готов к выезду на объекты"
-                        className="w-full border border-[#C9D0DB] rounded-lg px-4 py-3 text-[16px] bg-white outline-none focus:border-[#1F4FD1]"
-                      />
-                    </div>
-                  )}
-                  <div className="flex gap-3">
-                    <Btn
-                      variant="primary"
-                      disabled={!canSend}
-                      onClick={() => closeItem(`отказ — ${reason === 'Другая причина' ? otherText : reason}`)}
-                    >
-                      Отправить HR-менеджеру
-                    </Btn>
-                    <Btn onClick={() => { setPanel('idle'); setReason(null); setOtherText(''); }}>Отмена</Btn>
-                  </div>
-                  <div className="text-[14px] text-[#4A5363]">
-                    {reason === 'Другая причина'
-                      ? 'Кнопка станет активной, когда вы напишете причину'
-                      : 'Выберите причину. Она сразу уйдёт HR-менеджеру'}
-                  </div>
-                </div>
-              )}
-
-              {panel === 'close' && (
-                <div className="rounded-xl border border-[#B7C7F2] bg-[#F5F8FF] p-5 space-y-3">
-                  <div className="text-[18px] font-bold text-[#141A24]">Собеседование проведено? Закройте пункт</div>
-                  <label className="block text-[16px] font-bold text-[#141A24]">Итог</label>
-                  <input
-                    value={outcome}
-                    onChange={(e) => setOutcome(e.target.value)}
-                    placeholder="Готов принять на должность"
-                    className="w-full border border-[#C9D0DB] rounded-lg px-4 py-3 text-[16px] bg-white outline-none focus:border-[#1F4FD1]"
-                  />
-                  <label className="block text-[15px] font-bold text-[#141A24]">Короткий отчёт для HR-менеджера</label>
-                  <input
-                    value={report}
-                    onChange={(e) => setReport(e.target.value)}
-                    placeholder="Сильный в тестировании, готов выйти с 1 декабря"
-                    className="w-full border border-[#C9D0DB] rounded-lg px-4 py-3 text-[16px] bg-white outline-none focus:border-[#1F4FD1]"
-                  />
-                  <Btn
-                    variant="primary"
-                    disabled={!outcome.trim()}
-                    onClick={() => closeItem(outcome.trim().toLowerCase())}
-                  >
-                    Закрыть пункт и отправить отчёт
-                  </Btn>
-                </div>
-              )}
-            </>
-          )}
-        </Card>
-      </div>
-    </div>
-  );
+  return <div className="max-w-[1240px] mx-auto px-6 py-8 space-y-5"><PageTitle title="Кандидаты, направленные к вам" subtitle={`${recruitmentContour === 'training' ? 'Учебный кабинет · ' : ''}Вы видите только свои передачи. Ответ сохраняется у конкретной передачи.`} right={<Btn onClick={() => setReload(n => n + 1)}>Обновить</Btn>} />
+    {error && <div role="alert" className="bg-red-50 text-red-800 rounded-xl p-4">{error} <Btn onClick={() => setReload(n => n + 1)}>Повторить</Btn></div>}{notice && <p role="status" className="bg-[#E3F2E7] text-[#1D7A40] p-4 rounded-xl">{notice}</p>}
+    <p className="text-[#4A5363]">Просрочено: <b className="text-[#A3171B]">{items.filter(i => i.deadline_status === 'overdue').length}</b></p>
+    {loading ? <Card>Загрузка передач…</Card> : !items.length ? <Card>Вам пока не направляли кандидатов.</Card> : <div className="grid grid-cols-[360px_1fr] gap-5 items-start"><Card className="space-y-3 !p-3">{items.map(i => <button key={i.attempt_id} className={`w-full flex gap-4 text-left rounded-xl border p-3 ${i.attempt_id === selectedId ? 'border-[#1F4FD1] bg-[#EEF3FE]' : 'border-[#E1E5EB] bg-white'}`} onClick={() => { setSelectedId(i.attempt_id); setNotice(''); }}><div className={`w-14 h-14 shrink-0 rounded-xl flex flex-col items-center justify-center ${i.deadline_status === 'overdue' ? 'bg-[#FCE8E8] text-[#A3171B]' : 'bg-[#F3F5F8]'}`}><b className="text-xl">{i.due_date.slice(8)}</b><span className="text-xs">{new Date(i.due_date).toLocaleDateString('ru-RU', { month: 'short' })}</span></div><div><b>{i.candidate_code}</b><p className="text-sm">{i.vacancy_title}</p><p className="text-sm mt-1">{deadlineLabel(i.deadline_status)}</p></div></button>)}</Card>
+      <Card className="space-y-5">{!detail ? <p>Загрузка сводки…</p> : <><h2 className="text-[22px] font-bold">{detail.candidate_code} · {detail.vacancy_title}</h2><p className="text-sm text-[#4A5363]">Направлен {new Date(detail.handed_off_at).toLocaleDateString('ru-RU')} · срок до {detail.due_date}</p><Badge tone="blue">{deadlineLabel(detail.deadline_status)}</Badge><pre className="whitespace-pre-wrap font-sans text-sm leading-6 bg-[#F6F7F9] rounded-xl p-4 max-h-96 overflow-auto">{detail.markdown}</pre>
+      {detail.latest_feedback && <div className="rounded-xl border border-[#9FD0AC] bg-[#E3F2E7] p-4"><b>Сохранён ответ: {feedbackLabel(detail.latest_feedback.outcome)}</b><p>{detail.latest_feedback.rejection_reason?.title} · {detail.latest_feedback.comment}</p></div>}
+      {detail.status !== 'closed_without_response' && <div className="space-y-4 border-t pt-4"><h3 className="font-bold text-lg">{detail.latest_feedback ? 'Уточнить ответ' : 'Ответ HR-менеджеру'}</h3><label className="block">Результат<select className="block w-full border rounded-xl p-3 mt-2" value={outcome} onChange={e => setOutcome(e.target.value)}><option value="fit">Подошёл</option><option value="not_fit">Не подошёл</option><option value="pending">Рассмотрение продолжается</option></select></label><label className="block">Собеседование состоялось<select className="block w-full border rounded-xl p-3 mt-2" value={interview} onChange={e => setInterview(e.target.value)}><option value="not_reported">Не сообщено</option><option value="yes">Да</option><option value="no">Нет</option></select></label>{outcome === 'not_fit' && <select aria-label="Причина отказа" className="w-full border rounded-xl p-3" value={reason} onChange={e => setReason(e.target.value)}><option value="">Выберите причину</option>{reasons.map(r => <option key={r.code} value={r.code}>{r.title}</option>)}</select>}<textarea aria-label="Комментарий подразделения" className="w-full border rounded-xl p-3 min-h-28" placeholder="Причина и следующий шаг" value={comment} onChange={e => setComment(e.target.value)} /><Btn variant="primary" disabled={busy || !comment.trim() || (outcome === 'not_fit' && !reason)} onClick={submit}>Сохранить ответ и передать HR</Btn></div>}</> }</Card></div>}
+  </div>;
 };
-
 export default MyCandidates;
+
