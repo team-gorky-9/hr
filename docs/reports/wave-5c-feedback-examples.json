@@ -1,0 +1,53 @@
+{
+  "cycle_id": "d2bff774-061a-49f7-bcdd-f04ebc119647",
+  "publication_id": "97510705-83c6-4259-bdce-1720f9084070",
+  "measure_id": "4eac7f29-291e-4d4a-82e0-0b2d83d49492",
+  "message_id": "14bf2fd2-9430-4eca-9ad2-b14b5d06e02b",
+  "outcome": {
+    "cycle_id": "d2bff774-061a-49f7-bcdd-f04ebc119647",
+    "messages": [
+      {
+        "id": "14bf2fd2-9430-4eca-9ad2-b14b5d06e02b",
+        "organization_id": "e339f25e-92f1-5a62-8e29-75cee72d3738",
+        "revision": 1,
+        "created_by": "c8cddaca-ee2f-5bcc-8716-09f344b2a8a6",
+        "publication_id": "97510705-83c6-4259-bdce-1720f9084070",
+        "cycle_id": "d2bff774-061a-49f7-bcdd-f04ebc119647",
+        "group_key": "large",
+        "text": "We heard workload concerns and agreed a planning routine",
+        "measure_ids": [
+          "4eac7f29-291e-4d4a-82e0-0b2d83d49492"
+        ],
+        "measures": [
+          {
+            "id": "4eac7f29-291e-4d4a-82e0-0b2d83d49492",
+            "organization_id": "e339f25e-92f1-5a62-8e29-75cee72d3738",
+            "revision": 3,
+            "created_by": "21e17da6-db1a-5ec6-a44b-a41f7b06247f",
+            "publication_id": "97510705-83c6-4259-bdce-1720f9084070",
+            "group_key": "large",
+            "topic_key": "work",
+            "text": "Clarify workload planning",
+            "owner_actor_id": "260bbe1c-7751-501e-9c98-ea97dfa0de00",
+            "due_on": "2026-12-01",
+            "status": "completed",
+            "outcome_note": "Team planning routine agreed"
+          }
+        ],
+        "audience": "all_invited_group",
+        "status": "published"
+      }
+    ],
+    "comparison": null,
+    "notice": "\u0417\u0430\u0432\u0435\u0440\u0448\u0435\u043d\u0438\u0435 \u043c\u0435\u0440\u044b \u043d\u0435 \u0434\u043e\u043a\u0430\u0437\u044b\u0432\u0430\u0435\u0442 \u0432\u043b\u0438\u044f\u043d\u0438\u0435 \u043d\u0430 \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d\u0438\u0435 \u0438\u043b\u0438 \u0442\u0435\u043a\u0443\u0447\u0435\u0441\u0442\u044c."
+  },
+  "comparison": {
+    "cycle_id": "66eee7a8-0047-4672-8a69-5c4ebd016444",
+    "comparable": false,
+    "reasons": [
+      "QUESTIONS_DIFFER"
+    ],
+    "notice": "\u0421\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0435 \u043c\u0435\u0442\u043e\u0434\u0438\u043a\u0438 \u043d\u0435 \u0434\u043e\u043a\u0430\u0437\u044b\u0432\u0430\u0435\u0442 \u044d\u0444\u0444\u0435\u043a\u0442 \u043c\u0435\u0440\u044b; \u0441\u043e\u0441\u0442\u0430\u0432 \u0433\u0440\u0443\u043f\u043f\u044b \u043c\u043e\u0433 \u0438\u0437\u043c\u0435\u043d\u0438\u0442\u044c\u0441\u044f."
+  },
+  "reopened": true
+}

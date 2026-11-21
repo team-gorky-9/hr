@@ -75,3 +75,30 @@ body/header/SQL tracing; команда выше отключает access log �
 
 [OpenAPI 5B](../../docs/reports/wave-5b-feedback-openapi.json) ·
 [пример 5B](../../docs/reports/wave-5b-feedback-examples.json).
+
+## 5C · мера и итог всей группе
+
+`uv run python -m tests.smoke --part 5c`; `uv run pytest tests/test_actions.py -q`.
+Руководитель своей группы или organizer создаёт `POST /measures`:
+publication_id, group_key, topic_key, text, owner_actor_id, due_on (дата/null).
+Тема должна быть показана в публикации; ответственный — учебный сотрудник той же группы.
+`PATCH /measures/{id}` принимает expected_revision, status и outcome_note.
+Назначенный ответственный, руководитель группы или organizer переводит planned →
+in_progress/completed/cancelled либо in_progress → completed/cancelled.
+Завершение и отмена требуют объяснения; терминальные состояния не переписываются.
+`GET /measures` читает разрешённые меры, не первичные ответы.
+
+Organizer публикует `POST /publications/{id}/participant-message {text,measure_ids}`.
+Непустой уникальный список мер должен принадлежать одному выпуску и одной группе:
+группа сообщения определяется ими, дополнительного выбираемого поля нет.
+Сообщение сохраняет снимок мер на момент публикации. `GET /cycles/{id}/outcome`
+доступен всей приглашённой группе, включая неответивших; список участников пульса не нужен.
+Именные данные ответственного принадлежат мере и не выводятся из ответов пульса.
+Завершение не доказывает эффект на настроение/текучесть; предупреждение включено в ответ API.
+
+Новый цикл создаётся отдельно. `GET /cycles/{id}/outcome?compare_cycle_id={other}`
+показывает comparable и причины QUESTIONS_DIFFER/GROUPS_DIFFER/POLICY_DIFFERS либо
+PUBLICATION_PENDING. Числовых разностей и причинного вывода нет; даже при совпадении
+методики состав людей мог измениться. Другие query-параметры не поддерживаются.
+[OpenAPI 5C](../../docs/reports/wave-5c-feedback-openapi.json) ·
+[пример 5C](../../docs/reports/wave-5c-feedback-examples.json).
