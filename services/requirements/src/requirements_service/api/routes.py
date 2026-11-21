@@ -36,7 +36,7 @@ from ..schemas import (
 )
 from ..service import CommandResult, RequirementsService
 
-EXPECTED_ALEMBIC_HEAD = "0001_initial_requirements"
+EXPECTED_ALEMBIC_HEAD = "0002_vacancy_catalog"
 
 health_router = APIRouter()
 api_router = APIRouter(prefix="/api/v1")

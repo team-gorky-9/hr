@@ -5,6 +5,7 @@ from alembic import context
 
 from requirements_service.config import load_settings
 from requirements_service.db import models  # noqa: F401
+from requirements_service import catalog  # noqa: F401
 from requirements_service.db.base import Base
 from requirements_service.db.session import create_db_engine
 
