@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-brand: #1F4FD1;
+  --color-brand-hover: #1841B2;
+  --color-page: #F3F5F8;
+  --color-surface: #FFFFFF;
+  --color-border: #E1E5EB;
+  --color-text-primary: #141A24;
+  --color-text-secondary: #4A5363;
+  --color-text-muted: #616977;
+  --color-text-subtle: #8E939D;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--color-page);
+  color: var(--color-text-primary);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
