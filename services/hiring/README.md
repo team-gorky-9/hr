@@ -104,3 +104,12 @@ uv run python -m hiring.portal_outcome_demo   # запрос → прочтен�
 ```
 
 HR публикует исход: `POST /candidate-requests/{id}/public-outcome {expected_revision, outcome, public_explanation, next_action, source_reference}`. Кандидат работает с сообщениями — `GET …/messages`, `POST …/messages/{message_id}/read` — и может отозвать обращение: `POST …/withdraw {expected_revision, reason}`. Сообщения доставляются только внутри кабинета, без email, СЭД и брокера.
+
+### Волна 6 · сквозной показ HR и кандидата
+
+```bash
+uv run python -m hiring.recruitment_demo --legacy-url http://127.0.0.1:8000 \
+  --transcript ../../docs/reports/wave-6-recruitment-demo.transcript.json
+```
+
+Обращение → запрос уточнения → дополнение → поиск подготовленной записи в старом подборе (нужен `python -m app.search load-demo`) → ручная учебная регистрация рассмотрения → исход → чтение сообщения. Все запросы и ответы сохраняются в transcript. Подробности и ограничения — [отчёт](../../docs/reports/wave-6-recruitment-demo.md).

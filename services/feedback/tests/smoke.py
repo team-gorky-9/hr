@@ -15,6 +15,7 @@ import uvicorn
 from feedback.api import create_app
 from feedback.store import seed_demo
 from tests.test_actions import action_path
+from tests.test_confidential import confidential_path
 from tests.test_cycle import call, cycle_path
 from tests.test_publication import publication_path
 
@@ -44,13 +45,15 @@ def serve(app):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--part", choices=["5a", "5b", "5c"], default="5a")
+    parser.add_argument("--part", choices=["5a", "5b", "5c", "5d"], default="5a")
     args = parser.parse_args()
     with tempfile.TemporaryDirectory(prefix="feedback-smoke-") as directory:
         db = Path(directory) / "feedback.db"
         seed_demo(db)
         with serve(create_app(db)) as client:
-            result = {"5a": cycle_path, "5b": publication_path, "5c": action_path}[args.part](client, db)
+            result = {"5a": cycle_path, "5b": publication_path, "5c": action_path, "5d": confidential_path}[
+                args.part
+            ](client, db)
             spec = client.get("/openapi.json").json()
         with serve(create_app(db)) as client:
             if args.part == "5a":
@@ -59,9 +62,12 @@ def main():
             elif args.part == "5b":
                 saved = call(client, "GET", f"/publications/{result['publication_id']}")
                 assert saved == result["publication"]
-            else:
+            elif args.part == "5c":
                 saved = call(client, "GET", f"/cycles/{result['cycle_id']}/outcome", "alice")
                 assert saved == result["outcome"]
+            else:
+                saved = call(client, "GET", f"/confidential-cases/{result['case_id']}", "alice")
+                assert saved == result["case"]
             result["reopened"] = True
     reports = Path(__file__).resolve().parents[3] / "docs" / "reports"
     (reports / f"wave-{args.part}-feedback-openapi.json").write_text(
