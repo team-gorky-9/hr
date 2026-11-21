@@ -41,3 +41,25 @@
 ## Что не входит в этап 1
 
 Публикация `employment.ready`, приём `assignment.registered`/`assignment.review-resolved`, outbox/inbox, `/deliveries`, повторы, dead-letter и тестовый получатель на RabbitMQ относятся к этапу 2 по решению от 21.11 (wave-1-stage-1). Поле `transfer_mode` и статус `pending` в схеме оставлены под этот переход. Значение `transfer_mode='broker'` разрешено ограничением БД заранее.
+
+## Candidate-portal · собственное обращение кандидата (wave-5, 5A)
+
+`/api/v1/candidate-requests` в этом же сервисе. Контракт — [wave-5-candidate-portal-stage-1](../contracts/wave-5-candidate-portal-stage-1.md). Код — `hiring/portal.py`. Таблицы `candidate_requests`, `candidate_request_events` и `documents.request_id` добавлены миграцией `0002`.
+
+| Операция | Кто | Правило |
+|---|---|---|
+| `POST /candidate-requests {vacancy_ref?, message, contact}` | кандидат | черновик; автор — актор входа (поле автора в теле даёт 422) |
+| `PATCH /candidate-requests/{id} {expected_revision, message?, contact?, vacancy_ref?, clear_vacancy?}` | автор | только черновик; устаревшая форма — `STALE_REVISION` |
+| `POST /candidate-requests/{id}/documents` (multipart `file`, `kind=candidate_resume\|candidate_addendum`) | автор | черновик, `submitted` или `needs_information`; новый неизменяемый документ, прежние сохраняются |
+| `POST /candidate-requests/{id}/submit {expected_revision}` | автор | `draft → submitted`; номер `ОБР-NNNNNN`, снимок подачи |
+| `GET /candidate-requests`, `GET /candidate-requests/{id}`, `…/history` | автор — свои; HR — поданные своей организации | черновик виден только автору |
+| `GET /candidate-requests/{id}/documents/{document_id}/content` | автор; HR после подачи | чужой — 404 |
+| `GET /candidate-portal/vacancies` | любой вошедший | опубликованные из учебного снимка |
+
+**Как устроено.**
+- **Вакансия.** Цель задаётся точной ссылкой `{system, id, revision}` из учебного снимка. Если вакансия закрыта или не найдена, обращение принимается с `target_question` (`vacancy_closed` / `vacancy_unknown`). Подача без вакансии даёт `no_target`. Обращение откликом в подборе автоматически не становится. Цель перепроверяется в момент подачи.
+- **Контакт.** Сохраняется как сообщение самого кандидата: `source=candidate_reported`, `verified=false`.
+- **Снимок подачи.** `submitted_snapshot` фиксирует текст, контакт, цель и список файлов на момент подачи. Поздние файлы его не меняют.
+- **Права.** Второй учебный кандидат (`candidate2`) задан в `fixtures/extra-actors.json` сервиса, общий набор не меняется. HR не создаёт обращение за кандидата (403). Department — 403. Другая организация — 404.
+
+Следующие части — 5B (запрос сведений, дополнение, готовность, ручная регистрация рассмотрения) и 5C (публичный исход и сообщения кабинета).
