@@ -1,6 +1,10 @@
 import React from 'react';
 
-export const ReserveCtaBanner: React.FC = () => {
+interface ReserveCtaBannerProps {
+  onOpenReserve?: () => void;
+}
+
+export const ReserveCtaBanner: React.FC<ReserveCtaBannerProps> = ({ onOpenReserve }) => {
   return (
     <section className="bg-[#FFF8E8] border border-[#F3E2B5] rounded-2xl p-6 lg:p-8 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-6">
       {/* Left Text */}
@@ -20,6 +24,7 @@ export const ReserveCtaBanner: React.FC = () => {
       <div className="shrink-0">
         <button
           type="button"
+          onClick={onOpenReserve}
           className="px-6 py-3 bg-[#1F4FD1] hover:bg-[#1841B2] text-white text-[14px] font-medium rounded-lg transition-colors whitespace-nowrap shadow-sm"
         >
           Подробнее о конкурсе

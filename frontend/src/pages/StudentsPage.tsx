@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface StudentsPageProps {
   onApplyPractice?: (title: string) => void;
@@ -9,6 +9,7 @@ export const StudentsPage: React.FC<StudentsPageProps> = ({
   onApplyPractice,
   onRegisterEvent,
 }) => {
+  const [registeredEvents, setRegisteredEvents] = useState<string[]>([]);
   const practices = [
     {
       id: 'p1',
@@ -147,10 +148,20 @@ export const StudentsPage: React.FC<StudentsPageProps> = ({
               {/* Action Button */}
               <button
                 type="button"
-                onClick={() => onRegisterEvent?.(ev.title)}
-                className="px-6 py-2.5 text-[14px] font-medium text-[#141A24] bg-white border border-[#E1E5EB] rounded-lg hover:bg-[#F3F5F8] transition-colors whitespace-nowrap shadow-sm shrink-0"
+                onClick={() => {
+                  setRegisteredEvents((prev) =>
+                    prev.includes(ev.id) ? prev : [...prev, ev.id]
+                  );
+                  onRegisterEvent?.(ev.title);
+                }}
+                disabled={registeredEvents.includes(ev.id)}
+                className={`px-6 py-2.5 text-[14px] font-medium rounded-lg transition-colors whitespace-nowrap shadow-sm shrink-0 ${
+                  registeredEvents.includes(ev.id)
+                    ? 'text-[#15803D] bg-[#E6F4EA] border border-[#A8DAB5] cursor-default'
+                    : 'text-[#141A24] bg-white border border-[#E1E5EB] hover:bg-[#F3F5F8]'
+                }`}
               >
-                Записаться
+                {registeredEvents.includes(ev.id) ? 'Вы записаны' : 'Записаться'}
               </button>
             </div>
           ))}

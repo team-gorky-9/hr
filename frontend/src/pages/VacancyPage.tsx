@@ -1,20 +1,111 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+
+interface VacancyDetail {
+  id: string;
+  title: string;
+  department: string;
+  district: string;
+  salary: string;
+  tasks: string[];
+  required: string[];
+  plus: string[];
+  conditions: string[];
+}
+
+const VACANCIES: Record<string, VacancyDetail> = {
+  'python-dev': {
+    id: 'python-dev',
+    title: 'Python-разработчик',
+    department: 'Департамент цифрового развития',
+    district: 'Нижегородский район',
+    salary: '60 000 – 90 000 ₽',
+    tasks: [
+      'Разработка и поддержка городских цифровых сервисов',
+      'Автоматизированное тестирование API',
+      'Интеграция с ведомственными системами',
+    ],
+    required: [
+      'Высшее образование',
+      'Подтверждённый коммерческий опыт не менее 2 лет',
+    ],
+    plus: ['pytest и PostgreSQL', 'Работа с госсистемами'],
+    conditions: [
+      'Пятидневная рабочая неделя',
+      'Социальные гарантии муниципальной службы',
+      'Наставник и курс адаптации в первый месяц',
+    ],
+  },
+  'data-analyst': {
+    id: 'data-analyst',
+    title: 'Аналитик данных',
+    department: 'Департамент цифрового развития',
+    district: 'Нижегородский район',
+    salary: '55 000 – 80 000 ₽',
+    tasks: [
+      'Сбор и анализ данных по городским сервисам и обращениям жителей',
+      'Построение дашбордов и регулярной отчётности в Power BI',
+      'Подготовка аналитических записок для руководителей департаментов',
+    ],
+    required: [
+      'Высшее образование',
+      'Уверенный SQL и опыт работы с BI-инструментами (Power BI)',
+    ],
+    plus: ['Python (pandas) для обработки данных', 'Опыт работы с госотчётностью'],
+    conditions: [
+      'Пятидневная рабочая неделя',
+      'Социальные гарантии муниципальной службы',
+      'Наставник и курс адаптации в первый месяц',
+    ],
+  },
+  'pto-engineer': {
+    id: 'pto-engineer',
+    title: 'Инженер ПТО',
+    department: 'Департамент строительства',
+    district: 'Нижегородский район',
+    salary: '55 000 – 85 000 ₽',
+    tasks: [
+      'Проверка проектно-сметной и исполнительной документации',
+      'Сопровождение объектов капитального строительства и благоустройства',
+      'Взаимодействие с подрядными организациями и технический контроль',
+    ],
+    required: [
+      'Высшее техническое образование',
+      'Подтверждённый опыт работы от 3 лет',
+    ],
+    plus: ['AutoCAD и сметные комплексы', 'Опыт работы по 44-ФЗ'],
+    conditions: [
+      'Пятидневная рабочая неделя',
+      'Социальные гарантии муниципальной службы',
+      'Наставник и курс адаптации в первый месяц',
+    ],
+  },
+};
 
 interface VacancyPageProps {
+  vacancyId?: string;
   onGoHome?: () => void;
+  onGoVacancies?: () => void;
   onGoCabinet?: () => void;
   initialSubmitted?: boolean;
 }
 
 export const VacancyPage: React.FC<VacancyPageProps> = ({
+  vacancyId = 'python-dev',
   onGoHome,
+  onGoVacancies,
   onGoCabinet,
   initialSubmitted = false,
 }) => {
+  const vacancy = VACANCIES[vacancyId] || VACANCIES['python-dev'];
   const [isSubmitted, setIsSubmitted] = useState<boolean>(initialSubmitted);
   const [fio, setFio] = useState('');
   const [email, setEmail] = useState('');
+  const [resumeFileName, setResumeFileName] = useState('');
   const [agreed, setAgreed] = useState(false);
+
+  useEffect(() => {
+    setIsSubmitted(initialSubmitted);
+  }, [vacancyId, initialSubmitted]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,13 +127,13 @@ export const VacancyPage: React.FC<VacancyPageProps> = ({
         <span>›</span>
         <button
           type="button"
-          onClick={onGoHome}
+          onClick={onGoVacancies || onGoHome}
           className="hover:text-[#1F4FD1] transition-colors"
         >
           Вакансии
         </button>
         <span>›</span>
-        <span className="text-[#141A24] font-medium">Python-разработчик</span>
+        <span className="text-[#141A24] font-medium">{vacancy.title}</span>
       </nav>
 
       {/* Two Column Layout */}
@@ -52,10 +143,10 @@ export const VacancyPage: React.FC<VacancyPageProps> = ({
           {/* Badges */}
           <div className="flex flex-wrap items-center gap-2 mb-3">
             <span className="px-3 py-1 rounded-md text-[12px] font-medium bg-[#EEF3FE] text-[#1F4FD1]">
-              Департамент цифрового развития
+              {vacancy.department}
             </span>
             <span className="px-3 py-1 rounded-md text-[12px] font-medium bg-[#F1F3F5] text-[#4A5363]">
-              Нижегородский район
+              {vacancy.district}
             </span>
             <span className="px-3 py-1 rounded-md text-[12px] font-medium bg-[#F1F3F5] text-[#4A5363]">
               Муниципальная служба
@@ -64,13 +155,13 @@ export const VacancyPage: React.FC<VacancyPageProps> = ({
 
           {/* Job Title */}
           <h1 className="text-[28px] sm:text-[34px] font-bold text-[#141A24] tracking-tight mb-2">
-            Python-разработчик
+            {vacancy.title}
           </h1>
 
           {/* Salary */}
           <div className="text-[16px] text-[#616977] mb-8">
             <span className="text-[18px] sm:text-[20px] font-bold text-[#141A24]">
-              60 000 – 90 000 ₽
+              {vacancy.salary}
             </span>{' '}
             до вычета налогов · оклад и надбавки за выслугу и классный чин
           </div>
@@ -81,18 +172,12 @@ export const VacancyPage: React.FC<VacancyPageProps> = ({
               Чем предстоит заниматься
             </h2>
             <ul className="space-y-2 text-[14px] text-[#334155] leading-relaxed">
-              <li className="flex items-start gap-2">
-                <span className="text-[#141A24]">•</span>
-                <span>Разработка и поддержка городских цифровых сервисов</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-[#141A24]">•</span>
-                <span>Автоматизированное тестирование API</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-[#141A24]">•</span>
-                <span>Интеграция с ведомственными системами</span>
-              </li>
+              {vacancy.tasks.map((task) => (
+                <li key={task} className="flex items-start gap-2">
+                  <span className="text-[#141A24]">•</span>
+                  <span>{task}</span>
+                </li>
+              ))}
             </ul>
           </div>
 
@@ -104,14 +189,12 @@ export const VacancyPage: React.FC<VacancyPageProps> = ({
                 Обязательные требования
               </h3>
               <ul className="space-y-2 text-[13px] text-[#334155] leading-relaxed">
-                <li className="flex items-start gap-2">
-                  <span>•</span>
-                  <span>Высшее образование</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span>•</span>
-                  <span>Подтверждённый коммерческий опыт не менее 2 лет</span>
-                </li>
+                {vacancy.required.map((req) => (
+                  <li key={req} className="flex items-start gap-2">
+                    <span>•</span>
+                    <span>{req}</span>
+                  </li>
+                ))}
               </ul>
             </div>
 
@@ -121,14 +204,12 @@ export const VacancyPage: React.FC<VacancyPageProps> = ({
                 Будет плюсом
               </h3>
               <ul className="space-y-2 text-[13px] text-[#334155] leading-relaxed">
-                <li className="flex items-start gap-2">
-                  <span>•</span>
-                  <span>pytest и PostgreSQL</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span>•</span>
-                  <span>Работа с госсистемами</span>
-                </li>
+                {vacancy.plus.map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <span>•</span>
+                    <span>{item}</span>
+                  </li>
+                ))}
               </ul>
             </div>
           </div>
@@ -139,18 +220,12 @@ export const VacancyPage: React.FC<VacancyPageProps> = ({
               Условия
             </h2>
             <ul className="space-y-2 text-[14px] text-[#334155] leading-relaxed">
-              <li className="flex items-start gap-2">
-                <span className="text-[#141A24]">•</span>
-                <span>Пятидневная рабочая неделя</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-[#141A24]">•</span>
-                <span>Социальные гарантии муниципальной службы</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-[#141A24]">•</span>
-                <span>Наставник и курс адаптации в первый месяц</span>
-              </li>
+              {vacancy.conditions.map((cond) => (
+                <li key={cond} className="flex items-start gap-2">
+                  <span className="text-[#141A24]">•</span>
+                  <span>{cond}</span>
+                </li>
+              ))}
             </ul>
           </div>
         </div>
@@ -164,7 +239,15 @@ export const VacancyPage: React.FC<VacancyPageProps> = ({
                 Откликнуться
               </h2>
               <p className="text-[13px] text-[#616977] leading-snug mb-5">
-                Уже есть аккаунт? Войдите, данные подставятся сами.
+                Уже есть аккаунт?{' '}
+                <button
+                  type="button"
+                  onClick={onGoCabinet}
+                  className="text-[#1F4FD1] font-medium hover:underline"
+                >
+                  Войдите
+                </button>
+                , данные подставятся сами.
               </p>
 
               {/* Field: ФИО */}
@@ -202,14 +285,20 @@ export const VacancyPage: React.FC<VacancyPageProps> = ({
                 <label className="block text-[13px] font-medium text-[#141A24] mb-1.5">
                   Резюме
                 </label>
-                <div className="bg-[#F5F8FF] border-2 border-dashed border-[#94B4FB] rounded-xl p-5 text-center cursor-pointer hover:bg-[#EEF3FE] transition-colors">
+                <label className="block bg-[#F5F8FF] border-2 border-dashed border-[#94B4FB] rounded-xl p-5 text-center cursor-pointer hover:bg-[#EEF3FE] transition-colors">
+                  <input
+                    type="file"
+                    accept=".pdf,.doc,.docx"
+                    className="hidden"
+                    onChange={(e) => setResumeFileName(e.target.files?.[0]?.name || '')}
+                  />
                   <div className="text-[14px] font-bold text-[#141A24] mb-1">
-                    Перетащите резюме сюда
+                    {resumeFileName || 'Перетащите резюме сюда'}
                   </div>
                   <div className="text-[12px] text-[#616977]">
-                    или выберите файл: PDF, DOCX до 10 МБ
+                    {resumeFileName ? 'Нажмите, чтобы заменить файл' : 'или выберите файл: PDF, DOCX до 10 МБ'}
                   </div>
-                </div>
+                </label>
               </div>
 
               {/* Checkbox: 152-ФЗ */}
