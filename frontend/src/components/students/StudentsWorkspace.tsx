@@ -33,7 +33,7 @@ function CreateOpportunity({ perform, busy }: { perform: Perform; busy: boolean 
       void perform('/opportunities', { title, description, starts_on: starts, ends_on: ends, capacity: 1, mentor_actor_id: fixtureMentorId });
     }}>
       <label className="block text-[14px]">Название практики<input required className={field} value={title} onChange={(e) => setTitle(e.target.value)} /></label>
-      <div className="text-[14px] text-[#4A5363]">Одно учебное место<br />Назначенный наставник — department</div>
+      <div className="text-[14px] text-[#4A5363]">Одно учебное место<br />Назначенный наставник — руководитель подразделения</div>
       <label className="block text-[14px] col-span-2">Задача подразделения<textarea required className={field} value={description} onChange={(e) => setDescription(e.target.value)} rows={2} /></label>
       <label className="block text-[14px]">Начало практики<input required type="date" className={field} value={starts} onChange={(e) => setStarts(e.target.value)} /></label>
       <label className="block text-[14px]">Окончание практики<input required type="date" min={starts} className={field} value={ends} onChange={(e) => setEnds(e.target.value)} /></label>

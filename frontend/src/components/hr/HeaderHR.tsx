@@ -13,7 +13,7 @@ export const HeaderHR: React.FC<HeaderHRProps> = ({
   activeTab,
   onTabChange,
   onLogoClick,
-  managerName = 'Кабинет HR',
+  managerName = 'Сотрудник по подбору персонала',
 }) => {
   const tabs: { id: HRNavTab; label: string }[] = [
     { id: 'database', label: 'Единая база' },
@@ -36,11 +36,11 @@ export const HeaderHR: React.FC<HeaderHRProps> = ({
           >
             <img
               src="/images/Header/Mark.svg"
-              alt="Кадровый ассистент"
+              alt="GorkyCode"
               className="w-9 h-9 shrink-0"
             />
             <span className="hidden sm:inline text-[16px] font-bold text-[#141A24] tracking-tight whitespace-nowrap">
-              Кадровый ассистент
+              GorkyCode · команда 9
             </span>
           </button>
 

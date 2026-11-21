@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, errorMessage } from '../../api/recruitment';
+import { api, errorMessage, stageLabel } from '../../api/recruitment';
 import { Badge, Btn, Card, PageTitle } from '../shared/ui';
 import CandidateCard from './CandidateCard';
 import type { CandidateRecord } from './CandidatesDatabase';
@@ -34,7 +34,7 @@ export default function CandidateProfile({ candidate, selectedApplicationId, onB
       Рассмотрение
       <select className="mt-1 w-full rounded-xl border border-[#C9D0DB] bg-white px-4 py-2.5" value={applicationId} onChange={e => setSelected(e.target.value)}>
         {candidate.applications.map(item => <option key={item.application_id} value={item.application_id}>
-          {item.vacancy_title} · {item.stage_title}{item.applied_at && ' · ' + item.applied_at}
+          {item.vacancy_title} · {stageLabel(item.stage_title)}{item.applied_at && ' · ' + item.applied_at}
         </option>)}
       </select>
     </label>} />;

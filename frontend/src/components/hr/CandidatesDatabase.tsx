@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { api, deadlineLabel, errorMessage, type CandidateRow, type Handoff, type Vacancy } from '../../api/recruitment';
+import { api, deadlineLabel, errorMessage, stageLabel, type CandidateRow, type Handoff, type Vacancy } from '../../api/recruitment';
 import { Badge, Btn } from '../shared/ui';
 
 export interface CandidateRecord extends CandidateRow {
@@ -28,7 +28,7 @@ function candidateType(candidate: CandidateRecord) {
   const application = candidate.applications.find(item => item.application_id === candidate.applicationId);
   if (application?.source === 'response') return 'Внешний отклик';
   if (application?.source === 'history') return 'История откликов';
-  if (application?.source === 'manual') return 'Рассмотрение HR';
+  if (application?.source === 'manual') return 'Внутренний отбор';
   return 'Резюме';
 }
 
@@ -167,9 +167,9 @@ export const CandidatesDatabase: React.FC<CandidatesDatabaseProps> = ({
           <span>Источники: {selectedSources.length === allSources.length ? `все (${allSources.length})` : `${selectedSources.length} из ${allSources.length}`}</span>
           <span aria-hidden="true" className="text-[10px] text-[#616977]">{sourcesOpen ? '▲' : '▼'}</span>
         </button>
-        <span className="text-[13px] text-[#616977]">Выберите источники откликов</span>
+        <span className="text-[13px] text-[#616977]">Нажмите, чтобы выбрать HH.ru, «Работа России», сайт, обращения или загруженные вручную</span>
       </div>
-      {sourcesOpen && <div className="mt-3 bg-white border border-[#1F4FD1] rounded-2xl p-5 space-y-3">
+      {sourcesOpen && <div className="mt-3 bg-white border border-[#1F4FD1] rounded-2xl p-5 shadow-sm space-y-4">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-[14px] font-bold text-[#141A24]">Источники откликов</h2>
           <div className="flex gap-3 text-[13px]">
@@ -177,14 +177,28 @@ export const CandidatesDatabase: React.FC<CandidatesDatabaseProps> = ({
             <button type="button" className="text-[#1F4FD1] hover:underline font-medium" onClick={() => setSourceFilter([])}>Сбросить</button>
           </div>
         </div>
-        <div className="flex flex-wrap gap-3">
-          {allSources.map(source => <label key={source} className="inline-flex gap-2 rounded-xl border border-[#E1E5EB] px-3 py-2 text-sm">
-            <input type="checkbox" checked={selectedSources.includes(source)} onChange={e => setSourceFilter(e.target.checked ? [...selectedSources, source] : selectedSources.filter(item => item !== source))} />
-            {channelLabels[source] || 'Другой источник'} · {sourceCounts.get(source)}
-          </label>)}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {allSources.map(source => {
+            const isSelected = selectedSources.includes(source);
+            return <button key={source} type="button" aria-pressed={isSelected}
+              onClick={() => setSourceFilter(isSelected ? selectedSources.filter(item => item !== source) : [...selectedSources, source])}
+              className={`px-3.5 py-2 rounded-xl text-[13px] font-medium transition-colors flex items-center gap-2 border whitespace-nowrap ${
+                isSelected ? 'bg-[#EEF3FE] text-[#1F4FD1] border-[#1F4FD1]' : 'bg-white text-[#4A5363] border-[#E1E5EB] hover:bg-[#F3F5F8]'
+              }`}>
+              <span aria-hidden="true" className={`w-4 h-4 rounded flex items-center justify-center text-[10px] ${
+                isSelected ? 'bg-[#1F4FD1] text-white' : 'border border-[#D2D4D8]'
+              }`}>{isSelected ? '✓' : ''}</span>
+              <span>{channelLabels[source] || 'Другой источник'}</span>
+              <span className="text-[11px] opacity-70">{sourceCounts.get(source)}</span>
+            </button>;
+          })}
         </div>
-        <Btn variant="primary" onClick={() => setSourcesOpen(false)}>Применить</Btn>
-        <Btn className="ml-2" onClick={() => setSourcesOpen(false)}>Свернуть</Btn>
+        <div className="flex items-center gap-2.5">
+          <button type="button" onClick={() => setSourcesOpen(false)}
+            className="px-5 py-2 text-[13px] font-medium text-white bg-[#1F4FD1] rounded-lg hover:bg-[#1841B2] transition-colors shadow-sm">Применить</button>
+          <button type="button" onClick={() => setSourcesOpen(false)}
+            className="px-4 py-2 text-[13px] font-medium text-[#4A5363] bg-white border border-[#E1E5EB] rounded-lg hover:bg-[#F3F5F8] transition-colors">Свернуть</button>
+        </div>
       </div>}
     </div>}
     {error && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-4 text-red-800">{error}</p>}
@@ -203,7 +217,10 @@ export const CandidatesDatabase: React.FC<CandidatesDatabaseProps> = ({
             const application = candidate.applications.find(item => item.application_id === candidate.applicationId);
             return <tr key={candidate.id} className="hover:bg-[#F8FAFC]">
               <td className="py-3.5 pl-5 pr-3 min-w-40">
-                <button type="button" disabled={!onSelectCandidate} onClick={() => onSelectCandidate?.(candidate)} className="text-[#1F4FD1] hover:underline text-left font-medium">{candidate.candidate_code}</button>
+                <button type="button" disabled={!onSelectCandidate} onClick={() => onSelectCandidate?.(candidate)} className="text-[#1F4FD1] hover:underline text-left font-medium">
+                  {candidate.full_name || candidate.candidate_code}
+                </button>
+                {candidate.full_name && <p className="text-xs text-[#616977]">{candidate.candidate_code}</p>}
                 {candidate.headline && <p className="text-sm text-[#4A5363]">{candidate.headline}</p>}
               </td>
               <td className="py-3.5 px-3 whitespace-nowrap"><span className="inline-block px-2.5 py-0.5 rounded-full text-[12px] font-medium bg-[#EEF3FE] text-[#1F4FD1]">{candidateType(candidate)}</span>{candidate.in_archive && <span className="block text-xs mt-1">В архиве</span>}</td>
@@ -211,7 +228,7 @@ export const CandidatesDatabase: React.FC<CandidatesDatabaseProps> = ({
               <td className="py-3.5 px-3 text-[#141A24] font-medium min-w-36">{application?.vacancy_title || 'Без вакансии'}{candidate.applications.length > 1 && <span className="block text-xs text-[#616977]">Всего рассмотрений: {candidate.applications.length}</span>}</td>
               <td className="py-3.5 px-3 whitespace-nowrap">{application && onSelectCandidate ? <button type="button" onClick={() => onSelectCandidate(candidate)}
                 className="inline-block px-2.5 py-0.5 rounded-full text-[12px] font-medium bg-[#F3F4F6] text-[#4B5563] hover:underline">Смотреть оценку</button> : '—'}</td>
-              <td className="py-3.5 px-3 text-[#4A5363]">{application?.stage_title || 'Без отклика'}</td>
+              <td className="py-3.5 px-3 text-[#4A5363]">{application?.stage_title ? stageLabel(application.stage_title) : 'Без отклика'}</td>
               <td className="py-3.5 pl-3 pr-5 text-right min-w-40">{deadlineLoading ? 'Загрузка срока…' : deadlineError ? 'Недоступно' : <ResponseDeadline attempt={application ? byApplication.get(application.application_id) : undefined} />}</td>
             </tr>;
           })}

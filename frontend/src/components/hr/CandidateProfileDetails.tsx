@@ -25,7 +25,7 @@ export function ProfileQuestions({ applicationId, canReadGuide, onInterview }: {
 
   const questions = guide ? [...guide.core, ...guide.clarifications] : [];
   return <div className={profilePanel}>
-    <h2 className={profileTitle + ' mb-4'}>Черновик вопросов к телефонному интервью</h2>
+    <h2 className={profileTitle + ' mb-4'}>Черновик вопросов к телефонному собеседованию</h2>
     <div className="space-y-2 text-[13px] text-[#334155] leading-relaxed mb-4">
       {loading && canReadGuide ? <div>Загрузка вопросов…</div> : error ? <div role="alert">{error}</div>
         : questions.length ? questions.map((question, index) =>
@@ -35,7 +35,7 @@ export function ProfileQuestions({ applicationId, canReadGuide, onInterview }: {
     <p className="text-[12px] text-[#616977]">
       {guide?.is_stale && 'Вопросы по прежней оценке. '}
       {onInterview && <button type="button" onClick={onInterview} className="hover:text-[#1F4FD1] hover:underline transition-colors">
-        {guide ? 'Открыть телефонное интервью' : 'Открыть интервью и сформировать вопросы'}
+        {guide ? 'Открыть телефонное собеседование' : 'Открыть собеседование и сформировать вопросы'}
       </button>}
     </p>
   </div>;

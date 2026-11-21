@@ -43,7 +43,7 @@ export const StudentsPage: React.FC<StudentsPageProps> = ({
       day: '12',
       month: 'ДЕК',
       title: 'Хакатон по городским сервисам',
-      subtitle: 'Онлайн и в IT-парке',
+      subtitle: 'Дистанционно и в технопарке',
     },
     {
       id: 'e3',

@@ -10,7 +10,7 @@ const channelNames: Record<string, string> = {
   citizen_appeal: 'Обращения граждан', internship: 'Студенты', internal: 'Внутренние', other: 'Другие',
 };
 const stages = [
-  ['new', 'Получено'], ['screening', 'Разобрано'], ['phone_interview', 'Телефонное интервью'],
+  ['new', 'Получено'], ['screening', 'Разобрано'], ['phone_interview', 'Телефонное собеседование'],
   ['sent_to_department', 'Направлено в департамент'], ['department_interview', 'Очное собеседование'], ['hired', 'Принято'],
 ];
 const metrics = ['applications_received', 'phone_interviews_held', 'applications_with_phone_interview'];
@@ -222,7 +222,7 @@ export default function AnalyticsDashboard() {
   const waiting = vacanciesSLA.reduce((sum, row) => sum + row.waiting, 0);
   const overdue = vacanciesSLA.reduce((sum, row) => sum + row.overdue, 0);
   const reportCards = [
-    ['Отклики', 'applications_received'], ['Интервью', 'phone_interviews_held'],
+    ['Отклики', 'applications_received'], ['Собеседования', 'phone_interviews_held'],
     ['Отклики с разговором', 'applications_with_phone_interview'], ['Принято', 'hired'],
   ].map(([label, key]) => {
     const metric = prepared?.slice.totals[key];
@@ -300,7 +300,7 @@ export default function AnalyticsDashboard() {
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  title="Годовой доклад: фильтры дашборда не применяются" onClick={() => void downloadLatestAnnual()} disabled={busy}
+                  title="Годовой доклад: фильтры сводки не применяются" onClick={() => void downloadLatestAnnual()} disabled={busy}
                   className="px-4 py-2 text-[13px] font-medium text-[#141A24] bg-white border border-[#E1E5EB] rounded-lg hover:bg-[#F3F5F8] transition-colors whitespace-nowrap"
                 >
                   Годовой XLSX
@@ -383,10 +383,10 @@ export default function AnalyticsDashboard() {
             </div>
 
             <div className="bg-white border border-[#E1E5EB] rounded-2xl p-5 shadow-sm">
-              <div className="text-[12px] text-[#616977] mb-1">Проведено интервью</div>
+              <div className="text-[12px] text-[#616977] mb-1">Проведено собеседований</div>
               <div className="text-[28px] font-bold text-[#141A24] mb-1">{dashboard?.totals.interviews ?? '—'}</div>
               <div className="text-[12px] text-[#616977]">
-                {comparisonLabel('interviews', 'По дате проведённого интервью')}
+                {comparisonLabel('interviews', 'По дате проведённого собеседования')}
               </div>
             </div>
 
@@ -414,7 +414,7 @@ export default function AnalyticsDashboard() {
             </div>
             <ul className="space-y-1.5 text-[13px] text-[#334155] leading-relaxed">
               {dashboard ? <>
-                <li>• Поступило откликов: {dashboard.totals.received}. Проведено интервью: {dashboard.totals.interviews}.</li>
+                <li>• Поступило откликов: {dashboard.totals.received}. Проведено собеседований: {dashboard.totals.interviews}.</li>
                 <li>• Направлено откликов: {dashboard.totals.forwarded}. Из передач за период сейчас ожидают ответа: {waiting}. Просрочено: {overdue}.</li>
                 {rejectionData[0] && <li>• Наиболее частая причина отказа: {rejectionData[0].reason} ({rejectionData[0].count}).</li>}
               </> : <li>Сводка появится после загрузки данных.</li>}
@@ -486,7 +486,7 @@ export default function AnalyticsDashboard() {
                 Динамика по неделям
               </h2>
               <p className="text-[12px] text-[#616977] mb-6">
-                Разобрано откликов и проведено интервью
+                Разобрано откликов и проведено собеседований
               </p>
               <div className="h-44 flex items-end justify-between gap-3 pt-6 border-b border-[#E1E5EB] px-2 overflow-x-auto">
                 {weeklyData.map((w) => (
@@ -500,7 +500,7 @@ export default function AnalyticsDashboard() {
                       <div
                         className="w-4 bg-[#7FA4FD] rounded-t-sm transition-all duration-500"
                         style={{ height: w.interviewHeight }}
-                        title={w.interviews + ' проведённых интервью'}
+                        title={w.interviews + ' проведённых собеседований'}
                       ></div>
                     </div>
                     <span className="text-[11px] text-[#616977] whitespace-nowrap">
@@ -516,7 +516,7 @@ export default function AnalyticsDashboard() {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="w-3 h-3 rounded-sm bg-[#7FA4FD]"></span>
-                  <span>Интервью</span>
+                  <span>Собеседования</span>
                 </div>
               </div>
             </div>
@@ -564,7 +564,7 @@ export default function AnalyticsDashboard() {
                   <tr>
                     <th className="py-3 px-6 font-medium whitespace-nowrap">Вакансия</th>
                     <th className="py-3 px-4 font-medium whitespace-nowrap">Откликов</th>
-                    <th className="py-3 px-4 font-medium whitespace-nowrap">Интервью</th>
+                    <th className="py-3 px-4 font-medium whitespace-nowrap">Собеседования</th>
                     <th className="py-3 px-4 font-medium whitespace-nowrap">Направлено</th>
                     <th className="py-3 px-4 font-medium whitespace-nowrap">Открыта, дней</th>
                     <th className="py-3 px-6 font-medium whitespace-nowrap" title="Текущее ожидание у передач, отправленных за выбранный период">Ответ департамента</th>
@@ -814,8 +814,8 @@ export default function AnalyticsDashboard() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <img src="/images/Header/Mark.svg" alt="Кадровый ассистент" className="w-6 h-6" />
-                  <span className="text-[13px] font-bold text-[#141A24]">Кадровый ассистент</span>
+                  <img src="/images/Header/Mark.svg" alt="GorkyCode" className="w-6 h-6" />
+                  <span className="text-[13px] font-bold text-[#141A24]">GorkyCode · команда 9</span>
                 </div>
               </div>
 

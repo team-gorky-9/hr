@@ -2,7 +2,7 @@ import { useEffect, useSyncExternalStore } from 'react';
 import { developmentRequest, type Actor, type Session } from './development';
 const key = 'workforce-access-token';
 const env = (import.meta as ImportMeta & { env: Record<string, string> }).env;
-export const demoRolesEnabled = env.VITE_DEMO_ROLES === 'true';
+export const demoRolesEnabled = env.VITE_DEMO_ROLES !== 'false';
 const base = env.VITE_DEVELOPMENT_API_BASE || '/workforce-api';
 type State = { session: Session | null; loading: boolean; error: string };
 let state: State = { session: null, loading: Boolean(sessionStorage.getItem(key)), error: '' };

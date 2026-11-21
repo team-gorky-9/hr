@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   ApiError, api, assessmentLabel, deadlineLabel, errorMessage, feedbackLabel, readableAssessmentSummary, readableExplanation, recipientId,
-  request, resultLabel, type ApplicationDetail, type CandidateApplication, type Evidence, type Handoff, type HandoffDetail, type HandoffPreview,
+  request, resultLabel, stageLabel, type ApplicationDetail, type CandidateApplication, type Evidence, type Handoff, type HandoffDetail, type HandoffPreview,
   type History, type Reason, type Stage, type Vacancy,
 } from '../../api/recruitment';
 import { Badge, Btn, Card, PageTitle } from '../shared/ui';
@@ -185,12 +185,12 @@ export function CandidateCard({
   const sourceName = profileChannel ? channelTitles[profileChannel] : undefined;
   const appliedDate = profileApplication?.applied_at?.split('-').reverse().join('.');
   const sourceLabel = profileApplication?.source === 'response' ? 'Внешний отклик'
-    : profileApplication?.source === 'history' ? 'История откликов' : 'Рассмотрение HR';
+    : profileApplication?.source === 'history' ? 'История откликов' : 'Внутренний отбор';
   const headingDetails = [sourceLabel, sourceName, appliedDate, detail.candidate.is_training && 'Учебная запись'].filter(Boolean).join(' · ');
   const overdue = handoffs.some(attempt => attempt.deadline_status === 'overdue');
   const awaiting = handoffs.some(attempt => attempt.status === 'awaiting_response');
-  const profileStatus = detail.stage.is_final ? detail.stage.title
-    : overdue ? 'Просрочен ответ департамента' : awaiting ? 'Ждёт решения департамента' : inArchive ? 'В архиве кадров' : detail.stage.title;
+  const profileStatus = detail.stage.is_final ? stageLabel(detail.stage.title)
+    : overdue ? 'Просрочен ответ департамента' : awaiting ? 'Ждёт решения департамента' : inArchive ? 'В архиве кадров' : stageLabel(detail.stage.title);
   const profileStatusClass = detail.stage.code === 'rejected' || overdue ? 'bg-[#FDE8E8] text-[#C5221F]'
     : inArchive ? 'bg-[#E6F4EA] text-[#15803D]' : 'bg-[#EDF3FD] text-[#1F4FD1]';
   const unknownChecks = detail.assessment?.formal_checks.filter(item => item.result === 'unknown') ?? [];
@@ -336,7 +336,7 @@ export function CandidateCard({
             </label>
             {alreadyAssigned && ['sent_to_department', 'department_interview'].includes(detail.stage.code) && <p className={formLabel}>Дополнительную передачу настраивают для другого разрешённого адресата.</p>}
             <label className={formLabel}>Срок ответа<input className={formField} readOnly value="10 рабочих дней" /></label>
-            <label className={formLabel}>Комментарий HR<textarea rows={2} className={formField} value={comment} onChange={e => setComment(e.target.value)} /></label>
+            <label className={formLabel}>Комментарий сотрудника по подбору персонала<textarea rows={2} className={formField} value={comment} onChange={e => setComment(e.target.value)} /></label>
             <label className={formLabel}><input type="checkbox" checked={confirmSkip} onChange={e => setConfirmSkip(e.target.checked)} /> Подтверждаю пропуск этапов по указанной причине</label>
             {formButtons(databaseProfile ? 'Направить' : 'Подтвердить передачу', sendHandoff, busy || !summary || !recipientId || !comment.trim())}
           </div>}
@@ -354,7 +354,7 @@ export function CandidateCard({
             ? 'border border-[#F8B4B4] rounded-xl p-4 bg-[#FFF5F5] space-y-3' : 'space-y-3 border-t pt-4'}>
             {databaseProfile && panel === 'reject' && <h3 className="text-[14px] font-bold text-[#991B1B]">Отклонить отклик</h3>}
             {panel === 'stage' && <label className="block text-sm">Новый этап<select className={field} value={target} onChange={e => { setTarget(e.target.value); setReason(''); }}><option value="">Выберите этап</option>
-              {stages.filter(item => !['sent_to_department', 'rejected', detail.stage.code].includes(item.code)).map(item => <option key={item.code} value={item.code}>{item.title}</option>)}
+              {stages.filter(item => !['sent_to_department', 'rejected', detail.stage.code].includes(item.code)).map(item => <option key={item.code} value={item.code}>{stageLabel(item.title)}</option>)}
             </select></label>}
             {databaseProfile && panel === 'reject' ? <fieldset>
               <legend className="text-[12px] font-medium text-[#4A5363] mb-1.5">Причина</legend>
@@ -380,7 +380,7 @@ export function CandidateCard({
           currentPosition={detail.vacancy?.position_code} currentVacancy={detail.vacancy?.vacancy_id} />}
         {!databaseProfile && onOpenArchive && <div className="text-sm text-[#4A5363]">{inArchive && <p>Подборка сохранена</p>}<Btn variant="link" onClick={onOpenArchive}>Открыть архив кадров</Btn></div>}
         {!databaseProfile && <div className="flex flex-wrap gap-3">
-          {onRequestClarification && <Btn disabled={busy || !canMove} onClick={onRequestClarification}>Телефонное интервью</Btn>}
+          {onRequestClarification && <Btn disabled={busy || !canMove} onClick={onRequestClarification}>Телефонное собеседование</Btn>}
           {canMove && <Btn disabled={busy} onClick={() => openPanel('stage')}>Изменить этап</Btn>}
         </div>}
         <div className={profilePanel}>
@@ -388,7 +388,7 @@ export function CandidateCard({
           <div className="space-y-2 text-[13px] text-[#4A5363] leading-relaxed">
             {!history?.items.length && <div>Переходов пока нет.</div>}
             {history?.items.map(item => <div key={item.seq}>
-              {new Date(item.created_at).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })} · {item.to_stage.title}
+              {new Date(item.created_at).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })} · {stageLabel(item.to_stage.title)}
               {item.rejection_reason?.title && ' · ' + item.rejection_reason.title}{item.comment && <p>{item.comment}</p>}
             </div>)}
           </div>

@@ -7,7 +7,7 @@ export type Role = 'hr' | 'dept';
 export interface Stage { code: string; title: string; is_final: boolean }
 export interface Vacancy { vacancy_id: string; position_id: string; title: string; employer: string; channel: string; status: string; applications_count: number; approved_profile_version: number | null }
 export interface CandidateApplication { application_id: string; vacancy_id: string | null; vacancy_title: string; source: 'response' | 'history' | 'manual'; stage_title: string; applied_at: string | null }
-export interface CandidateRow { candidate_id: string; candidate_code: string; headline: string | null; channel: string; is_training: boolean; current_text_id: string | null; in_archive: boolean; applications: CandidateApplication[] }
+export interface CandidateRow { candidate_id: string; candidate_code: string; full_name?: string | null; headline: string | null; channel: string; is_training: boolean; current_text_id: string | null; in_archive: boolean; applications: CandidateApplication[] }
 export interface CrossAssessmentItem {
   position_id: string;
   position_code: string;
@@ -94,13 +94,28 @@ export const feedbackLabel = (value: string) => ({ fit: 'Подошёл', not_fi
 export const deadlineLabel = (value: string) => ({ on_track: 'Ожидаем ответ', due_soon: 'Срок скоро', overdue: 'Просрочено', responded: 'Ответ получен', closed_without_response: 'Закрыто без ответа' }[value] || value);
 export const errorMessage = (e: unknown) => e instanceof Error ? e.message : 'Не удалось выполнить действие';
 
+export function humanizeInterview(text: string | null | undefined): string {
+  if (!text) return '';
+  return text
+    .replace(/Телефонное интервью/g, 'Телефонное собеседование')
+    .replace(/телефонного интервью/gi, 'телефонного собеседования')
+    .replace(/телефонному интервью/gi, 'телефонному собеседованию')
+    .replace(/телефонные интервью/gi, 'телефонные собеседования')
+    .replace(/на интервью/gi, 'на собеседовании')
+    .replace(/вопрос интервью/gi, 'вопрос собеседования')
+    .replace(/по итогам интервью/gi, 'по итогам собеседования')
+    .replace(/Интервью/g, 'Собеседование')
+    .replace(/интервью/g, 'собеседование');
+}
+export const stageLabel = (title: string | null | undefined) => humanizeInterview(title || '');
+
 // The server stores check explanations as "[basis] {json}" (app/assessment/service.py _explanation).
 // HR must see a sentence, not the machine record.
-const basisLabel: Record<string, string> = { resume: 'резюме', interview: 'интервью', document: 'документам', documents: 'документам', test: 'результату проверки' };
+const basisLabel: Record<string, string> = { resume: 'резюме', interview: 'собеседованию', document: 'документам', documents: 'документам', test: 'результату проверки' };
 const needsLabel: Record<string, string> = { interview: 'на собеседовании', document: 'документом', documents: 'документами', resume: 'по резюме', test: 'практическим заданием' };
 export function readableAssessmentSummary(text: string | null | undefined): string {
-  return (text ?? '').replace(/^Формальные требования:\s*(met|not_met|unknown)\./, (_, result: string) =>
-    `Формальные требования: ${resultLabel(result).toLowerCase()}.`);
+  return humanizeInterview((text ?? '').replace(/^Формальные требования:\s*(met|not_met|unknown)\./, (_, result: string) =>
+    `Формальные требования: ${resultLabel(result).toLowerCase()}.`));
 }
 type Counts = { confirmed?: number; contradicted?: number; no_info?: number; total?: number };
 const counted = (title: string, c?: Counts) => !c?.total ? '' :
@@ -108,7 +123,7 @@ const counted = (title: string, c?: Counts) => !c?.total ? '' :
 export function readableExplanation(text: string | null | undefined): string {
   if (!text) return '';
   const match = text.match(/^\[(\w+)\]\s*(\{[\s\S]*\})\s*$/);
-  if (!match) return text;
+  if (!match) return humanizeInterview(text);
   let d: Record<string, any>;
   try { d = JSON.parse(match[2]); } catch { return ''; }
   const source = basisLabel[match[1]] || match[1];
@@ -132,6 +147,6 @@ export function readableExplanation(text: string | null | undefined): string {
     if (d.downgraded) parts.push('вывод модели без подтверждающей цитаты — проверьте сами');
   }
   if (!parts.length) return '';
-  const sentence = parts.join('; ');
+  const sentence = humanizeInterview(parts.join('; '));
   return sentence.charAt(0).toUpperCase() + sentence.slice(1) + (sentence.endsWith('.') ? '' : '.');
 }

@@ -43,7 +43,7 @@ export async function developmentRequest<T>(token: string | null, path: string, 
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') throw error;
-    throw new Error('Нет связи с Workforce. Повторите запрос.');
+    throw new Error('Нет связи с сервисом кадров. Повторите запрос.');
   }
   if (response.status === 204) return undefined as T;
   const data = await response.json().catch(() => null);

@@ -255,7 +255,7 @@ export const App: React.FC = () => {
             <span>Гид по сайту</span>
           </button>
           <div className="text-[#8E939D] text-xs hidden sm:block">
-            Кадровый ассистент
+            GorkyCode · команда 9
           </div>
           {session && !demoRolesEnabled && appMode !== 'portal' && <button type="button" className="text-xs text-white" onClick={async () => { try { await logoutSession(); setSessionError(''); } catch (error) { setSessionError(error instanceof Error ? error.message : 'Не удалось выйти'); } }}>Выйти</button>}
         </div>
@@ -500,9 +500,7 @@ export const App: React.FC = () => {
             onLogoClick={() => setEmployeeTab('workspace')}
           />
           <main className="flex-1 w-full">
-            {employeeTab === 'workspace' && <ServiceAccess initialLogin="employee" allowedRoles={['employee']}>
-              {() => <Workspace onNavigate={setEmployeeTab} />}
-            </ServiceAccess>}
+            {employeeTab === 'workspace' && <Workspace onNavigate={setEmployeeTab} />}
             {employeeTab === 'care' && <Care onNavigate={setEmployeeTab} />}
             {employeeTab === 'support' && <SupportPage />}
             {employeeTab === 'development' && <ServiceAccess initialLogin="employee" allowedRoles={['employee', 'department', 'hr', 'admin']}>{() => <DevelopmentPage />}</ServiceAccess>}

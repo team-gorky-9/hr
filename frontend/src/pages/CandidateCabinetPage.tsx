@@ -80,7 +80,7 @@ export const CandidateCabinetPage: React.FC<CandidateCabinetPageProps> = ({
             Ответ отправлен сотруднику по подбору персонала
           </h2>
           <p className="text-[14px] text-[#137333]">
-            Отклик перешёл к следующему шагу: телефонное интервью.
+            Отклик перешёл к следующему шагу: телефонное собеседование.
           </p>
         </div>
       )}
@@ -112,7 +112,7 @@ export const CandidateCabinetPage: React.FC<CandidateCabinetPageProps> = ({
                 </span>
               ) : (
                 <span className="self-start sm:self-auto px-3 py-1 rounded-md text-[12px] font-medium bg-[#EEF3FE] text-[#1F4FD1]">
-                  Телефонное интервью
+                  Телефонное собеседование
                 </span>
               )}
             </div>
@@ -134,7 +134,7 @@ export const CandidateCabinetPage: React.FC<CandidateCabinetPageProps> = ({
                   Уточнение данных
                 </span>
                 <span className={isAnswered ? 'font-bold text-[#141A24]' : ''}>
-                  Телефонное интервью
+                  Телефонное собеседование
                 </span>
                 <span>Решение департамента</span>
                 <span>Итог</span>
@@ -173,7 +173,7 @@ export const CandidateCabinetPage: React.FC<CandidateCabinetPageProps> = ({
                 <span>Отклик получен</span>
                 <span>Разбор резюме</span>
                 <span>Уточнение данных</span>
-                <span>Телефонное интервью</span>
+                <span>Телефонное собеседование</span>
                 <span className="font-bold text-[#141A24]">Решение департамента</span>
                 <span>Итог</span>
               </div>

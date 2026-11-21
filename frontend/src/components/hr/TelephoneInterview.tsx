@@ -11,7 +11,7 @@ interface TelephoneInterviewProps {
 function requireGuideForApplication(guide: Guide, applicationId: string, interviewId?: string) {
   if (guide.application_id !== applicationId || guide.kind !== 'phone' ||
       (interviewId && guide.interview_id !== interviewId)) {
-    throw new Error('Сервер вернул другой гайд. Обновите карточку отклика.');
+    throw new Error('Сервер вернул другой список вопросов. Обновите карточку отклика.');
   }
   return guide;
 }
@@ -53,7 +53,7 @@ function SelectedInterview({ applicationId, onBackToCard, onSaveResult }: Teleph
 
   function phoneMeetings(response: { application_id: string; items: Interview[] }) {
     if (response.application_id !== applicationId || response.items.some(item => item.application_id !== applicationId)) {
-      throw new Error('Сервер вернул интервью другого отклика. Обновите карточку.');
+      throw new Error('Сервер вернул собеседование другого отклика. Обновите карточку.');
     }
     return response.items.filter(item => item.kind === 'phone');
   }
@@ -142,15 +142,15 @@ function SelectedInterview({ applicationId, onBackToCard, onSaveResult }: Teleph
 
   return <div className="max-w-[1240px] mx-auto px-6 py-8 space-y-5">
     <Btn variant="link" onClick={onBackToCard}>← Карточка отклика</Btn>
-    <PageTitle title="Телефонное интервью" subtitle={context || 'Вопросы, ответы кандидата и итог встречи'} />
+    <PageTitle title="Телефонное собеседование" subtitle={context || 'Вопросы, ответы кандидата и итог встречи'} />
     {differsFromVacancy && detail.posting_title && <p className="text-sm text-[#616977]">
-      Профиль для интервью определён по подтверждённой публикации «{detail.posting_title}».
+      Профиль для собеседования определён по подтверждённой публикации «{detail.posting_title}».
     </p>}
     {error && <div role="alert" className="bg-red-50 text-red-800 p-4 rounded-xl">
       {error} <Btn onClick={() => setReload(value => value + 1)}>Повторить чтение</Btn>
     </div>}
     {notice && <p role="status" className="bg-green-50 p-4 rounded-xl">{notice}</p>}
-    {loading ? <Card>Загрузка интервью…</Card> : detail && (!guide ? <Card className="space-y-4">
+    {loading ? <Card>Загрузка собеседования…</Card> : detail && (!guide ? <Card className="space-y-4">
       <h2 className="text-xl font-bold">Вопросы ещё не сформированы</h2>
       <p>{evaluationNotice(detail)}</p>
       {detail.assessment_status === 'ready' && <Btn variant="primary" disabled={busy} onClick={createGuide}>
@@ -198,8 +198,8 @@ export function TelephoneInterview({ applicationId = '', ...props }: TelephoneIn
   const chosen = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(applicationId);
   if (chosen) return <SelectedInterview key={applicationId} applicationId={applicationId} {...props} />;
   return <div className="max-w-[1240px] mx-auto px-6 py-8 space-y-5">
-    <PageTitle title="Телефонное интервью" subtitle="Вопросы, ответы кандидата и итог встречи" />
-    <Card><p>Откройте телефонное интервью из карточки выбранного отклика.</p></Card>
+    <PageTitle title="Телефонное собеседование" subtitle="Вопросы, ответы кандидата и итог встречи" />
+    <Card><p>Откройте телефонное собеседование из карточки выбранного отклика.</p></Card>
   </div>;
 }
 

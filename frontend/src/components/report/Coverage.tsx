@@ -6,7 +6,7 @@ const states = [
   { cls: 'bg-[#FFEFD9] border-[#F3C98B]', val: 'не менее 242', valSize: 'text-[19px] sm:text-[20px]', valCls: 'text-[#8A4B0A]', unit: 'откликов', note: '45 откликов без даты не учтены' },
   { cls: 'bg-[#EEF1F5] border-dashed border-[#C9D0DB]', val: 'нет данных', valSize: 'text-[19px] sm:text-[20px]', valCls: 'text-[#3B4352]', unit: '', note: 'Источник не передал этот показатель' },
   { cls: 'bg-[#EEF1F5] border-dashed border-[#C9D0DB]', val: '—', valSize: 'text-[26px]', valCls: 'text-[#3B4352]', unit: 'за пределами периода', note: 'Вакансия открыта после 31.12.2025' },
-  { cls: 'bg-[#F1EDFF] border-[#D5C9F5]', val: 'несопоставимо', valSize: 'text-[17px] sm:text-[18px] tracking-tight', valCls: 'text-[#5B3FC4]', unit: 'с 2024 годом', note: 'В 2024 году не вели журнал интервью' },
+  { cls: 'bg-[#F1EDFF] border-[#D5C9F5]', val: 'несопоставимо', valSize: 'text-[17px] sm:text-[18px] tracking-tight', valCls: 'text-[#5B3FC4]', unit: 'с 2024 годом', note: 'В 2024 году не вели журнал собеседований' },
 ];
 
 const cards = [
@@ -53,7 +53,7 @@ export const Coverage: React.FC<{ onNotify: (m: string) => void }> = ({ onNotify
             <div className="rounded-2xl border border-dashed border-[#C9D0DB] bg-[#EEF1F5] p-5">
               <div className="text-[15px] font-semibold">Разговоры</div>
               <div className="text-[34px] font-bold text-[#3B4352]">нет данных</div>
-              <div className="text-[15px] text-[#4A5363]">Журнал интервью не передан консультантом</div>
+              <div className="text-[15px] text-[#4A5363]">Журнал собеседований не передан консультантом</div>
             </div>
           </div>
         </div>
