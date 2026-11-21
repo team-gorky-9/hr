@@ -22,6 +22,7 @@ from app.api.errors import ApiError
 from app.postings import service as postings
 from app.postings.service import ApplicationResolution
 from app.api.schemas import (
+    CandidateContactsOut,
     AnswerIn,
     AnswerListOut,
     AnswerOut,
@@ -128,7 +129,18 @@ def get_application(application_id: uuid.UUID, session: SessionDep, user: Option
                 "Доступ к карточке отклика разрешён только назначенному получателю",
                 {"application_id": str(application_id)},
             )
-    return services.get_application(session, application_id)
+    detail = services.get_application(session, application_id)
+    if user is not None and user.role in (UserRole.HR, UserRole.ADMIN):
+        # Решение команды с HR: кадровик видит контакты кандидата в карточке. Слепой режим остаётся для
+        # модели, департамента и анонимного чтения; каждое открытие пишется в журнал (ADR-002).
+        pii = repo.get_candidate_pii(session, detail.candidate.candidate_id, user_id=user.id,
+                                     purpose="карточка отклика: связь с кандидатом")
+        session.commit()
+        if pii is not None:
+            detail.candidate.contacts = CandidateContactsOut(
+                full_name=pii.full_name, phone=pii.phone, email=pii.email, city=pii.city)
+            detail.candidate.pii_hidden = False
+    return detail
 
 
 @router.get('/applications/{application_id}/posting-resolution', response_model=ApplicationResolution)

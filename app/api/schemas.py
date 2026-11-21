@@ -130,6 +130,14 @@ class StageOut(BaseModel):
     is_final: bool
 
 
+class CandidateContactsOut(BaseModel):
+    """Контакты для связи с кандидатом. Выдаются только кадровику и администратору; чтение в журнале."""
+    full_name: str | None
+    phone: str | None
+    email: str | None
+    city: str | None
+
+
 class CandidateOut(BaseModel):
     candidate_id: uuid.UUID
     code: str
@@ -137,6 +145,7 @@ class CandidateOut(BaseModel):
     current_text_id: uuid.UUID | None
     is_training: bool
     pii_hidden: bool = True
+    contacts: CandidateContactsOut | None = None
     # Карточка — документ app.schemas.card.CandidateCard (уже без ПДн) + version и extractor.
     card: dict[str, Any] | None
 
