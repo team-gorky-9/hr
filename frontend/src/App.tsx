@@ -16,6 +16,7 @@ import VacancyResponses from './components/hr/VacancyResponses';
 import CandidateCard from './components/hr/CandidateCard';
 import TelephoneInterview from './components/hr/TelephoneInterview';
 import TalentReserve from './components/hr/TalentReserve';
+import ArchivePage from './components/hr/ArchivePage';
 import AnalyticsDashboard from './components/hr/AnalyticsDashboard';
 
 import RoleHeader from './components/shared/RoleHeader';
@@ -279,6 +280,7 @@ export const App: React.FC = () => {
             )}
 
             {/* 24 & 25. КАДРОВЫЙ РЕЗЕРВ: КОНКУРС И СТУДЕНТЫ (макеты 24 и 25) */}
+            {hrTab === 'archive' && <ArchivePage />}
             {hrTab === 'reserve' && (
               <TalentReserve />
             )}
