@@ -19,7 +19,7 @@ interface CandidateProfileProps {
 }
 
 export const CandidateProfile: React.FC<CandidateProfileProps> = ({
-  initialActionState = 'reserve_form',
+  initialActionState = 'idle',
   onBackToDatabase,
   onOpenInterview: _onOpenInterview,
   onOpenReserve,
