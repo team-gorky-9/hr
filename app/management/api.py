@@ -1,5 +1,6 @@
 """HTTP /api/v1/management — только кадровик и администратор (X-User-Login legacy API).
 Роль department в агрегированной сводке недопустима до отдельного ограниченного представления."""
+import uuid
 from datetime import date
 from typing import Annotated
 
@@ -11,7 +12,16 @@ from app.api.auth import StaffUser
 from app.api.schemas import Contour
 from app.db.session import get_session
 from app.management.annual import create_release, read_release, release_out
-from app.management.schemas import AnnualReleaseIn, AnnualReleaseOut, OverviewOut, ReleaseSummary
+from app.management.plans import create_plan, get_plan, plan_out, summary_out
+from app.management.schemas import (
+    AnnualReleaseIn,
+    AnnualReleaseOut,
+    OverviewOut,
+    PlanIn,
+    PlanOut,
+    PlanSummaryOut,
+    ReleaseSummary,
+)
 from app.management.service import overview
 from app.reporting import store
 from app.reporting.excel import make_workbook
@@ -72,3 +82,27 @@ def read_annual_report_xlsx(snapshot_id: SnapshotId, user: StaffUser, catalog: C
     return Response(content=make_workbook(report), media_type=XLSX, headers={
         "Cache-Control": "private, no-store",
         "Content-Disposition": f'attachment; filename="report-{report["year"]}-{snapshot_id[:12]}.xlsx"'})
+
+
+@router.post("/plans", response_model=PlanOut, status_code=201)
+def create_plan_route(body: PlanIn, response: Response, user: StaffUser,
+                      session: Annotated[Session, Depends(get_session)]):
+    """Плановый снимок (4C): неизменяемый ввод HR и возможное покрытие на одну дату."""
+    result = create_plan(session, body, user)
+    response.headers["Cache-Control"] = "private, no-store"
+    return result
+
+
+@router.get("/plans/{plan_id}", response_model=PlanOut)
+def read_plan_route(plan_id: uuid.UUID, response: Response, user: StaffUser,
+                    session: Annotated[Session, Depends(get_session)]):
+    response.headers["Cache-Control"] = "private, no-store"
+    return plan_out(session, get_plan(session, plan_id))
+
+
+@router.get("/plans/{plan_id}/summary", response_model=PlanSummaryOut)
+def read_plan_summary_route(plan_id: uuid.UUID, response: Response, user: StaffUser,
+                            session: Annotated[Session, Depends(get_session)]):
+    """Управленческая проекция без имён, record_ref и первичных оснований."""
+    response.headers["Cache-Control"] = "private, no-store"
+    return summary_out(get_plan(session, plan_id))
