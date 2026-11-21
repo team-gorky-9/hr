@@ -1,0 +1,12 @@
+{
+  "cycle_id": "0fc81d5a-f5b3-4fa2-88c6-90887010fa1c",
+  "status": "closed",
+  "response_columns": [
+    "id",
+    "cycle_id",
+    "group_key",
+    "answers",
+    "topic_key"
+  ],
+  "reopened_status": "closed"
+}
