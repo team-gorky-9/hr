@@ -14,6 +14,7 @@ import uvicorn
 
 from recognition.api import create_app
 from recognition.store import seed_demo
+from tests.test_nominations import nomination_path
 from tests.test_thanks import call, thanks_path
 
 
@@ -42,18 +43,22 @@ def serve(app):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--part", choices=["4a"], default="4a")
+    parser.add_argument("--part", choices=["4a", "4b"], default="4a")
     args = parser.parse_args()
     directory = Path(tempfile.mkdtemp(prefix="recognition-smoke-"))
     db = directory / "recognition.db"
     seed_demo(db)
     app = create_app(db)
     with serve(app) as client:
-        result = thanks_path(client)
+        result = thanks_path(client) if args.part == "4a" else nomination_path(client)
         spec = client.get("/openapi.json").json()
     with serve(create_app(db)) as client:
-        saved = call(client, "GET", "/thanks/" + result["thanks_id"])
-        assert saved["status"] == "withdrawn"
+        if args.part == "4a":
+            saved = call(client, "GET", "/thanks/" + result["thanks_id"])
+            assert saved["status"] == "withdrawn"
+        else:
+            saved = call(client, "GET", "/nominations/" + result["nomination_id"], "bob")
+            assert saved["status"] == "selected" and saved["publication_choice"] == "allowed"
         result["reopened_revision"] = saved["revision"]
     reports = Path(__file__).resolve().parents[3] / "docs" / "reports"
     reports.mkdir(parents=True, exist_ok=True)
