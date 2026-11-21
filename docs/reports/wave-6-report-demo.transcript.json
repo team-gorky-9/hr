@@ -1,0 +1,1119 @@
+{
+  "first": {
+    "snapshot_id": "be9884136d7eb4ed2f03b223595560c012df5120ea399efdcf5e66562453ac54",
+    "mode": "demo",
+    "year": 2026,
+    "contour": "training",
+    "generated_at": "2026-11-21T04:49:50.838228+03:00",
+    "observed_until": "2026-11-21",
+    "coverage_summary": {
+      "note": "Выпуск по журналу legacy-hr в пределах заявленной полноты. Это не полная кадровая статистика организации: partial — нижняя граница, unavailable — нет подтверждённого охвата.",
+      "period": {
+        "to": "2026-11-21",
+        "from": "2026-01-01"
+      },
+      "interim": true,
+      "quality": {
+        "duplicates": 0,
+        "undated_interviews": 0,
+        "undated_applications": 0
+      },
+      "declared": {
+        "applications": {
+          "complete_intervals": [
+            {
+              "to": "2026-11-21",
+              "from": "2026-09-01"
+            }
+          ],
+          "comparable_to_previous_year": false
+        },
+        "phone_interviews": {
+          "complete_intervals": [],
+          "comparable_to_previous_year": false
+        }
+      },
+      "totals_status": {
+        "applications_received": "partial",
+        "phone_interviews_held": "partial",
+        "applications_with_phone_interview": "partial"
+      }
+    },
+    "preparation": {
+      "skipped": {
+        "interviews_after_cutoff": 0,
+        "applications_after_cutoff": 0,
+        "applications_without_vacancy": 0,
+        "interviews_of_skipped_applications": 0
+      },
+      "applications": 4,
+      "phone_interviews": 4,
+      "undated_applications": 0,
+      "interviews_without_held_on": 3
+    },
+    "confirmation_basis": "Учебный набор волны 6: полнота заявлена только для откликов с 01.09.2026 (учебно)",
+    "created_by": "hr_demo",
+    "report_url": "/api/v1/management/annual-reports/be9884136d7eb4ed2f03b223595560c012df5120ea399efdcf5e66562453ac54",
+    "xlsx_url": "/api/v1/management/annual-reports/be9884136d7eb4ed2f03b223595560c012df5120ea399efdcf5e66562453ac54/xlsx"
+  },
+  "second": {
+    "snapshot_id": "51cfeaa248a0b83c766076333161b989f4122e1e79140d71608248bd186e6e74",
+    "mode": "demo",
+    "year": 2026,
+    "contour": "training",
+    "generated_at": "2026-11-21T04:49:50.898074+03:00",
+    "observed_until": "2026-11-21",
+    "coverage_summary": {
+      "note": "Выпуск по журналу legacy-hr в пределах заявленной полноты. Это не полная кадровая статистика организации: partial — нижняя граница, unavailable — нет подтверждённого охвата.",
+      "period": {
+        "to": "2026-11-21",
+        "from": "2026-01-01"
+      },
+      "interim": true,
+      "quality": {
+        "duplicates": 0,
+        "undated_interviews": 0,
+        "undated_applications": 0
+      },
+      "declared": {
+        "applications": {
+          "complete_intervals": [
+            {
+              "to": "2026-11-21",
+              "from": "2026-09-01"
+            }
+          ],
+          "comparable_to_previous_year": false
+        },
+        "phone_interviews": {
+          "complete_intervals": [],
+          "comparable_to_previous_year": false
+        }
+      },
+      "totals_status": {
+        "applications_received": "partial",
+        "phone_interviews_held": "partial",
+        "applications_with_phone_interview": "partial"
+      }
+    },
+    "preparation": {
+      "skipped": {
+        "interviews_after_cutoff": 0,
+        "applications_after_cutoff": 0,
+        "applications_without_vacancy": 0,
+        "interviews_of_skipped_applications": 0
+      },
+      "applications": 4,
+      "phone_interviews": 4,
+      "undated_applications": 0,
+      "interviews_without_held_on": 2
+    },
+    "confirmation_basis": "Учебный набор волны 6: полнота заявлена только для откликов с 01.09.2026 (учебно)",
+    "created_by": "hr_demo",
+    "report_url": "/api/v1/management/annual-reports/51cfeaa248a0b83c766076333161b989f4122e1e79140d71608248bd186e6e74",
+    "xlsx_url": "/api/v1/management/annual-reports/51cfeaa248a0b83c766076333161b989f4122e1e79140d71608248bd186e6e74/xlsx"
+  },
+  "steps": [
+    {
+      "step": "Итог встречи rep-9002: continue 05.11",
+      "actor": "hr_demo",
+      "method": "POST",
+      "path": "/api/v1/interviews/e15217b5-a7cd-4ae0-bf79-53b47a5a0e41/outcome",
+      "request": {
+        "expected_revision": 1,
+        "result": "continue",
+        "occurred_at": "2026-11-05T14:00:00+03:00",
+        "summary": "Учебный итог встречи (волна 6)"
+      },
+      "status": 200,
+      "response": {
+        "id": "e15217b5-a7cd-4ae0-bf79-53b47a5a0e41",
+        "application_id": "03f83e3d-583a-4caf-90c4-cc64dd12ded7",
+        "kind": "phone",
+        "scheduled_at": null,
+        "held_at": "2026-11-05T14:00:00+03:00",
+        "attempt_at": "2026-11-05T14:00:00+03:00",
+        "result": "continue",
+        "summary": "Учебный итог встречи (волна 6)",
+        "interviewer_user_id": "c94abe21-3dc9-47a9-ae53-fdcdb7cf6355",
+        "outcome_recorded_at": "2026-11-21T01:49:50.782385Z",
+        "revision": 2
+      }
+    },
+    {
+      "step": "Итог встречи rep-9003: no_answer 11.11",
+      "actor": "hr_demo",
+      "method": "POST",
+      "path": "/api/v1/interviews/51df0450-9bda-4de2-a95e-a56f7811828b/outcome",
+      "request": {
+        "expected_revision": 1,
+        "result": "no_answer",
+        "occurred_at": "2026-11-11T10:00:00+03:00",
+        "summary": "Учебный итог встречи (волна 6)"
+      },
+      "status": 200,
+      "response": {
+        "id": "51df0450-9bda-4de2-a95e-a56f7811828b",
+        "application_id": "b6b6e968-f2d6-462a-8b85-7c088c00af2a",
+        "kind": "phone",
+        "scheduled_at": null,
+        "held_at": null,
+        "attempt_at": "2026-11-11T10:00:00+03:00",
+        "result": "no_answer",
+        "summary": "Учебный итог встречи (волна 6)",
+        "interviewer_user_id": "c94abe21-3dc9-47a9-ae53-fdcdb7cf6355",
+        "outcome_recorded_at": "2026-11-21T01:49:50.797387Z",
+        "revision": 2
+      }
+    },
+    {
+      "step": "Выпуск отчёта 2026",
+      "actor": "hr_demo",
+      "method": "POST",
+      "path": "/api/v1/management/annual-reports",
+      "request": {
+        "year": 2026,
+        "observed_until": "2026-11-21",
+        "contour": "training",
+        "coverage": {
+          "applications": {
+            "complete_intervals": [
+              {
+                "from": "2026-09-01",
+                "to": "2026-11-21"
+              }
+            ],
+            "comparable_to_previous_year": false
+          }
+        },
+        "confirmation_basis": "Учебный набор волны 6: полнота заявлена только для откликов с 01.09.2026 (учебно)"
+      },
+      "status": 201,
+      "response": {
+        "snapshot_id": "be9884136d7eb4ed2f03b223595560c012df5120ea399efdcf5e66562453ac54",
+        "mode": "demo",
+        "year": 2026,
+        "contour": "training",
+        "generated_at": "2026-11-21T04:49:50.838228+03:00",
+        "observed_until": "2026-11-21",
+        "coverage_summary": {
+          "note": "Выпуск по журналу legacy-hr в пределах заявленной полноты. Это не полная кадровая статистика организации: partial — нижняя граница, unavailable — нет подтверждённого охвата.",
+          "period": {
+            "to": "2026-11-21",
+            "from": "2026-01-01"
+          },
+          "interim": true,
+          "quality": {
+            "duplicates": 0,
+            "undated_interviews": 0,
+            "undated_applications": 0
+          },
+          "declared": {
+            "applications": {
+              "complete_intervals": [
+                {
+                  "to": "2026-11-21",
+                  "from": "2026-09-01"
+                }
+              ],
+              "comparable_to_previous_year": false
+            },
+            "phone_interviews": {
+              "complete_intervals": [],
+              "comparable_to_previous_year": false
+            }
+          },
+          "totals_status": {
+            "applications_received": "partial",
+            "phone_interviews_held": "partial",
+            "applications_with_phone_interview": "partial"
+          }
+        },
+        "preparation": {
+          "skipped": {
+            "interviews_after_cutoff": 0,
+            "applications_after_cutoff": 0,
+            "applications_without_vacancy": 0,
+            "interviews_of_skipped_applications": 0
+          },
+          "applications": 4,
+          "phone_interviews": 4,
+          "undated_applications": 0,
+          "interviews_without_held_on": 3
+        },
+        "confirmation_basis": "Учебный набор волны 6: полнота заявлена только для откликов с 01.09.2026 (учебно)",
+        "created_by": "hr_demo",
+        "report_url": "/api/v1/management/annual-reports/be9884136d7eb4ed2f03b223595560c012df5120ea399efdcf5e66562453ac54",
+        "xlsx_url": "/api/v1/management/annual-reports/be9884136d7eb4ed2f03b223595560c012df5120ea399efdcf5e66562453ac54/xlsx"
+      }
+    },
+    {
+      "step": "Чтение того же снимка",
+      "actor": "hr_demo",
+      "method": "GET",
+      "path": "/api/v1/management/annual-reports/be9884136d7eb4ed2f03b223595560c012df5120ea399efdcf5e66562453ac54",
+      "request": null,
+      "status": 200,
+      "response": {
+        "release": {
+          "snapshot_id": "be9884136d7eb4ed2f03b223595560c012df5120ea399efdcf5e66562453ac54",
+          "mode": "demo",
+          "year": 2026,
+          "contour": "training",
+          "generated_at": "2026-11-21T04:49:50.838228+03:00",
+          "observed_until": "2026-11-21",
+          "coverage_summary": {
+            "note": "Выпуск по журналу legacy-hr в пределах заявленной полноты. Это не полная кадровая статистика организации: partial — нижняя граница, unavailable — нет подтверждённого охвата.",
+            "period": {
+              "to": "2026-11-21",
+              "from": "2026-01-01"
+            },
+            "interim": true,
+            "quality": {
+              "duplicates": 0,
+              "undated_interviews": 0,
+              "undated_applications": 0
+            },
+            "declared": {
+              "applications": {
+                "complete_intervals": [
+                  {
+                    "to": "2026-11-21",
+                    "from": "2026-09-01"
+                  }
+                ],
+                "comparable_to_previous_year": false
+              },
+              "phone_interviews": {
+                "complete_intervals": [],
+                "comparable_to_previous_year": false
+              }
+            },
+            "totals_status": {
+              "applications_received": "partial",
+              "phone_interviews_held": "partial",
+              "applications_with_phone_interview": "partial"
+            }
+          },
+          "preparation": {
+            "skipped": {
+              "interviews_after_cutoff": 0,
+              "applications_after_cutoff": 0,
+              "applications_without_vacancy": 0,
+              "interviews_of_skipped_applications": 0
+            },
+            "applications": 4,
+            "phone_interviews": 4,
+            "undated_applications": 0,
+            "interviews_without_held_on": 3
+          },
+          "confirmation_basis": "Учебный набор волны 6: полнота заявлена только для откликов с 01.09.2026 (учебно)",
+          "created_by": "hr_demo",
+          "report_url": "/api/v1/management/annual-reports/be9884136d7eb4ed2f03b223595560c012df5120ea399efdcf5e66562453ac54",
+          "xlsx_url": "/api/v1/management/annual-reports/be9884136d7eb4ed2f03b223595560c012df5120ea399efdcf5e66562453ac54/xlsx"
+        },
+        "report_excerpt": {
+          "snapshot_id": "be9884136d7eb4ed2f03b223595560c012df5120ea399efdcf5e66562453ac54",
+          "year": 2026,
+          "mode": "demo",
+          "period_start": "2026-01-01",
+          "period_end_exclusive": "2026-11-21",
+          "interim": true,
+          "sources": {
+            "applications": {
+              "comparable_to_previous_year": false,
+              "complete_intervals": [
+                {
+                  "from": "2026-09-01",
+                  "to": "2026-11-21"
+                }
+              ],
+              "source_id": "legacy-hr.applications",
+              "source_revision": "2026-11-21T04:49:50+03:00"
+            },
+            "phone_interviews": {
+              "comparable_to_previous_year": false,
+              "complete_intervals": [],
+              "source_id": "legacy-hr.phone_interviews",
+              "source_revision": "2026-11-21T04:49:50+03:00"
+            }
+          },
+          "quality": {
+            "duplicates": 0,
+            "undated_applications": 0,
+            "undated_interviews": 0
+          },
+          "totals": {
+            "applications_received": {
+              "reason_codes": [
+                "coverage_gap"
+              ],
+              "status": "partial",
+              "value": 4
+            },
+            "applications_with_phone_interview": {
+              "reason_codes": [
+                "coverage_gap"
+              ],
+              "status": "partial",
+              "value": 1
+            },
+            "phone_interviews_held": {
+              "reason_codes": [
+                "coverage_gap"
+              ],
+              "status": "partial",
+              "value": 1
+            }
+          },
+          "months": [
+            {
+              "metrics": {
+                "applications_received": {
+                  "reason_codes": [],
+                  "status": "complete",
+                  "value": 1
+                },
+                "applications_with_phone_interview": {
+                  "reason_codes": [
+                    "coverage_unknown"
+                  ],
+                  "status": "unavailable",
+                  "value": null
+                },
+                "phone_interviews_held": {
+                  "reason_codes": [
+                    "coverage_unknown"
+                  ],
+                  "status": "unavailable",
+                  "value": null
+                }
+              },
+              "month": "2026-09",
+              "outcomes": {
+                "continue": {
+                  "reason_codes": [
+                    "coverage_unknown"
+                  ],
+                  "status": "unavailable",
+                  "value": null
+                },
+                "pending": {
+                  "reason_codes": [
+                    "coverage_unknown"
+                  ],
+                  "status": "unavailable",
+                  "value": null
+                },
+                "stop": {
+                  "reason_codes": [
+                    "coverage_unknown"
+                  ],
+                  "status": "unavailable",
+                  "value": null
+                }
+              },
+              "vacancies": [
+                {
+                  "applications_received": {
+                    "reason_codes": [],
+                    "status": "complete",
+                    "value": 1
+                  },
+                  "applications_with_phone_interview": {
+                    "reason_codes": [
+                      "coverage_unknown"
+                    ],
+                    "status": "unavailable",
+                    "value": null
+                  },
+                  "label": "Python-разработчик",
+                  "phone_interviews_held": {
+                    "reason_codes": [
+                      "coverage_unknown"
+                    ],
+                    "status": "unavailable",
+                    "value": null
+                  },
+                  "vacancy_key": "8c77585b-c292-4480-8c2f-e70c80b3f3a2"
+                }
+              ]
+            },
+            {
+              "metrics": {
+                "applications_received": {
+                  "reason_codes": [],
+                  "status": "complete",
+                  "value": 0
+                },
+                "applications_with_phone_interview": {
+                  "reason_codes": [
+                    "coverage_unknown"
+                  ],
+                  "status": "unavailable",
+                  "value": null
+                },
+                "phone_interviews_held": {
+                  "reason_codes": [
+                    "coverage_unknown"
+                  ],
+                  "status": "unavailable",
+                  "value": null
+                }
+              },
+              "month": "2026-10",
+              "outcomes": {
+                "continue": {
+                  "reason_codes": [
+                    "coverage_unknown"
+                  ],
+                  "status": "unavailable",
+                  "value": null
+                },
+                "pending": {
+                  "reason_codes": [
+                    "coverage_unknown"
+                  ],
+                  "status": "unavailable",
+                  "value": null
+                },
+                "stop": {
+                  "reason_codes": [
+                    "coverage_unknown"
+                  ],
+                  "status": "unavailable",
+                  "value": null
+                }
+              },
+              "vacancies": [
+                {
+                  "applications_received": {
+                    "reason_codes": [],
+                    "status": "complete",
+                    "value": 0
+                  },
+                  "applications_with_phone_interview": {
+                    "reason_codes": [
+                      "coverage_unknown"
+                    ],
+                    "status": "unavailable",
+                    "value": null
+                  },
+                  "label": "Python-разработчик",
+                  "phone_interviews_held": {
+                    "reason_codes": [
+                      "coverage_unknown"
+                    ],
+                    "status": "unavailable",
+                    "value": null
+                  },
+                  "vacancy_key": "8c77585b-c292-4480-8c2f-e70c80b3f3a2"
+                }
+              ]
+            },
+            {
+              "metrics": {
+                "applications_received": {
+                  "reason_codes": [],
+                  "status": "complete",
+                  "value": 3
+                },
+                "applications_with_phone_interview": {
+                  "reason_codes": [
+                    "coverage_gap"
+                  ],
+                  "status": "partial",
+                  "value": 1
+                },
+                "phone_interviews_held": {
+                  "reason_codes": [
+                    "coverage_gap"
+                  ],
+                  "status": "partial",
+                  "value": 1
+                }
+              },
+              "month": "2026-11",
+              "outcomes": {
+                "continue": {
+                  "reason_codes": [
+                    "coverage_gap"
+                  ],
+                  "status": "partial",
+                  "value": 1
+                },
+                "pending": {
+                  "reason_codes": [
+                    "coverage_gap"
+                  ],
+                  "status": "partial",
+                  "value": null
+                },
+                "stop": {
+                  "reason_codes": [
+                    "coverage_gap"
+                  ],
+                  "status": "partial",
+                  "value": null
+                }
+              },
+              "vacancies": [
+                {
+                  "applications_received": {
+                    "reason_codes": [],
+                    "status": "complete",
+                    "value": 3
+                  },
+                  "applications_with_phone_interview": {
+                    "reason_codes": [
+                      "coverage_gap"
+                    ],
+                    "status": "partial",
+                    "value": 1
+                  },
+                  "label": "Python-разработчик",
+                  "phone_interviews_held": {
+                    "reason_codes": [
+                      "coverage_gap"
+                    ],
+                    "status": "partial",
+                    "value": 1
+                  },
+                  "vacancy_key": "8c77585b-c292-4480-8c2f-e70c80b3f3a2"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "step": "Excel того же снимка",
+      "actor": "hr_demo",
+      "method": "GET",
+      "path": "/api/v1/management/annual-reports/be9884136d7eb4ed2f03b223595560c012df5120ea399efdcf5e66562453ac54/xlsx",
+      "request": null,
+      "status": 200,
+      "response": {
+        "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "bytes": 18376
+      }
+    },
+    {
+      "step": "Поздняя поправка: итог встречи rep-9004 continue 12.11",
+      "actor": "hr_demo",
+      "method": "POST",
+      "path": "/api/v1/interviews/99edc9f0-f015-4073-8574-1744b5419917/outcome",
+      "request": {
+        "expected_revision": 1,
+        "result": "continue",
+        "occurred_at": "2026-11-12T16:00:00+03:00",
+        "summary": "Учебный итог встречи (волна 6)"
+      },
+      "status": 200,
+      "response": {
+        "id": "99edc9f0-f015-4073-8574-1744b5419917",
+        "application_id": "2ab6d88f-c1ed-46dd-bbf9-01a14d5e20bc",
+        "kind": "phone",
+        "scheduled_at": null,
+        "held_at": "2026-11-12T16:00:00+03:00",
+        "attempt_at": "2026-11-12T16:00:00+03:00",
+        "result": "continue",
+        "summary": "Учебный итог встречи (волна 6)",
+        "interviewer_user_id": "c94abe21-3dc9-47a9-ae53-fdcdb7cf6355",
+        "outcome_recorded_at": "2026-11-21T01:49:50.885890Z",
+        "revision": 2
+      }
+    },
+    {
+      "step": "Новый выпуск после поправки",
+      "actor": "hr_demo",
+      "method": "POST",
+      "path": "/api/v1/management/annual-reports",
+      "request": {
+        "year": 2026,
+        "observed_until": "2026-11-21",
+        "contour": "training",
+        "coverage": {
+          "applications": {
+            "complete_intervals": [
+              {
+                "from": "2026-09-01",
+                "to": "2026-11-21"
+              }
+            ],
+            "comparable_to_previous_year": false
+          }
+        },
+        "confirmation_basis": "Учебный набор волны 6: полнота заявлена только для откликов с 01.09.2026 (учебно)"
+      },
+      "status": 201,
+      "response": {
+        "snapshot_id": "51cfeaa248a0b83c766076333161b989f4122e1e79140d71608248bd186e6e74",
+        "mode": "demo",
+        "year": 2026,
+        "contour": "training",
+        "generated_at": "2026-11-21T04:49:50.898074+03:00",
+        "observed_until": "2026-11-21",
+        "coverage_summary": {
+          "note": "Выпуск по журналу legacy-hr в пределах заявленной полноты. Это не полная кадровая статистика организации: partial — нижняя граница, unavailable — нет подтверждённого охвата.",
+          "period": {
+            "to": "2026-11-21",
+            "from": "2026-01-01"
+          },
+          "interim": true,
+          "quality": {
+            "duplicates": 0,
+            "undated_interviews": 0,
+            "undated_applications": 0
+          },
+          "declared": {
+            "applications": {
+              "complete_intervals": [
+                {
+                  "to": "2026-11-21",
+                  "from": "2026-09-01"
+                }
+              ],
+              "comparable_to_previous_year": false
+            },
+            "phone_interviews": {
+              "complete_intervals": [],
+              "comparable_to_previous_year": false
+            }
+          },
+          "totals_status": {
+            "applications_received": "partial",
+            "phone_interviews_held": "partial",
+            "applications_with_phone_interview": "partial"
+          }
+        },
+        "preparation": {
+          "skipped": {
+            "interviews_after_cutoff": 0,
+            "applications_after_cutoff": 0,
+            "applications_without_vacancy": 0,
+            "interviews_of_skipped_applications": 0
+          },
+          "applications": 4,
+          "phone_interviews": 4,
+          "undated_applications": 0,
+          "interviews_without_held_on": 2
+        },
+        "confirmation_basis": "Учебный набор волны 6: полнота заявлена только для откликов с 01.09.2026 (учебно)",
+        "created_by": "hr_demo",
+        "report_url": "/api/v1/management/annual-reports/51cfeaa248a0b83c766076333161b989f4122e1e79140d71608248bd186e6e74",
+        "xlsx_url": "/api/v1/management/annual-reports/51cfeaa248a0b83c766076333161b989f4122e1e79140d71608248bd186e6e74/xlsx"
+      }
+    },
+    {
+      "step": "Чтение нового снимка",
+      "actor": "hr_demo",
+      "method": "GET",
+      "path": "/api/v1/management/annual-reports/51cfeaa248a0b83c766076333161b989f4122e1e79140d71608248bd186e6e74",
+      "request": null,
+      "status": 200,
+      "response": {
+        "release": {
+          "snapshot_id": "51cfeaa248a0b83c766076333161b989f4122e1e79140d71608248bd186e6e74",
+          "mode": "demo",
+          "year": 2026,
+          "contour": "training",
+          "generated_at": "2026-11-21T04:49:50.898074+03:00",
+          "observed_until": "2026-11-21",
+          "coverage_summary": {
+            "note": "Выпуск по журналу legacy-hr в пределах заявленной полноты. Это не полная кадровая статистика организации: partial — нижняя граница, unavailable — нет подтверждённого охвата.",
+            "period": {
+              "to": "2026-11-21",
+              "from": "2026-01-01"
+            },
+            "interim": true,
+            "quality": {
+              "duplicates": 0,
+              "undated_interviews": 0,
+              "undated_applications": 0
+            },
+            "declared": {
+              "applications": {
+                "complete_intervals": [
+                  {
+                    "to": "2026-11-21",
+                    "from": "2026-09-01"
+                  }
+                ],
+                "comparable_to_previous_year": false
+              },
+              "phone_interviews": {
+                "complete_intervals": [],
+                "comparable_to_previous_year": false
+              }
+            },
+            "totals_status": {
+              "applications_received": "partial",
+              "phone_interviews_held": "partial",
+              "applications_with_phone_interview": "partial"
+            }
+          },
+          "preparation": {
+            "skipped": {
+              "interviews_after_cutoff": 0,
+              "applications_after_cutoff": 0,
+              "applications_without_vacancy": 0,
+              "interviews_of_skipped_applications": 0
+            },
+            "applications": 4,
+            "phone_interviews": 4,
+            "undated_applications": 0,
+            "interviews_without_held_on": 2
+          },
+          "confirmation_basis": "Учебный набор волны 6: полнота заявлена только для откликов с 01.09.2026 (учебно)",
+          "created_by": "hr_demo",
+          "report_url": "/api/v1/management/annual-reports/51cfeaa248a0b83c766076333161b989f4122e1e79140d71608248bd186e6e74",
+          "xlsx_url": "/api/v1/management/annual-reports/51cfeaa248a0b83c766076333161b989f4122e1e79140d71608248bd186e6e74/xlsx"
+        },
+        "report_excerpt": {
+          "snapshot_id": "51cfeaa248a0b83c766076333161b989f4122e1e79140d71608248bd186e6e74",
+          "year": 2026,
+          "mode": "demo",
+          "period_start": "2026-01-01",
+          "period_end_exclusive": "2026-11-21",
+          "interim": true,
+          "sources": {
+            "applications": {
+              "comparable_to_previous_year": false,
+              "complete_intervals": [
+                {
+                  "from": "2026-09-01",
+                  "to": "2026-11-21"
+                }
+              ],
+              "source_id": "legacy-hr.applications",
+              "source_revision": "2026-11-21T04:49:50+03:00"
+            },
+            "phone_interviews": {
+              "comparable_to_previous_year": false,
+              "complete_intervals": [],
+              "source_id": "legacy-hr.phone_interviews",
+              "source_revision": "2026-11-21T04:49:50+03:00"
+            }
+          },
+          "quality": {
+            "duplicates": 0,
+            "undated_applications": 0,
+            "undated_interviews": 0
+          },
+          "totals": {
+            "applications_received": {
+              "reason_codes": [
+                "coverage_gap"
+              ],
+              "status": "partial",
+              "value": 4
+            },
+            "applications_with_phone_interview": {
+              "reason_codes": [
+                "coverage_gap"
+              ],
+              "status": "partial",
+              "value": 2
+            },
+            "phone_interviews_held": {
+              "reason_codes": [
+                "coverage_gap"
+              ],
+              "status": "partial",
+              "value": 2
+            }
+          },
+          "months": [
+            {
+              "metrics": {
+                "applications_received": {
+                  "reason_codes": [],
+                  "status": "complete",
+                  "value": 1
+                },
+                "applications_with_phone_interview": {
+                  "reason_codes": [
+                    "coverage_unknown"
+                  ],
+                  "status": "unavailable",
+                  "value": null
+                },
+                "phone_interviews_held": {
+                  "reason_codes": [
+                    "coverage_unknown"
+                  ],
+                  "status": "unavailable",
+                  "value": null
+                }
+              },
+              "month": "2026-09",
+              "outcomes": {
+                "continue": {
+                  "reason_codes": [
+                    "coverage_unknown"
+                  ],
+                  "status": "unavailable",
+                  "value": null
+                },
+                "pending": {
+                  "reason_codes": [
+                    "coverage_unknown"
+                  ],
+                  "status": "unavailable",
+                  "value": null
+                },
+                "stop": {
+                  "reason_codes": [
+                    "coverage_unknown"
+                  ],
+                  "status": "unavailable",
+                  "value": null
+                }
+              },
+              "vacancies": [
+                {
+                  "applications_received": {
+                    "reason_codes": [],
+                    "status": "complete",
+                    "value": 1
+                  },
+                  "applications_with_phone_interview": {
+                    "reason_codes": [
+                      "coverage_unknown"
+                    ],
+                    "status": "unavailable",
+                    "value": null
+                  },
+                  "label": "Python-разработчик",
+                  "phone_interviews_held": {
+                    "reason_codes": [
+                      "coverage_unknown"
+                    ],
+                    "status": "unavailable",
+                    "value": null
+                  },
+                  "vacancy_key": "8c77585b-c292-4480-8c2f-e70c80b3f3a2"
+                }
+              ]
+            },
+            {
+              "metrics": {
+                "applications_received": {
+                  "reason_codes": [],
+                  "status": "complete",
+                  "value": 0
+                },
+                "applications_with_phone_interview": {
+                  "reason_codes": [
+                    "coverage_unknown"
+                  ],
+                  "status": "unavailable",
+                  "value": null
+                },
+                "phone_interviews_held": {
+                  "reason_codes": [
+                    "coverage_unknown"
+                  ],
+                  "status": "unavailable",
+                  "value": null
+                }
+              },
+              "month": "2026-10",
+              "outcomes": {
+                "continue": {
+                  "reason_codes": [
+                    "coverage_unknown"
+                  ],
+                  "status": "unavailable",
+                  "value": null
+                },
+                "pending": {
+                  "reason_codes": [
+                    "coverage_unknown"
+                  ],
+                  "status": "unavailable",
+                  "value": null
+                },
+                "stop": {
+                  "reason_codes": [
+                    "coverage_unknown"
+                  ],
+                  "status": "unavailable",
+                  "value": null
+                }
+              },
+              "vacancies": [
+                {
+                  "applications_received": {
+                    "reason_codes": [],
+                    "status": "complete",
+                    "value": 0
+                  },
+                  "applications_with_phone_interview": {
+                    "reason_codes": [
+                      "coverage_unknown"
+                    ],
+                    "status": "unavailable",
+                    "value": null
+                  },
+                  "label": "Python-разработчик",
+                  "phone_interviews_held": {
+                    "reason_codes": [
+                      "coverage_unknown"
+                    ],
+                    "status": "unavailable",
+                    "value": null
+                  },
+                  "vacancy_key": "8c77585b-c292-4480-8c2f-e70c80b3f3a2"
+                }
+              ]
+            },
+            {
+              "metrics": {
+                "applications_received": {
+                  "reason_codes": [],
+                  "status": "complete",
+                  "value": 3
+                },
+                "applications_with_phone_interview": {
+                  "reason_codes": [
+                    "coverage_gap"
+                  ],
+                  "status": "partial",
+                  "value": 2
+                },
+                "phone_interviews_held": {
+                  "reason_codes": [
+                    "coverage_gap"
+                  ],
+                  "status": "partial",
+                  "value": 2
+                }
+              },
+              "month": "2026-11",
+              "outcomes": {
+                "continue": {
+                  "reason_codes": [
+                    "coverage_gap"
+                  ],
+                  "status": "partial",
+                  "value": 2
+                },
+                "pending": {
+                  "reason_codes": [
+                    "coverage_gap"
+                  ],
+                  "status": "partial",
+                  "value": null
+                },
+                "stop": {
+                  "reason_codes": [
+                    "coverage_gap"
+                  ],
+                  "status": "partial",
+                  "value": null
+                }
+              },
+              "vacancies": [
+                {
+                  "applications_received": {
+                    "reason_codes": [],
+                    "status": "complete",
+                    "value": 3
+                  },
+                  "applications_with_phone_interview": {
+                    "reason_codes": [
+                      "coverage_gap"
+                    ],
+                    "status": "partial",
+                    "value": 2
+                  },
+                  "label": "Python-разработчик",
+                  "phone_interviews_held": {
+                    "reason_codes": [
+                      "coverage_gap"
+                    ],
+                    "status": "partial",
+                    "value": 2
+                  },
+                  "vacancy_key": "8c77585b-c292-4480-8c2f-e70c80b3f3a2"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    {
+      "step": "Отказ: роль department",
+      "actor": "dept_demo",
+      "method": "POST",
+      "path": "/api/v1/management/annual-reports",
+      "request": {
+        "year": 2026,
+        "observed_until": "2026-11-21",
+        "contour": "training",
+        "coverage": {
+          "applications": {
+            "complete_intervals": [
+              {
+                "from": "2026-09-01",
+                "to": "2026-11-21"
+              }
+            ],
+            "comparable_to_previous_year": false
+          }
+        },
+        "confirmation_basis": "Учебный набор волны 6: полнота заявлена только для откликов с 01.09.2026 (учебно)"
+      },
+      "status": 403,
+      "response": {
+        "error": {
+          "code": "FORBIDDEN_ROLE",
+          "message": "Действие недоступно для роли пользователя",
+          "details": {
+            "role": "department",
+            "allowed_roles": [
+              "hr",
+              "admin"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "step": "Отказ: полнота за пределами наблюдения",
+      "actor": "hr_demo",
+      "method": "POST",
+      "path": "/api/v1/management/annual-reports",
+      "request": {
+        "year": 2026,
+        "observed_until": "2026-11-21",
+        "contour": "training",
+        "coverage": {
+          "applications": {
+            "complete_intervals": [
+              {
+                "from": "2026-09-01",
+                "to": "2026-12-01"
+              }
+            ]
+          }
+        },
+        "confirmation_basis": "Учебный набор волны 6: полнота заявлена только для откликов с 01.09.2026 (учебно)"
+      },
+      "status": 422,
+      "response": {
+        "error": {
+          "code": "PREPARATION_FAILED",
+          "message": "Пакет фактов не прошёл проверку годового модуля",
+          "details": {
+            "reason": "invalid_manifest manifest.json"
+          }
+        }
+      }
+    }
+  ]
+}
