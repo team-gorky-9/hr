@@ -344,7 +344,7 @@ export const CandidateProfile: React.FC<CandidateProfileProps> = ({
                   </label>
                   <input
                     type="text"
-                    defaultValue="3 рабочих дня (норма)"
+                    defaultValue="10 рабочих дней (норма)"
                     className="w-full px-3 py-2 text-[13px] border border-[#D2D4D8] rounded-lg bg-white text-[#141A24] focus:outline-none focus:border-[#1F4FD1]"
                   />
                 </div>
