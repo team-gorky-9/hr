@@ -160,6 +160,7 @@ INTERVIEW_ROUTES = {
     "/api/v1/interviews/{interview_id}/outcome",
     # wave-3-matching-stage-1: люди под выбранную вакансию (3A).
     "/api/v1/matching/candidates",
+    "/api/v1/matching/vacancies",  # 3B: вакансии по присланному резюме
 }
 
 WORKFLOW_01_ROUTES = {

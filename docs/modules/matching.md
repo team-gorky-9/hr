@@ -1,6 +1,6 @@
 # Модуль «Двунаправленный подбор» (matching)
 
-Код — `app/matching/`. Контракт — [wave-3-matching-stage-1](../contracts/wave-3-matching-stage-1.md). Сейчас реализован раздел 3A: люди под выбранную вакансию. 3B (вакансии по резюме) и 3C (сохранённая подборка) — следующие задачи.
+Код — `app/matching/`. Контракт — [wave-3-matching-stage-1](../contracts/wave-3-matching-stage-1.md). Реализованы 3A (люди под выбранную вакансию) и 3B (вакансии по присланному резюме). 3C (сохранённая подборка) — следующая задача.
 
 ## Как работает 3A
 
@@ -35,3 +35,26 @@ curl -s -X POST localhost:8000/api/v1/matching/candidates -H 'X-User-Login: hr_d
 ```
 
 Первая строка ответа — `search-9015` с фрагментом «Анализ и согласование требований к ИС при модернизации портала…» и `qualification_status: not_evaluated` (`no_profile_ref`). С `"filters": {"required_terms": ["SAP ERP"]}` выдача пустая.
+
+## Как работает 3B
+
+`POST /api/v1/matching/vacancies` принимает `{candidate_id, contour, vacancies: [VacancySnapshot] (1–50), limit}`. В 3B `search_query` у снимка не нужен.
+
+Пример. Учебный кандидат `match-9001` прислал резюме без вакансии. HR передаёт четыре снимка: python-dev, qa-manual, frontend-dev и закрытую python-dev.
+
+1. **Проверка доступа и контура.** Права и контур — как в 3A. Кандидата нет — `404 CANDIDATE_NOT_FOUND`. Кандидат из другого контура — `409 CONTOUR_MISMATCH`.
+2. **Отсев.** Закрытая вакансия или вакансия другого контура попадает в `excluded` только с причиной (`closed` / `other_contour`).
+3. **Сопоставление с оценкой.** Остальные вакансии сопоставляются с сохранёнными кросс-оценками (`app.assessment.cross`, та же модель чтения, что `GET /candidates/{id}/cross-assessments`). Совпасть должны id профиля, его версия и код должности. Похожее название не используется.
+4. **Готовая оценка.** Вакансия попадает в `items` с `formal_result`, `assessment_id` и `reason`. Основание собирается из сохранённых проверок обязательных требований этапа отбора: «Нет сведений: …», «Не выполнено: …». Порядок — met → unknown → not_met, затем по id публикации.
+5. **Оценки нет.** Вакансия попадает в `needs_evaluation` с причиной: `not_assessed`, `assessment_stale` (с `stale_reason`), `no_profile_ref`, `unmapped_profile`, `profile_not_found`, `profile_mismatch` или `profile_not_current`.
+
+Если готовых оценок нет, `items` пуст, а `needs_evaluation` показывает, что проверить. Это не ответ «подходящих вакансий нет». Новые оценки, отклики и вызовы модели не создаются.
+
+Проверка на отдельной пустой учебной базе (подготовка утверждает учебные копии профилей):
+
+```bash
+DATABASE_URL=…/hr_match uv run alembic upgrade head
+DATABASE_URL=…/hr_match uv run python scripts/check_matching_vacancies.py --prepare
+DATABASE_URL=…/hr_match uv run uvicorn app.main:app &
+DATABASE_URL=…/hr_match uv run python scripts/check_matching_vacancies.py
+```
