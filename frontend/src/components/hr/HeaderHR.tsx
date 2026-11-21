@@ -34,14 +34,14 @@ export const HeaderHR: React.FC<HeaderHRProps> = ({
           <button
             type="button"
             onClick={onLogoClick || (() => onTabChange('database'))}
-            className="flex items-center gap-3 justify-self-start text-left hover:opacity-90 transition-opacity"
+            className="flex items-center gap-3 min-w-0 justify-self-start text-left hover:opacity-90 transition-opacity"
           >
             <img
               src="/images/Header/Mark.svg"
               alt="GorkyCode"
               className="w-9 h-9 shrink-0"
             />
-            <span className="text-[16px] font-bold text-[#141A24] tracking-tight whitespace-nowrap">
+            <span className="text-[16px] font-bold text-[#141A24] tracking-tight sm:whitespace-nowrap">
               GorkyCode - team 9
             </span>
           </button>
