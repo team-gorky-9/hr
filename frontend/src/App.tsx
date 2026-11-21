@@ -394,9 +394,6 @@ export const App: React.FC = () => {
               { id: 'workspace', label: 'Рабочее пространство' },
               { id: 'care', label: 'Забота и мотивация' },
               { id: 'support', label: 'Материальная помощь' },
-              { id: 'development', label: 'Развитие' },
-              { id: 'workforce', label: 'Кадровые назначения' },
-              { id: 'onboarding', label: 'Адаптация' },
               { id: 'surveys', label: 'Опросы' },
               { id: 'vacancies', label: 'Витрина вакансий' },
             ]}
