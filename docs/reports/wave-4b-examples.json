@@ -1,0 +1,14 @@
+{
+  "campaign_id": "79779aff-f464-470a-b3c6-774498fac928",
+  "nomination_id": "df8917c3-504c-44d2-afd3-7cd244f5c9b1",
+  "results": [
+    {
+      "id": "df8917c3-504c-44d2-afd3-7cd244f5c9b1",
+      "nominee_id": "678f5620-c651-556f-859f-2c41e375d567",
+      "campaign_id": "79779aff-f464-470a-b3c6-774498fac928",
+      "status": "selected",
+      "revision": 4
+    }
+  ],
+  "reopened_revision": 4
+}
