@@ -66,9 +66,27 @@ from app.interview.service import GuideError
 from app.postings.service import resolve_application, resolved_state
 
 
+class _LazyLLMClient:
+    """Клиент создаётся при первом обращении к модели, а не при разборе запроса.
+
+    Иначе стенд без ключа модели отвечал 500 на любой POST гайда: build_client бросал
+    LLMUnavailableError ещё в зависимости FastAPI, до проверки оценки. Теперь отклик без оценки
+    получает 409 ASSESSMENT_REQUIRED, а отсутствие ключа при нужном вызове — 503 LLM_UNAVAILABLE."""
+
+    def __init__(self):
+        self._client: LLMClient | None = None
+
+    def __getattr__(self, name: str):
+        if name == "calls" and self._client is None:
+            return []  # журнал вызовов пуст, пока модель не понадобилась (гайд из кэша рубрики)
+        if self._client is None:
+            self._client = build_client()
+        return getattr(self._client, name)
+
+
 def get_llm_client() -> LLMClient:
     """Клиент модели для маршрута гайда; в тестах подменяется FakeLLMClient через dependency_overrides."""
-    return build_client()
+    return _LazyLLMClient()
 
 
 def rule_error(error: repo.RuleConflict) -> ApiError:

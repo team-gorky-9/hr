@@ -1,7 +1,8 @@
 export const environment = (import.meta as ImportMeta & { env: Record<string, string> }).env;
 export const recruitmentContour = environment.VITE_RECRUITMENT_CONTOUR === 'working' ? 'working' : 'training';
 const base = environment.VITE_RECRUITMENT_API_BASE || '/legacy-api/api/v1';
-export const recipientId = environment.VITE_RECRUITMENT_RECIPIENT_ID || '';
+// Default: fixed id of the stand account dept_demo (app/db/seed.py demo_user_id); override per deployment.
+export const recipientId = environment.VITE_RECRUITMENT_RECIPIENT_ID || '91fb005a-a5e2-5d38-b6ee-a5e968e182a9';
 export type Role = 'hr' | 'dept';
 export interface Stage { code: string; title: string; is_final: boolean }
 export interface Vacancy { vacancy_id: string; title: string; employer: string; channel: string; applications_count: number; approved_profile_version: number | null }

@@ -61,6 +61,12 @@ services:
       DATABASE_URL: postgresql+psycopg://legacy:${LEGACY_DB_PASSWORD}@postgres:5432/legacy
       CORS_ORIGINS: '[]'
       HR_SEARCH_SEMANTIC_ENABLED: 'false'
+      # Annual report snapshots must survive container replacement.
+      HR_REPORTS_DIR: /data/annual-reports
+      # Optional model access for assessment and interview guides; empty keeps the model off (409/503, not 500).
+      YANDEX_API_KEY: ${YANDEX_API_KEY:-}
+      YANDEX_FOLDER_ID: ${YANDEX_FOLDER_ID:-}
+    volumes: [legacy-data:/data]
     depends_on: {legacy-migrate: {condition: service_completed_successfully}}
   legacy-migrate:
     image: ${IMAGE_PREFIX:-hr-backend}-legacy:${RELEASE}
@@ -213,6 +219,7 @@ services:
 
 volumes:
   postgres:
+  legacy-data:
   rabbitmq:
   requirements-files:
   hiring-files:
