@@ -1,6 +1,6 @@
 # Модуль «Двунаправленный подбор» (matching)
 
-Код — `app/matching/`. Контракт — [wave-3-matching-stage-1](../contracts/wave-3-matching-stage-1.md). Реализованы 3A (люди под выбранную вакансию) и 3B (вакансии по присланному резюме). 3C (сохранённая подборка) — следующая задача.
+Код — `app/matching/`. Контракт — [wave-3-matching-stage-1](../contracts/wave-3-matching-stage-1.md). Реализованы 3A (люди под выбранную вакансию), 3B (вакансии по присланному резюме) и 3C (сохранённая подборка после публикации).
 
 ## Как работает 3A
 
@@ -57,4 +57,27 @@ DATABASE_URL=…/hr_match uv run alembic upgrade head
 DATABASE_URL=…/hr_match uv run python scripts/check_matching_vacancies.py --prepare
 DATABASE_URL=…/hr_match uv run uvicorn app.main:app &
 DATABASE_URL=…/hr_match uv run python scripts/check_matching_vacancies.py
+```
+
+## Как работает 3C
+
+`POST /api/v1/matching/suggestions` принимает тот же вход, что 3A, и отвечает `201`. `GET /api/v1/matching/suggestions/{id}` перечитывает подборку. Хранение — таблица `matching_suggestions`, миграция `0011`.
+
+Порядок вызовов экрана после публикации вакансии:
+1. Опубликовать вакансию в каталоге или взять учебный снимок.
+2. `POST /matching/suggestions` с `{vacancy, filters, limit}` → показать `items`, запомнить `id`.
+3. Позже `GET /matching/suggestions/{id}` → тот же результат с датой расчёта (`created_at`), автором, редакцией вакансии (`vacancy_revision`) и запросом.
+4. После правки вакансии — новый `POST` с новой `revision`. Прежняя подборка остаётся для объяснения.
+
+Подборка — явное действие API, а не фоновое событие: автоматический запуск по событию публикации относится к этапу 2.
+
+**Что хранится.** Разрешённая выдача: `candidate_id`, балл, тип совпадения, статус оценки, ссылка на версию источника (`candidate_text_id` и границы фрагмента). Текст фрагмента и описание вакансии не хранятся. При чтении фрагмент берётся из действующего источника, а `source_status` показывает его состояние:
+- `available` — текст кандидата текущий, фрагмент и границы UTF-16 отдаются;
+- `superseded` — текст заменён новой версией, фрагмента нет, ссылка остаётся;
+- `unavailable` — кандидат удалён или из другого контура, фрагмента и кода нет.
+
+Права и контур проверяются при каждом чтении. Подборка не создаёт отклик, приглашение, запись резерва и не даёт права на контакт (`qualification_note` в ответе).
+
+```bash
+uv run python scripts/check_matching_suggestions.py   # API запущен, учебный корпус загружен (load-demo)
 ```
