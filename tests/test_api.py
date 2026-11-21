@@ -163,6 +163,7 @@ INTERVIEW_ROUTES = {
     "/api/v1/matching/vacancies",  # 3B: вакансии по присланному резюме
     "/api/v1/matching/suggestions",  # 3C: сохранённая подборка после публикации
     "/api/v1/matching/suggestions/{suggestion_id}",
+    "/api/v1/management/overview",  # wave-4 4A: текущая работа и факты интервью
 }
 
 WORKFLOW_01_ROUTES = {
