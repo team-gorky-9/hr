@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type HRNavTab = 'database' | 'vacancies' | 'interview' | 'reserve' | 'analytics';
+export type HRNavTab = 'database' | 'vacancies' | 'interview' | 'reserve' | 'archive' | 'analytics';
 
 interface HeaderHRProps {
   activeTab: HRNavTab;
@@ -19,7 +19,8 @@ export const HeaderHR: React.FC<HeaderHRProps> = ({
     { id: 'database', label: 'Единая база' },
     { id: 'vacancies', label: 'Отклики по вакансиям' },
     { id: 'interview', label: 'Интервью' },
-    { id: 'reserve', label: 'Архив кадров' },
+    { id: 'archive', label: 'Архив резюме' },
+    { id: 'reserve', label: 'Кадровый резерв' },
     { id: 'analytics', label: 'Аналитика' },
   ];
 
