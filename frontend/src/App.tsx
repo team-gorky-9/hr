@@ -260,6 +260,7 @@ export const App: React.FC = () => {
             {hrTab === 'database' && dbView === 'profile' && databaseCandidate && (
               <CandidateProfile
                 candidate={databaseCandidate}
+                selectedApplicationId={selectedCandidateId}
                 onBackToDatabase={() => {
                   setDbView('list');
                   window.scrollTo({ top: 0, behavior: 'smooth' });

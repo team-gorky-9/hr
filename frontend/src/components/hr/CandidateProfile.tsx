@@ -6,13 +6,14 @@ import type { CandidateRecord } from './CandidatesDatabase';
 
 interface CandidateProfileProps {
   candidate: CandidateRecord;
+  selectedApplicationId?: string;
   onBackToDatabase?: () => void;
   onOpenInterview?: (applicationId: string) => void;
   onOpenReserve?: () => void;
 }
 
-export default function CandidateProfile({ candidate, onBackToDatabase, onOpenInterview, onOpenReserve }: CandidateProfileProps) {
-  const [selected, setSelected] = useState(candidate.applicationId);
+export default function CandidateProfile({ candidate, selectedApplicationId, onBackToDatabase, onOpenInterview, onOpenReserve }: CandidateProfileProps) {
+  const [selected, setSelected] = useState(selectedApplicationId || candidate.applicationId);
   const [source, setSource] = useState<{ text: string; version: number } | null>(null);
   const [sourceError, setSourceError] = useState('');
   const applicationId = candidate.applications.some(row => row.application_id === selected) ? selected : candidate.applicationId;
@@ -27,6 +28,7 @@ export default function CandidateProfile({ candidate, onBackToDatabase, onOpenIn
   }, [applicationId, candidate.current_text_id]);
 
   if (applicationId) return <CandidateCard key={applicationId} candidateId={applicationId} backLabel="Единая база" databaseProfile
+    profileApplication={candidate.applications.find(item => item.application_id === applicationId)} profileChannel={candidate.channel}
     onBack={onBackToDatabase} onOpenArchive={onOpenReserve} onRequestClarification={onOpenInterview ? () => onOpenInterview(applicationId) : undefined}
     context={candidate.applications.length > 1 && <label className="block max-w-lg font-medium text-sm">
       Рассмотрение

@@ -1,125 +1,248 @@
 import { useEffect, useState } from 'react';
-import { archiveApi, contour, request, type Vacancy } from '../../api/archive';
-import { annualReportsPath, downloadWorkbook } from '../../api/reports';
-import ReportPage from '../report/ReportPage';
-import { Btn, Card } from '../shared/ui';
+import { analyticsApi, type Dashboard, type Period, type ReportQuery, type ReportSlice, type ReportVersion } from '../../api/analytics';
 
 export type AnalyticsView = 'dashboard' | 'config' | 'ready';
-type DashboardVacancy = Vacancy & { channel?: string; applications_count?: number };
-type Funnel = {
-  as_of: string;
-  total_applications: number;
-  stages: { code: string; title: string; reached_count: number }[];
-  closures: { stage_code: string; reason_title: string; count: number }[];
-  open_waits: { total: number; due_soon_total: number; overdue_total: number };
-};
-
-const field = 'px-3 py-1.5 border border-[#E1E5EB] rounded-lg bg-white text-[#141A24] text-[13px]';
+type Prepared = { version: ReportVersion; from: string; to: string; query: ReportQuery; slice: ReportSlice };
 const periodOptions = ['Неделя', 'Месяц', 'Квартал', 'Год', 'Свой период'];
-const channelNames: Record<string, string> = { hh_ru: 'HH.ru', rabota_rossii: 'Работа России', city_site: 'Сайт администрации', email: 'Электронная почта', citizen_appeal: 'Обращения граждан', internship: 'Практика' };
-const statusNames: Record<string, string> = { open: 'Открыта', closed: 'Закрыта', draft: 'Черновик', paused: 'Приостановлена' };
-const weeklyData = [
-  { label: '21–27 окт', screenedHeight: '52%', interviewHeight: '40%' },
-  { label: '28 окт–3 ноя', screenedHeight: '70%', interviewHeight: '48%' },
-  { label: '4–10 ноя', screenedHeight: '92%', interviewHeight: '68%' },
-  { label: '11–17 ноя', screenedHeight: '88%', interviewHeight: '68%' },
-  { label: '18–20 ноя', screenedHeight: '60%', interviewHeight: '42%' },
+const periodDays: Record<string, number> = { Неделя: 7, Месяц: 30, Квартал: 90, Год: 365 };
+const channelNames: Record<string, string> = {
+  hh_ru: 'HH.ru', rabota_rossii: '«Работа России»', city_site: 'Сайт администрации', email: 'Почта',
+  citizen_appeal: 'Обращения граждан', internship: 'Студенты', internal: 'Внутренние', other: 'Другие',
+};
+const stages = [
+  ['new', 'Получено'], ['screening', 'Разобрано'], ['phone_interview', 'Телефонное интервью'],
+  ['sent_to_department', 'Направлено в департамент'], ['department_interview', 'Очное собеседование'], ['hired', 'Принято'],
 ];
+const metrics = ['applications_received', 'phone_interviews_held', 'applications_with_phone_interview'];
+const dayMs = 86_400_000;
+const firstDate = '0001-01-02';
+const lastDate = '9999-12-30';
+const dayLabel = new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short', timeZone: 'UTC' });
+const monthLabel = new Intl.DateTimeFormat('ru-RU', { month: 'short', timeZone: 'UTC' });
+const dateText = (time: number) => new Date(time).toISOString().slice(0, 10);
+const monthName = (month: string) => monthLabel.format(new Date(month + '-01T12:00:00Z'));
+const message = (failure: unknown) => failure instanceof Error ? failure.message : 'Не удалось выполнить действие.';
+const percent = (value: number, max: number) => 100 * value / Math.max(max, 1) + '%';
+const isMonth = (value: string, year: number) => /^\d{4}-(0[1-9]|1[0-2])$/.test(value) && value.startsWith(String(year) + '-');
+
+function latestPeriod(days: number): Period {
+  const to = dateText(Date.now() + 3 * 3_600_000);
+  return { from: dateText(Date.parse(to) - (days - 1) * dayMs), to };
+}
+
+function validPeriod({ from, to }: Period) {
+  const days = (Date.parse(to) - Date.parse(from)) / dayMs;
+  return from >= firstDate && to <= lastDate && Number.isFinite(days) && days >= 0 && days < 366;
+}
+
+function previousPeriod(period: Period, mode: string): Period {
+  if (mode === 'year') {
+    function shift(value: string) {
+      const [year, month, day] = value.split('-').map(Number);
+      const lastDay = new Date(0);
+      lastDay.setUTCFullYear(year - 1, month, 0);
+      const shifted = new Date(0);
+      shifted.setUTCFullYear(year - 1, month - 1, Math.min(day, lastDay.getUTCDate()));
+      return dateText(shifted.getTime());
+    }
+    return { from: shift(period.from), to: shift(period.to) };
+  }
+  const first = Date.parse(period.from);
+  return { from: dateText(2 * first - Date.parse(period.to) - dayMs), to: dateText(first - dayMs) };
+}
 
 export default function AnalyticsDashboard() {
   const [view, setView] = useState<AnalyticsView>('dashboard');
-  const [activePeriod, setActivePeriod] = useState('Свой период');
-  const [vacancies, setVacancies] = useState<DashboardVacancy[]>([]);
+  const [activePeriod, setActivePeriod] = useState('Месяц');
+  const [period, setPeriod] = useState(() => latestPeriod(30));
   const [vacancy, setVacancy] = useState('');
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
-  const [funnel, setFunnel] = useState<Funnel | null>(null);
-  const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
-  const [downloading, setDownloading] = useState(false);
+  const [vacancies, setVacancies] = useState<{ vacancy_id: string; title: string }[]>([]);
+  const [dashboard, setDashboard] = useState<Dashboard | null>(null);
+  const [comparison, setComparison] = useState<Dashboard | null>(null);
+  const [comparisonMode, setComparisonMode] = useState('previous');
+  const [comparisonError, setComparisonError] = useState(false);
+  const [dataError, setDataError] = useState('');
+  const [vacancyError, setVacancyError] = useState('');
   const [reload, setReload] = useState(0);
-  const invalidDates = Boolean(from && to && from > to);
+  const [notice, setNotice] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [versions, setVersions] = useState<ReportVersion[]>([]);
+  const [reportId, setReportId] = useState('');
+  const [reportFrom, setReportFrom] = useState('');
+  const [reportTo, setReportTo] = useState('');
+  const [reportPreset, setReportPreset] = useState('Год');
+  const [prepared, setPrepared] = useState<Prepared | null>(null);
+  const invalidPeriod = !validPeriod(period);
+  const reportVersion = versions.find((version) => version.snapshot_id === reportId);
+  const reportMin = reportVersion ? reportVersion.year + '-01' : undefined;
+  const reportMax = reportVersion ? reportVersion.year + '-12' : undefined;
 
   useEffect(() => {
     const controller = new AbortController();
-    archiveApi.vacancies(controller.signal).then(({ items }) => setVacancies(items)).catch((failure) => {
-      if (!controller.signal.aborted) setError(failure.message);
-    });
+    setVacancyError('');
+    analyticsApi.vacancies(controller.signal)
+      .then(({ items }) => { if (!controller.signal.aborted) setVacancies(items); })
+      .catch((failure) => { if (!controller.signal.aborted) setVacancyError(message(failure)); });
     return () => controller.abort();
   }, [reload]);
 
   useEffect(() => {
-    setFunnel(null);
-    setError('');
-    if (invalidDates) return;
+    setDashboard(null);
+    setDataError('');
+    if (invalidPeriod) return;
     const controller = new AbortController();
-    const params = new URLSearchParams({ contour });
-    if (vacancy) params.set('vacancy_id', vacancy);
-    if (from) params.set('period_from', from);
-    if (to) params.set('period_to', to);
-    request<Funnel>('/analytics/funnel?' + params, { signal: controller.signal }).then(setFunnel).catch((failure) => {
-      if (!controller.signal.aborted) setError(failure.message);
-    });
+    analyticsApi.dashboard(period, vacancy, controller.signal)
+      .then((data) => { if (!controller.signal.aborted) setDashboard(data); })
+      .catch((failure) => { if (!controller.signal.aborted) setDataError(message(failure)); });
     return () => controller.abort();
-  }, [vacancy, from, to, invalidDates, reload]);
+  }, [period, vacancy, invalidPeriod, reload]);
 
-  function selectPeriod(period: string) {
-    setActivePeriod(period);
-    if (period === 'Свой период') return;
-    const end = new Date();
-    const start = new Date(end);
-    const days = { Неделя: 6, Месяц: 29, Квартал: 89, Год: 364 }[period] ?? 29;
-    start.setUTCDate(start.getUTCDate() - days);
-    setFrom(start.toISOString().slice(0,10));
-    setTo(end.toISOString().slice(0,10));
-  }
-
-  async function downloadAnnual() {
-    setError('');
-    setDownloading(true);
-    try {
-      const versions = await request<{ snapshot_id: string }[]>(annualReportsPath);
-      if (!versions[0]) throw new Error('Доступных снимков пока нет.');
-      await downloadWorkbook(versions[0].snapshot_id, '/xlsx');
-    } catch (failure) {
-      setError(failure instanceof Error ? failure.message : 'Не удалось скачать отчёт.');
-    } finally {
-      setDownloading(false);
+  useEffect(() => {
+    setComparison(null);
+    setComparisonError(false);
+    if (!comparisonMode || invalidPeriod) return;
+    const range = previousPeriod(period, comparisonMode);
+    if (!validPeriod(range)) {
+      setComparisonError(true);
+      return;
     }
+    const controller = new AbortController();
+    analyticsApi.dashboard(range, vacancy, controller.signal)
+      .then((data) => { if (!controller.signal.aborted) setComparison(data); })
+      .catch(() => { if (!controller.signal.aborted) setComparisonError(true); });
+    return () => controller.abort();
+  }, [period, vacancy, invalidPeriod, reload, comparisonMode]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    analyticsApi.versions(controller.signal).then((rows) => {
+      if (controller.signal.aborted) return;
+      setVersions(rows);
+      setReportId((current) => current || rows[0]?.snapshot_id || '');
+    }).catch((failure) => { if (!controller.signal.aborted) setNotice(message(failure)); });
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    setReportFrom(reportMin ?? '');
+    setReportTo(reportMax ?? '');
+    setReportPreset('Год');
+  }, [reportMin, reportMax]);
+
+  function selectPeriod(name: string) {
+    setActivePeriod(name);
+    if (periodDays[name]) setPeriod(latestPeriod(periodDays[name]));
   }
 
-  const stageCount = (code: string) => funnel?.stages.find((stage) => stage.code === code)?.reached_count;
-  const barWidth = (value: number, max: number) => (100 * value / Math.max(max, 1)) + '%';
-  const funnelData = funnel?.stages.map((stage) => ({ stage: stage.title, count: stage.reached_count, width: barWidth(stage.reached_count, funnel.total_applications) })) ?? [];
-  const channels = new Map<string, number>();
-  const rejectionCounts = new Map<string, number>();
-  for (const item of vacancies) {
-    if (!item.channel || (vacancy && item.vacancy_id !== vacancy)) continue;
-    channels.set(item.channel, (channels.get(item.channel) || 0) + (item.applications_count ?? 0));
+  function changePeriod(key: keyof Period, value: string) {
+    setActivePeriod('Свой период');
+    setPeriod((current) => ({ ...current, [key]: value }));
   }
-  for (const item of funnel?.closures ?? []) {
-    if (item.stage_code !== 'rejected') continue;
-    rejectionCounts.set(item.reason_title, (rejectionCounts.get(item.reason_title) || 0) + item.count);
+
+  function comparisonLabel(key: 'screened' | 'interviews' | 'hired', fallback: string) {
+    if (!dashboard || !comparison) return fallback;
+    const before = comparison.totals[key];
+    if (!before) return 'Период сравнения: 0';
+    const change = Math.round(100 * (dashboard.totals[key] - before) / before);
+    return (change > 0 ? '+' : '') + change + '% к выбранному сравнению';
   }
-  const maxChannel = Math.max(1, ...channels.values());
-  const sourcesData = Array.from(channels, ([source, count]) => ({ source: channelNames[source] || source, count, width: barWidth(count, maxChannel) }));
-  const maxRejection = Math.max(1, ...rejectionCounts.values());
-  const rejectionData = Array.from(rejectionCounts, ([reason, count]) => ({ reason, count, width: barWidth(count, maxRejection) })).sort((a,b) => b.count-a.count);
-  const vacanciesSLA = vacancies.filter((item) => !vacancy || item.vacancy_id === vacancy).map((item) => {
-    const selected = item.vacancy_id === vacancy && funnel;
+
+  const future = () => setNotice('Будет добавлено позже');
+
+  function selectReportPeriod(preset: string) {
+    if (preset === 'Неделя') return future();
+    if (!reportVersion) return;
+    setReportPreset(preset);
+    if (preset === 'Свой период') return;
+    setReportFrom(reportVersion.year + '-' + (preset === 'Месяц' ? '12' : preset === 'Квартал' ? '10' : '01'));
+    setReportTo(reportVersion.year + '-12');
+  }
+
+  async function run(action: () => Promise<void>) {
+    setBusy(true);
+    setNotice('');
+    try { await action(); }
+    catch (failure) { setNotice(message(failure)); }
+    finally { setBusy(false); }
+  }
+
+  async function prepareReport() {
+    if (!reportVersion || !isMonth(reportFrom, reportVersion.year) || !isMonth(reportTo, reportVersion.year) || reportFrom > reportTo) {
+      setNotice('Выберите месяцы в пределах года выбранного снимка.');
+      return;
+    }
+    const query: ReportQuery = {
+      start_month: Number(reportFrom.slice(-2)), end_month: Number(reportTo.slice(-2)),
+      metrics, group_by: ['month'], compare_previous: false,
+    };
+    await run(async () => {
+      const slice = await analyticsApi.report(reportVersion.snapshot_id, query);
+      setPrepared({ version: reportVersion, from: reportFrom, to: reportTo, query, slice });
+      setView('ready');
+    });
+  }
+
+  function downloadLatestAnnual() {
+    return run(async () => {
+      const snapshot = versions[0];
+      if (!snapshot) throw new Error('Доступных снимков годового доклада пока нет.');
+      await analyticsApi.downloadAnnual(snapshot.snapshot_id);
+    });
+  }
+
+  function downloadReady() {
+    if (prepared) return run(() => analyticsApi.downloadReport(prepared.version.snapshot_id, prepared.query));
+  }
+
+  const counts = dashboard ? stages.map(([code, stage]) => ({
+    stage, count: code === 'new' ? dashboard.totals.received : code === 'sent_to_department' ? dashboard.totals.forwarded
+      : dashboard.stages.find((item) => item.code === code)?.count ?? 0,
+  })) : [];
+  const maxStage = Math.max(1, ...counts.map((item) => item.count));
+  const funnelData = counts.map((item) => ({ ...item, width: percent(item.count, maxStage) }));
+  const sources = dashboard?.sources ?? [];
+  const maxSource = Math.max(1, ...sources.map((item) => item.count));
+  const sourcesData = sources.map(({ channel, count }) => ({ source: channelNames[channel] || 'Другие источники', count, width: percent(count, maxSource) }));
+  const rejections = dashboard?.rejections ?? [];
+  const maxRejection = Math.max(1, ...rejections.map((item) => item.count));
+  const rejectionData = rejections.map(({ code, title, count }) => ({ code, reason: title, count, width: percent(count, maxRejection) }));
+  const weeks = dashboard?.weeks ?? [];
+  const maxWeek = Math.max(1, ...weeks.flatMap(({ screened, interviews }) => [screened, interviews]));
+  const weeklyData = weeks.map((week) => ({
+    ...week, label: dayLabel.format(new Date(week.start)) + (week.start === week.end ? '' : '–' + dayLabel.format(new Date(week.end))),
+    screenedHeight: percent(week.screened, maxWeek), interviewHeight: percent(week.interviews, maxWeek),
+  }));
+  const vacanciesSLA = (dashboard?.vacancies ?? []).map((row) => ({
+    ...row, responses: row.received, interview: row.interviews,
+    slaStatus: row.overdue ? 'Просрочено · ' + row.overdue : row.due_soon ? 'Срок подходит · ' + row.due_soon
+      : row.waiting ? 'В срок · ' + row.waiting : 'Нет открытых передач',
+    slaColor: row.overdue ? 'bg-[#FEE2E2] text-[#B91C1C]' : row.due_soon ? 'bg-[#FFF3D6] text-[#B45309]'
+      : row.waiting ? 'bg-[#D7F0DD] text-[#15803D]' : 'bg-[#EEF1F5] text-[#4A5363]',
+  }));
+  const waiting = vacanciesSLA.reduce((sum, row) => sum + row.waiting, 0);
+  const overdue = vacanciesSLA.reduce((sum, row) => sum + row.overdue, 0);
+  const reportCards = [
+    ['Отклики', 'applications_received'], ['Интервью', 'phone_interviews_held'],
+    ['Отклики с разговором', 'applications_with_phone_interview'], ['Принято', 'hired'],
+  ].map(([label, key]) => {
+    const metric = prepared?.slice.totals[key];
+    return { label, value: metric?.value ?? '—', note: key === 'hired' ? 'Будет добавлено позже' : metric?.status === 'partial' ? 'Неполный охват' : 'По выбранному срезу' };
+  });
+  const months = prepared?.slice.rows ?? [];
+  const maxMonth = Math.max(1, ...months.flatMap(({ metrics: row }) => [row.applications_received?.value ?? 0, row.phone_interviews_held?.value ?? 0]));
+  const reportMonths = months.map(({ dimensions, metrics: row }) => {
+    const rawMonth = String(dimensions.month ?? '');
+    const month = /^\d{4}-\d{2}$/.test(rawMonth) ? rawMonth : prepared?.version.year + '-' + rawMonth.padStart(2, '0');
     return {
-      title: item.title, responses: item.applications_count ?? '—',
-      interview: selected ? stageCount('phone_interview') ?? '—' : '—',
-      forwarded: selected ? stageCount('sent_to_department') ?? '—' : '—',
-      status: statusNames[item.status] || 'Иной статус',
-      slaStatus: selected ? selected.open_waits.overdue_total ? 'Просрочено: ' + selected.open_waits.overdue_total
-        : selected.open_waits.total ? 'Ожидается: ' + selected.open_waits.total : 'Нет открытых передач' : 'Выберите вакансию',
-      slaColor: selected && selected.open_waits.overdue_total ? 'bg-[#FEE2E2] text-[#B91C1C]' : 'bg-[#EEF1F5] text-[#4A5363]',
+      label: /^\d{4}-(0[1-9]|1[0-2])$/.test(month) ? monthName(month) : rawMonth,
+      screenedHeight: percent(row.applications_received?.value ?? 0, maxMonth), interviewHeight: percent(row.phone_interviews_held?.value ?? 0, maxMonth),
     };
   });
 
+
   return (
     <div className="max-w-[1240px] mx-auto px-4 sm:px-6 py-6 space-y-6">
+      {/* Quick Mockup Switcher for convenience (Экраны 21, 22, 23) */}
       <div className="flex items-center justify-end">
         <div className="flex items-center gap-1 bg-white border border-[#E1E5EB] rounded-lg p-1 text-xs">
           <button
@@ -158,6 +281,9 @@ export default function AnalyticsDashboard() {
         </div>
       </div>
 
+      {/* ======================================================== */}
+      {/* МАКЕТ 21: ДАШБОРД ЗА ПЕРИОД (Аналитика_ дашборд.png)      */}
+      {/* ======================================================== */}
       {view === 'dashboard' && (
         <>
           {/* Header & Filters Card */}
@@ -168,16 +294,16 @@ export default function AnalyticsDashboard() {
                   Аналитика и отчёты
                 </h1>
                 <p className="text-[13px] text-[#616977]">
-                  {funnel ? 'Состояние подбора · ' + new Date(funnel.as_of).toLocaleString('ru-RU') : 'Состояние подбора'}
+                  {dashboard ? 'Срез на ' + new Date(dashboard.as_of).toLocaleString('ru-RU') : 'Подбор по вакансиям'}
                 </p>
               </div>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => void downloadAnnual()} disabled={downloading}
+                  title="Годовой доклад: фильтры дашборда не применяются" onClick={() => void downloadLatestAnnual()} disabled={busy}
                   className="px-4 py-2 text-[13px] font-medium text-[#141A24] bg-white border border-[#E1E5EB] rounded-lg hover:bg-[#F3F5F8] transition-colors whitespace-nowrap"
                 >
-                  Скачать годовой XLSX
+                  Годовой XLSX
                 </button>
                 <button
                   type="button"
@@ -191,7 +317,7 @@ export default function AnalyticsDashboard() {
 
             {/* Filter controls row */}
             <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-[#F0F2F5]">
-              <div className="inline-flex flex-wrap rounded-lg bg-[#F3F5F8] p-1">
+              <div className="inline-flex rounded-lg bg-[#F3F5F8] p-1">
                 {periodOptions.map((p) => (
                   <button
                     key={p}
@@ -210,38 +336,67 @@ export default function AnalyticsDashboard() {
 
               <div className="flex flex-wrap items-center gap-3 text-[13px]">
                 <div className="flex items-center gap-2">
-                  <label>Закрытие с <input type="date" value={from} onChange={(event) => { setFrom(event.target.value); setActivePeriod('Свой период'); }} className={field} /></label>
-                  <label>по <input type="date" value={to} onChange={(event) => { setTo(event.target.value); setActivePeriod('Свой период'); }} className={field} /></label>
+                  <span className="text-[#616977]">Период</span>
+                  <input type="date" aria-label="Начало периода" value={period.from} onChange={(event) => changePeriod('from', event.target.value)} className="px-3 py-1.5 border border-[#E1E5EB] rounded-lg bg-white text-[#141A24] text-[13px] focus:outline-none" />
+                  <input type="date" aria-label="Конец периода" value={period.to} onChange={(event) => changePeriod('to', event.target.value)} className="px-3 py-1.5 border border-[#E1E5EB] rounded-lg bg-white text-[#141A24] text-[13px] focus:outline-none" />
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <button type="button" className={field} onClick={() => setNotice('Будет добавлено позже')}>Сравнить с прошлым периодом</button>
+                  <span className="text-[#616977]">Сравнить с</span>
+                  <select aria-label="Сравнить с" value={comparisonMode} onChange={(event) => setComparisonMode(event.target.value)} className="px-3 py-1.5 border border-[#E1E5EB] rounded-lg bg-white text-[#141A24] text-[13px] focus:outline-none">
+                    <option value="previous">Предыдущий период</option><option value="year">Тот же период прошлого года</option><option value="">Без сравнения</option>
+                  </select>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <label>Вакансия <select className={field} value={vacancy} onChange={(event) => setVacancy(event.target.value)}>
-                    <option value="">Все вакансии</option>
+                  <span className="text-[#616977]">Вакансия</span>
+                  <select aria-label="Вакансия" value={vacancy} onChange={(event) => setVacancy(event.target.value)} className="px-3 py-1.5 border border-[#E1E5EB] rounded-lg bg-white text-[#141A24] text-[13px] focus:outline-none">
+                    <option value="">Все вакансии{vacancies.length > 0 ? ' (' + vacancies.length + ')' : ''}</option>
                     {vacancies.map((item) => <option key={item.vacancy_id} value={item.vacancy_id}>{item.title}</option>)}
-                  </select></label>
+                  </select>
                 </div>
               </div>
             </div>
           </div>
 
-          {error && <Card><p role="alert" className="text-[#A3171B]">{error}</p><Btn variant="link" onClick={() => setReload((value) => value + 1)}>Повторить</Btn></Card>}
-          {invalidDates && <Card><p role="alert">Проверьте даты периода закрытия откликов.</p></Card>}
-          {!funnel && !error && !invalidDates && <p role="status" className="text-[14px] text-[#616977]">Загружаем данные подбора…</p>}
+          {invalidPeriod && <p role="alert" className="text-[13px] text-[#A3171B]">Выберите период от 1 до 366 календарных дней.</p>}
+          {vacancyError && <p role="alert" className="text-[13px] text-[#A3171B]">{vacancyError} <button type="button" className="underline" onClick={() => setReload((value) => value + 1)}>Повторить загрузку вакансий</button></p>}
+          {dataError && <p role="alert" className="text-[13px] text-[#A3171B]">{dataError} <button type="button" className="underline" onClick={() => setReload((value) => value + 1)}>Повторить</button></p>}
+          {!dashboard && !invalidPeriod && !dataError && <p role="status" className="text-[13px] text-[#616977]">Загружаем данные…</p>}
+          {comparisonError && <p role="status" className="text-[13px] text-[#616977]">Данные для сравнения недоступны.</p>}
+          {/* 4 Summary Metric Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[
-              { label: 'Получено откликов', value: funnel?.total_applications, caption: 'По выбранным вакансиям' },
-              { label: 'Открытые передачи', value: funnel?.open_waits.total, caption: 'Ожидают ответа подразделения' },
-              { label: 'Дошли до телефонного интервью', value: stageCount('phone_interview'), caption: 'По истории этапов' },
-              { label: 'Приняты на работу', value: stageCount('hired'), caption: 'По истории этапов' },
-            ].map(({ label, value, caption }) => <div key={label} className="bg-white border border-[#E1E5EB] rounded-2xl p-5 shadow-sm">
-              <div className="text-[12px] text-[#616977] mb-1">{label}</div>
-              <div className="text-[28px] font-bold text-[#141A24] mb-1">{value ?? '—'}</div>
-              <div className="text-[12px] text-[#616977]">{caption}</div>
-            </div>)}
+            <div className="bg-white border border-[#E1E5EB] rounded-2xl p-5 shadow-sm">
+              <div className="text-[12px] text-[#616977] mb-1">Разобрано откликов</div>
+              <div className="text-[28px] font-bold text-[#141A24] mb-1">{dashboard?.totals.screened ?? '—'}</div>
+              <div className="text-[12px] font-medium text-[#15803D]">
+                {comparisonLabel('screened', 'Достигли первичного отбора')}
+              </div>
+            </div>
+
+            <div className="bg-white border border-[#E1E5EB] rounded-2xl p-5 shadow-sm">
+              <div className="text-[12px] text-[#616977] mb-1">Первый ответ кандидату</div>
+              <div className="text-[28px] font-bold text-[#141A24] mb-1">—</div>
+              <div className="text-[12px] font-medium text-[#15803D]">
+                Будет добавлено позже
+              </div>
+            </div>
+
+            <div className="bg-white border border-[#E1E5EB] rounded-2xl p-5 shadow-sm">
+              <div className="text-[12px] text-[#616977] mb-1">Проведено интервью</div>
+              <div className="text-[28px] font-bold text-[#141A24] mb-1">{dashboard?.totals.interviews ?? '—'}</div>
+              <div className="text-[12px] text-[#616977]">
+                {comparisonLabel('interviews', 'По дате проведённого интервью')}
+              </div>
+            </div>
+
+            <div className="bg-white border border-[#E1E5EB] rounded-2xl p-5 shadow-sm">
+              <div className="text-[12px] text-[#616977] mb-1">Принято на работу</div>
+              <div className="text-[28px] font-bold text-[#141A24] mb-1">{dashboard?.totals.hired ?? '—'}</div>
+              <div className="text-[12px] text-[#616977]">
+                {comparisonLabel('hired', 'По дате перехода на этап «Принят»')}
+              </div>
+            </div>
           </div>
 
           {/* AI Insight Highlight Card */}
@@ -250,29 +405,31 @@ export default function AnalyticsDashboard() {
               <div className="flex items-center gap-2">
                 <span className="text-[#6B21A8] font-bold text-[14px]">↗</span>
                 <h2 className="text-[15px] font-bold text-[#141A24]">
-                  Главное по подбору
+                  Главное за период
                 </h2>
               </div>
               <span className="text-[12px] text-[#6B21A8]">
-                По данным подбора
+                По данным за выбранный период
               </span>
             </div>
-            {funnel ? <ul className="space-y-1.5 text-[13px] text-[#334155] leading-relaxed">
-              <li>• Откликов в выбранном контуре: {funnel.total_applications}.</li>
-              <li>• Открыто передач: {funnel.open_waits.total}. Срок подходит: {funnel.open_waits.due_soon_total}. Просрочено: {funnel.open_waits.overdue_total}.</li>
-              {rejectionData[0] && <li>• Самая частая причина отказа за период: {rejectionData[0].reason} ({rejectionData[0].count}).</li>}
-            </ul> : <p className="text-[13px] text-[#616977]">Сводка появится после загрузки данных.</p>}
+            <ul className="space-y-1.5 text-[13px] text-[#334155] leading-relaxed">
+              {dashboard ? <>
+                <li>• Поступило откликов: {dashboard.totals.received}. Проведено интервью: {dashboard.totals.interviews}.</li>
+                <li>• Направлено откликов: {dashboard.totals.forwarded}. Из передач за период сейчас ожидают ответа: {waiting}. Просрочено: {overdue}.</li>
+                {rejectionData[0] && <li>• Наиболее частая причина отказа: {rejectionData[0].reason} ({rejectionData[0].count}).</li>}
+              </> : <li>Сводка появится после загрузки данных.</li>}
+            </ul>
           </div>
 
           {/* 2x2 Charts Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Chart 1: Воронка по вакансиям */}
+            {/* Chart 1: Воронка по моим вакансиям */}
             <div className="bg-white border border-[#E1E5EB] rounded-2xl p-6 shadow-sm">
               <h2 className="text-[16px] font-bold text-[#141A24] mb-1">
                 Воронка по моим вакансиям
               </h2>
               <p className="text-[12px] text-[#616977] mb-6">
-                Сколько откликов достигло каждого этапа
+                Сколько откликов достигло каждого этапа за период
               </p>
               <div className="space-y-3">
                 {funnelData.map((f) => (
@@ -300,10 +457,10 @@ export default function AnalyticsDashboard() {
                 Источники
               </h2>
               <p className="text-[12px] text-[#616977] mb-6">
-                Отклики в разрезе каналов вакансий
+                По каналу публикации вакансии и дате отклика
               </p>
               <div className="space-y-3">
-                {!sourcesData.length && <p className="text-[13px] text-[#616977]">Данных пока нет.</p>}
+                {dashboard && sourcesData.length === 0 && <p className="text-[13px] text-[#616977]">Откликов за период нет.</p>}
                 {sourcesData.map((s) => (
                   <div key={s.source} className="flex items-center text-[13px]">
                     <span className="w-36 text-[#4A5363] shrink-0 truncate mr-2">
@@ -329,21 +486,21 @@ export default function AnalyticsDashboard() {
                 Динамика по неделям
               </h2>
               <p className="text-[12px] text-[#616977] mb-6">
-                Пример расположения графика · Будет добавлено позже
+                Разобрано откликов и проведено интервью
               </p>
               <div className="h-44 flex items-end justify-between gap-3 pt-6 border-b border-[#E1E5EB] px-2 overflow-x-auto">
                 {weeklyData.map((w) => (
-                  <div key={w.label} className="flex-1 flex flex-col items-center gap-2 h-full justify-end">
+                  <div key={w.label} className="flex-1 min-w-[42px] flex flex-col items-center gap-2 h-full justify-end">
                     <div className="w-full flex items-end justify-center gap-1.5 h-full">
                       <div
                         className="w-4 bg-[#1F4FD1] rounded-t-sm transition-all duration-500"
                         style={{ height: w.screenedHeight }}
-                        title="Разобрано"
+                        title={w.screened + ' откликов достигли первичного отбора'}
                       ></div>
                       <div
                         className="w-4 bg-[#7FA4FD] rounded-t-sm transition-all duration-500"
                         style={{ height: w.interviewHeight }}
-                        title="Интервью"
+                        title={w.interviews + ' проведённых интервью'}
                       ></div>
                     </div>
                     <span className="text-[11px] text-[#616977] whitespace-nowrap">
@@ -370,12 +527,12 @@ export default function AnalyticsDashboard() {
                 Причины отказов
               </h2>
               <p className="text-[12px] text-[#616977] mb-6">
-                {funnel ? 'Отказов за период: ' + rejectionData.reduce((sum, item) => sum + item.count, 0) : 'Загружаются данные'}
+                {dashboard ? 'Отказов за период: ' + rejectionData.reduce((sum, item) => sum + item.count, 0) : 'За выбранный период'}
               </p>
               <div className="space-y-3">
-                {funnel && !rejectionData.length && <p className="text-[13px] text-[#616977]">Отказов за период нет.</p>}
+                {dashboard && rejectionData.length === 0 && <p className="text-[13px] text-[#616977]">Отказов за период нет.</p>}
                 {rejectionData.map((r) => (
-                  <div key={r.reason} className="flex items-center text-[13px]">
+                  <div key={r.code} className="flex items-center text-[13px]">
                     <span className="w-44 text-[#4A5363] shrink-0 truncate mr-2">
                       {r.reason}
                     </span>
@@ -398,7 +555,7 @@ export default function AnalyticsDashboard() {
           <div className="bg-white border border-[#E1E5EB] rounded-2xl shadow-sm overflow-hidden">
             <div className="p-6 border-b border-[#E1E5EB]">
               <h2 className="text-[16px] font-bold text-[#141A24]">
-                Вакансии
+                Мои вакансии
               </h2>
             </div>
             <div className="overflow-x-auto">
@@ -409,20 +566,20 @@ export default function AnalyticsDashboard() {
                     <th className="py-3 px-4 font-medium whitespace-nowrap">Откликов</th>
                     <th className="py-3 px-4 font-medium whitespace-nowrap">Интервью</th>
                     <th className="py-3 px-4 font-medium whitespace-nowrap">Направлено</th>
-                    <th className="py-3 px-4 font-medium whitespace-nowrap">Статус вакансии</th>
-                    <th className="py-3 px-6 font-medium whitespace-nowrap">Ответ департамента</th>
+                    <th className="py-3 px-4 font-medium whitespace-nowrap">Открыта, дней</th>
+                    <th className="py-3 px-6 font-medium whitespace-nowrap" title="Текущее ожидание у передач, отправленных за выбранный период">Ответ департамента</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E1E5EB]">
                   {vacanciesSLA.map((v) => (
-                    <tr key={v.title} className="hover:bg-[#F8FAFC]">
+                    <tr key={v.id} className="hover:bg-[#F8FAFC]">
                       <td className="py-3.5 px-6 font-medium text-[#141A24] whitespace-nowrap">
                         {v.title}
                       </td>
                       <td className="py-3.5 px-4 text-[#4A5363] whitespace-nowrap">{v.responses}</td>
                       <td className="py-3.5 px-4 text-[#4A5363] whitespace-nowrap">{v.interview}</td>
                       <td className="py-3.5 px-4 text-[#4A5363] whitespace-nowrap">{v.forwarded}</td>
-                      <td className="py-3.5 px-4 text-[#4A5363] whitespace-nowrap">{v.status}</td>
+                      <td className="py-3.5 px-4 text-[#4A5363] whitespace-nowrap">{v.days_open ?? '—'}</td>
                       <td className="py-3.5 px-6 whitespace-nowrap">
                         <span className={`inline-block px-2.5 py-0.5 rounded-full text-[12px] font-medium whitespace-nowrap ${v.slaColor}`}>
                           {v.slaStatus}
@@ -437,13 +594,351 @@ export default function AnalyticsDashboard() {
         </>
       )}
 
-      {view !== 'dashboard' && <>
-        <Btn variant="link" onClick={() => setView('dashboard')}>← Аналитика и отчёты</Btn>
-        <ReportPage embeddedView={view} onPrepared={() => setView('ready')} />
-      </>}
-      {notice && <div role="status" className="fixed bottom-6 right-6 z-50 rounded-xl bg-[#141A24] px-4 py-3 text-white">
-        {notice}<button type="button" className="ml-3" aria-label="Закрыть уведомление" onClick={() => setNotice('')}>×</button>
-      </div>}
+
+      {view === 'config' && (
+        <div className="space-y-6">
+          {/* Top back button */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setView('dashboard')}
+              className="text-[14px] font-medium text-[#1F4FD1] hover:underline flex items-center gap-1.5 transition-colors whitespace-nowrap"
+            >
+              ← Аналитика и отчёты
+            </button>
+          </div>
+
+          <div>
+            <h1 className="text-[24px] font-bold text-[#141A24] tracking-tight mb-1">
+              Новый отчёт
+            </h1>
+            <p className="text-[14px] text-[#616977]">
+              Выберите снимок годового доклада и месяцы для выгрузки XLSX.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Left Column (8 cols): Form Sections */}
+            <div className="lg:col-span-8 bg-white border border-[#E1E5EB] rounded-2xl p-6 shadow-sm space-y-6">
+              {/* Block 1: Период */}
+              <div>
+                <h2 className="text-[15px] font-bold text-[#141A24] mb-3">Период</h2>
+                <div className="inline-flex rounded-lg bg-[#F3F5F8] p-1 mb-4">
+                  {['Неделя', 'Месяц', 'Квартал', 'Год', 'Свой период'].map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => selectReportPeriod(p)} aria-pressed={reportPreset === p}
+                      className={`px-3 py-1 text-[13px] font-medium rounded-md transition-all whitespace-nowrap ${
+                        p === reportPreset
+                          ? 'bg-white text-[#141A24] shadow-sm font-semibold'
+                          : 'text-[#616977] hover:text-[#141A24]'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[13px]">
+                  <div>
+                    <label className="block text-[12px] text-[#616977] mb-1">С</label>
+                    <input type="month" aria-label="Первый месяц отчёта" value={reportFrom} min={reportMin} max={reportMax}
+                      onChange={(event) => { setReportFrom(event.target.value); setReportPreset('Свой период'); }} className="w-full px-3 py-2 border border-[#E1E5EB] rounded-lg bg-white text-[#141A24] focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-[12px] text-[#616977] mb-1">По</label>
+                    <input type="month" aria-label="Последний месяц отчёта" value={reportTo} min={reportMin} max={reportMax}
+                      onChange={(event) => { setReportTo(event.target.value); setReportPreset('Свой период'); }} className="w-full px-3 py-2 border border-[#E1E5EB] rounded-lg bg-white text-[#141A24] focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-[12px] text-[#616977] mb-1" htmlFor="dashboard-snapshot">Версия доклада</label>
+                    <select id="dashboard-snapshot" value={reportId} onChange={(event) => setReportId(event.target.value)} className="w-full px-3 py-2 border border-[#E1E5EB] rounded-lg bg-white text-[#141A24] focus:outline-none">
+                      <option value="">Выберите снимок</option>
+                      {versions.map((version) => <option key={version.snapshot_id} value={version.snapshot_id}>{version.year} · {version.extracted_at.slice(0,10)}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Block 2: Разделы отчёта */}
+              <div className="pt-2 border-t border-[#F0F2F5]">
+                <h2 className="text-[15px] font-bold text-[#141A24] mb-3">Разделы отчёта</h2>
+                <div className="space-y-2.5 text-[13px] text-[#334155]">
+                  {[
+                    { label: 'Ключевые показатели', defaultChecked: true },
+                    { label: 'Сводка ИИ: главное за период', defaultChecked: false },
+                    { label: 'Воронка подбора', defaultChecked: false },
+                    { label: 'Динамика по месяцам', defaultChecked: true },
+                    { label: 'Источники откликов', defaultChecked: false },
+                    { label: 'Причины отказов', defaultChecked: false },
+                    { label: 'Сроки ответов департаментов', defaultChecked: false },
+                    { label: 'Список кандидатов с ФИО (только для внутреннего пользования)', defaultChecked: false },
+                  ].map((item) => (
+                    <label key={item.label} className="flex items-center gap-2.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={item.defaultChecked} onChange={() => item.defaultChecked ? setNotice('Этот раздел входит в выгрузку XLSX') : future()}
+                        className="w-4 h-4 rounded text-[#1F4FD1] focus:ring-[#1F4FD1] cursor-pointer"
+                      />
+                      <span>{item.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Block 3: Формат */}
+              <div className="pt-2 border-t border-[#F0F2F5]">
+                <h2 className="text-[15px] font-bold text-[#141A24] mb-3">Формат</h2>
+                <div className="flex items-center gap-2">
+                  {(['PDF', 'Excel', 'Презентация'] as const).map((fmt) => (
+                    <button
+                      key={fmt}
+                      type="button"
+                      onClick={() => { if (fmt !== 'Excel') future(); }}
+                      className={`px-4 py-2 rounded-lg text-[13px] font-medium transition-all ${
+                        fmt === 'Excel'
+                          ? 'border-2 border-[#1F4FD1] text-[#1F4FD1] bg-[#F8FAFF]'
+                          : 'border border-[#E1E5EB] text-[#4A5363] hover:bg-gray-50'
+                      }`}
+                    >
+                      {fmt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="pt-4 border-t border-[#F0F2F5] flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => void prepareReport()} disabled={busy || !reportVersion}
+                  className="px-5 py-2.5 text-[14px] font-medium text-white bg-[#1F4FD1] rounded-lg hover:bg-[#1841B2] transition-colors shadow-sm whitespace-nowrap"
+                >
+                  Сформировать
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setView('dashboard')}
+                  className="px-5 py-2.5 text-[14px] font-medium text-[#4A5363] bg-white border border-[#E1E5EB] rounded-lg hover:bg-[#F3F5F8] transition-colors whitespace-nowrap"
+                >
+                  Отмена
+                </button>
+              </div>
+            </div>
+
+            {/* Right Column (4 cols): Кому отправить & Автоотчёт */}
+            <div className="lg:col-span-4 space-y-6">
+              <div className="bg-white border border-[#E1E5EB] rounded-2xl p-6 shadow-sm space-y-4">
+                <h2 className="text-[16px] font-bold text-[#141A24]">
+                  Кому отправить
+                </h2>
+                <div>
+                  <label className="block text-[12px] font-medium text-[#4A5363] mb-1">
+                    Получатели
+                  </label>
+                  <input
+                    type="text"
+                    readOnly placeholder="Будет добавлено позже" onClick={future}
+                    className="w-full px-3.5 py-2 text-[13px] border border-[#D2D4D8] rounded-lg bg-white text-[#141A24] focus:outline-none focus:border-[#1F4FD1]"
+                  />
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer text-[13px] text-[#4A5363]">
+                  <input
+                    type="checkbox"
+                    checked={false} onChange={future} className="w-4 h-4 rounded text-[#1F4FD1] focus:ring-[#1F4FD1]"
+                  />
+                  <span>Отправить копию мне</span>
+                </label>
+              </div>
+
+              <div className="bg-white border border-[#E1E5EB] rounded-2xl p-6 shadow-sm space-y-3">
+                <h2 className="text-[16px] font-bold text-[#141A24]">Автоотчёт</h2>
+                <p className="text-[13px] text-[#616977]">
+                  Расписание отправки отчётов будет добавлено позже.
+                </p>
+                <div className="space-y-2 pt-1 text-[13px] text-[#4A5363]">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={false} onChange={future} className="w-4 h-4 rounded text-[#1F4FD1] focus:ring-[#1F4FD1]"
+                    />
+                    <span>Присылать каждый понедельник в 9:00</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox" checked={false} onChange={future} className="w-4 h-4 rounded text-[#1F4FD1] focus:ring-[#1F4FD1]"
+                    />
+                    <span>Присылать в конце месяца</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-2xl p-5 text-[13px] space-y-1">
+                <div className="font-bold text-[#1E40AF]">Без лишних персональных данных</div>
+                <div className="text-[#1E3A8A] leading-relaxed">
+                  В текущей выгрузке только агрегированные показатели.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* МАКЕТ 23: ОТЧЁТ ГОТОВ (Отчёт_ готов.png)                  */}
+      {/* ======================================================== */}
+      {view === 'ready' && (
+        <div className="space-y-6">
+          {/* Top Green Notification Banner */}
+          <div className={prepared ? "bg-[#EBF7EE] border border-[#C6E7D2] rounded-2xl p-5 text-[#14532D]" : "bg-white border border-[#E1E5EB] rounded-2xl p-5 text-[#4A5363]"}>
+            <h2 className="text-[15px] font-bold text-[#166534] mb-0.5">
+              {prepared ? 'Отчёт готов' : 'Отчёт ещё не сформирован'}
+            </h2>
+            <p className="text-[13px]">
+              {prepared ? 'Проверьте показатели и скачайте XLSX.' : 'Выберите параметры на вкладке «Настройка отчёта».'}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Left Column (8 cols): Report Sheet Preview */}
+            <div className="lg:col-span-8 bg-white border border-[#E1E5EB] rounded-2xl p-6 lg:p-8 shadow-sm space-y-6">
+              {/* Report Header */}
+              <div className="flex items-start justify-between border-b border-[#E1E5EB] pb-5">
+                <div>
+                  <h1 className="text-[22px] font-bold text-[#141A24] tracking-tight mb-1">
+                    Отчёт по подбору персонала
+                  </h1>
+                  <p className="text-[13px] text-[#616977]">
+                    {prepared ? monthName(prepared.from) + ' – ' + monthName(prepared.to) + ' · ' + prepared.version.year : 'По выбранному снимку годового доклада'}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <img src="/images/Header/Mark.svg" alt="GorkyCode" className="w-6 h-6" />
+                  <span className="text-[13px] font-bold text-[#141A24]">GorkyCode - team 9</span>
+                </div>
+              </div>
+
+              {/* 4 Mini KPI Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {reportCards.map((item) => <div key={item.label} className="bg-[#F8FAFC] border border-[#E1E5EB] rounded-xl p-3.5">
+                  <div className="text-[11px] text-[#616977]">{item.label}</div>
+                  <div className="text-[22px] font-bold text-[#141A24]">{item.value}</div>
+                  <div className="text-[11px] text-[#616977]">{item.note}</div>
+                </div>)}
+              </div>
+
+              {/* Главное */}
+              <div className="space-y-1.5 text-[13px] text-[#334155] leading-relaxed">
+                <h3 className="font-bold text-[#141A24]">Главное</h3>
+                <p>
+                  {prepared ? 'На экране и в файле один срез годового доклада: отклики и телефонные разговоры.' : 'Данные появятся после формирования отчёта.'}
+                </p>
+              </div>
+
+              {/* Динамика по неделям */}
+              <div>
+                <h3 className="text-[13px] font-bold text-[#141A24] mb-3">Динамика по месяцам</h3>
+                <div className="h-28 flex items-end justify-between gap-3 pt-2 border-b border-[#E1E5EB] px-2">
+                  {reportMonths.map((w) => (
+                    <div key={w.label} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+                      <div className="w-full flex items-end justify-center gap-1.5 h-full">
+                        <div className="w-3.5 bg-[#1F4FD1] rounded-t-sm" style={{ height: w.screenedHeight }}></div>
+                        <div className="w-3.5 bg-[#7FA4FD] rounded-t-sm" style={{ height: w.interviewHeight }}></div>
+                      </div>
+                      <span className="text-[10px] text-[#616977] whitespace-nowrap">{w.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Причины отказов + Источники */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[12px]">
+                <div>
+                  <h4 className="font-bold text-[#141A24] mb-2">Причины отказов</h4>
+                  <p className="text-[#616977]">Будет добавлено позже</p>
+                </div>
+
+                <div>
+                  <h4 className="font-bold text-[#141A24] mb-2">Источники</h4>
+                  <p className="text-[#616977]">Будет добавлено позже</p>
+                </div>
+              </div>
+
+              <div className="text-[11px] text-[#8E939D] pt-2 border-t border-[#E1E5EB]">
+                {prepared ? 'Срез годового доклада' : 'Предварительный просмотр'}
+              </div>
+            </div>
+
+            {/* Right Column (4 cols): Actions & Past Reports */}
+            <div className="lg:col-span-4 space-y-6">
+              <div className="bg-white border border-[#E1E5EB] rounded-2xl p-6 shadow-sm space-y-3">
+                <h2 className="text-[16px] font-bold text-[#141A24]">Скачать</h2>
+                <button
+                  type="button"
+                  onClick={future}
+                  className="w-full py-2.5 px-4 text-[14px] font-medium text-white bg-[#1F4FD1] rounded-lg hover:bg-[#1841B2] transition-colors shadow-sm text-center"
+                >
+                  Скачать PDF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void downloadReady()} disabled={!prepared || busy}
+                  className="w-full py-2.5 px-4 text-[14px] font-medium text-[#141A24] bg-white border border-[#E1E5EB] rounded-lg hover:bg-[#F3F5F8] transition-colors text-center"
+                >
+                  Скачать Excel
+                </button>
+                <button
+                  type="button"
+                  onClick={future}
+                  className="w-full py-2.5 px-4 text-[14px] font-medium text-[#141A24] bg-white border border-[#E1E5EB] rounded-lg hover:bg-[#F3F5F8] transition-colors text-center"
+                >
+                  Скачать презентацию
+                </button>
+              </div>
+
+              <div className="bg-white border border-[#E1E5EB] rounded-2xl p-6 shadow-sm space-y-3">
+                <h2 className="text-[16px] font-bold text-[#141A24]">Отправить ещё</h2>
+                <div>
+                  <label className="block text-[12px] font-medium text-[#4A5363] mb-1">
+                    Кому
+                  </label>
+                  <input
+                    type="text"
+                    readOnly placeholder="Будет добавлено позже" onClick={future}
+                    className="w-full px-3.5 py-2 text-[13px] border border-[#D2D4D8] rounded-lg bg-white text-[#141A24] focus:outline-none focus:border-[#1F4FD1]"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={future}
+                  className="w-full py-2 text-[13px] font-medium text-[#141A24] bg-white border border-[#E1E5EB] rounded-lg hover:bg-[#F3F5F8] transition-colors text-center"
+                >
+                  Отправить
+                </button>
+              </div>
+
+              <div className="bg-white border border-[#E1E5EB] rounded-2xl p-6 shadow-sm space-y-3">
+                <h2 className="text-[16px] font-bold text-[#141A24]">Мои отчёты</h2>
+                <div className="space-y-3 text-[13px]">
+                  {versions.map((version) => <div key={version.snapshot_id} className="flex items-center justify-between">
+                    <div><div className="font-medium text-[#141A24]">Годовой доклад · {version.year}</div><div className="text-[11px] text-[#616977]">XLSX · {version.extracted_at.slice(0,10)}</div></div>
+                    <button type="button" onClick={() => void run(() => analyticsApi.downloadAnnual(version.snapshot_id))}
+                      className="text-[#1F4FD1] hover:underline font-medium text-[12px]">Скачать</button>
+                  </div>)}
+                  {versions.length === 0 && <p className="text-[#616977]">Доступных снимков пока нет.</p>}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {notice && (
+        <div className="fixed bottom-6 right-6 bg-[#141A24] text-white text-[13px] px-4 py-2.5 rounded-lg shadow-lg z-50 animate-fade-in flex items-center gap-2">
+          <span role="status">{notice}</span><button type="button" aria-label="Закрыть уведомление" onClick={() => setNotice('')}>×</button>
+        </div>
+      )}
     </div>
   );
 }
