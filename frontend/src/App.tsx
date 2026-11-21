@@ -5,6 +5,7 @@ import HeroSection from './components/portal/HeroSection';
 import CategoryCards from './components/portal/CategoryCards';
 import NewVacanciesSection from './components/portal/NewVacanciesSection';
 import WhyUsSection from './components/portal/WhyUsSection';
+import ReserveCtaBanner from './components/portal/ReserveCtaBanner';
 import VacancyPage from './pages/VacancyPage';
 import StudentsWorkspace from './components/students/StudentsWorkspace';
 import SupportPage from './components/support/SupportPage';
@@ -188,6 +189,7 @@ export const App: React.FC = () => {
                 />
 
                 <WhyUsSection />
+                <ReserveCtaBanner />
 
               </>
             )}
