@@ -1,4 +1,6 @@
-from typing import Annotated
+from datetime import date
+from typing import Annotated, Literal
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, StringConstraints, model_validator
 
@@ -74,3 +76,34 @@ class Policy(Input):
 class PublicationCreate(Revision):
     policy: Policy
     policy_basis: Text
+
+
+class MeasureCreate(Input):
+    publication_id: UUID
+    group_key: Key
+    topic_key: Key
+    text: Text
+    owner_actor_id: UUID
+    due_on: date | None = None
+
+
+class MeasureUpdate(Revision):
+    status: Literal["planned", "in_progress", "completed", "cancelled"]
+    outcome_note: Text | None = None
+
+    @model_validator(mode="after")
+    def terminal_reason(self):
+        if self.status in ("completed", "cancelled") and not self.outcome_note:
+            raise ValueError("Completion or cancellation requires an explanation")
+        return self
+
+
+class ParticipantMessage(Input):
+    text: Text
+    measure_ids: Annotated[list[UUID], Field(min_length=1, max_length=100)]
+
+    @model_validator(mode="after")
+    def unique_measures(self):
+        if len(set(self.measure_ids)) != len(self.measure_ids):
+            raise ValueError("Duplicate measures")
+        return self

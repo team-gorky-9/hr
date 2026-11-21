@@ -31,3 +31,13 @@ HTTP-сценарий использует обычный httpx и uvicorn.
 своя группа руководителя, отказ обычному HR/чужой организации/произвольному фильтру,
 повтор прежнего выпуска и отказ изменить политику. Ruff pass.
 [OpenAPI 5B](wave-5b-feedback-openapi.json) · [ID и ячейки](wave-5b-feedback-examples.json).
+
+## 5C
+
+База — `13bc953` (PR #75). `uv run pytest tests/test_actions.py -q` — 1 passed
+за 1,06 с. `uv run python -m tests.smoke --part 5c` — создание меры по теме work,
+работа ответственного и завершение с объяснением, сообщение всей large и чтение
+неответившей учебной alice; после остановки результат перечитан без изменений.
+Проверены чужая группа, скрытая тема, постороннее изменение, отсутствие причины,
+устаревшая ревизия и несопоставимость v1/v2. Ruff pass.
+[OpenAPI 5C](wave-5c-feedback-openapi.json) · [ID и результат](wave-5c-feedback-examples.json).
