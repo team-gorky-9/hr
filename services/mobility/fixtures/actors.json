@@ -1,0 +1,17 @@
+{
+  "source_mode": "synthetic",
+  "version": "mobility-training-v1",
+  "actors": [
+    {"login":"employee","actor_id":"00000000-0000-4000-8000-000000000101","organization_id":"00000000-0000-4000-8000-000000000001","roles":["employee"],"active":true},
+    {"login":"owner","actor_id":"00000000-0000-4000-8000-000000000102","organization_id":"00000000-0000-4000-8000-000000000001","roles":["employee","owner"],"active":true},
+    {"login":"manager","actor_id":"00000000-0000-4000-8000-000000000103","organization_id":"00000000-0000-4000-8000-000000000001","roles":["employee","manager"],"active":true},
+    {"login":"manager2","actor_id":"00000000-0000-4000-8000-000000000104","organization_id":"00000000-0000-4000-8000-000000000001","roles":["employee","manager"],"active":true},
+    {"login":"hr","actor_id":"00000000-0000-4000-8000-000000000105","organization_id":"00000000-0000-4000-8000-000000000001","roles":["hr"],"active":true},
+    {"login":"other","actor_id":"00000000-0000-4000-8000-000000000106","organization_id":"00000000-0000-4000-8000-000000000001","roles":["employee","owner"],"active":true},
+    {"login":"foreign","actor_id":"00000000-0000-4000-8000-000000000107","organization_id":"00000000-0000-4000-8000-000000000002","roles":["employee","hr","owner"],"active":true}
+  ],
+  "manager_assignments": [
+    {"organization_id":"00000000-0000-4000-8000-000000000001","employee_actor_id":"00000000-0000-4000-8000-000000000101","manager_actor_id":"00000000-0000-4000-8000-000000000103","source_reference":"fixture:mobility-training-v1:employee-manager","active":true},
+    {"organization_id":"00000000-0000-4000-8000-000000000001","employee_actor_id":"00000000-0000-4000-8000-000000000102","manager_actor_id":"00000000-0000-4000-8000-000000000104","source_reference":"fixture:mobility-training-v1:owner-manager","active":true}
+  ]
+}
