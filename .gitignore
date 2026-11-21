@@ -3,6 +3,11 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+.DS_Store
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/*.local
 # Исходные данные организаторов содержат персональные данные.
 data/
 # Versioned routing decisions contain no resumes; ship them with the application.
