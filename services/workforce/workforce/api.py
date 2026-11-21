@@ -120,6 +120,8 @@ def execute(request, body, action, model=None, id=None, status=200, roles=("hr",
 
 
 def create_app(settings=None):
+    from workforce.onboarding.api import router as onboarding_router
+
     settings = settings or Settings()
     app = FastAPI(title="Workforce", version="1.0")
     app.state.settings = settings
@@ -462,4 +464,5 @@ def create_app(settings=None):
     def delivery_retry(id: UUID, body: s.Revision, request: Request):
         return execute(request, body, "delivery_retry", Outbox, id)
 
+    app.include_router(onboarding_router)
     return app

@@ -1,4 +1,48 @@
-# Workforce · первая волна
+# Workforce · кадровые назначения и вводные программы
+
+## Вводная программа · этап 1 второй волны
+
+Модуль `workforce/onboarding` использует ту же БД и серверные сессии. `python -m workforce prepare`
+применяет миграцию `0003` и повторяемый seed `intro-v1`, версия 1. Три материала явно учебные,
+их текст находится в `steps[].description`; `material_url=null` не мешает прочитать материал.
+[Контракт](../../docs/contracts/wave-2-stage-1.md) · [Проверенный пример](../../docs/reports/wave-2-onboarding.md).
+
+Все URL ниже имеют префикс `/api/v1/onboarding`; требуется `Authorization: Bearer <access_token>`.
+
+| Метод и путь | Действие |
+|---|---|
+| `GET /templates` | Шаблоны для HR/admin и employee |
+| `POST /programs` | HR назначает `{workforce_assignment_id,template_code:"intro-v1",template_version:1}`; 201, повтор пары — 200 |
+| `GET /programs` | HR видит организацию, employee — только свои программы |
+| `GET /programs/{id}` | Программа со снимком шагов и прогрессом |
+| `POST /programs/{id}/steps/{key}/acknowledge` | Только связанный employee, `{expected_revision}` |
+| `POST /programs/{id}/cancel` | HR/admin, `{expected_revision,reason}` |
+
+В отличие от команд первой волны, новым операциям onboarding не нужен `Idempotency-Key`:
+повтор назначения определяется парой кадрового назначения и версии шаблона, повтор ознакомления —
+уже сохранённой отметкой. Повтор не меняет автора, время, revision или счётчик. Для новой отметки
+и отмены неверная ревизия даёт `409 STALE_REVISION`. Отменённая программа не возобновляется повтором назначения.
+
+Начало кадрового назначения должно быть не позже текущей даты UTC; `ends_on` включается в период.
+Будущая/закончившаяся занятость не позволяет создать программу или новую отметку (`ASSIGNMENT_NOT_ACTIVE`).
+После окончания GET сохраняет историю и возвращает `assignment_state=inactive`.
+Без связи учётки HR видит `account_link_required=true`. Отмена сохраняет подтверждения и пишет Audit.
+`intro_completed` означает только три ознакомления, а не оценку компетенции или кадрового испытания.
+
+Короткий автономный HTTP-проход (из `services/workforce`, после `uv sync --locked`):
+
+```sh
+uv run python -m tests.support.onboarding_smoke
+```
+
+Он поднимает временный loopback API на свободном порту, применяет штатные миграции и seed к отдельной
+SQLite, проходит 0/3 → 3/3, проверяет чужую employee-учётку, останавливает API и перечитывает БД.
+Печатает ID и каталог с сохранёнными `workforce.db` и `openapi.json`; токены не печатает.
+Два быстрых адресных теста: `uv run pytest tests/test_onboarding.py -q`.
+Брокер и общий стенд этим проходом не затрагиваются. Проверка PostgreSQL и полного набора здесь не заявляется.
+
+Для фронтенда: живой `/openapi.json` содержит модели Templates/Programs/ProgramView и все шесть операций,
+`/docs` — интерактивное описание. Пример с ID и команды находятся в отчёте по ссылке выше.
 
 **Автономная поставка, завершение 21 ноября 2026.** Выполнены итоговый набор PostgreSQL/RabbitMQ, сборка Compose и настоящий HTTP/worker-проход. Версии, команды и граница интеграции с Hiring — в [отчёте](../../docs/reports/wave-1-workforce.md).
 
