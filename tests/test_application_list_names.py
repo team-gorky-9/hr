@@ -4,9 +4,9 @@ from uuid import uuid4
 import pytest
 from fastapi import Response
 
-from app.api import routes
+from app.api import candidates, routes
 from app.api.errors import ApiError
-from app.db.enums import UserRole
+from app.db.enums import Channel, UserRole
 
 
 def test_list_names_are_staff_only_and_audited(monkeypatch):
@@ -40,3 +40,29 @@ def test_department_cannot_read_name_list(monkeypatch):
         pytest.fail('Department reached the list query'))
     with pytest.raises(ApiError):
         routes.list_applications(uuid4(), None, Response(), user=SimpleNamespace(role=UserRole.DEPARTMENT))
+
+
+def test_candidate_registry_names_are_hr_only_and_audited(monkeypatch):
+    ident = uuid4()
+    accessed = []
+    commits = []
+    candidate = SimpleNamespace(id=ident, code='hr-9101', headline='Специалист', is_synthetic=True)
+    session = SimpleNamespace(
+        execute=lambda query: [(candidate, Channel.HH_RU, None, False, None, None, None)],
+        commit=lambda: commits.append(True),
+    )
+
+    def read_pii(db, candidate_id, **kwargs):
+        accessed.append((candidate_id, kwargs))
+        return SimpleNamespace(full_name='Ирина Андреевна Сорокина')
+
+    monkeypatch.setattr(candidates.repo, 'get_candidate_pii', read_pii)
+    actor = SimpleNamespace(role=UserRole.HR, id=uuid4())
+    response = Response()
+    result = candidates.list_candidates(session, actor, response)
+    assert result.items[0].full_name == 'Ирина Андреевна Сорокина'
+    assert accessed[-1][1]['user_id'] == actor.id
+    assert accessed[-1][1]['purpose'] == 'единая база: имя кандидата'
+    assert response.headers['cache-control'] == 'private, no-store'
+    assert response.headers['vary'] == 'X-User-Login'
+    assert len(commits) == 1

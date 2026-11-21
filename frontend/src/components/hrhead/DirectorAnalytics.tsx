@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Card, Kpi, Badge, Bar, Btn, PageTitle } from '../shared/ui';
 
 // Заглушка: данные макета «Обзор аналитики» (бэкенд: GET /api/v1/analytics/dashboard)
-const funnel = [['Отклики', 100], ['Разобраны', 92], ['Телефонное интервью', 65], ['Очное собеседование', 15], ['Приняты', 6]] as const;
+const funnel = [['Отклики', 100], ['Разобраны', 92], ['Телефонное собеседование', 65], ['Очное собеседование', 15], ['Приняты', 6]] as const;
 const sources = [
   ['HH.ru', 45, '62%', 'green'], ['«Работа России»', 25, '48%', 'amber'],
   ['Сайт администрации', 15, '73%', 'green'], ['Загружено вручную', 10, '70%', 'green'],
@@ -63,7 +63,7 @@ export const DirectorAnalytics: React.FC<{ onExportReport: () => void }> = ({ on
 
         <Card className="space-y-3">
           <h2 className="text-[22px] font-bold">Источники откликов</h2>
-          <p className="text-[15px] text-[#4A5363]">Количество и доля, дошедшая до интервью</p>
+          <p className="text-[15px] text-[#4A5363]">Количество и доля, дошедшая до собеседования</p>
           {sources.map(([l, v, p, t]) => (
             <div key={l} className="flex items-center gap-4 text-[16px]">
               <span className="w-[170px] shrink-0">{l}</span>
@@ -135,7 +135,7 @@ export const DirectorAnalytics: React.FC<{ onExportReport: () => void }> = ({ on
           <table className="w-full text-left text-[16px]">
             <thead>
               <tr className="text-[14px] text-[#4A5363] border-b border-[#E1E5EB]">
-                {['Сотрудник по подбору персонала', 'Разобрано', 'Интервью', 'Ср. звонок'].map((h) => <th key={h} className="py-3 font-semibold">{h}</th>)}
+                {['Сотрудник по подбору персонала', 'Разобрано', 'Собеседования', 'Ср. звонок'].map((h) => <th key={h} className="py-3 font-semibold">{h}</th>)}
               </tr>
             </thead>
             <tbody>

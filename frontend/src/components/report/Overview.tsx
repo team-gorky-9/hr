@@ -140,7 +140,7 @@ export const Overview: React.FC<{ onOpenBuilder: () => void; onDownloadSlice: ()
           <h2 className="text-[22px] font-bold">Полнота данных</h2>
           {[
             ['green', 'Полно', 'Даты есть у всех откликов', '1 077 из 1 077'],
-            ['green', 'Полно', 'Журнал интервью за 12 месяцев', '857 разговоров'],
+            ['green', 'Полно', 'Журнал собеседований за 12 месяцев', '857 разговоров'],
             ['amber', 'Частично', 'Декабрь неполный', 'выгрузка 26.12, 5 дней нет'],
           ].map(([t, b, h, s]) => (
             <div key={h} className="flex gap-3 items-start">

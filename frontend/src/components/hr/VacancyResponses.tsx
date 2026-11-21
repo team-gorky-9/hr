@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { api, recruitmentContour, resultLabel, errorMessage, type Vacancy } from '../../api/recruitment';
+import { api, recruitmentContour, resultLabel, stageLabel, humanizeInterview, errorMessage, type Vacancy } from '../../api/recruitment';
 
 export interface ResponseItem {
   id: string;
@@ -55,7 +55,7 @@ export const VacancyResponses: React.FC<VacancyResponsesProps> = ({
     const controller = new AbortController();
     setResponses([]); setError(''); setLoading(true);
     api.applications(selectedVacancyId, controller.signal).then(({ items }) => {
-      setResponses(items.map(a => ({ id: a.application_id, name: a.full_name?.trim() || a.candidate_code, code: a.candidate_code, headline: a.headline, source: [a.current_stage_title, a.applied_at].filter(Boolean).join(' · '), requirementExp: resultLabel(a.formal_result) as ResponseItem['requirementExp'], skillApi: a.rank_reason, category: ({ ready: 'call', clarify: 'clarify', not_met: 'reject' }[a.rank_group] || 'action') as ResponseItem['category'] })));
+      setResponses(items.map(a => ({ id: a.application_id, name: a.full_name?.trim() || a.candidate_code, code: a.candidate_code, headline: a.headline, source: [stageLabel(a.current_stage_title), a.applied_at].filter(Boolean).join(' · '), requirementExp: resultLabel(a.formal_result) as ResponseItem['requirementExp'], skillApi: humanizeInterview(a.rank_reason), category: ({ ready: 'call', clarify: 'clarify', not_met: 'reject' }[a.rank_group] || 'action') as ResponseItem['category'] })));
       setLoading(false);
     }).catch(e => { if (!controller.signal.aborted) { setError(errorMessage(e)); setLoading(false); } });
     return () => controller.abort();

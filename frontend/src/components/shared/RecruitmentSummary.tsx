@@ -1,4 +1,4 @@
-import { assessmentLabel, readableExplanation, resultLabel, type HandoffSummary } from '../../api/recruitment';
+import { assessmentLabel, humanizeInterview, readableExplanation, resultLabel, stageLabel, type HandoffSummary } from '../../api/recruitment';
 import { Badge } from '../shared/ui';
 
 const staleLabels: Record<string, string> = {
@@ -10,12 +10,12 @@ const gapLabels: Record<string, string> = {
   interview_requirements: 'Проверить на собеседовании',
 };
 const basisLabels: Record<string, string> = {
-  resume: 'по резюме', interview: 'по итогам интервью', documents: 'по документам',
+  resume: 'по резюме', interview: 'по итогам собеседования', documents: 'по документам',
   document: 'по документу', test: 'по результату задания',
 };
 const interviewLabels: Record<string, string> = {
   continue: 'Продолжить рассмотрение', stop: 'Остановить рассмотрение',
-  no_answer: 'Не удалось связаться', pending: 'Итог ещё не записан', completed: 'Интервью завершено',
+  no_answer: 'Не удалось связаться', pending: 'Итог ещё не записан', completed: 'Собеседование завершено',
 };
 
 export default function RecruitmentSummary({ summary }: { summary: HandoffSummary }) {
@@ -26,7 +26,7 @@ export default function RecruitmentSummary({ summary }: { summary: HandoffSummar
       <h3 className="text-base font-bold">Сводка по кандидату {summary.candidate_code}</h3>
       {summary.vacancy && <p>Вакансия · {summary.vacancy.title}</p>}
       {summary.posting_title && summary.posting_title !== summary.vacancy?.title && <p>Публикация · {summary.posting_title}</p>}
-      <p>Этап · {summary.stage.title}</p>
+      <p>Этап · {stageLabel(summary.stage.title)}</p>
     </div>
     {summary.warnings.length > 0 && <ul className="list-disc pl-5 text-[#8A4B0A]">
       {summary.warnings.map((warning, index) => {
@@ -54,7 +54,7 @@ export default function RecruitmentSummary({ summary }: { summary: HandoffSummar
             {check.description} <strong>· {resultLabel(check.result)}</strong>
             {basisLabels[check.basis] && ` · ${basisLabels[check.basis]}`}
             {check.is_preliminary && ' · предварительно'}
-            {check.check_stage === 'interview' && ' · проверить на интервью'}
+            {check.check_stage === 'interview' && ' · проверить на собеседовании'}
           </li>)}
         </ul>
       </>}
@@ -72,16 +72,16 @@ export default function RecruitmentSummary({ summary }: { summary: HandoffSummar
       <ul className="list-disc pl-5">{summary.gaps[key].map((item, index) => <li key={index}>{item}</li>)}</ul>
     </div> : null)}
     {!!summary.interview_notes.length && <div className="space-y-2">
-      <h4 className="font-bold">Итоги интервью</h4>
+      <h4 className="font-bold">Итоги собеседования</h4>
       {summary.interview_notes.map(item => <div key={item.interview_id}>
-        <strong>{item.kind === 'phone' ? 'Телефонное интервью' : 'Интервью в подразделении'} · {interviewLabels[item.result] || 'Итог не указан'}</strong>
-        {item.summary && <p>{item.summary}</p>}
+        <strong>{item.kind === 'phone' ? 'Телефонное собеседование' : 'Собеседование в подразделении'} · {interviewLabels[item.result] || 'Итог не указан'}</strong>
+        {item.summary && <p>{humanizeInterview(item.summary)}</p>}
         {item.questions.map(question => <p key={question.question_id}>{question.question} · {question.answer_text || 'Ответ не записан'}</p>)}
       </div>)}
     </div>}
     {!!summary.hr_notes.length && <div className="space-y-2">
-      <h4 className="font-bold">Заметки кадровика</h4>
-      {summary.hr_notes.map(note => <p key={note.seq}><strong>{note.stage_title}</strong> · {note.text}</p>)}
+      <h4 className="font-bold">Заметки сотрудника по подбору персонала</h4>
+      {summary.hr_notes.map(note => <p key={note.seq}><strong>{stageLabel(note.stage_title)}</strong> · {note.text}</p>)}
     </div>}
   </section>;
 }

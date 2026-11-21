@@ -11,7 +11,7 @@ from app.api.auth import StaffUser
 from app.api.routes import SessionDep
 from app.api.schemas import Contour
 from app.db import repository as repo
-from app.db.enums import ApplicationSource, Channel
+from app.db.enums import ApplicationSource, Channel, UserRole
 from app.db.models import Application, Candidate, CandidateText, ReserveEntry, SelectionStage, SourceDocument, Vacancy
 
 router = APIRouter(prefix="/api/v1")
@@ -29,6 +29,7 @@ class CandidateApplication(BaseModel):
 class CandidateRow(BaseModel):
     candidate_id: UUID
     candidate_code: str
+    full_name: str | None = None
     headline: str | None
     channel: Channel
     is_training: bool
@@ -100,4 +101,17 @@ def list_candidates(
                 )
             )
     response.headers["Cache-Control"] = "private, no-store"
-    return CandidateList(items=list(rows.values()))
+    response.headers["Vary"] = "X-User-Login"
+    items = list(rows.values())
+    if user.role in (UserRole.HR, UserRole.ADMIN):
+        for item in items:
+            pii = repo.get_candidate_pii(
+                session,
+                item.candidate_id,
+                user_id=user.id,
+                purpose="единая база: имя кандидата",
+            )
+            item.full_name = pii.full_name if pii else None
+        if items:
+            session.commit()
+    return CandidateList(items=items)

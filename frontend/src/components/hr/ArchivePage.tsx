@@ -6,7 +6,7 @@ const field = 'w-full px-3 py-2 text-[14px] border border-[#D2D4D8] rounded-lg b
 const formatDate = (value: string | null) => value ? new Date(value).toLocaleDateString('ru-RU') : 'Не указана';
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : 'Не удалось выполнить запрос.';
 const stages: Record<string, string> = {
-  new: 'Новый отклик', screening: 'Первичный отбор', phone_interview: 'Телефонное интервью',
+  new: 'Новый отклик', screening: 'Первичный отбор', phone_interview: 'Телефонное собеседование',
   sent_to_department: 'Передан в департамент', department_interview: 'Собеседование в департаменте',
   documents: 'Оформление документов', hired: 'Принят', rejected: 'Отказ', withdrawn: 'Кандидат отказался',
 };
