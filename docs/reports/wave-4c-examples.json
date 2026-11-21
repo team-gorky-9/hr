@@ -1,0 +1,18 @@
+{
+  "event_id": "60af4b49-ba03-4213-b8a5-1dc93e16331b",
+  "registration_id": "11a87b0c-4f2f-4463-9ab9-21062afbfdbc",
+  "registration": {
+    "id": "11a87b0c-4f2f-4463-9ab9-21062afbfdbc",
+    "event_id": "60af4b49-ba03-4213-b8a5-1dc93e16331b",
+    "actor_id": "678f5620-c651-556f-859f-2c41e375d567",
+    "participants_count": 2,
+    "child_age_bands": [],
+    "status": "confirmed",
+    "agreed_event_revision": 3,
+    "revision": 5,
+    "created_at": "2026-11-21T01:07:18.389513+00:00",
+    "updated_at": "2026-11-21T01:07:18.539027+00:00"
+  },
+  "available_places": 1,
+  "reopened_revision": 5
+}
