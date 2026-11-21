@@ -1,800 +1,101 @@
-import React, { useState } from 'react';
-
-export type CandidateCardKey = 'r1' | 'r2' | 'r3' | 'r4' | 'r5' | 'r6';
+import React, { useEffect, useState } from 'react';
+import { Card, Btn, Badge, PageTitle } from '../shared/ui';
+import { api, request, recipientId, resultLabel, assessmentLabel, deadlineLabel, feedbackLabel, errorMessage, type ApplicationDetail, type History, type Handoff, type Stage, type Reason, type Evidence } from '../../api/recruitment';
 
 interface CandidateCardProps {
-  candidateId?: string;
-  initialLoading?: boolean;
-  onBack?: () => void;
-  onRequestClarification?: () => void;
-  onReject?: () => void;
-  onSendToHead?: () => void;
-  onSaveToReserve?: () => void;
-  onManualCheck?: () => void;
-  onReevaluate?: () => void;
+  candidateId?: string; initialLoading?: boolean; onBack?: () => void; onRequestClarification?: () => void;
+  onReject?: () => void; onSendToHead?: () => void; onSaveToReserve?: () => void; onManualCheck?: () => void; onReevaluate?: () => void;
 }
-
-interface CandidateDetailData {
-  id: string;
-  fullName: string;
-  roleDept: string;
-  sourceDate: string;
-  contacts: string;
-  statusBanner: {
-    type: 'amber' | 'green' | 'red' | 'blue';
-    title: string;
-    text: string;
+const field = 'w-full border border-[#C9D0DB] rounded-xl px-4 py-3 text-[14px] bg-white';
+export const CandidateCard: React.FC<CandidateCardProps> = ({ candidateId = '', onBack, onRequestClarification }) => {
+  const [detail, setDetail] = useState<ApplicationDetail | null>(null);
+  const [history, setHistory] = useState<History | null>(null);
+  const [handoffs, setHandoffs] = useState<Handoff[]>([]);
+  const [stages, setStages] = useState<Stage[]>([]);
+  const [reasons, setReasons] = useState<Reason[]>([]);
+  const [source, setSource] = useState<{ text: string; version: number; is_current: boolean } | null>(null);
+  const [sourceError, setSourceError] = useState('');
+  const [highlight, setHighlight] = useState<Evidence | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [reload, setReload] = useState(0);
+  const [panel, setPanel] = useState<'stage' | 'handoff' | null>(null);
+  const [target, setTarget] = useState('');
+  const [reason, setReason] = useState('');
+  const [comment, setComment] = useState('');
+  const [confirmSkip, setConfirmSkip] = useState(false);
+  const recipient = recipientId;
+  const [summary, setSummary] = useState<{ summary_revision: string; markdown: string } | null>(null);
+  const [newDate, setNewDate] = useState('');
+  const [extensionComment, setExtensionComment] = useState('');
+  const [selectedAttempt, setSelectedAttempt] = useState('');
+  const [attemptDetail, setAttemptDetail] = useState<Handoff | null>(null);
+  useEffect(() => {
+    let live = true;
+    setLoading(true); setError(''); setDetail(null); setSource(null); setHighlight(null); setSourceError('');
+    Promise.all([api.application(candidateId), api.history(candidateId), api.applicationHandoffs(candidateId), api.stages(), api.reasons()])
+      .then(async ([d, h, attempts, s, r]) => {
+        if (!live) return;
+        setDetail(d); setHistory(h); setHandoffs(attempts.items); setStages(s.items); setReasons(r.items); setLoading(false);
+        if (d.candidate.current_text_id) {
+          try { const text = await api.source(d.candidate.current_text_id); if (live) setSource(text); }
+          catch (e) { if (live) setSourceError(errorMessage(e)); }
+        } else setSourceError('У кандидата нет доступного текста источника.');
+      }).catch(e => { if (live) { setError(errorMessage(e)); setLoading(false); } });
+    return () => { live = false; };
+  }, [candidateId, reload]);
+  const action = async (work: () => Promise<void>) => {
+    setBusy(true); setError(''); setNotice('');
+    try { await work(); } catch (e) { setError(errorMessage(e)); } finally { setBusy(false); }
   };
-  mandatoryRequirement: {
-    statusBadge: 'Нужно уточнить' | 'Выполнено' | 'Не выполнено' | 'Не оценено';
-    badgeColor: 'amber' | 'green' | 'red' | 'gray';
-    text: string;
-    hasAskButton?: boolean;
-  };
-  competency: {
-    title: string;
-    badgeText: 'Цитата найдена' | 'Цитата не найдена' | 'Не оценено';
-    badgeColor: 'green' | 'red' | 'gray';
-    text: string;
-  };
-  actionBar: {
-    hint: string;
-    primaryButton: string;
-    primaryAction: 'clarify' | 'forward' | 'reject' | 'manual' | 'reevaluate' | 'retry';
-    secondaryButton?: string;
-    secondaryAction?: 'reject' | 'reserve' | 'clarify' | 'manual';
-  };
-  cleanedText: {
-    hasSourceError?: boolean;
-    sourceErrorTitle?: string;
-    sourceErrorText?: string;
-    hasV2Notice?: boolean;
-    v2NoticeTitle?: string;
-    v2NoticeText?: string;
-    lines: { text: string; isMarked?: boolean }[];
-    caption: string;
-  };
-}
-
-const candidateDataMap: Record<string, CandidateDetailData> = {
-  // МАКЕТ 6: Фролов Денис Андреевич (Карточка_ нужно уточнить.png)
-  r1: {
-    id: 'r1',
-    fullName: 'Фролов Денис Андреевич',
-    roleDept: 'Python-разработчик · департамент цифрового развития',
-    sourceDate: 'Источник: HH.ru · 18.11.2026',
-    contacts: '+7 910 384-21-55 · d.frolov@mail.ru',
-    statusBanner: {
-      type: 'amber',
-      title: 'Нужно уточнить 1 обязательное требование',
-      text: 'Прежде чем передавать отклик руководителю, спросите кандидата о длительности коммерческого опыта.',
-    },
-    mandatoryRequirement: {
-      statusBadge: 'Нужно уточнить',
-      badgeColor: 'amber',
-      text: 'В тексте нет длительности коммерческого опыта. Это не значит, что опыта нет.',
-      hasAskButton: true,
-    },
-    competency: {
-      title: 'Автоматизированное тестирование API',
-      badgeText: 'Цитата найдена',
-      badgeColor: 'green',
-      text: 'Оценка 85 · ожидаемый уровень 70–100 · «Написал API-тесты для сервиса заявок.»',
-    },
-    actionBar: {
-      hint: 'ИИ подсказывает, решение принимает HR-менеджер',
-      primaryButton: 'Запросить уточнение',
-      primaryAction: 'clarify',
-      secondaryButton: 'Отклонить с причиной',
-      secondaryAction: 'reject',
-    },
-    cleanedText: {
-      lines: [
-        { text: 'Написал API-тесты для сервиса заявок.', isMarked: true },
-      ],
-      caption: 'Цитата совпадает с текстом дословно',
-    },
-  },
-
-  // МАКЕТ 7: Ковалёва Анна Сергеевна (Карточка_ выполнено.png)
-  r2: {
-    id: 'r2',
-    fullName: 'Ковалёва Анна Сергеевна',
-    roleDept: 'Python-разработчик · департамент цифрового развития',
-    sourceDate: 'Источник: «Работа России» · 18.11.2026',
-    contacts: '+7 920 115-07-43 · a.kovaleva@yandex.ru',
-    statusBanner: {
-      type: 'green',
-      title: 'Обязательное требование выполнено',
-      text: 'Отклик можно передать руководителю департамента. Решение о собеседовании принимает он.',
-    },
-    mandatoryRequirement: {
-      statusBadge: 'Выполнено',
-      badgeColor: 'green',
-      text: 'Найдено в тексте: 3 года при требовании от 2 лет. · «Общий коммерческий опыт — 3 года.»',
-      hasAskButton: false,
-    },
-    competency: {
-      title: 'Автоматизированное тестирование API',
-      badgeText: 'Цитата найдена',
-      badgeColor: 'green',
-      text: 'Оценка 85 · ожидаемый уровень 70–100 · «Написал API-тесты для сервиса заявок.»',
-    },
-    actionBar: {
-      hint: 'ИИ подсказывает, решение принимает HR-менеджер',
-      primaryButton: 'Передать руководителю',
-      primaryAction: 'forward',
-      secondaryButton: 'Отклонить с причиной',
-      secondaryAction: 'reject',
-    },
-    cleanedText: {
-      lines: [
-        { text: 'Написал API-тесты для сервиса заявок.', isMarked: false },
-        { text: 'Общий коммерческий опыт — 3 года.', isMarked: true },
-      ],
-      caption: 'Цитата совпадает с текстом дословно',
-    },
-  },
-
-  // МАКЕТ 8: Морозов Илья Викторович (Карточка_ не выполнено.png)
-  r3: {
-    id: 'r3',
-    fullName: 'Морозов Илья Викторович',
-    roleDept: 'Python-разработчик · департамент цифрового развития',
-    sourceDate: 'Источник: Сайт администрации · 18.11.2026',
-    contacts: '+7 903 652-90-18 · morozov.ilya@gmail.com',
-    statusBanner: {
-      type: 'red',
-      title: 'Обязательное требование не выполнено',
-      text: 'Оценка 85 по тестированию API этого не меняет. Сильную компетенцию можно сохранить в кадровый резерв.',
-    },
-    mandatoryRequirement: {
-      statusBadge: 'Не выполнено',
-      badgeColor: 'red',
-      text: 'Найдено в тексте: 1 год при требовании от 2 лет. · «Общий коммерческий опыт — 1 год.»',
-      hasAskButton: false,
-    },
-    competency: {
-      title: 'Автоматизированное тестирование API',
-      badgeText: 'Цитата найдена',
-      badgeColor: 'green',
-      text: 'Оценка 85 · ожидаемый уровень 70–100 · «Написал API-тесты для сервиса заявок.»',
-    },
-    actionBar: {
-      hint: 'ИИ подсказывает, решение принимает HR-менеджер',
-      primaryButton: 'Отклонить с причиной',
-      primaryAction: 'reject',
-      secondaryButton: 'Сохранить в кадровый резерв',
-      secondaryAction: 'reserve',
-    },
-    cleanedText: {
-      lines: [
-        { text: 'Написал API-тесты для сервиса заявок.', isMarked: false },
-        { text: 'Общий коммерческий опыт — 1 год.', isMarked: true },
-      ],
-      caption: 'Цитата совпадает с текстом дословно',
-    },
-  },
-
-  // МАКЕТ 9: Белова Ольга Николаевна (Карточка_ цитата не найдена.png)
-  r4: {
-    id: 'r4',
-    fullName: 'Белова Ольга Николаевна',
-    roleDept: 'Python-разработчик · департамент цифрового развития',
-    sourceDate: 'Источник: HH.ru · 18.11.2026',
-    contacts: '+7 915 241-66-02 · o.belova@mail.ru',
-    statusBanner: {
-      type: 'blue',
-      title: 'Один вывод не подтверждён текстом',
-      text: 'Система не нашла цитату в отклике и не считает навык доказанным. Проверьте текст сами.',
-    },
-    mandatoryRequirement: {
-      statusBadge: 'Нужно уточнить',
-      badgeColor: 'amber',
-      text: 'В тексте нет длительности коммерческого опыта.',
-      hasAskButton: true,
-    },
-    competency: {
-      title: 'Автоматизированное тестирование API',
-      badgeText: 'Цитата не найдена',
-      badgeColor: 'red',
-      text: 'Оценка не засчитана: нет подтверждения в тексте · «Руководил командой»',
-    },
-    actionBar: {
-      hint: 'ИИ подсказывает, решение принимает HR-менеджер',
-      primaryButton: 'Проверить вручную',
-      primaryAction: 'manual',
-      secondaryButton: 'Запросить уточнение',
-      secondaryAction: 'clarify',
-    },
-    cleanedText: {
-      hasSourceError: true,
-      sourceErrorTitle: 'Источник недоступен',
-      sourceErrorText: 'Фраза «Руководил командой» не найдена в тексте отклика. Вывод не подтверждён, проверьте вручную.',
-      lines: [
-        { text: 'Написал API-тесты для сервиса заявок.', isMarked: false },
-      ],
-      caption: 'Основание вывода не найдено',
-    },
-  },
-
-  // МАКЕТ 10: Соколов Артём Дмитриевич (Карточка_ оценка устарела.png)
-  r5: {
-    id: 'r5',
-    fullName: 'Соколов Артём Дмитриевич',
-    roleDept: 'Python-разработчик · департамент цифрового развития',
-    sourceDate: 'Источник: Почта · 18.11.2026',
-    contacts: '+7 930 707-31-84 · sokolov.a@yandex.ru',
-    statusBanner: {
-      type: 'blue',
-      title: 'Текст отклика изменился после оценки',
-      text: 'Кандидат прислал новую версию резюме. Старая оценка скрыта, чтобы не вводить в заблуждение.',
-    },
-    mandatoryRequirement: {
-      statusBadge: 'Не оценено',
-      badgeColor: 'gray',
-      text: 'Оценка по старой версии текста не показывается.',
-      hasAskButton: false,
-    },
-    competency: {
-      title: 'Автоматизированное тестирование API',
-      badgeText: 'Не оценено',
-      badgeColor: 'gray',
-      text: 'Оценка не проводилась',
-    },
-    actionBar: {
-      hint: 'ИИ подсказывает, решение принимает HR-менеджер',
-      primaryButton: 'Оценить заново',
-      primaryAction: 'reevaluate',
-    },
-    cleanedText: {
-      hasV2Notice: true,
-      v2NoticeTitle: 'Новая версия текста (v2)',
-      v2NoticeText: 'Прежняя оценка делалась по версии v1 и скрыта.',
-      lines: [
-        { text: 'Написал API-тесты для сервиса заявок.', isMarked: false },
-        { text: 'Общий коммерческий опыт — 3 года.', isMarked: false },
-      ],
-      caption: 'Нажмите «Показать в тексте» у вывода, чтобы увидеть основание',
-    },
-  },
-
-  // МАКЕТ 11: Кузнецова Мария Алексеевна (Карточка_ не оценено, сбой сервиса.png)
-  r6: {
-    id: 'r6',
-    fullName: 'Кузнецова Мария Алексеевна',
-    roleDept: 'Python-разработчик · департамент цифрового развития',
-    sourceDate: 'Источник: HH.ru · 18.11.2026',
-    contacts: '+7 908 199-45-27 · m.kuznetsova@mail.ru',
-    statusBanner: {
-      type: 'blue',
-      title: 'Отклик ещё не оценён: сервис анализа недоступен',
-      text: 'Это не «нужно уточнить»: писать кандидату не нужно. Повторите оценку позже или разберите отклик вручную.',
-    },
-    mandatoryRequirement: {
-      statusBadge: 'Не оценено',
-      badgeColor: 'gray',
-      text: 'Оценка не проводилась.',
-      hasAskButton: false,
-    },
-    competency: {
-      title: 'Автоматизированное тестирование API',
-      badgeText: 'Не оценено',
-      badgeColor: 'gray',
-      text: 'Оценка не проводилась',
-    },
-    actionBar: {
-      hint: 'ИИ подсказывает, решение принимает HR-менеджер',
-      primaryButton: 'Повторить оценку',
-      primaryAction: 'retry',
-      secondaryButton: 'Разобрать вручную',
-      secondaryAction: 'manual',
-    },
-    cleanedText: {
-      lines: [
-        { text: 'Написал API-тесты для сервиса заявок.', isMarked: false },
-      ],
-      caption: 'Нажмите «Показать в тексте» у вывода, чтобы увидеть основание',
-    },
-  },
-};
-
-export const CandidateCard: React.FC<CandidateCardProps> = ({
-  candidateId = 'r1',
-  initialLoading = false,
-  onBack,
-  onRequestClarification,
-  onReject,
-  onSendToHead,
-  onSaveToReserve,
-  onManualCheck,
-  onReevaluate,
-}) => {
-  const [activeCandidateKey, setActiveCandidateKey] = useState<string>(candidateId);
-  const [isLoading, setIsLoading] = useState<boolean>(initialLoading);
-  const [modalAction, setModalAction] = useState<string | null>(null);
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const candidate = candidateDataMap[activeCandidateKey] || candidateDataMap['r1'];
-
-  const triggerToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
-  };
-
-  const handlePrimaryClick = () => {
-    switch (candidate.actionBar.primaryAction) {
-      case 'clarify':
-        if (onRequestClarification) onRequestClarification();
-        else setModalAction('Запрос на уточнение');
-        break;
-      case 'forward':
-        if (onSendToHead) onSendToHead();
-        else setModalAction('Передача руководителю департамента');
-        break;
-      case 'reject':
-        if (onReject) onReject();
-        else setModalAction('Отклонение отклика с указанием причины');
-        break;
-      case 'manual':
-        if (onManualCheck) onManualCheck();
-        else {
-          triggerToast('Режим ручной проверки активирован');
-        }
-        break;
-      case 'reevaluate':
-        if (onReevaluate) onReevaluate();
-        else {
-          setIsLoading(true);
-          setTimeout(() => {
-            setIsLoading(false);
-            triggerToast('Отклик успешно переоценён');
-          }, 1000);
-        }
-        break;
-      case 'retry':
-        setIsLoading(true);
-        setTimeout(() => {
-          setIsLoading(false);
-          triggerToast('Сервис анализа завершил оценку');
-        }, 1000);
-        break;
+  const openHandoff = () => action(async () => { setSummary(await api.summary(candidateId)); setPanel('handoff'); });
+  const sendHandoff = () => action(async () => {
+    if (!summary || !history || !detail) return;
+    const handoff = { recipient_user_id: recipient, channel: 'cabinet', summary_revision: summary.summary_revision, request_id: crypto.randomUUID() };
+    if (['sent_to_department', 'department_interview'].includes(detail.stage.code)) {
+      await request(`/applications/${candidateId}/handoffs`, 'hr', { expected_seq: history.last_seq || 0, handoff });
+    } else {
+      await request(`/applications/${candidateId}/stage`, 'hr', { to_stage_code: 'sent_to_department', expected_seq: history.last_seq || 0, comment, confirm_skip: confirmSkip, handoff });
     }
-  };
-
-  const handleSecondaryClick = () => {
-    if (!candidate.actionBar.secondaryAction) return;
-    switch (candidate.actionBar.secondaryAction) {
-      case 'reject':
-        if (onReject) onReject();
-        else setModalAction('Отклонение отклика с указанием причины');
-        break;
-      case 'reserve':
-        if (onSaveToReserve) onSaveToReserve();
-        else setModalAction('Сохранение в кадровый резерв');
-        break;
-      case 'clarify':
-        if (onRequestClarification) onRequestClarification();
-        else setModalAction('Запрос на уточнение');
-        break;
-      case 'manual':
-        triggerToast('Переход к ручному разбору отклика');
-        break;
-    }
-  };
-
-  return (
-    <div className="max-w-[1240px] mx-auto px-4 sm:px-6 py-6">
-      {/* Top Navigation Row: Back Link & Quick Mockup Switcher */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
-        <button
-          type="button"
-          onClick={onBack}
-          className="text-[14px] font-medium text-[#1F4FD1] hover:underline flex items-center gap-1.5 transition-colors whitespace-nowrap"
-        >
-          ← Отклики · Python-разработчик
-        </button>
-
-        {/* Quick Mockup Switcher for convenience (Экраны 6–12) */}
-        <div className="flex flex-wrap items-center gap-1 bg-white border border-[#E1E5EB] rounded-lg p-1 text-xs">
-          <span className="text-[#8E939D] px-2 font-medium whitespace-nowrap">Макет:</span>
-          <button
-            type="button"
-            onClick={() => {
-              setIsLoading(false);
-              setActiveCandidateKey('r1');
-            }}
-            className={`px-2.5 py-1 rounded font-medium transition-colors whitespace-nowrap ${
-              !isLoading && activeCandidateKey === 'r1'
-                ? 'bg-[#1F4FD1] text-white shadow-sm'
-                : 'text-[#4A5363] hover:text-[#141A24]'
-            }`}
-          >
-            6. Нужно уточнить
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setIsLoading(false);
-              setActiveCandidateKey('r2');
-            }}
-            className={`px-2.5 py-1 rounded font-medium transition-colors whitespace-nowrap ${
-              !isLoading && activeCandidateKey === 'r2'
-                ? 'bg-[#1F4FD1] text-white shadow-sm'
-                : 'text-[#4A5363] hover:text-[#141A24]'
-            }`}
-          >
-            7. Выполнено
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setIsLoading(false);
-              setActiveCandidateKey('r3');
-            }}
-            className={`px-2.5 py-1 rounded font-medium transition-colors whitespace-nowrap ${
-              !isLoading && activeCandidateKey === 'r3'
-                ? 'bg-[#1F4FD1] text-white shadow-sm'
-                : 'text-[#4A5363] hover:text-[#141A24]'
-            }`}
-          >
-            8. Не выполнено
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setIsLoading(false);
-              setActiveCandidateKey('r4');
-            }}
-            className={`px-2.5 py-1 rounded font-medium transition-colors whitespace-nowrap ${
-              !isLoading && activeCandidateKey === 'r4'
-                ? 'bg-[#1F4FD1] text-white shadow-sm'
-                : 'text-[#4A5363] hover:text-[#141A24]'
-            }`}
-          >
-            9. Цитата не найдена
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setIsLoading(false);
-              setActiveCandidateKey('r5');
-            }}
-            className={`px-2.5 py-1 rounded font-medium transition-colors whitespace-nowrap ${
-              !isLoading && activeCandidateKey === 'r5'
-                ? 'bg-[#1F4FD1] text-white shadow-sm'
-                : 'text-[#4A5363] hover:text-[#141A24]'
-            }`}
-          >
-            10. Оценка устарела
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setIsLoading(false);
-              setActiveCandidateKey('r6');
-            }}
-            className={`px-2.5 py-1 rounded font-medium transition-colors whitespace-nowrap ${
-              !isLoading && activeCandidateKey === 'r6'
-                ? 'bg-[#1F4FD1] text-white shadow-sm'
-                : 'text-[#4A5363] hover:text-[#141A24]'
-            }`}
-          >
-            11. Сбой сервиса
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsLoading(!isLoading)}
-            className={`px-2.5 py-1 rounded font-medium transition-colors whitespace-nowrap ${
-              isLoading
-                ? 'bg-[#1F4FD1] text-white shadow-sm'
-                : 'text-[#4A5363] hover:text-[#141A24]'
-            }`}
-          >
-            12. Загрузка
-          </button>
-        </div>
+    setPanel(null); setComment(''); setNotice('Передача сохранена. Получатель видит сводку и срок в своём кабинете.'); setReload(n => n + 1);
+  });
+  const moveStage = () => action(async () => {
+    await request(`/applications/${candidateId}/stage`, 'hr', { to_stage_code: target, expected_seq: history?.last_seq || 0, comment, confirm_skip: confirmSkip, rejection_reason_code: ['rejected', 'withdrawn'].includes(target) ? reason : null });
+    setPanel(null); setComment(''); setNotice('Решение HR сохранено в истории.'); setReload(n => n + 1);
+  });
+  const showEvidence = (e: Evidence) => action(async () => { setSource(await api.source(e.candidate_text_id)); setHighlight(e); setSourceError(''); });
+  const extend = (attempt: Handoff) => action(async () => {
+    await request(`/applications/${candidateId}/handoffs/${attempt.attempt_id}/deadline`, 'hr', { new_due_date: newDate, expected_due_date: attempt.due_date, reason_code: 'other', comment: extensionComment, request_id: crypto.randomUUID() });
+    setSelectedAttempt(''); setNotice('Новый срок и причина сохранены.'); setReload(n => n + 1);
+  });
+  if (loading || !detail) return <div className="max-w-[1240px] mx-auto p-8 space-y-4"><Btn onClick={onBack}>← Отклики</Btn><p role={error ? 'alert' : undefined}>{error || 'Загрузка карточки…'}</p>{error && <Btn onClick={() => setReload(n => n + 1)}>Повторить</Btn>}</div>;
+  return <div className="max-w-[1240px] mx-auto px-6 py-6 space-y-5">
+    <Btn variant="link" onClick={onBack}>← Отклики · {detail.vacancy?.title || detail.posting_title}</Btn>
+    <PageTitle title={detail.candidate.code} subtitle={detail.candidate.headline || detail.vacancy?.title || 'Карточка отклика'} right={<Badge tone="blue">{detail.stage.title}</Badge>} />
+    <p className="text-sm text-[#616977]">{detail.candidate.is_training ? 'Учебная запись · ' : ''}Персональные данные скрыты</p>
+    {error && <div role="alert" className="p-4 bg-red-50 text-red-800 rounded-xl">{error} <Btn onClick={() => setReload(n => n + 1)}>Перечитать</Btn></div>}
+    {notice && <div role="status" className="p-4 bg-[#E3F2E7] text-[#1D7A40] rounded-xl">{notice}</div>}
+    <div className="grid grid-cols-[1.15fr_1fr] gap-6 items-start">
+      <div className="space-y-5">
+        <Card className="space-y-4"><h2 className="text-xl font-bold">Результат рассмотрения</h2><Badge tone={detail.assessment?.is_stale ? 'amber' : 'blue'}>{assessmentLabel(detail.assessment_status)}</Badge><p>{detail.assessment?.summary || 'Нет готового вывода. Отсутствие сведений не означает несоответствие.'}</p>
+          <h3 className="font-bold">Обязательные требования</h3>
+          {detail.assessment?.formal_checks.length ? detail.assessment.formal_checks.map(c => <div key={c.requirement_id} className="border border-[#E1E5EB] rounded-xl p-4 space-y-2"><div className="font-semibold">{c.description}</div><Badge tone={c.result === 'met' ? 'green' : c.result === 'not_met' ? 'red' : 'amber'}>{resultLabel(c.result)}{c.is_preliminary ? ' · предварительно' : ''}</Badge><p className="text-sm">{c.explanation}</p>{c.evidence.map((e, i) => <button key={i} onClick={() => showEvidence(e)} className="block text-left text-sm text-[#1F4FD1]">«{e.quote}» ↗</button>)}</div>) : <p className="text-[#616977]">Требования ещё не оценены.</p>}
+          <h3 className="font-bold">Компетенции и основания</h3>
+          {detail.assessment?.competency_scores.map((c, i) => <div key={i} className="border border-[#E1E5EB] rounded-xl p-4"><b>{c.name}</b><p className="text-sm mt-2">{c.explanation || 'Сведений недостаточно'}</p>{c.evidence.map((e, j) => <button key={j} onClick={() => showEvidence(e)} className="block text-left text-sm text-[#1F4FD1] mt-2">«{e.quote}» ↗</button>)}</div>)}
+        </Card>
+        <Card className="space-y-3"><h2 className="text-xl font-bold">Действия HR</h2><div className="flex flex-wrap gap-3"><Btn variant="primary" disabled={busy || detail.stage.is_final || history?.source !== 'response'} onClick={onRequestClarification}>Телефонное интервью</Btn><Btn disabled={busy || detail.stage.is_final || history?.source !== 'response'} onClick={openHandoff}>Передать руководителю</Btn><Btn disabled={busy || detail.stage.is_final || history?.source !== 'response'} onClick={() => { setPanel('stage'); setTarget(''); setComment(''); }}>Изменить этап / решение</Btn><Btn onClick={() => setReload(n => n + 1)}>Обновить</Btn></div><p className="text-sm text-[#616977]">Ответ подразделения сохраняется отдельно. Итоговое решение принимает HR.</p>
+          {panel === 'stage' && <div className="space-y-3 border-t pt-4"><select aria-label="Новый этап" className={field} value={target} onChange={e => setTarget(e.target.value)}><option value="">Выберите этап</option>{stages.filter(s => s.code !== 'sent_to_department' && s.code !== detail.stage.code).map(s => <option key={s.code} value={s.code}>{s.title}</option>)}</select>{['rejected', 'withdrawn'].includes(target) && <select aria-label="Причина решения" className={field} value={reason} onChange={e => setReason(e.target.value)}><option value="">Выберите причину</option>{reasons.filter(r => target !== 'withdrawn' || r.side === 'candidate').map(r => <option key={r.code} value={r.code}>{r.title}</option>)}</select>}<textarea aria-label="Обоснование решения" className={field} placeholder="Обоснование решения" value={comment} onChange={e => setComment(e.target.value)} /><label className="block text-sm"><input type="checkbox" checked={confirmSkip} onChange={e => setConfirmSkip(e.target.checked)} /> Подтверждаю возврат или пропуск этапов с указанной причиной</label><Btn variant="primary" disabled={busy || !target || !comment.trim() || (['rejected', 'withdrawn'].includes(target) && !reason)} onClick={moveStage}>Сохранить решение</Btn></div>}
+          {panel === 'handoff' && <div className="space-y-3 border-t pt-4"><h3 className="font-bold">Сводка перед отправкой</h3><pre className="whitespace-pre-wrap text-sm max-h-64 overflow-auto bg-[#F6F7F9] p-4 rounded-xl">{summary?.markdown}</pre><p className="text-sm">{recipient ? 'Получатель: представитель департамента (учебная учётная запись стенда)' : 'Получатель кабинета не настроен. Передача пока недоступна.'}</p><textarea className={field} placeholder="Комментарий HR и основание перехода" value={comment} onChange={e => setComment(e.target.value)} /><label className="block text-sm"><input type="checkbox" checked={confirmSkip} onChange={e => setConfirmSkip(e.target.checked)} /> Подтверждаю пропуск этапов с указанной причиной</label><p className="text-sm text-[#616977]">Срок ответа рассчитывается сервером: 10 рабочих дней. Просмотр сводки не создаёт передачу.</p><Btn variant="primary" disabled={busy || !recipient || !comment.trim()} onClick={sendHandoff}>Подтвердить передачу</Btn></div>}
+        </Card>
       </div>
-
-      {/* ======================================================== */}
-      {/* МАКЕТ 12: ЗАГРУЗКА КАРТОЧКИ (Карточка_ загрузка.png)      */}
-      {/* ======================================================== */}
-      {isLoading ? (
-        <div className="bg-white border border-[#E1E5EB] rounded-2xl p-6 lg:p-8 shadow-sm">
-          <div className="text-[14px] text-[#616977] mb-5">
-            Загружаем карточку отклика...
-          </div>
-          <div className="space-y-3.5">
-            <div className="w-full h-10 bg-[#E5E9F2] rounded-xl animate-pulse"></div>
-            <div className="w-full h-20 bg-[#E5E9F2] rounded-xl animate-pulse"></div>
-            <div className="w-full h-32 bg-[#E5E9F2] rounded-xl animate-pulse"></div>
-            <div className="w-full h-36 bg-[#E5E9F2] rounded-xl animate-pulse"></div>
-          </div>
-        </div>
-      ) : (
-        /* ======================================================== */
-        /* МАКЕТЫ 6–11: ДЕТАЛЬНЫЙ ПРОСМОТР КАРТОЧКИ                  */
-        /* ======================================================== */
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column (8 cols) */}
-          <div className="lg:col-span-8 space-y-6">
-            {/* Card 1: Candidate Header + Status Alert Banner */}
-            <div className="bg-white border border-[#E1E5EB] rounded-2xl p-6 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-5">
-                <div>
-                  <h1 className="text-[22px] font-bold text-[#141A24] tracking-tight mb-1">
-                    {candidate.fullName}
-                  </h1>
-                  <p className="text-[14px] text-[#4A5363] mb-1">
-                    {candidate.roleDept}
-                  </p>
-                  <p className="text-[13px] text-[#616977]">
-                    {candidate.sourceDate}
-                  </p>
-                </div>
-                <div className="text-[13px] text-[#4A5363] font-medium sm:text-right whitespace-nowrap">
-                  {candidate.contacts}
-                </div>
-              </div>
-
-              {/* Status Alert Banner */}
-              {candidate.statusBanner.type === 'amber' && (
-                <div className="bg-[#FFF6EC] border border-[#F3DDBF] rounded-xl p-4">
-                  <h2 className="text-[14px] font-bold text-[#92400E] mb-1">
-                    {candidate.statusBanner.title}
-                  </h2>
-                  <p className="text-[13px] text-[#78350F] leading-relaxed">
-                    {candidate.statusBanner.text}
-                  </p>
-                </div>
-              )}
-
-              {candidate.statusBanner.type === 'green' && (
-                <div className="bg-[#EBF7EE] border border-[#C6E7D2] rounded-xl p-4">
-                  <h2 className="text-[14px] font-bold text-[#166534] mb-1">
-                    {candidate.statusBanner.title}
-                  </h2>
-                  <p className="text-[13px] text-[#14532D] leading-relaxed">
-                    {candidate.statusBanner.text}
-                  </p>
-                </div>
-              )}
-
-              {candidate.statusBanner.type === 'red' && (
-                <div className="bg-[#FDF2F2] border border-[#F8B4B4] rounded-xl p-4">
-                  <h2 className="text-[14px] font-bold text-[#991B1B] mb-1">
-                    {candidate.statusBanner.title}
-                  </h2>
-                  <p className="text-[13px] text-[#7F1D1D] leading-relaxed">
-                    {candidate.statusBanner.text}
-                  </p>
-                </div>
-              )}
-
-              {candidate.statusBanner.type === 'blue' && (
-                <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-xl p-4">
-                  <h2 className="text-[14px] font-bold text-[#1E40AF] mb-1">
-                    {candidate.statusBanner.title}
-                  </h2>
-                  <p className="text-[13px] text-[#1E3A8A] leading-relaxed">
-                    {candidate.statusBanner.text}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Card 2: Обязательное требование */}
-            <div className="bg-white border border-[#E1E5EB] rounded-2xl p-6 shadow-sm">
-              <div className="mb-4">
-                <h2 className="text-[16px] font-bold text-[#141A24] mb-0.5">
-                  Обязательное требование
-                </h2>
-                <p className="text-[13px] text-[#616977]">
-                  Из профиля должности. Высокая оценка компетенции его не заменяет.
-                </p>
-              </div>
-
-              <div className="pt-2">
-                <div className="flex items-center justify-between gap-4 mb-2">
-                  <span className="font-bold text-[15px] text-[#141A24]">
-                    Подтверждённый коммерческий опыт не менее 2 лет
-                  </span>
-                  <span
-                    className={`shrink-0 inline-block px-3 py-1 rounded-full text-[12px] font-medium whitespace-nowrap ${
-                      candidate.mandatoryRequirement.badgeColor === 'green'
-                        ? 'bg-[#E6F4EA] text-[#15803D]'
-                        : candidate.mandatoryRequirement.badgeColor === 'amber'
-                        ? 'bg-[#FEF3E6] text-[#B45309]'
-                        : candidate.mandatoryRequirement.badgeColor === 'red'
-                        ? 'bg-[#FDE8E8] text-[#C5221F]'
-                        : 'bg-[#F3F4F6] text-[#4B5563]'
-                    }`}
-                  >
-                    {candidate.mandatoryRequirement.statusBadge}
-                  </span>
-                </div>
-                <p className="text-[13px] text-[#4A5363] mb-4">
-                  {candidate.mandatoryRequirement.text}
-                </p>
-                {candidate.mandatoryRequirement.hasAskButton && (
-                  <button
-                    type="button"
-                    onClick={() => setModalAction('Вопрос кандидату об опыте')}
-                    className="px-4 py-2 text-[13px] font-medium text-white bg-[#1F4FD1] rounded-lg hover:bg-[#1841B2] transition-colors shadow-sm whitespace-nowrap"
-                  >
-                    Спросить кандидата
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Card 3: Профессиональная компетенция */}
-            <div className="bg-white border border-[#E1E5EB] rounded-2xl p-6 shadow-sm">
-              <div className="mb-4">
-                <h2 className="text-[16px] font-bold text-[#141A24] mb-0.5">
-                  Профессиональная компетенция
-                </h2>
-                <p className="text-[13px] text-[#616977]">
-                  Что кандидат делал на практике, по тексту отклика
-                </p>
-              </div>
-
-              <div className="pt-2">
-                <div className="flex items-center justify-between gap-4 mb-2">
-                  <span className="font-bold text-[15px] text-[#141A24]">
-                    {candidate.competency.title}
-                  </span>
-                  <span
-                    className={`shrink-0 inline-block px-3 py-1 rounded-full text-[12px] font-medium whitespace-nowrap ${
-                      candidate.competency.badgeColor === 'green'
-                        ? 'bg-[#E6F4EA] text-[#15803D]'
-                        : candidate.competency.badgeColor === 'red'
-                        ? 'bg-[#FDE8E8] text-[#C5221F]'
-                        : 'bg-[#F3F4F6] text-[#4B5563]'
-                    }`}
-                  >
-                    {candidate.competency.badgeText}
-                  </span>
-                </div>
-                <p className="text-[13px] text-[#4A5363]">
-                  {candidate.competency.text}
-                </p>
-              </div>
-            </div>
-
-            {/* Card 4: Action Bar */}
-            <div className="bg-white border border-[#E1E5EB] rounded-2xl p-4 sm:p-5 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="text-[13px] text-[#616977] text-center sm:text-left">
-                {candidate.actionBar.hint}
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handlePrimaryClick}
-                  className="px-5 py-2.5 text-[14px] font-medium text-white bg-[#1F4FD1] rounded-lg hover:bg-[#1841B2] transition-colors shadow-sm whitespace-nowrap"
-                >
-                  {candidate.actionBar.primaryButton}
-                </button>
-                {candidate.actionBar.secondaryButton && (
-                  <button
-                    type="button"
-                    onClick={handleSecondaryClick}
-                    className="px-5 py-2.5 text-[14px] font-medium text-[#141A24] bg-white border border-[#E1E5EB] rounded-lg hover:bg-[#F3F5F8] transition-colors shadow-sm whitespace-nowrap"
-                  >
-                    {candidate.actionBar.secondaryButton}
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column (4 cols): Очищенный текст отклика */}
-          <div className="lg:col-span-4 bg-white border border-[#E1E5EB] rounded-2xl p-6 shadow-sm">
-            <h2 className="text-[16px] font-bold text-[#141A24] mb-1">
-              Очищенный текст отклика
-            </h2>
-            <p className="text-[13px] text-[#616977] mb-4">
-              Персональные данные удалены до анализа
-            </p>
-
-            {/* Notice for Screen 10 (Новая версия текста v2) */}
-            {candidate.cleanedText.hasV2Notice && (
-              <div className="bg-[#EFF6FF] border border-[#BFDBFE] rounded-xl p-4 mb-4">
-                <h3 className="text-[14px] font-bold text-[#1E40AF] mb-1">
-                  {candidate.cleanedText.v2NoticeTitle}
-                </h3>
-                <p className="text-[13px] text-[#1E3A8A] leading-relaxed">
-                  {candidate.cleanedText.v2NoticeText}
-                </p>
-              </div>
-            )}
-
-            {/* Notice for Screen 9 (Источник недоступен) */}
-            {candidate.cleanedText.hasSourceError && (
-              <div className="bg-[#FDF2F2] border border-[#F8B4B4] rounded-xl p-4 mb-4">
-                <h3 className="text-[14px] font-bold text-[#991B1B] mb-1">
-                  {candidate.cleanedText.sourceErrorTitle}
-                </h3>
-                <p className="text-[13px] text-[#7F1D1D] leading-relaxed">
-                  {candidate.cleanedText.sourceErrorText}
-                </p>
-              </div>
-            )}
-
-            {/* Resume text box */}
-            <div className="bg-[#F8FAFC] border border-[#E1E5EB] rounded-xl p-4 text-[14px] leading-relaxed text-[#141A24] space-y-2.5">
-              {candidate.cleanedText.lines.map((line, idx) => (
-                <p key={idx}>
-                  {line.isMarked ? (
-                    <mark className="bg-[#FEF08A] text-[#141A24] px-1.5 py-0.5 rounded font-medium">
-                      {line.text}
-                    </mark>
-                  ) : (
-                    line.text
-                  )}
-                </p>
-              ))}
-            </div>
-
-            <div className="mt-3 text-[12px] text-[#616977]">
-              {candidate.cleanedText.caption}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Action Dialog / Modal */}
-      {modalAction && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-[#E1E5EB]">
-            <h2 className="text-[18px] font-bold text-[#141A24] mb-2">
-              {modalAction}
-            </h2>
-            <p className="text-[13px] text-[#616977] mb-4">
-              Кандидат: <strong className="text-[#141A24]">{candidate.fullName}</strong>
-            </p>
-            <div className="mb-5">
-              <label className="block text-[12px] font-medium text-[#4A5363] mb-1">
-                Комментарий или сообщение
-              </label>
-              <textarea
-                rows={3}
-                placeholder="Введите текст сообщения..."
-                className="w-full px-3 py-2 text-[14px] border border-[#D2D4D8] rounded-lg focus:outline-none focus:border-[#1F4FD1]"
-              />
-            </div>
-            <div className="flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setModalAction(null)}
-                className="px-4 py-2 text-[13px] font-medium text-[#4A5363] hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                Отмена
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setModalAction(null);
-                  triggerToast(`${modalAction} успешно выполнено`);
-                }}
-                className="px-4 py-2 text-[13px] font-medium text-white bg-[#1F4FD1] rounded-lg hover:bg-[#1841B2] transition-colors"
-              >
-                Подтвердить
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Toast Notification */}
-      {toastMessage && (
-        <div className="fixed bottom-6 right-6 bg-[#141A24] text-white text-[13px] px-4 py-2.5 rounded-lg shadow-lg z-50 animate-fade-in flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[#15803D]"></span>
-          {toastMessage}
-        </div>
-      )}
+      <Card className="space-y-4 sticky top-4"><h2 className="text-xl font-bold">Текст источника</h2>{sourceError ? <p role="alert">{sourceError}</p> : source ? <><p className="text-sm text-[#616977]">Версия {source.version} · {source.is_current ? 'текущая' : 'предыдущая'}</p><pre className="whitespace-pre-wrap font-sans text-[14px] leading-7 max-h-[650px] overflow-auto">{highlight ? <>{source.text.slice(0, highlight.utf16_start)}<mark className="bg-[#FFF4CC]">{source.text.slice(highlight.utf16_start, highlight.utf16_end)}</mark>{source.text.slice(highlight.utf16_end)}</> : source.text}</pre></> : <p>Загрузка источника…</p>}</Card>
     </div>
-  );
+    <Card className="space-y-4"><h2 className="text-xl font-bold">Передачи и ответы подразделения</h2>{!handoffs.length && <p>Передач пока нет.</p>}{handoffs.map(a => <div key={a.attempt_id} className="border border-[#E1E5EB] p-4 rounded-xl space-y-3"><div className="flex justify-between"><b>{a.recipient_name} · {a.recipient_department}</b><Badge tone={a.deadline_status === 'overdue' ? 'red' : 'blue'}>{deadlineLabel(a.deadline_status)}</Badge></div><p className="text-sm">Передан {new Date(a.handed_off_at).toLocaleString('ru-RU')} · срок {a.due_date} · переносов {a.extensions_count}</p>{a.latest_feedback && <p className="bg-[#E3F2E7] rounded-xl p-3">{feedbackLabel(a.latest_feedback.outcome)} · {a.latest_feedback.rejection_reason?.title} {a.latest_feedback.comment}</p>}<div className="flex gap-3"><Btn onClick={() => action(async () => setAttemptDetail(await api.handoff(a.attempt_id, 'hr')))}>Сводка и история</Btn>{a.status === 'awaiting_response' && <Btn onClick={() => { setSelectedAttempt(a.attempt_id); setNewDate(''); setExtensionComment(''); }}>Перенести срок</Btn>}</div>{selectedAttempt === a.attempt_id && <div className="flex gap-3"><input aria-label="Новый срок" type="date" className={field} min={a.due_date} value={newDate} onChange={e => setNewDate(e.target.value)} /><input aria-label="Причина переноса" className={field} placeholder="Причина переноса" value={extensionComment} onChange={e => setExtensionComment(e.target.value)} /><Btn disabled={busy || !newDate || !extensionComment.trim()} onClick={() => extend(a)}>Сохранить</Btn></div>}</div>)}
+      {attemptDetail && <div className="bg-[#F6F7F9] rounded-xl p-4 space-y-3"><Btn onClick={() => setAttemptDetail(null)}>Закрыть сводку</Btn><pre className="whitespace-pre-wrap font-sans text-sm">{attemptDetail.markdown}</pre>{attemptDetail.feedback_history?.map(f => <p key={f.feedback_id}>{new Date(f.received_at).toLocaleString('ru-RU')} · {feedbackLabel(f.outcome)} · {f.comment}</p>)}{attemptDetail.deadline_extensions?.map((e, i) => <p key={i}>{e.previous_due_date} → {e.new_due_date} · {e.reason_title} · {e.comment}</p>)}</div>}
+    </Card>
+    <Card><h2 className="text-xl font-bold mb-4">История этапов</h2><div className="space-y-3">{history?.items.map(e => <div key={e.seq} className="border-b border-[#E1E5EB] pb-3"><b>{e.to_stage.title}</b> · {new Date(e.created_at).toLocaleString('ru-RU')} · {e.actor?.login}<p className="text-sm mt-1">{e.comment} {e.rejection_reason?.title}</p></div>)}</div></Card>
+  </div>;
 };
-
 export default CandidateCard;

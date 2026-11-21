@@ -1,6 +1,6 @@
 import React from 'react';
 
-export type HRNavTab = 'database' | 'vacancies' | 'interview' | 'reserve' | 'archive' | 'analytics';
+export type HRNavTab = 'database' | 'vacancies' | 'interview' | 'reserve' | 'archive' | 'hiring' | 'requirements' | 'analytics';
 
 interface HeaderHRProps {
   activeTab: HRNavTab;
@@ -20,15 +20,17 @@ export const HeaderHR: React.FC<HeaderHRProps> = ({
     { id: 'vacancies', label: 'Отклики по вакансиям' },
     { id: 'interview', label: 'Интервью' },
     { id: 'archive', label: 'Архив резюме' },
+    { id: 'hiring', label: 'Оформление' },
+    { id: 'requirements', label: 'Требования и вакансии' },
     { id: 'reserve', label: 'Кадровый резерв' },
     { id: 'analytics', label: 'Аналитика' },
   ];
 
   return (
     <header className="w-full bg-white border-b border-[#E1E5EB] sticky top-0 z-40">
-      <div className="max-w-[1240px] mx-auto px-4 sm:px-6 h-[72px] flex items-center justify-between">
+      <div className="max-w-[1240px] mx-auto px-4 sm:px-6 min-h-[72px] py-3 flex flex-wrap items-center justify-between">
         {/* Left: Brand + Navigation */}
-        <div className="flex items-center gap-4 lg:gap-8">
+        <div className="flex flex-wrap items-center gap-4 lg:gap-6">
           <button
             type="button"
             onClick={onLogoClick || (() => onTabChange('database'))}
@@ -44,7 +46,7 @@ export const HeaderHR: React.FC<HeaderHRProps> = ({
             </span>
           </button>
 
-          <nav className="hidden md:flex items-center gap-1.5">
+          <nav className="hidden md:flex flex-wrap items-center gap-1.5">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
               return (

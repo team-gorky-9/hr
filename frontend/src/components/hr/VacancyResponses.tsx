@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { api, recruitmentContour, resultLabel, errorMessage, type Vacancy } from '../../api/recruitment';
 
 export interface ResponseItem {
   id: string;
@@ -8,57 +9,6 @@ export interface ResponseItem {
   skillApi: string;
   category: 'call' | 'clarify' | 'reject' | 'action';
 }
-
-const mockResponses: ResponseItem[] = [
-  {
-    id: 'r1',
-    name: 'Фролов Денис',
-    source: 'HH.ru',
-    requirementExp: 'Нужно уточнить',
-    skillApi: '85 · цитата найдена',
-    category: 'clarify',
-  },
-  {
-    id: 'r2',
-    name: 'Ковалёва Анна',
-    source: '«Работа России»',
-    requirementExp: 'Выполнено',
-    skillApi: '85 · цитата найдена',
-    category: 'call',
-  },
-  {
-    id: 'r3',
-    name: 'Морозов Илья',
-    source: 'Сайт администрации',
-    requirementExp: 'Не выполнено',
-    skillApi: '85 · цитата найдена',
-    category: 'reject',
-  },
-  {
-    id: 'r4',
-    name: 'Белова Ольга',
-    source: 'HH.ru',
-    requirementExp: 'Нужно уточнить',
-    skillApi: 'Цитата не найдена',
-    category: 'clarify',
-  },
-  {
-    id: 'r5',
-    name: 'Соколов Артём',
-    source: 'Почта',
-    requirementExp: 'Не оценено',
-    skillApi: '—',
-    category: 'action',
-  },
-  {
-    id: 'r6',
-    name: 'Кузнецова Мария',
-    source: 'HH.ru',
-    requirementExp: 'Не оценено',
-    skillApi: '—',
-    category: 'action',
-  },
-];
 
 interface VacancyResponsesProps {
   initialVacancyId?: string;
@@ -76,42 +26,42 @@ const requirementExpStyles: Record<string, string> = {
 };
 
 export const VacancyResponses: React.FC<VacancyResponsesProps> = ({
-  initialVacancyId = 'v1',
+  initialVacancyId = '',
   onOpenCard,
   onManualUpload: _onManualUpload,
 }) => {
   const [selectedVacancyId, setSelectedVacancyId] = useState<string>(initialVacancyId);
   const [activeFilter, setActiveFilter] = useState<FilterTab>('all');
 
-  const vacancies = [
-    {
-      id: 'v1',
-      title: 'Python-разработчик',
-      department: 'Департамент цифрового развития',
-      count: '6 откликов',
-      requirement: 'требование: коммерческий опыт от 2 лет',
-      hasResponses: true,
-    },
-    {
-      id: 'v2',
-      title: 'Главный специалист по обращениям граждан',
-      department: 'Общий отдел',
-      count: 'нет откликов',
-      requirement: 'требование: коммерческий опыт от 2 лет',
-      hasResponses: false,
-    },
-  ];
-
-  const currentVacancy = vacancies.find((v) => v.id === selectedVacancyId) || vacancies[0];
-
-  const filteredResponses = mockResponses.filter((r) => {
-    if (activeFilter === 'all') return true;
-    if (activeFilter === 'call') return r.category === 'call';
-    if (activeFilter === 'clarify') return r.requirementExp === 'Нужно уточнить';
-    if (activeFilter === 'reject') return r.requirementExp === 'Не выполнено';
-    if (activeFilter === 'action') return r.requirementExp === 'Не оценено' || r.category === 'clarify';
-    return true;
-  });
+  const [vacancyRows, setVacancyRows] = useState<Vacancy[]>([]);
+  const [responses, setResponses] = useState<ResponseItem[]>([]);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [reload, setReload] = useState(0);
+  useEffect(() => {
+    const controller = new AbortController();
+    setError(''); setLoading(true);
+    api.vacancies(controller.signal).then(({ items }) => {
+      setVacancyRows(items);
+      setSelectedVacancyId(current => items.some(v => v.vacancy_id === current) ? current : (items.find(v => v.applications_count > 0) || items[0])?.vacancy_id || '');
+      if (!items.length) setLoading(false);
+    }).catch(e => { if (!controller.signal.aborted) { setError(errorMessage(e)); setLoading(false); } });
+    return () => controller.abort();
+  }, [reload]);
+  useEffect(() => {
+    if (!selectedVacancyId || selectedVacancyId === 'v1') return;
+    const controller = new AbortController();
+    setResponses([]); setError(''); setLoading(true);
+    api.applications(selectedVacancyId, controller.signal).then(({ items }) => {
+      setResponses(items.map(a => ({ id: a.application_id, name: a.candidate_code + (a.headline ? ' · ' + a.headline : ''), source: [a.current_stage_title, a.applied_at].filter(Boolean).join(' · '), requirementExp: resultLabel(a.formal_result) as ResponseItem['requirementExp'], skillApi: a.rank_reason, category: ({ ready: 'call', clarify: 'clarify', not_met: 'reject' }[a.rank_group] || 'action') as ResponseItem['category'] })));
+      setLoading(false);
+    }).catch(e => { if (!controller.signal.aborted) { setError(errorMessage(e)); setLoading(false); } });
+    return () => controller.abort();
+  }, [selectedVacancyId, reload]);
+  const vacancies = vacancyRows.map(v => ({ id: v.vacancy_id, title: v.title, department: v.employer, count: `${v.applications_count} откликов`, requirement: v.approved_profile_version ? `профиль v${v.approved_profile_version}` : 'нет утверждённого профиля', hasResponses: responses.length > 0 }));
+  const currentVacancy = vacancies.find(v => v.id === selectedVacancyId);
+  const filteredResponses = responses.filter(r => activeFilter === 'all' || r.category === activeFilter);
+  if (!currentVacancy) return <div className="max-w-[1240px] mx-auto p-8"><h1 className="text-3xl font-bold mb-4">Отклики</h1><p>{error || (loading ? 'Загрузка вакансий…' : 'Вакансий пока нет')}</p><button className="mt-4 text-[#1F4FD1]" onClick={() => setReload(n => n + 1)}>Обновить</button></div>;
 
   return (
     <div className="max-w-[1240px] mx-auto px-4 sm:px-6 py-8">
@@ -121,7 +71,7 @@ export const VacancyResponses: React.FC<VacancyResponsesProps> = ({
           Отклики
         </h1>
         <p className="text-[14px] text-[#616977]">
-          Выберите вакансию и откройте отклик. Просмотр персональных данных фиксируется в журнале.
+          {recruitmentContour === 'training' ? 'Учебные данные · ' : ''}Выберите вакансию и откройте отклик. Персональные данные скрыты.
         </p>
       </div>
 
@@ -174,7 +124,9 @@ export const VacancyResponses: React.FC<VacancyResponsesProps> = ({
             </p>
           </div>
 
-          {currentVacancy.hasResponses ? (
+          {error && <div role="alert" className="mb-4 p-4 bg-red-50 text-red-800 rounded-xl">{error} <button onClick={() => setReload(n => n + 1)}>Повторить</button></div>}
+          {loading && <p className="mb-4">Загрузка откликов…</p>}
+          {!loading && !error && currentVacancy.hasResponses ? (
             <>
               {/* Horizontal Filter Tabs / Chips */}
               <div className="flex items-center gap-3.5 lg:gap-4 border-b border-[#E1E5EB] mb-6 overflow-x-auto">
@@ -196,7 +148,7 @@ export const VacancyResponses: React.FC<VacancyResponsesProps> = ({
                         : 'bg-[#F1F3F5] text-[#616977]'
                     }`}
                   >
-                    6
+                    {responses.length}
                   </span>
                   {activeFilter === 'all' && (
                     <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#1F4FD1] rounded-full" />
@@ -218,7 +170,7 @@ export const VacancyResponses: React.FC<VacancyResponsesProps> = ({
                   </span>
                   <span>Готов к звонку</span>
                   <span className="px-2 py-0.5 rounded-full text-[12px] font-semibold bg-[#F1F3F5] text-[#616977]">
-                    1
+                    {responses.filter(r => r.category === 'call').length}
                   </span>
                   {activeFilter === 'call' && (
                     <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#1F4FD1] rounded-full" />
@@ -240,7 +192,7 @@ export const VacancyResponses: React.FC<VacancyResponsesProps> = ({
                   </span>
                   <span>Нужно уточнить</span>
                   <span className="px-2 py-0.5 rounded-full text-[12px] font-semibold bg-[#F1F3F5] text-[#616977]">
-                    1
+                    {responses.filter(r => r.category === 'clarify').length}
                   </span>
                   {activeFilter === 'clarify' && (
                     <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#1F4FD1] rounded-full" />
@@ -262,7 +214,7 @@ export const VacancyResponses: React.FC<VacancyResponsesProps> = ({
                   </span>
                   <span>Формально не проходит</span>
                   <span className="px-2 py-0.5 rounded-full text-[12px] font-semibold bg-[#F1F3F5] text-[#616977]">
-                    1
+                    {responses.filter(r => r.category === 'reject').length}
                   </span>
                   {activeFilter === 'reject' && (
                     <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#1F4FD1] rounded-full" />
@@ -284,7 +236,7 @@ export const VacancyResponses: React.FC<VacancyResponsesProps> = ({
                   </span>
                   <span>Требуют действия</span>
                   <span className="px-2 py-0.5 rounded-full text-[12px] font-semibold bg-[#F1F3F5] text-[#616977]">
-                    3
+                    {responses.filter(r => r.category === 'action').length}
                   </span>
                   {activeFilter === 'action' && (
                     <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-[#1F4FD1] rounded-full" />
@@ -302,10 +254,10 @@ export const VacancyResponses: React.FC<VacancyResponsesProps> = ({
                           Отклик
                         </th>
                         <th className="py-4 px-4 font-semibold whitespace-nowrap">
-                          Опыт от 2 лет
+                          Формальные требования
                         </th>
                         <th className="py-4 px-4 font-semibold whitespace-nowrap">
-                          Тестирование API
+                          Основание группы
                         </th>
                         <th className="py-4 pl-4 pr-6 text-right whitespace-nowrap"></th>
                       </tr>
@@ -323,7 +275,7 @@ export const VacancyResponses: React.FC<VacancyResponsesProps> = ({
                             </div>
                           </td>
 
-                          {/* Col 2: Опыт от 2 лет (бейдж) */}
+                          {/* Col 2: Формальные требования (бейдж) */}
                           <td className="py-4 px-4 whitespace-nowrap">
                             <span
                               className={`inline-block px-3 py-1 rounded-md text-[13px] font-medium whitespace-nowrap ${
@@ -334,7 +286,7 @@ export const VacancyResponses: React.FC<VacancyResponsesProps> = ({
                             </span>
                           </td>
 
-                          {/* Col 3: Тестирование API */}
+                          {/* Col 3: Основание группы */}
                           <td className="py-4 px-4 text-[#141A24] text-[14px] whitespace-nowrap">
                             {r.skillApi}
                           </td>
@@ -356,24 +308,24 @@ export const VacancyResponses: React.FC<VacancyResponsesProps> = ({
                 </div>
               </div>
             </>
-          ) : (
+          ) : !loading && !error ? (
             /* Пустой список для вакансии без откликов */
             <div className="border-2 border-dashed border-[#D2D4D8] rounded-2xl p-8 lg:p-10 flex flex-col items-start">
               <h3 className="text-[18px] font-bold text-[#141A24] mb-2">
                 Откликов пока нет
               </h3>
               <p className="text-[14px] text-[#616977] max-w-xl leading-relaxed mb-6">
-                Они появятся здесь автоматически из HH.ru, «Работы России», с сайта администрации и из обращений граждан.
+                Для выбранной вакансии в этом контуре нет откликов.
               </p>
               <button
                 type="button"
-                onClick={() => _onManualUpload?.()}
+                disabled={!_onManualUpload} onClick={() => _onManualUpload?.()}
                 className="px-5 py-2.5 text-[14px] font-medium text-[#141A24] bg-white border border-[#D2D4D8] rounded-xl hover:bg-[#F8FAFC] transition-colors shadow-sm"
               >
                 Загрузить отклик вручную
               </button>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </div>
