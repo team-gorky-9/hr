@@ -1,5 +1,5 @@
 """Local durable cases. Every command checks its revision inside a write transaction."""
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
 from datetime import datetime, timezone
 import json
 import os
@@ -56,7 +56,7 @@ def require_assigned(case, actor, role):
         not_found()
 
 def can_read(case, actor):
-    return owner(case, actor) or staff(case, actor)
+    return owner(case, actor) or staff(case, actor) or assigned(case, actor, "executor")
 
 def document_view(doc):
     return {k: v for k, v in doc.items() if k != "storage_key"}
@@ -65,20 +65,38 @@ def queue_view(case):
     return {k: case[k] for k in ("id", "revision", "number", "support_type",
                                  "submitted_at", "status")} | {"applicant_ref": case["applicant_actor_id"]}
 
+def extract_view(decision):
+    return {k: decision[k] for k in ("id", "case_id", "version", "outcome",
+                                    "public_explanation", "decided_on")}
+
+def public_execution(record):
+    if record is None:
+        return {"status": "unknown", "occurred_on": None}
+    return {k: record[k] for k in ("id", "decision_id", "status", "occurred_on", "recorded_at")}
+
 def case_view(case, actor):
     if not can_read(case, actor):
         not_found()
     if staff(case, actor):
         result = dict(case)
-    else:
+    elif owner(case, actor):
         keys = ("id", "organization_id", "applicant_actor_id", "rule_version_id",
                 "support_type", "revision", "status", "statement", "number",
                 "submitted_at", "created_at", "submissions")
         result = {k: case[k] for k in keys}
-    result["public_message"] = case.get("public_message")
-    result["staff_status"] = case.get("staff_confirmation", {}).get("state", "unknown")
-    result["documents"] = [document_view(d) for d in case["documents"]
-                           if staff(case, actor) or d["visibility"] == "applicant"]
+    else:
+        result = queue_view(case)
+    if owner(case, actor) or staff(case, actor):
+        result["public_message"] = case.get("public_message")
+        result["staff_status"] = case.get("staff_confirmation", {}).get("state", "unknown")
+        result["documents"] = [document_view(d) for d in case["documents"]
+                               if staff(case, actor) or d["visibility"] == "applicant"]
+    result["execution"] = public_execution(case.get("execution"))
+    if case.get("decisions"):
+        result["extract"] = extract_view(case["decisions"][-1])
+    for key in ("closure", "withdrawal"):
+        if key in case:
+            result[key] = case[key]
     return result
 
 class Store:
@@ -90,7 +108,7 @@ class Store:
         self.db = self.data_dir / "support.sqlite3"
         fixture_path = Path(os.environ.get("SUPPORT_ACTORS_PATH", ROOT / "fixtures/actors.json"))
         self.actors = json.loads(fixture_path.read_text(encoding="utf-8-sig"))["actors"]
-        with self.connect() as conn:
+        with closing(self.connect()) as conn, conn:
             conn.executescript("""
                 CREATE TABLE IF NOT EXISTS cases (
                     id TEXT PRIMARY KEY, organization_id TEXT NOT NULL,
@@ -182,6 +200,9 @@ class Unit:
     def history(self, case):
         events = [json.loads(r["payload"]) for r in self.conn.execute(
             "SELECT payload FROM history WHERE case_id=? ORDER BY revision", (case["id"],))]
+        if assigned(case, self.actor, "executor") and not staff(case, self.actor):
+            events = [e for e in events if e["action"] in {
+                "execution_recorded", "decision_recorded", "decision_corrected", "closed"}]
         if not staff(case, self.actor):
             events = [{k: v for k, v in e.items() if k != "internal"} for e in events]
         return events

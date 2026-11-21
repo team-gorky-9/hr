@@ -43,7 +43,7 @@ def list_cases(request: Request, actor: Actor):
         for case in tx.all():
             if can_read(case, actor):
                 result.append(case_view(case, actor))
-            elif "coordinator" in actor["roles"] and case["status"] != "draft":
+            elif "coordinator" in actor["roles"] and case["submitted_at"] is not None:
                 result.append(queue_view(case))
         return result
 
@@ -128,7 +128,7 @@ def download(case_id: UUID, document_id: UUID, request: Request, actor: Actor):
     store = request.app.state.store
     with store.transaction(actor) as tx:
         case = tx.get(case_id)
-        if not can_read(case, actor):
+        if not (owner(case, actor) or staff(case, actor)):
             not_found()
         doc = next((d for d in case["documents"] if d["id"] == str(document_id)), None)
         if doc is None or (owner(case, actor) and doc["visibility"] != "applicant"):
@@ -163,7 +163,7 @@ def assign(case_id: UUID, body: Assignment, request: Request, actor: Actor):
     store = request.app.state.store
     with store.transaction(actor, True) as tx:
         case = tx.get(case_id)
-        if "coordinator" not in actor["roles"] or case["status"] == "draft":
+        if "coordinator" not in actor["roles"] or case["submitted_at"] is None:
             not_found()
         check_revision(case, body.expected_revision)
         state(case, "submitted", "needs_information", "ready_for_review", "decision_recorded")

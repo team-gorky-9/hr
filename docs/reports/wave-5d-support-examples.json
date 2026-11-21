@@ -1,0 +1,4708 @@
+{
+  "is_synthetic": true,
+  "source": "support-training-v1",
+  "trace": [
+    {
+      "actor": "employee",
+      "method": "GET",
+      "path": "/rules",
+      "status": 200,
+      "response": [
+        {
+          "id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+          "support_type": "training-a",
+          "title": "Учебная помощь А — не нормативный перечень",
+          "required_items": [
+            {
+              "key": "application",
+              "title": "Учебное заявление"
+            },
+            {
+              "key": "evidence",
+              "title": "Учебное подтверждение"
+            }
+          ],
+          "source_reference": "synthetic:support-training-v1",
+          "is_synthetic": true,
+          "status": "published"
+        }
+      ]
+    },
+    {
+      "actor": "employee",
+      "method": "POST",
+      "path": "/cases",
+      "status": 201,
+      "response": {
+        "id": "95097575-872a-48b6-8833-16581c357289",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 1,
+        "status": "draft",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": null,
+        "submitted_at": null,
+        "created_at": "2026-11-21T01:24:57.330790+00:00",
+        "submissions": [],
+        "public_message": null,
+        "staff_status": "unknown",
+        "documents": [],
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "POST",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289/documents",
+      "status": 201,
+      "response": {
+        "id": "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+        "case_id": "95097575-872a-48b6-8833-16581c357289",
+        "item_key": "application",
+        "original_name": "original.txt",
+        "content_type": "text/plain",
+        "size_bytes": 20,
+        "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+        "uploaded_by": "50000000-0000-0000-0000-000000000001",
+        "created_at": "2026-11-21T01:24:57.340514+00:00",
+        "visibility": "applicant",
+        "case_revision": 2
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "GET",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289",
+      "status": 200,
+      "response": {
+        "id": "95097575-872a-48b6-8833-16581c357289",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 2,
+        "status": "draft",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": null,
+        "submitted_at": null,
+        "created_at": "2026-11-21T01:24:57.330790+00:00",
+        "submissions": [],
+        "public_message": null,
+        "staff_status": "unknown",
+        "documents": [
+          {
+            "id": "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.340514+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "POST",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289/documents",
+      "status": 201,
+      "response": {
+        "id": "b0afd752-db31-43ac-8639-7c2dfba42cda",
+        "case_id": "95097575-872a-48b6-8833-16581c357289",
+        "item_key": "evidence",
+        "original_name": "original.txt",
+        "content_type": "text/plain",
+        "size_bytes": 20,
+        "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+        "uploaded_by": "50000000-0000-0000-0000-000000000001",
+        "created_at": "2026-11-21T01:24:57.350413+00:00",
+        "visibility": "applicant",
+        "case_revision": 3
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "GET",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289",
+      "status": 200,
+      "response": {
+        "id": "95097575-872a-48b6-8833-16581c357289",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 3,
+        "status": "draft",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": null,
+        "submitted_at": null,
+        "created_at": "2026-11-21T01:24:57.330790+00:00",
+        "submissions": [],
+        "public_message": null,
+        "staff_status": "unknown",
+        "documents": [
+          {
+            "id": "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.340514+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "b0afd752-db31-43ac-8639-7c2dfba42cda",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.350413+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "POST",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289/submit",
+      "status": 200,
+      "response": {
+        "id": "95097575-872a-48b6-8833-16581c357289",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 4,
+        "status": "submitted",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": "SP-95097575-872a-48b6-8833-16581c357289",
+        "submitted_at": "2026-11-21T01:24:57.357720+00:00",
+        "created_at": "2026-11-21T01:24:57.330790+00:00",
+        "submissions": [
+          {
+            "id": "5a63392e-fa68-4b58-84b4-9fa2d516a988",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+              "b0afd752-db31-43ac-8639-7c2dfba42cda"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.357720+00:00"
+          }
+        ],
+        "public_message": null,
+        "staff_status": "unknown",
+        "documents": [
+          {
+            "id": "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.340514+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "b0afd752-db31-43ac-8639-7c2dfba42cda",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.350413+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "coordinator",
+      "method": "POST",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289/assign",
+      "status": 200,
+      "response": {
+        "id": "95097575-872a-48b6-8833-16581c357289",
+        "revision": 5,
+        "number": "SP-95097575-872a-48b6-8833-16581c357289",
+        "support_type": "training-a",
+        "submitted_at": "2026-11-21T01:24:57.357720+00:00",
+        "status": "submitted",
+        "applicant_ref": "50000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "actor": "specialist",
+      "method": "GET",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289",
+      "status": 200,
+      "response": {
+        "id": "95097575-872a-48b6-8833-16581c357289",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 5,
+        "status": "submitted",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "created_at": "2026-11-21T01:24:57.330790+00:00",
+        "number": "SP-95097575-872a-48b6-8833-16581c357289",
+        "submitted_at": "2026-11-21T01:24:57.357720+00:00",
+        "assigned_specialist_id": "50000000-0000-0000-0000-000000000003",
+        "assigned_secretary_id": "50000000-0000-0000-0000-000000000004",
+        "documents": [
+          {
+            "id": "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.340514+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "b0afd752-db31-43ac-8639-7c2dfba42cda",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.350413+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "submissions": [
+          {
+            "id": "5a63392e-fa68-4b58-84b4-9fa2d516a988",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+              "b0afd752-db31-43ac-8639-7c2dfba42cda"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.357720+00:00"
+          }
+        ],
+        "assignment_basis": "synthetic: assignment v1",
+        "public_message": null,
+        "staff_status": "unknown",
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "specialist",
+      "method": "POST",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289/staff-confirmation",
+      "status": 200,
+      "response": {
+        "id": "95097575-872a-48b6-8833-16581c357289",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 6,
+        "status": "submitted",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "created_at": "2026-11-21T01:24:57.330790+00:00",
+        "number": "SP-95097575-872a-48b6-8833-16581c357289",
+        "submitted_at": "2026-11-21T01:24:57.357720+00:00",
+        "assigned_specialist_id": "50000000-0000-0000-0000-000000000003",
+        "assigned_secretary_id": "50000000-0000-0000-0000-000000000004",
+        "documents": [
+          {
+            "id": "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.340514+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "b0afd752-db31-43ac-8639-7c2dfba42cda",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.350413+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "submissions": [
+          {
+            "id": "5a63392e-fa68-4b58-84b4-9fa2d516a988",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+              "b0afd752-db31-43ac-8639-7c2dfba42cda"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.357720+00:00"
+          }
+        ],
+        "assignment_basis": "synthetic: assignment v1",
+        "staff_confirmation": {
+          "state": "confirmed",
+          "source_reference": "synthetic: workforce training v1",
+          "verified_by_actor_id": "50000000-0000-0000-0000-000000000003",
+          "verified_at": "2026-11-21T01:24:57.371346+00:00"
+        },
+        "public_message": null,
+        "staff_status": "confirmed",
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "specialist",
+      "method": "POST",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289/completeness",
+      "status": 200,
+      "response": {
+        "id": "95097575-872a-48b6-8833-16581c357289",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 7,
+        "status": "ready_for_review",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "created_at": "2026-11-21T01:24:57.330790+00:00",
+        "number": "SP-95097575-872a-48b6-8833-16581c357289",
+        "submitted_at": "2026-11-21T01:24:57.357720+00:00",
+        "assigned_specialist_id": "50000000-0000-0000-0000-000000000003",
+        "assigned_secretary_id": "50000000-0000-0000-0000-000000000004",
+        "documents": [
+          {
+            "id": "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.340514+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "b0afd752-db31-43ac-8639-7c2dfba42cda",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.350413+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "submissions": [
+          {
+            "id": "5a63392e-fa68-4b58-84b4-9fa2d516a988",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+              "b0afd752-db31-43ac-8639-7c2dfba42cda"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.357720+00:00"
+          }
+        ],
+        "assignment_basis": "synthetic: assignment v1",
+        "staff_confirmation": {
+          "state": "confirmed",
+          "source_reference": "synthetic: workforce training v1",
+          "verified_by_actor_id": "50000000-0000-0000-0000-000000000003",
+          "verified_at": "2026-11-21T01:24:57.371346+00:00"
+        },
+        "checklists": [
+          {
+            "id": "3341faa4-63f1-466c-9e2f-70504a8f213e",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "submission_revision": 1,
+            "items": [
+              {
+                "key": "application",
+                "result": "present",
+                "document_id": "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+                "reason": ""
+              },
+              {
+                "key": "evidence",
+                "result": "present",
+                "document_id": "b0afd752-db31-43ac-8639-7c2dfba42cda",
+                "reason": ""
+              }
+            ],
+            "reviewed_by": "50000000-0000-0000-0000-000000000003",
+            "reviewed_at": "2026-11-21T01:24:57.377644+00:00"
+          }
+        ],
+        "public_message": "Комплект проверен",
+        "staff_status": "confirmed",
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "secretary",
+      "method": "POST",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289/decision",
+      "status": 200,
+      "response": {
+        "id": "95097575-872a-48b6-8833-16581c357289",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 8,
+        "status": "decision_recorded",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "created_at": "2026-11-21T01:24:57.330790+00:00",
+        "number": "SP-95097575-872a-48b6-8833-16581c357289",
+        "submitted_at": "2026-11-21T01:24:57.357720+00:00",
+        "assigned_specialist_id": "50000000-0000-0000-0000-000000000003",
+        "assigned_secretary_id": "50000000-0000-0000-0000-000000000004",
+        "documents": [
+          {
+            "id": "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.340514+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "b0afd752-db31-43ac-8639-7c2dfba42cda",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.350413+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "submissions": [
+          {
+            "id": "5a63392e-fa68-4b58-84b4-9fa2d516a988",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+              "b0afd752-db31-43ac-8639-7c2dfba42cda"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.357720+00:00"
+          }
+        ],
+        "assignment_basis": "synthetic: assignment v1",
+        "staff_confirmation": {
+          "state": "confirmed",
+          "source_reference": "synthetic: workforce training v1",
+          "verified_by_actor_id": "50000000-0000-0000-0000-000000000003",
+          "verified_at": "2026-11-21T01:24:57.371346+00:00"
+        },
+        "checklists": [
+          {
+            "id": "3341faa4-63f1-466c-9e2f-70504a8f213e",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "submission_revision": 1,
+            "items": [
+              {
+                "key": "application",
+                "result": "present",
+                "document_id": "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+                "reason": ""
+              },
+              {
+                "key": "evidence",
+                "result": "present",
+                "document_id": "b0afd752-db31-43ac-8639-7c2dfba42cda",
+                "reason": ""
+              }
+            ],
+            "reviewed_by": "50000000-0000-0000-0000-000000000003",
+            "reviewed_at": "2026-11-21T01:24:57.377644+00:00"
+          }
+        ],
+        "public_message": "Учебное решение: помощь одобрена",
+        "decisions": [
+          {
+            "outcome": "approved",
+            "public_explanation": "Учебное решение: помощь одобрена",
+            "source_reference": "INTERNAL synthetic protocol for several cases",
+            "source_author": "Учебная комиссия",
+            "decided_on": "2026-11-21",
+            "recording_basis": "INTERNAL registrar authority",
+            "id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "version": 1,
+            "submission_revision": 1,
+            "recorded_by": "50000000-0000-0000-0000-000000000004",
+            "recorded_at": "2026-11-21T01:24:57.383983+00:00",
+            "replaces_decision_id": null
+          }
+        ],
+        "staff_status": "confirmed",
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        },
+        "extract": {
+          "id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+          "case_id": "95097575-872a-48b6-8833-16581c357289",
+          "version": 1,
+          "outcome": "approved",
+          "public_explanation": "Учебное решение: помощь одобрена",
+          "decided_on": "2026-11-21"
+        }
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "GET",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289",
+      "status": 200,
+      "response": {
+        "id": "95097575-872a-48b6-8833-16581c357289",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 8,
+        "status": "decision_recorded",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": "SP-95097575-872a-48b6-8833-16581c357289",
+        "submitted_at": "2026-11-21T01:24:57.357720+00:00",
+        "created_at": "2026-11-21T01:24:57.330790+00:00",
+        "submissions": [
+          {
+            "id": "5a63392e-fa68-4b58-84b4-9fa2d516a988",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+              "b0afd752-db31-43ac-8639-7c2dfba42cda"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.357720+00:00"
+          }
+        ],
+        "public_message": "Учебное решение: помощь одобрена",
+        "staff_status": "confirmed",
+        "documents": [
+          {
+            "id": "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.340514+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "b0afd752-db31-43ac-8639-7c2dfba42cda",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.350413+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        },
+        "extract": {
+          "id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+          "case_id": "95097575-872a-48b6-8833-16581c357289",
+          "version": 1,
+          "outcome": "approved",
+          "public_explanation": "Учебное решение: помощь одобрена",
+          "decided_on": "2026-11-21"
+        }
+      }
+    },
+    {
+      "actor": "executor",
+      "method": "POST",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289/execution",
+      "status": 404,
+      "response": {
+        "error": {
+          "code": "NOT_FOUND",
+          "message": "Дело или документ недоступны."
+        }
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "POST",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289/withdraw",
+      "status": 409,
+      "response": {
+        "error": {
+          "code": "INVALID_STATE",
+          "message": "Действие недоступно в текущем состоянии."
+        }
+      }
+    },
+    {
+      "actor": "coordinator",
+      "method": "POST",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289/executor-assignment",
+      "status": 200,
+      "response": {
+        "id": "95097575-872a-48b6-8833-16581c357289",
+        "revision": 9,
+        "number": "SP-95097575-872a-48b6-8833-16581c357289",
+        "support_type": "training-a",
+        "submitted_at": "2026-11-21T01:24:57.357720+00:00",
+        "status": "decision_recorded",
+        "applicant_ref": "50000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "actor": "executor",
+      "method": "GET",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289",
+      "status": 200,
+      "response": {
+        "id": "95097575-872a-48b6-8833-16581c357289",
+        "revision": 9,
+        "number": "SP-95097575-872a-48b6-8833-16581c357289",
+        "support_type": "training-a",
+        "submitted_at": "2026-11-21T01:24:57.357720+00:00",
+        "status": "decision_recorded",
+        "applicant_ref": "50000000-0000-0000-0000-000000000001",
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        },
+        "extract": {
+          "id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+          "case_id": "95097575-872a-48b6-8833-16581c357289",
+          "version": 1,
+          "outcome": "approved",
+          "public_explanation": "Учебное решение: помощь одобрена",
+          "decided_on": "2026-11-21"
+        }
+      }
+    },
+    {
+      "actor": "specialist",
+      "method": "GET",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289",
+      "status": 200,
+      "response": {
+        "id": "95097575-872a-48b6-8833-16581c357289",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 9,
+        "status": "decision_recorded",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "created_at": "2026-11-21T01:24:57.330790+00:00",
+        "number": "SP-95097575-872a-48b6-8833-16581c357289",
+        "submitted_at": "2026-11-21T01:24:57.357720+00:00",
+        "assigned_specialist_id": "50000000-0000-0000-0000-000000000003",
+        "assigned_secretary_id": "50000000-0000-0000-0000-000000000004",
+        "documents": [
+          {
+            "id": "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.340514+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "b0afd752-db31-43ac-8639-7c2dfba42cda",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.350413+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "submissions": [
+          {
+            "id": "5a63392e-fa68-4b58-84b4-9fa2d516a988",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+              "b0afd752-db31-43ac-8639-7c2dfba42cda"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.357720+00:00"
+          }
+        ],
+        "assignment_basis": "synthetic: assignment v1",
+        "staff_confirmation": {
+          "state": "confirmed",
+          "source_reference": "synthetic: workforce training v1",
+          "verified_by_actor_id": "50000000-0000-0000-0000-000000000003",
+          "verified_at": "2026-11-21T01:24:57.371346+00:00"
+        },
+        "checklists": [
+          {
+            "id": "3341faa4-63f1-466c-9e2f-70504a8f213e",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "submission_revision": 1,
+            "items": [
+              {
+                "key": "application",
+                "result": "present",
+                "document_id": "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+                "reason": ""
+              },
+              {
+                "key": "evidence",
+                "result": "present",
+                "document_id": "b0afd752-db31-43ac-8639-7c2dfba42cda",
+                "reason": ""
+              }
+            ],
+            "reviewed_by": "50000000-0000-0000-0000-000000000003",
+            "reviewed_at": "2026-11-21T01:24:57.377644+00:00"
+          }
+        ],
+        "public_message": "Учебное решение: помощь одобрена",
+        "decisions": [
+          {
+            "outcome": "approved",
+            "public_explanation": "Учебное решение: помощь одобрена",
+            "source_reference": "INTERNAL synthetic protocol for several cases",
+            "source_author": "Учебная комиссия",
+            "decided_on": "2026-11-21",
+            "recording_basis": "INTERNAL registrar authority",
+            "id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "version": 1,
+            "submission_revision": 1,
+            "recorded_by": "50000000-0000-0000-0000-000000000004",
+            "recorded_at": "2026-11-21T01:24:57.383983+00:00",
+            "replaces_decision_id": null
+          }
+        ],
+        "assigned_executor_id": "50000000-0000-0000-0000-000000000007",
+        "executor_assignment_basis": "synthetic: accounting registrar",
+        "staff_status": "confirmed",
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        },
+        "extract": {
+          "id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+          "case_id": "95097575-872a-48b6-8833-16581c357289",
+          "version": 1,
+          "outcome": "approved",
+          "public_explanation": "Учебное решение: помощь одобрена",
+          "decided_on": "2026-11-21"
+        }
+      }
+    },
+    {
+      "actor": "executor",
+      "method": "GET",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289/documents/5aa118bb-1d7c-475d-880b-6db0e766b6bc/content",
+      "status": 404,
+      "response": {
+        "error": {
+          "code": "NOT_FOUND",
+          "message": "Дело или документ недоступны."
+        }
+      }
+    },
+    {
+      "actor": "executor",
+      "method": "POST",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289/execution",
+      "status": 200,
+      "response": {
+        "id": "95097575-872a-48b6-8833-16581c357289",
+        "revision": 10,
+        "number": "SP-95097575-872a-48b6-8833-16581c357289",
+        "support_type": "training-a",
+        "submitted_at": "2026-11-21T01:24:57.357720+00:00",
+        "status": "decision_recorded",
+        "applicant_ref": "50000000-0000-0000-0000-000000000001",
+        "execution": {
+          "id": "9640c36f-66a3-4c64-b44c-58becc743760",
+          "decision_id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+          "status": "unknown",
+          "occurred_on": null,
+          "recorded_at": "2026-11-21T01:24:57.407206+00:00"
+        },
+        "extract": {
+          "id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+          "case_id": "95097575-872a-48b6-8833-16581c357289",
+          "version": 1,
+          "outcome": "approved",
+          "public_explanation": "Учебное решение: помощь одобрена",
+          "decided_on": "2026-11-21"
+        }
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "GET",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289",
+      "status": 200,
+      "response": {
+        "id": "95097575-872a-48b6-8833-16581c357289",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 10,
+        "status": "decision_recorded",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": "SP-95097575-872a-48b6-8833-16581c357289",
+        "submitted_at": "2026-11-21T01:24:57.357720+00:00",
+        "created_at": "2026-11-21T01:24:57.330790+00:00",
+        "submissions": [
+          {
+            "id": "5a63392e-fa68-4b58-84b4-9fa2d516a988",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+              "b0afd752-db31-43ac-8639-7c2dfba42cda"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.357720+00:00"
+          }
+        ],
+        "public_message": "Учебное решение: помощь одобрена",
+        "staff_status": "confirmed",
+        "documents": [
+          {
+            "id": "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.340514+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "b0afd752-db31-43ac-8639-7c2dfba42cda",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.350413+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "execution": {
+          "id": "9640c36f-66a3-4c64-b44c-58becc743760",
+          "decision_id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+          "status": "unknown",
+          "occurred_on": null,
+          "recorded_at": "2026-11-21T01:24:57.407206+00:00"
+        },
+        "extract": {
+          "id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+          "case_id": "95097575-872a-48b6-8833-16581c357289",
+          "version": 1,
+          "outcome": "approved",
+          "public_explanation": "Учебное решение: помощь одобрена",
+          "decided_on": "2026-11-21"
+        }
+      }
+    },
+    {
+      "actor": "executor",
+      "method": "POST",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289/execution",
+      "status": 200,
+      "response": {
+        "id": "95097575-872a-48b6-8833-16581c357289",
+        "revision": 11,
+        "number": "SP-95097575-872a-48b6-8833-16581c357289",
+        "support_type": "training-a",
+        "submitted_at": "2026-11-21T01:24:57.357720+00:00",
+        "status": "decision_recorded",
+        "applicant_ref": "50000000-0000-0000-0000-000000000001",
+        "execution": {
+          "id": "433fd75c-d5f9-4e81-847f-9477b7254c10",
+          "decision_id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+          "status": "failed",
+          "occurred_on": "2026-11-21",
+          "recorded_at": "2026-11-21T01:24:57.414924+00:00"
+        },
+        "extract": {
+          "id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+          "case_id": "95097575-872a-48b6-8833-16581c357289",
+          "version": 1,
+          "outcome": "approved",
+          "public_explanation": "Учебное решение: помощь одобрена",
+          "decided_on": "2026-11-21"
+        }
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "GET",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289",
+      "status": 200,
+      "response": {
+        "id": "95097575-872a-48b6-8833-16581c357289",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 11,
+        "status": "decision_recorded",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": "SP-95097575-872a-48b6-8833-16581c357289",
+        "submitted_at": "2026-11-21T01:24:57.357720+00:00",
+        "created_at": "2026-11-21T01:24:57.330790+00:00",
+        "submissions": [
+          {
+            "id": "5a63392e-fa68-4b58-84b4-9fa2d516a988",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+              "b0afd752-db31-43ac-8639-7c2dfba42cda"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.357720+00:00"
+          }
+        ],
+        "public_message": "Учебное решение: помощь одобрена",
+        "staff_status": "confirmed",
+        "documents": [
+          {
+            "id": "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.340514+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "b0afd752-db31-43ac-8639-7c2dfba42cda",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.350413+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "execution": {
+          "id": "433fd75c-d5f9-4e81-847f-9477b7254c10",
+          "decision_id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+          "status": "failed",
+          "occurred_on": "2026-11-21",
+          "recorded_at": "2026-11-21T01:24:57.414924+00:00"
+        },
+        "extract": {
+          "id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+          "case_id": "95097575-872a-48b6-8833-16581c357289",
+          "version": 1,
+          "outcome": "approved",
+          "public_explanation": "Учебное решение: помощь одобрена",
+          "decided_on": "2026-11-21"
+        }
+      }
+    },
+    {
+      "actor": "executor",
+      "method": "POST",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289/execution",
+      "status": 200,
+      "response": {
+        "id": "95097575-872a-48b6-8833-16581c357289",
+        "revision": 12,
+        "number": "SP-95097575-872a-48b6-8833-16581c357289",
+        "support_type": "training-a",
+        "submitted_at": "2026-11-21T01:24:57.357720+00:00",
+        "status": "decision_recorded",
+        "applicant_ref": "50000000-0000-0000-0000-000000000001",
+        "execution": {
+          "id": "efd09d47-1d21-4e0a-9400-1e0e2b2fd181",
+          "decision_id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+          "status": "confirmed",
+          "occurred_on": "2026-11-21",
+          "recorded_at": "2026-11-21T01:24:57.422699+00:00"
+        },
+        "extract": {
+          "id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+          "case_id": "95097575-872a-48b6-8833-16581c357289",
+          "version": 1,
+          "outcome": "approved",
+          "public_explanation": "Учебное решение: помощь одобрена",
+          "decided_on": "2026-11-21"
+        }
+      }
+    },
+    {
+      "actor": "specialist",
+      "method": "POST",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289/close",
+      "status": 200,
+      "response": {
+        "id": "95097575-872a-48b6-8833-16581c357289",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 13,
+        "status": "closed",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "created_at": "2026-11-21T01:24:57.330790+00:00",
+        "number": "SP-95097575-872a-48b6-8833-16581c357289",
+        "submitted_at": "2026-11-21T01:24:57.357720+00:00",
+        "assigned_specialist_id": "50000000-0000-0000-0000-000000000003",
+        "assigned_secretary_id": "50000000-0000-0000-0000-000000000004",
+        "documents": [
+          {
+            "id": "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.340514+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "b0afd752-db31-43ac-8639-7c2dfba42cda",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.350413+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "submissions": [
+          {
+            "id": "5a63392e-fa68-4b58-84b4-9fa2d516a988",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+              "b0afd752-db31-43ac-8639-7c2dfba42cda"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.357720+00:00"
+          }
+        ],
+        "assignment_basis": "synthetic: assignment v1",
+        "staff_confirmation": {
+          "state": "confirmed",
+          "source_reference": "synthetic: workforce training v1",
+          "verified_by_actor_id": "50000000-0000-0000-0000-000000000003",
+          "verified_at": "2026-11-21T01:24:57.371346+00:00"
+        },
+        "checklists": [
+          {
+            "id": "3341faa4-63f1-466c-9e2f-70504a8f213e",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "submission_revision": 1,
+            "items": [
+              {
+                "key": "application",
+                "result": "present",
+                "document_id": "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+                "reason": ""
+              },
+              {
+                "key": "evidence",
+                "result": "present",
+                "document_id": "b0afd752-db31-43ac-8639-7c2dfba42cda",
+                "reason": ""
+              }
+            ],
+            "reviewed_by": "50000000-0000-0000-0000-000000000003",
+            "reviewed_at": "2026-11-21T01:24:57.377644+00:00"
+          }
+        ],
+        "public_message": "Учебное решение: помощь одобрена",
+        "decisions": [
+          {
+            "outcome": "approved",
+            "public_explanation": "Учебное решение: помощь одобрена",
+            "source_reference": "INTERNAL synthetic protocol for several cases",
+            "source_author": "Учебная комиссия",
+            "decided_on": "2026-11-21",
+            "recording_basis": "INTERNAL registrar authority",
+            "id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "version": 1,
+            "submission_revision": 1,
+            "recorded_by": "50000000-0000-0000-0000-000000000004",
+            "recorded_at": "2026-11-21T01:24:57.383983+00:00",
+            "replaces_decision_id": null
+          }
+        ],
+        "assigned_executor_id": "50000000-0000-0000-0000-000000000007",
+        "executor_assignment_basis": "synthetic: accounting registrar",
+        "executions": [
+          {
+            "status": "unknown",
+            "source_reference": "INTERNAL synthetic accounting registry",
+            "source_author": "Учебный регистратор",
+            "occurred_on": null,
+            "note": "INTERNAL evidence note",
+            "id": "9640c36f-66a3-4c64-b44c-58becc743760",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "decision_id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+            "recorded_by": "50000000-0000-0000-0000-000000000007",
+            "recorded_at": "2026-11-21T01:24:57.407206+00:00"
+          },
+          {
+            "status": "failed",
+            "source_reference": "INTERNAL synthetic accounting registry",
+            "source_author": "Учебный регистратор",
+            "occurred_on": "2026-11-21",
+            "note": "INTERNAL evidence note",
+            "id": "433fd75c-d5f9-4e81-847f-9477b7254c10",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "decision_id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+            "recorded_by": "50000000-0000-0000-0000-000000000007",
+            "recorded_at": "2026-11-21T01:24:57.414924+00:00"
+          },
+          {
+            "status": "confirmed",
+            "source_reference": "INTERNAL synthetic accounting registry",
+            "source_author": "Учебный регистратор",
+            "occurred_on": "2026-11-21",
+            "note": "INTERNAL evidence note",
+            "id": "efd09d47-1d21-4e0a-9400-1e0e2b2fd181",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "decision_id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+            "recorded_by": "50000000-0000-0000-0000-000000000007",
+            "recorded_at": "2026-11-21T01:24:57.422699+00:00"
+          }
+        ],
+        "execution": {
+          "id": "efd09d47-1d21-4e0a-9400-1e0e2b2fd181",
+          "decision_id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+          "status": "confirmed",
+          "occurred_on": "2026-11-21",
+          "recorded_at": "2026-11-21T01:24:57.422699+00:00"
+        },
+        "closure": {
+          "reason": "Явное учебное основание завершения",
+          "closed_by": "50000000-0000-0000-0000-000000000003",
+          "closed_at": "2026-11-21T01:24:57.428588+00:00",
+          "execution_status": "confirmed"
+        },
+        "staff_status": "confirmed",
+        "extract": {
+          "id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+          "case_id": "95097575-872a-48b6-8833-16581c357289",
+          "version": 1,
+          "outcome": "approved",
+          "public_explanation": "Учебное решение: помощь одобрена",
+          "decided_on": "2026-11-21"
+        }
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "GET",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289",
+      "status": 200,
+      "response": {
+        "id": "95097575-872a-48b6-8833-16581c357289",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 13,
+        "status": "closed",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": "SP-95097575-872a-48b6-8833-16581c357289",
+        "submitted_at": "2026-11-21T01:24:57.357720+00:00",
+        "created_at": "2026-11-21T01:24:57.330790+00:00",
+        "submissions": [
+          {
+            "id": "5a63392e-fa68-4b58-84b4-9fa2d516a988",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+              "b0afd752-db31-43ac-8639-7c2dfba42cda"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.357720+00:00"
+          }
+        ],
+        "public_message": "Учебное решение: помощь одобрена",
+        "staff_status": "confirmed",
+        "documents": [
+          {
+            "id": "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.340514+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "b0afd752-db31-43ac-8639-7c2dfba42cda",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.350413+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "execution": {
+          "id": "efd09d47-1d21-4e0a-9400-1e0e2b2fd181",
+          "decision_id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+          "status": "confirmed",
+          "occurred_on": "2026-11-21",
+          "recorded_at": "2026-11-21T01:24:57.422699+00:00"
+        },
+        "extract": {
+          "id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+          "case_id": "95097575-872a-48b6-8833-16581c357289",
+          "version": 1,
+          "outcome": "approved",
+          "public_explanation": "Учебное решение: помощь одобрена",
+          "decided_on": "2026-11-21"
+        },
+        "closure": {
+          "reason": "Явное учебное основание завершения",
+          "closed_by": "50000000-0000-0000-0000-000000000003",
+          "closed_at": "2026-11-21T01:24:57.428588+00:00",
+          "execution_status": "confirmed"
+        }
+      }
+    },
+    {
+      "actor": "executor",
+      "method": "GET",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289/history",
+      "status": 200,
+      "response": [
+        {
+          "id": "2cf0c3b4-cdaf-4991-8076-b0e427d4b207",
+          "case_id": "95097575-872a-48b6-8833-16581c357289",
+          "revision": 8,
+          "action": "decision_recorded",
+          "actor_id": "50000000-0000-0000-0000-000000000004",
+          "recorded_at": "2026-11-21T01:24:57.384418+00:00",
+          "public": {
+            "extract": {
+              "id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+              "case_id": "95097575-872a-48b6-8833-16581c357289",
+              "version": 1,
+              "outcome": "approved",
+              "public_explanation": "Учебное решение: помощь одобрена",
+              "decided_on": "2026-11-21"
+            }
+          }
+        },
+        {
+          "id": "31009104-5163-46f8-a982-23306c7b2198",
+          "case_id": "95097575-872a-48b6-8833-16581c357289",
+          "revision": 10,
+          "action": "execution_recorded",
+          "actor_id": "50000000-0000-0000-0000-000000000007",
+          "recorded_at": "2026-11-21T01:24:57.407678+00:00",
+          "public": {
+            "execution": {
+              "id": "9640c36f-66a3-4c64-b44c-58becc743760",
+              "decision_id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+              "status": "unknown",
+              "occurred_on": null,
+              "recorded_at": "2026-11-21T01:24:57.407206+00:00"
+            }
+          }
+        },
+        {
+          "id": "b69b3927-362a-43dd-90f1-0acd19fb7888",
+          "case_id": "95097575-872a-48b6-8833-16581c357289",
+          "revision": 11,
+          "action": "execution_recorded",
+          "actor_id": "50000000-0000-0000-0000-000000000007",
+          "recorded_at": "2026-11-21T01:24:57.415405+00:00",
+          "public": {
+            "execution": {
+              "id": "433fd75c-d5f9-4e81-847f-9477b7254c10",
+              "decision_id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+              "status": "failed",
+              "occurred_on": "2026-11-21",
+              "recorded_at": "2026-11-21T01:24:57.414924+00:00"
+            }
+          }
+        },
+        {
+          "id": "15da63e1-60d4-480e-81e5-f5ea51c4e375",
+          "case_id": "95097575-872a-48b6-8833-16581c357289",
+          "revision": 12,
+          "action": "execution_recorded",
+          "actor_id": "50000000-0000-0000-0000-000000000007",
+          "recorded_at": "2026-11-21T01:24:57.423180+00:00",
+          "public": {
+            "execution": {
+              "id": "efd09d47-1d21-4e0a-9400-1e0e2b2fd181",
+              "decision_id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+              "status": "confirmed",
+              "occurred_on": "2026-11-21",
+              "recorded_at": "2026-11-21T01:24:57.422699+00:00"
+            }
+          }
+        },
+        {
+          "id": "1e193318-dc24-481c-a39f-798cb2dc5acb",
+          "case_id": "95097575-872a-48b6-8833-16581c357289",
+          "revision": 13,
+          "action": "closed",
+          "actor_id": "50000000-0000-0000-0000-000000000003",
+          "recorded_at": "2026-11-21T01:24:57.429156+00:00",
+          "public": {
+            "closure": {
+              "reason": "Явное учебное основание завершения",
+              "closed_by": "50000000-0000-0000-0000-000000000003",
+              "closed_at": "2026-11-21T01:24:57.428588+00:00",
+              "execution_status": "confirmed"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "actor": "employee2",
+      "method": "GET",
+      "path": "/rules",
+      "status": 200,
+      "response": [
+        {
+          "id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+          "support_type": "training-a",
+          "title": "Учебная помощь А — не нормативный перечень",
+          "required_items": [
+            {
+              "key": "application",
+              "title": "Учебное заявление"
+            },
+            {
+              "key": "evidence",
+              "title": "Учебное подтверждение"
+            }
+          ],
+          "source_reference": "synthetic:support-training-v1",
+          "is_synthetic": true,
+          "status": "published"
+        }
+      ]
+    },
+    {
+      "actor": "employee2",
+      "method": "POST",
+      "path": "/cases",
+      "status": 201,
+      "response": {
+        "id": "b7043b76-4470-4595-9270-d9031d43949a",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000002",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 1,
+        "status": "draft",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": null,
+        "submitted_at": null,
+        "created_at": "2026-11-21T01:24:57.439756+00:00",
+        "submissions": [],
+        "public_message": null,
+        "staff_status": "unknown",
+        "documents": [],
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "employee2",
+      "method": "POST",
+      "path": "/cases/b7043b76-4470-4595-9270-d9031d43949a/documents",
+      "status": 201,
+      "response": {
+        "id": "6d16e582-1d9d-4a5f-b243-6549ca864d90",
+        "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+        "item_key": "application",
+        "original_name": "original.txt",
+        "content_type": "text/plain",
+        "size_bytes": 20,
+        "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+        "uploaded_by": "50000000-0000-0000-0000-000000000002",
+        "created_at": "2026-11-21T01:24:57.449287+00:00",
+        "visibility": "applicant",
+        "case_revision": 2
+      }
+    },
+    {
+      "actor": "employee2",
+      "method": "GET",
+      "path": "/cases/b7043b76-4470-4595-9270-d9031d43949a",
+      "status": 200,
+      "response": {
+        "id": "b7043b76-4470-4595-9270-d9031d43949a",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000002",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 2,
+        "status": "draft",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": null,
+        "submitted_at": null,
+        "created_at": "2026-11-21T01:24:57.439756+00:00",
+        "submissions": [],
+        "public_message": null,
+        "staff_status": "unknown",
+        "documents": [
+          {
+            "id": "6d16e582-1d9d-4a5f-b243-6549ca864d90",
+            "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000002",
+            "created_at": "2026-11-21T01:24:57.449287+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "employee2",
+      "method": "POST",
+      "path": "/cases/b7043b76-4470-4595-9270-d9031d43949a/documents",
+      "status": 201,
+      "response": {
+        "id": "577e27f9-1dd1-4c91-b442-94c3505cee4e",
+        "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+        "item_key": "evidence",
+        "original_name": "original.txt",
+        "content_type": "text/plain",
+        "size_bytes": 20,
+        "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+        "uploaded_by": "50000000-0000-0000-0000-000000000002",
+        "created_at": "2026-11-21T01:24:57.460262+00:00",
+        "visibility": "applicant",
+        "case_revision": 3
+      }
+    },
+    {
+      "actor": "employee2",
+      "method": "GET",
+      "path": "/cases/b7043b76-4470-4595-9270-d9031d43949a",
+      "status": 200,
+      "response": {
+        "id": "b7043b76-4470-4595-9270-d9031d43949a",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000002",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 3,
+        "status": "draft",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": null,
+        "submitted_at": null,
+        "created_at": "2026-11-21T01:24:57.439756+00:00",
+        "submissions": [],
+        "public_message": null,
+        "staff_status": "unknown",
+        "documents": [
+          {
+            "id": "6d16e582-1d9d-4a5f-b243-6549ca864d90",
+            "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000002",
+            "created_at": "2026-11-21T01:24:57.449287+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "577e27f9-1dd1-4c91-b442-94c3505cee4e",
+            "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000002",
+            "created_at": "2026-11-21T01:24:57.460262+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "employee2",
+      "method": "POST",
+      "path": "/cases/b7043b76-4470-4595-9270-d9031d43949a/submit",
+      "status": 200,
+      "response": {
+        "id": "b7043b76-4470-4595-9270-d9031d43949a",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000002",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 4,
+        "status": "submitted",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": "SP-b7043b76-4470-4595-9270-d9031d43949a",
+        "submitted_at": "2026-11-21T01:24:57.468711+00:00",
+        "created_at": "2026-11-21T01:24:57.439756+00:00",
+        "submissions": [
+          {
+            "id": "12f7ef86-713c-4248-a270-59d605f63287",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "6d16e582-1d9d-4a5f-b243-6549ca864d90",
+              "577e27f9-1dd1-4c91-b442-94c3505cee4e"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000002",
+            "submitted_at": "2026-11-21T01:24:57.468711+00:00"
+          }
+        ],
+        "public_message": null,
+        "staff_status": "unknown",
+        "documents": [
+          {
+            "id": "6d16e582-1d9d-4a5f-b243-6549ca864d90",
+            "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000002",
+            "created_at": "2026-11-21T01:24:57.449287+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "577e27f9-1dd1-4c91-b442-94c3505cee4e",
+            "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000002",
+            "created_at": "2026-11-21T01:24:57.460262+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "coordinator",
+      "method": "POST",
+      "path": "/cases/b7043b76-4470-4595-9270-d9031d43949a/assign",
+      "status": 200,
+      "response": {
+        "id": "b7043b76-4470-4595-9270-d9031d43949a",
+        "revision": 5,
+        "number": "SP-b7043b76-4470-4595-9270-d9031d43949a",
+        "support_type": "training-a",
+        "submitted_at": "2026-11-21T01:24:57.468711+00:00",
+        "status": "submitted",
+        "applicant_ref": "50000000-0000-0000-0000-000000000002"
+      }
+    },
+    {
+      "actor": "specialist",
+      "method": "GET",
+      "path": "/cases/b7043b76-4470-4595-9270-d9031d43949a",
+      "status": 200,
+      "response": {
+        "id": "b7043b76-4470-4595-9270-d9031d43949a",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000002",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 5,
+        "status": "submitted",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "created_at": "2026-11-21T01:24:57.439756+00:00",
+        "number": "SP-b7043b76-4470-4595-9270-d9031d43949a",
+        "submitted_at": "2026-11-21T01:24:57.468711+00:00",
+        "assigned_specialist_id": "50000000-0000-0000-0000-000000000003",
+        "assigned_secretary_id": "50000000-0000-0000-0000-000000000004",
+        "documents": [
+          {
+            "id": "6d16e582-1d9d-4a5f-b243-6549ca864d90",
+            "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000002",
+            "created_at": "2026-11-21T01:24:57.449287+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "577e27f9-1dd1-4c91-b442-94c3505cee4e",
+            "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000002",
+            "created_at": "2026-11-21T01:24:57.460262+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "submissions": [
+          {
+            "id": "12f7ef86-713c-4248-a270-59d605f63287",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "6d16e582-1d9d-4a5f-b243-6549ca864d90",
+              "577e27f9-1dd1-4c91-b442-94c3505cee4e"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000002",
+            "submitted_at": "2026-11-21T01:24:57.468711+00:00"
+          }
+        ],
+        "assignment_basis": "synthetic: assignment v1",
+        "public_message": null,
+        "staff_status": "unknown",
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "specialist",
+      "method": "POST",
+      "path": "/cases/b7043b76-4470-4595-9270-d9031d43949a/staff-confirmation",
+      "status": 200,
+      "response": {
+        "id": "b7043b76-4470-4595-9270-d9031d43949a",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000002",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 6,
+        "status": "submitted",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "created_at": "2026-11-21T01:24:57.439756+00:00",
+        "number": "SP-b7043b76-4470-4595-9270-d9031d43949a",
+        "submitted_at": "2026-11-21T01:24:57.468711+00:00",
+        "assigned_specialist_id": "50000000-0000-0000-0000-000000000003",
+        "assigned_secretary_id": "50000000-0000-0000-0000-000000000004",
+        "documents": [
+          {
+            "id": "6d16e582-1d9d-4a5f-b243-6549ca864d90",
+            "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000002",
+            "created_at": "2026-11-21T01:24:57.449287+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "577e27f9-1dd1-4c91-b442-94c3505cee4e",
+            "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000002",
+            "created_at": "2026-11-21T01:24:57.460262+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "submissions": [
+          {
+            "id": "12f7ef86-713c-4248-a270-59d605f63287",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "6d16e582-1d9d-4a5f-b243-6549ca864d90",
+              "577e27f9-1dd1-4c91-b442-94c3505cee4e"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000002",
+            "submitted_at": "2026-11-21T01:24:57.468711+00:00"
+          }
+        ],
+        "assignment_basis": "synthetic: assignment v1",
+        "staff_confirmation": {
+          "state": "confirmed",
+          "source_reference": "synthetic: workforce training v1",
+          "verified_by_actor_id": "50000000-0000-0000-0000-000000000003",
+          "verified_at": "2026-11-21T01:24:57.481489+00:00"
+        },
+        "public_message": null,
+        "staff_status": "confirmed",
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "specialist",
+      "method": "POST",
+      "path": "/cases/b7043b76-4470-4595-9270-d9031d43949a/completeness",
+      "status": 200,
+      "response": {
+        "id": "b7043b76-4470-4595-9270-d9031d43949a",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000002",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 7,
+        "status": "ready_for_review",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "created_at": "2026-11-21T01:24:57.439756+00:00",
+        "number": "SP-b7043b76-4470-4595-9270-d9031d43949a",
+        "submitted_at": "2026-11-21T01:24:57.468711+00:00",
+        "assigned_specialist_id": "50000000-0000-0000-0000-000000000003",
+        "assigned_secretary_id": "50000000-0000-0000-0000-000000000004",
+        "documents": [
+          {
+            "id": "6d16e582-1d9d-4a5f-b243-6549ca864d90",
+            "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000002",
+            "created_at": "2026-11-21T01:24:57.449287+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "577e27f9-1dd1-4c91-b442-94c3505cee4e",
+            "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000002",
+            "created_at": "2026-11-21T01:24:57.460262+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "submissions": [
+          {
+            "id": "12f7ef86-713c-4248-a270-59d605f63287",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "6d16e582-1d9d-4a5f-b243-6549ca864d90",
+              "577e27f9-1dd1-4c91-b442-94c3505cee4e"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000002",
+            "submitted_at": "2026-11-21T01:24:57.468711+00:00"
+          }
+        ],
+        "assignment_basis": "synthetic: assignment v1",
+        "staff_confirmation": {
+          "state": "confirmed",
+          "source_reference": "synthetic: workforce training v1",
+          "verified_by_actor_id": "50000000-0000-0000-0000-000000000003",
+          "verified_at": "2026-11-21T01:24:57.481489+00:00"
+        },
+        "checklists": [
+          {
+            "id": "6d9c2d99-27e4-4cf8-bdaa-4713f5c5eb68",
+            "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+            "submission_revision": 1,
+            "items": [
+              {
+                "key": "application",
+                "result": "present",
+                "document_id": "6d16e582-1d9d-4a5f-b243-6549ca864d90",
+                "reason": ""
+              },
+              {
+                "key": "evidence",
+                "result": "present",
+                "document_id": "577e27f9-1dd1-4c91-b442-94c3505cee4e",
+                "reason": ""
+              }
+            ],
+            "reviewed_by": "50000000-0000-0000-0000-000000000003",
+            "reviewed_at": "2026-11-21T01:24:57.487692+00:00"
+          }
+        ],
+        "public_message": "Комплект проверен",
+        "staff_status": "confirmed",
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "secretary",
+      "method": "POST",
+      "path": "/cases/b7043b76-4470-4595-9270-d9031d43949a/decision",
+      "status": 200,
+      "response": {
+        "id": "b7043b76-4470-4595-9270-d9031d43949a",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000002",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 8,
+        "status": "decision_recorded",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "created_at": "2026-11-21T01:24:57.439756+00:00",
+        "number": "SP-b7043b76-4470-4595-9270-d9031d43949a",
+        "submitted_at": "2026-11-21T01:24:57.468711+00:00",
+        "assigned_specialist_id": "50000000-0000-0000-0000-000000000003",
+        "assigned_secretary_id": "50000000-0000-0000-0000-000000000004",
+        "documents": [
+          {
+            "id": "6d16e582-1d9d-4a5f-b243-6549ca864d90",
+            "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000002",
+            "created_at": "2026-11-21T01:24:57.449287+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "577e27f9-1dd1-4c91-b442-94c3505cee4e",
+            "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000002",
+            "created_at": "2026-11-21T01:24:57.460262+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "submissions": [
+          {
+            "id": "12f7ef86-713c-4248-a270-59d605f63287",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "6d16e582-1d9d-4a5f-b243-6549ca864d90",
+              "577e27f9-1dd1-4c91-b442-94c3505cee4e"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000002",
+            "submitted_at": "2026-11-21T01:24:57.468711+00:00"
+          }
+        ],
+        "assignment_basis": "synthetic: assignment v1",
+        "staff_confirmation": {
+          "state": "confirmed",
+          "source_reference": "synthetic: workforce training v1",
+          "verified_by_actor_id": "50000000-0000-0000-0000-000000000003",
+          "verified_at": "2026-11-21T01:24:57.481489+00:00"
+        },
+        "checklists": [
+          {
+            "id": "6d9c2d99-27e4-4cf8-bdaa-4713f5c5eb68",
+            "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+            "submission_revision": 1,
+            "items": [
+              {
+                "key": "application",
+                "result": "present",
+                "document_id": "6d16e582-1d9d-4a5f-b243-6549ca864d90",
+                "reason": ""
+              },
+              {
+                "key": "evidence",
+                "result": "present",
+                "document_id": "577e27f9-1dd1-4c91-b442-94c3505cee4e",
+                "reason": ""
+              }
+            ],
+            "reviewed_by": "50000000-0000-0000-0000-000000000003",
+            "reviewed_at": "2026-11-21T01:24:57.487692+00:00"
+          }
+        ],
+        "public_message": "Учебное решение: помощь одобрена",
+        "decisions": [
+          {
+            "outcome": "approved",
+            "public_explanation": "Учебное решение: помощь одобрена",
+            "source_reference": "INTERNAL synthetic protocol for several cases",
+            "source_author": "Учебная комиссия",
+            "decided_on": "2026-11-21",
+            "recording_basis": "INTERNAL registrar authority",
+            "id": "c988070b-e446-44b4-83b4-d3fe8b4d0668",
+            "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+            "version": 1,
+            "submission_revision": 1,
+            "recorded_by": "50000000-0000-0000-0000-000000000004",
+            "recorded_at": "2026-11-21T01:24:57.493483+00:00",
+            "replaces_decision_id": null
+          }
+        ],
+        "staff_status": "confirmed",
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        },
+        "extract": {
+          "id": "c988070b-e446-44b4-83b4-d3fe8b4d0668",
+          "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+          "version": 1,
+          "outcome": "approved",
+          "public_explanation": "Учебное решение: помощь одобрена",
+          "decided_on": "2026-11-21"
+        }
+      }
+    },
+    {
+      "actor": "specialist",
+      "method": "POST",
+      "path": "/cases/b7043b76-4470-4595-9270-d9031d43949a/close",
+      "status": 200,
+      "response": {
+        "id": "b7043b76-4470-4595-9270-d9031d43949a",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000002",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 9,
+        "status": "closed",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "created_at": "2026-11-21T01:24:57.439756+00:00",
+        "number": "SP-b7043b76-4470-4595-9270-d9031d43949a",
+        "submitted_at": "2026-11-21T01:24:57.468711+00:00",
+        "assigned_specialist_id": "50000000-0000-0000-0000-000000000003",
+        "assigned_secretary_id": "50000000-0000-0000-0000-000000000004",
+        "documents": [
+          {
+            "id": "6d16e582-1d9d-4a5f-b243-6549ca864d90",
+            "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000002",
+            "created_at": "2026-11-21T01:24:57.449287+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "577e27f9-1dd1-4c91-b442-94c3505cee4e",
+            "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000002",
+            "created_at": "2026-11-21T01:24:57.460262+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "submissions": [
+          {
+            "id": "12f7ef86-713c-4248-a270-59d605f63287",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "6d16e582-1d9d-4a5f-b243-6549ca864d90",
+              "577e27f9-1dd1-4c91-b442-94c3505cee4e"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000002",
+            "submitted_at": "2026-11-21T01:24:57.468711+00:00"
+          }
+        ],
+        "assignment_basis": "synthetic: assignment v1",
+        "staff_confirmation": {
+          "state": "confirmed",
+          "source_reference": "synthetic: workforce training v1",
+          "verified_by_actor_id": "50000000-0000-0000-0000-000000000003",
+          "verified_at": "2026-11-21T01:24:57.481489+00:00"
+        },
+        "checklists": [
+          {
+            "id": "6d9c2d99-27e4-4cf8-bdaa-4713f5c5eb68",
+            "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+            "submission_revision": 1,
+            "items": [
+              {
+                "key": "application",
+                "result": "present",
+                "document_id": "6d16e582-1d9d-4a5f-b243-6549ca864d90",
+                "reason": ""
+              },
+              {
+                "key": "evidence",
+                "result": "present",
+                "document_id": "577e27f9-1dd1-4c91-b442-94c3505cee4e",
+                "reason": ""
+              }
+            ],
+            "reviewed_by": "50000000-0000-0000-0000-000000000003",
+            "reviewed_at": "2026-11-21T01:24:57.487692+00:00"
+          }
+        ],
+        "public_message": "Учебное решение: помощь одобрена",
+        "decisions": [
+          {
+            "outcome": "approved",
+            "public_explanation": "Учебное решение: помощь одобрена",
+            "source_reference": "INTERNAL synthetic protocol for several cases",
+            "source_author": "Учебная комиссия",
+            "decided_on": "2026-11-21",
+            "recording_basis": "INTERNAL registrar authority",
+            "id": "c988070b-e446-44b4-83b4-d3fe8b4d0668",
+            "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+            "version": 1,
+            "submission_revision": 1,
+            "recorded_by": "50000000-0000-0000-0000-000000000004",
+            "recorded_at": "2026-11-21T01:24:57.493483+00:00",
+            "replaces_decision_id": null
+          }
+        ],
+        "closure": {
+          "reason": "Явное учебное основание завершения",
+          "closed_by": "50000000-0000-0000-0000-000000000003",
+          "closed_at": "2026-11-21T01:24:57.501450+00:00",
+          "execution_status": "unknown"
+        },
+        "staff_status": "confirmed",
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        },
+        "extract": {
+          "id": "c988070b-e446-44b4-83b4-d3fe8b4d0668",
+          "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+          "version": 1,
+          "outcome": "approved",
+          "public_explanation": "Учебное решение: помощь одобрена",
+          "decided_on": "2026-11-21"
+        }
+      }
+    },
+    {
+      "actor": "employee2",
+      "method": "GET",
+      "path": "/cases/b7043b76-4470-4595-9270-d9031d43949a",
+      "status": 200,
+      "response": {
+        "id": "b7043b76-4470-4595-9270-d9031d43949a",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000002",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 9,
+        "status": "closed",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": "SP-b7043b76-4470-4595-9270-d9031d43949a",
+        "submitted_at": "2026-11-21T01:24:57.468711+00:00",
+        "created_at": "2026-11-21T01:24:57.439756+00:00",
+        "submissions": [
+          {
+            "id": "12f7ef86-713c-4248-a270-59d605f63287",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "6d16e582-1d9d-4a5f-b243-6549ca864d90",
+              "577e27f9-1dd1-4c91-b442-94c3505cee4e"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000002",
+            "submitted_at": "2026-11-21T01:24:57.468711+00:00"
+          }
+        ],
+        "public_message": "Учебное решение: помощь одобрена",
+        "staff_status": "confirmed",
+        "documents": [
+          {
+            "id": "6d16e582-1d9d-4a5f-b243-6549ca864d90",
+            "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000002",
+            "created_at": "2026-11-21T01:24:57.449287+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "577e27f9-1dd1-4c91-b442-94c3505cee4e",
+            "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000002",
+            "created_at": "2026-11-21T01:24:57.460262+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        },
+        "extract": {
+          "id": "c988070b-e446-44b4-83b4-d3fe8b4d0668",
+          "case_id": "b7043b76-4470-4595-9270-d9031d43949a",
+          "version": 1,
+          "outcome": "approved",
+          "public_explanation": "Учебное решение: помощь одобрена",
+          "decided_on": "2026-11-21"
+        },
+        "closure": {
+          "reason": "Явное учебное основание завершения",
+          "closed_by": "50000000-0000-0000-0000-000000000003",
+          "closed_at": "2026-11-21T01:24:57.501450+00:00",
+          "execution_status": "unknown"
+        }
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "GET",
+      "path": "/rules",
+      "status": 200,
+      "response": [
+        {
+          "id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+          "support_type": "training-a",
+          "title": "Учебная помощь А — не нормативный перечень",
+          "required_items": [
+            {
+              "key": "application",
+              "title": "Учебное заявление"
+            },
+            {
+              "key": "evidence",
+              "title": "Учебное подтверждение"
+            }
+          ],
+          "source_reference": "synthetic:support-training-v1",
+          "is_synthetic": true,
+          "status": "published"
+        }
+      ]
+    },
+    {
+      "actor": "employee",
+      "method": "POST",
+      "path": "/cases",
+      "status": 201,
+      "response": {
+        "id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 1,
+        "status": "draft",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": null,
+        "submitted_at": null,
+        "created_at": "2026-11-21T01:24:57.511816+00:00",
+        "submissions": [],
+        "public_message": null,
+        "staff_status": "unknown",
+        "documents": [],
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "POST",
+      "path": "/cases/d3343570-2648-4df9-a19d-ee19ffb28f1b/documents",
+      "status": 201,
+      "response": {
+        "id": "1179c8e3-1bfb-4d69-b938-7ffbbfdd8c7b",
+        "case_id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+        "item_key": "application",
+        "original_name": "original.txt",
+        "content_type": "text/plain",
+        "size_bytes": 20,
+        "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+        "uploaded_by": "50000000-0000-0000-0000-000000000001",
+        "created_at": "2026-11-21T01:24:57.520596+00:00",
+        "visibility": "applicant",
+        "case_revision": 2
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "GET",
+      "path": "/cases/d3343570-2648-4df9-a19d-ee19ffb28f1b",
+      "status": 200,
+      "response": {
+        "id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 2,
+        "status": "draft",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": null,
+        "submitted_at": null,
+        "created_at": "2026-11-21T01:24:57.511816+00:00",
+        "submissions": [],
+        "public_message": null,
+        "staff_status": "unknown",
+        "documents": [
+          {
+            "id": "1179c8e3-1bfb-4d69-b938-7ffbbfdd8c7b",
+            "case_id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.520596+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "POST",
+      "path": "/cases/d3343570-2648-4df9-a19d-ee19ffb28f1b/documents",
+      "status": 201,
+      "response": {
+        "id": "8bdc29bc-4c9f-467d-ad21-467ac2b9b4d3",
+        "case_id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+        "item_key": "evidence",
+        "original_name": "original.txt",
+        "content_type": "text/plain",
+        "size_bytes": 20,
+        "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+        "uploaded_by": "50000000-0000-0000-0000-000000000001",
+        "created_at": "2026-11-21T01:24:57.530177+00:00",
+        "visibility": "applicant",
+        "case_revision": 3
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "GET",
+      "path": "/cases/d3343570-2648-4df9-a19d-ee19ffb28f1b",
+      "status": 200,
+      "response": {
+        "id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 3,
+        "status": "draft",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": null,
+        "submitted_at": null,
+        "created_at": "2026-11-21T01:24:57.511816+00:00",
+        "submissions": [],
+        "public_message": null,
+        "staff_status": "unknown",
+        "documents": [
+          {
+            "id": "1179c8e3-1bfb-4d69-b938-7ffbbfdd8c7b",
+            "case_id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.520596+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "8bdc29bc-4c9f-467d-ad21-467ac2b9b4d3",
+            "case_id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.530177+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "POST",
+      "path": "/cases/d3343570-2648-4df9-a19d-ee19ffb28f1b/submit",
+      "status": 200,
+      "response": {
+        "id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 4,
+        "status": "submitted",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": "SP-d3343570-2648-4df9-a19d-ee19ffb28f1b",
+        "submitted_at": "2026-11-21T01:24:57.538459+00:00",
+        "created_at": "2026-11-21T01:24:57.511816+00:00",
+        "submissions": [
+          {
+            "id": "6f919eee-950c-4186-ba38-471f34d9d06c",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "1179c8e3-1bfb-4d69-b938-7ffbbfdd8c7b",
+              "8bdc29bc-4c9f-467d-ad21-467ac2b9b4d3"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.538459+00:00"
+          }
+        ],
+        "public_message": null,
+        "staff_status": "unknown",
+        "documents": [
+          {
+            "id": "1179c8e3-1bfb-4d69-b938-7ffbbfdd8c7b",
+            "case_id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.520596+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "8bdc29bc-4c9f-467d-ad21-467ac2b9b4d3",
+            "case_id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.530177+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "coordinator",
+      "method": "POST",
+      "path": "/cases/d3343570-2648-4df9-a19d-ee19ffb28f1b/assign",
+      "status": 200,
+      "response": {
+        "id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+        "revision": 5,
+        "number": "SP-d3343570-2648-4df9-a19d-ee19ffb28f1b",
+        "support_type": "training-a",
+        "submitted_at": "2026-11-21T01:24:57.538459+00:00",
+        "status": "submitted",
+        "applicant_ref": "50000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "actor": "specialist",
+      "method": "GET",
+      "path": "/cases/d3343570-2648-4df9-a19d-ee19ffb28f1b",
+      "status": 200,
+      "response": {
+        "id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 5,
+        "status": "submitted",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "created_at": "2026-11-21T01:24:57.511816+00:00",
+        "number": "SP-d3343570-2648-4df9-a19d-ee19ffb28f1b",
+        "submitted_at": "2026-11-21T01:24:57.538459+00:00",
+        "assigned_specialist_id": "50000000-0000-0000-0000-000000000003",
+        "assigned_secretary_id": "50000000-0000-0000-0000-000000000004",
+        "documents": [
+          {
+            "id": "1179c8e3-1bfb-4d69-b938-7ffbbfdd8c7b",
+            "case_id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.520596+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "8bdc29bc-4c9f-467d-ad21-467ac2b9b4d3",
+            "case_id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.530177+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "submissions": [
+          {
+            "id": "6f919eee-950c-4186-ba38-471f34d9d06c",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "1179c8e3-1bfb-4d69-b938-7ffbbfdd8c7b",
+              "8bdc29bc-4c9f-467d-ad21-467ac2b9b4d3"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.538459+00:00"
+          }
+        ],
+        "assignment_basis": "synthetic: assignment v1",
+        "public_message": null,
+        "staff_status": "unknown",
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "specialist",
+      "method": "POST",
+      "path": "/cases/d3343570-2648-4df9-a19d-ee19ffb28f1b/staff-confirmation",
+      "status": 200,
+      "response": {
+        "id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 6,
+        "status": "submitted",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "created_at": "2026-11-21T01:24:57.511816+00:00",
+        "number": "SP-d3343570-2648-4df9-a19d-ee19ffb28f1b",
+        "submitted_at": "2026-11-21T01:24:57.538459+00:00",
+        "assigned_specialist_id": "50000000-0000-0000-0000-000000000003",
+        "assigned_secretary_id": "50000000-0000-0000-0000-000000000004",
+        "documents": [
+          {
+            "id": "1179c8e3-1bfb-4d69-b938-7ffbbfdd8c7b",
+            "case_id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.520596+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "8bdc29bc-4c9f-467d-ad21-467ac2b9b4d3",
+            "case_id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.530177+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "submissions": [
+          {
+            "id": "6f919eee-950c-4186-ba38-471f34d9d06c",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "1179c8e3-1bfb-4d69-b938-7ffbbfdd8c7b",
+              "8bdc29bc-4c9f-467d-ad21-467ac2b9b4d3"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.538459+00:00"
+          }
+        ],
+        "assignment_basis": "synthetic: assignment v1",
+        "staff_confirmation": {
+          "state": "confirmed",
+          "source_reference": "synthetic: workforce training v1",
+          "verified_by_actor_id": "50000000-0000-0000-0000-000000000003",
+          "verified_at": "2026-11-21T01:24:57.551776+00:00"
+        },
+        "public_message": null,
+        "staff_status": "confirmed",
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "specialist",
+      "method": "POST",
+      "path": "/cases/d3343570-2648-4df9-a19d-ee19ffb28f1b/completeness",
+      "status": 200,
+      "response": {
+        "id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 7,
+        "status": "ready_for_review",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "created_at": "2026-11-21T01:24:57.511816+00:00",
+        "number": "SP-d3343570-2648-4df9-a19d-ee19ffb28f1b",
+        "submitted_at": "2026-11-21T01:24:57.538459+00:00",
+        "assigned_specialist_id": "50000000-0000-0000-0000-000000000003",
+        "assigned_secretary_id": "50000000-0000-0000-0000-000000000004",
+        "documents": [
+          {
+            "id": "1179c8e3-1bfb-4d69-b938-7ffbbfdd8c7b",
+            "case_id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.520596+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "8bdc29bc-4c9f-467d-ad21-467ac2b9b4d3",
+            "case_id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.530177+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "submissions": [
+          {
+            "id": "6f919eee-950c-4186-ba38-471f34d9d06c",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "1179c8e3-1bfb-4d69-b938-7ffbbfdd8c7b",
+              "8bdc29bc-4c9f-467d-ad21-467ac2b9b4d3"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.538459+00:00"
+          }
+        ],
+        "assignment_basis": "synthetic: assignment v1",
+        "staff_confirmation": {
+          "state": "confirmed",
+          "source_reference": "synthetic: workforce training v1",
+          "verified_by_actor_id": "50000000-0000-0000-0000-000000000003",
+          "verified_at": "2026-11-21T01:24:57.551776+00:00"
+        },
+        "checklists": [
+          {
+            "id": "76e0479d-bf9b-4dcd-9683-4f200d52e57b",
+            "case_id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+            "submission_revision": 1,
+            "items": [
+              {
+                "key": "application",
+                "result": "present",
+                "document_id": "1179c8e3-1bfb-4d69-b938-7ffbbfdd8c7b",
+                "reason": ""
+              },
+              {
+                "key": "evidence",
+                "result": "present",
+                "document_id": "8bdc29bc-4c9f-467d-ad21-467ac2b9b4d3",
+                "reason": ""
+              }
+            ],
+            "reviewed_by": "50000000-0000-0000-0000-000000000003",
+            "reviewed_at": "2026-11-21T01:24:57.557155+00:00"
+          }
+        ],
+        "public_message": "Комплект проверен",
+        "staff_status": "confirmed",
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "secretary",
+      "method": "POST",
+      "path": "/cases/d3343570-2648-4df9-a19d-ee19ffb28f1b/decision",
+      "status": 200,
+      "response": {
+        "id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 8,
+        "status": "decision_recorded",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "created_at": "2026-11-21T01:24:57.511816+00:00",
+        "number": "SP-d3343570-2648-4df9-a19d-ee19ffb28f1b",
+        "submitted_at": "2026-11-21T01:24:57.538459+00:00",
+        "assigned_specialist_id": "50000000-0000-0000-0000-000000000003",
+        "assigned_secretary_id": "50000000-0000-0000-0000-000000000004",
+        "documents": [
+          {
+            "id": "1179c8e3-1bfb-4d69-b938-7ffbbfdd8c7b",
+            "case_id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.520596+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "8bdc29bc-4c9f-467d-ad21-467ac2b9b4d3",
+            "case_id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.530177+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "submissions": [
+          {
+            "id": "6f919eee-950c-4186-ba38-471f34d9d06c",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "1179c8e3-1bfb-4d69-b938-7ffbbfdd8c7b",
+              "8bdc29bc-4c9f-467d-ad21-467ac2b9b4d3"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.538459+00:00"
+          }
+        ],
+        "assignment_basis": "synthetic: assignment v1",
+        "staff_confirmation": {
+          "state": "confirmed",
+          "source_reference": "synthetic: workforce training v1",
+          "verified_by_actor_id": "50000000-0000-0000-0000-000000000003",
+          "verified_at": "2026-11-21T01:24:57.551776+00:00"
+        },
+        "checklists": [
+          {
+            "id": "76e0479d-bf9b-4dcd-9683-4f200d52e57b",
+            "case_id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+            "submission_revision": 1,
+            "items": [
+              {
+                "key": "application",
+                "result": "present",
+                "document_id": "1179c8e3-1bfb-4d69-b938-7ffbbfdd8c7b",
+                "reason": ""
+              },
+              {
+                "key": "evidence",
+                "result": "present",
+                "document_id": "8bdc29bc-4c9f-467d-ad21-467ac2b9b4d3",
+                "reason": ""
+              }
+            ],
+            "reviewed_by": "50000000-0000-0000-0000-000000000003",
+            "reviewed_at": "2026-11-21T01:24:57.557155+00:00"
+          }
+        ],
+        "public_message": "Учебный отказ: основание не подтверждено",
+        "decisions": [
+          {
+            "outcome": "declined",
+            "public_explanation": "Учебный отказ: основание не подтверждено",
+            "source_reference": "INTERNAL synthetic protocol for several cases",
+            "source_author": "Учебная комиссия",
+            "decided_on": "2026-11-21",
+            "recording_basis": "INTERNAL registrar authority",
+            "id": "e2596f9c-9110-40b0-95dd-18864f6640c0",
+            "case_id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+            "version": 1,
+            "submission_revision": 1,
+            "recorded_by": "50000000-0000-0000-0000-000000000004",
+            "recorded_at": "2026-11-21T01:24:57.562489+00:00",
+            "replaces_decision_id": null
+          }
+        ],
+        "staff_status": "confirmed",
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        },
+        "extract": {
+          "id": "e2596f9c-9110-40b0-95dd-18864f6640c0",
+          "case_id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+          "version": 1,
+          "outcome": "declined",
+          "public_explanation": "Учебный отказ: основание не подтверждено",
+          "decided_on": "2026-11-21"
+        }
+      }
+    },
+    {
+      "actor": "coordinator",
+      "method": "POST",
+      "path": "/cases/d3343570-2648-4df9-a19d-ee19ffb28f1b/executor-assignment",
+      "status": 200,
+      "response": {
+        "id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+        "revision": 9,
+        "number": "SP-d3343570-2648-4df9-a19d-ee19ffb28f1b",
+        "support_type": "training-a",
+        "submitted_at": "2026-11-21T01:24:57.538459+00:00",
+        "status": "decision_recorded",
+        "applicant_ref": "50000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "actor": "executor",
+      "method": "GET",
+      "path": "/cases/d3343570-2648-4df9-a19d-ee19ffb28f1b",
+      "status": 200,
+      "response": {
+        "id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+        "revision": 9,
+        "number": "SP-d3343570-2648-4df9-a19d-ee19ffb28f1b",
+        "support_type": "training-a",
+        "submitted_at": "2026-11-21T01:24:57.538459+00:00",
+        "status": "decision_recorded",
+        "applicant_ref": "50000000-0000-0000-0000-000000000001",
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        },
+        "extract": {
+          "id": "e2596f9c-9110-40b0-95dd-18864f6640c0",
+          "case_id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+          "version": 1,
+          "outcome": "declined",
+          "public_explanation": "Учебный отказ: основание не подтверждено",
+          "decided_on": "2026-11-21"
+        }
+      }
+    },
+    {
+      "actor": "executor",
+      "method": "POST",
+      "path": "/cases/d3343570-2648-4df9-a19d-ee19ffb28f1b/execution",
+      "status": 409,
+      "response": {
+        "error": {
+          "code": "APPROVAL_REQUIRED",
+          "message": "Исполнение допускается только после одобрения."
+        }
+      }
+    },
+    {
+      "actor": "specialist",
+      "method": "POST",
+      "path": "/cases/d3343570-2648-4df9-a19d-ee19ffb28f1b/close",
+      "status": 200,
+      "response": {
+        "id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 10,
+        "status": "closed",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "created_at": "2026-11-21T01:24:57.511816+00:00",
+        "number": "SP-d3343570-2648-4df9-a19d-ee19ffb28f1b",
+        "submitted_at": "2026-11-21T01:24:57.538459+00:00",
+        "assigned_specialist_id": "50000000-0000-0000-0000-000000000003",
+        "assigned_secretary_id": "50000000-0000-0000-0000-000000000004",
+        "documents": [
+          {
+            "id": "1179c8e3-1bfb-4d69-b938-7ffbbfdd8c7b",
+            "case_id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.520596+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "8bdc29bc-4c9f-467d-ad21-467ac2b9b4d3",
+            "case_id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.530177+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "submissions": [
+          {
+            "id": "6f919eee-950c-4186-ba38-471f34d9d06c",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "1179c8e3-1bfb-4d69-b938-7ffbbfdd8c7b",
+              "8bdc29bc-4c9f-467d-ad21-467ac2b9b4d3"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.538459+00:00"
+          }
+        ],
+        "assignment_basis": "synthetic: assignment v1",
+        "staff_confirmation": {
+          "state": "confirmed",
+          "source_reference": "synthetic: workforce training v1",
+          "verified_by_actor_id": "50000000-0000-0000-0000-000000000003",
+          "verified_at": "2026-11-21T01:24:57.551776+00:00"
+        },
+        "checklists": [
+          {
+            "id": "76e0479d-bf9b-4dcd-9683-4f200d52e57b",
+            "case_id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+            "submission_revision": 1,
+            "items": [
+              {
+                "key": "application",
+                "result": "present",
+                "document_id": "1179c8e3-1bfb-4d69-b938-7ffbbfdd8c7b",
+                "reason": ""
+              },
+              {
+                "key": "evidence",
+                "result": "present",
+                "document_id": "8bdc29bc-4c9f-467d-ad21-467ac2b9b4d3",
+                "reason": ""
+              }
+            ],
+            "reviewed_by": "50000000-0000-0000-0000-000000000003",
+            "reviewed_at": "2026-11-21T01:24:57.557155+00:00"
+          }
+        ],
+        "public_message": "Учебный отказ: основание не подтверждено",
+        "decisions": [
+          {
+            "outcome": "declined",
+            "public_explanation": "Учебный отказ: основание не подтверждено",
+            "source_reference": "INTERNAL synthetic protocol for several cases",
+            "source_author": "Учебная комиссия",
+            "decided_on": "2026-11-21",
+            "recording_basis": "INTERNAL registrar authority",
+            "id": "e2596f9c-9110-40b0-95dd-18864f6640c0",
+            "case_id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+            "version": 1,
+            "submission_revision": 1,
+            "recorded_by": "50000000-0000-0000-0000-000000000004",
+            "recorded_at": "2026-11-21T01:24:57.562489+00:00",
+            "replaces_decision_id": null
+          }
+        ],
+        "assigned_executor_id": "50000000-0000-0000-0000-000000000007",
+        "executor_assignment_basis": "synthetic: accounting registrar",
+        "closure": {
+          "reason": "Явное учебное основание завершения",
+          "closed_by": "50000000-0000-0000-0000-000000000003",
+          "closed_at": "2026-11-21T01:24:57.577784+00:00",
+          "execution_status": "unknown"
+        },
+        "staff_status": "confirmed",
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        },
+        "extract": {
+          "id": "e2596f9c-9110-40b0-95dd-18864f6640c0",
+          "case_id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+          "version": 1,
+          "outcome": "declined",
+          "public_explanation": "Учебный отказ: основание не подтверждено",
+          "decided_on": "2026-11-21"
+        }
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "GET",
+      "path": "/rules",
+      "status": 200,
+      "response": [
+        {
+          "id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+          "support_type": "training-a",
+          "title": "Учебная помощь А — не нормативный перечень",
+          "required_items": [
+            {
+              "key": "application",
+              "title": "Учебное заявление"
+            },
+            {
+              "key": "evidence",
+              "title": "Учебное подтверждение"
+            }
+          ],
+          "source_reference": "synthetic:support-training-v1",
+          "is_synthetic": true,
+          "status": "published"
+        }
+      ]
+    },
+    {
+      "actor": "employee",
+      "method": "POST",
+      "path": "/cases",
+      "status": 201,
+      "response": {
+        "id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 1,
+        "status": "draft",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": null,
+        "submitted_at": null,
+        "created_at": "2026-11-21T01:24:57.585676+00:00",
+        "submissions": [],
+        "public_message": null,
+        "staff_status": "unknown",
+        "documents": [],
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "POST",
+      "path": "/cases/853f4382-9e8f-4a8b-a352-c49d6104b112/documents",
+      "status": 201,
+      "response": {
+        "id": "74bf944b-06f3-41ad-ae69-e1d672098428",
+        "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "item_key": "application",
+        "original_name": "original.txt",
+        "content_type": "text/plain",
+        "size_bytes": 20,
+        "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+        "uploaded_by": "50000000-0000-0000-0000-000000000001",
+        "created_at": "2026-11-21T01:24:57.594511+00:00",
+        "visibility": "applicant",
+        "case_revision": 2
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "GET",
+      "path": "/cases/853f4382-9e8f-4a8b-a352-c49d6104b112",
+      "status": 200,
+      "response": {
+        "id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 2,
+        "status": "draft",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": null,
+        "submitted_at": null,
+        "created_at": "2026-11-21T01:24:57.585676+00:00",
+        "submissions": [],
+        "public_message": null,
+        "staff_status": "unknown",
+        "documents": [
+          {
+            "id": "74bf944b-06f3-41ad-ae69-e1d672098428",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.594511+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "POST",
+      "path": "/cases/853f4382-9e8f-4a8b-a352-c49d6104b112/documents",
+      "status": 201,
+      "response": {
+        "id": "b6be1aa1-6f91-47f8-9763-707e4e968dbf",
+        "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "item_key": "evidence",
+        "original_name": "original.txt",
+        "content_type": "text/plain",
+        "size_bytes": 20,
+        "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+        "uploaded_by": "50000000-0000-0000-0000-000000000001",
+        "created_at": "2026-11-21T01:24:57.606468+00:00",
+        "visibility": "applicant",
+        "case_revision": 3
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "GET",
+      "path": "/cases/853f4382-9e8f-4a8b-a352-c49d6104b112",
+      "status": 200,
+      "response": {
+        "id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 3,
+        "status": "draft",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": null,
+        "submitted_at": null,
+        "created_at": "2026-11-21T01:24:57.585676+00:00",
+        "submissions": [],
+        "public_message": null,
+        "staff_status": "unknown",
+        "documents": [
+          {
+            "id": "74bf944b-06f3-41ad-ae69-e1d672098428",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.594511+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "b6be1aa1-6f91-47f8-9763-707e4e968dbf",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.606468+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "POST",
+      "path": "/cases/853f4382-9e8f-4a8b-a352-c49d6104b112/submit",
+      "status": 200,
+      "response": {
+        "id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 4,
+        "status": "submitted",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": "SP-853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "submitted_at": "2026-11-21T01:24:57.613964+00:00",
+        "created_at": "2026-11-21T01:24:57.585676+00:00",
+        "submissions": [
+          {
+            "id": "fba39045-fd5b-40fb-beb3-175dc0865990",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "74bf944b-06f3-41ad-ae69-e1d672098428",
+              "b6be1aa1-6f91-47f8-9763-707e4e968dbf"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.613964+00:00"
+          }
+        ],
+        "public_message": null,
+        "staff_status": "unknown",
+        "documents": [
+          {
+            "id": "74bf944b-06f3-41ad-ae69-e1d672098428",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.594511+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "b6be1aa1-6f91-47f8-9763-707e4e968dbf",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.606468+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "coordinator",
+      "method": "POST",
+      "path": "/cases/853f4382-9e8f-4a8b-a352-c49d6104b112/assign",
+      "status": 200,
+      "response": {
+        "id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "revision": 5,
+        "number": "SP-853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "support_type": "training-a",
+        "submitted_at": "2026-11-21T01:24:57.613964+00:00",
+        "status": "submitted",
+        "applicant_ref": "50000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "actor": "specialist",
+      "method": "GET",
+      "path": "/cases/853f4382-9e8f-4a8b-a352-c49d6104b112",
+      "status": 200,
+      "response": {
+        "id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 5,
+        "status": "submitted",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "created_at": "2026-11-21T01:24:57.585676+00:00",
+        "number": "SP-853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "submitted_at": "2026-11-21T01:24:57.613964+00:00",
+        "assigned_specialist_id": "50000000-0000-0000-0000-000000000003",
+        "assigned_secretary_id": "50000000-0000-0000-0000-000000000004",
+        "documents": [
+          {
+            "id": "74bf944b-06f3-41ad-ae69-e1d672098428",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.594511+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "b6be1aa1-6f91-47f8-9763-707e4e968dbf",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.606468+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "submissions": [
+          {
+            "id": "fba39045-fd5b-40fb-beb3-175dc0865990",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "74bf944b-06f3-41ad-ae69-e1d672098428",
+              "b6be1aa1-6f91-47f8-9763-707e4e968dbf"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.613964+00:00"
+          }
+        ],
+        "assignment_basis": "synthetic: assignment v1",
+        "public_message": null,
+        "staff_status": "unknown",
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "specialist",
+      "method": "POST",
+      "path": "/cases/853f4382-9e8f-4a8b-a352-c49d6104b112/staff-confirmation",
+      "status": 200,
+      "response": {
+        "id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 6,
+        "status": "submitted",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "created_at": "2026-11-21T01:24:57.585676+00:00",
+        "number": "SP-853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "submitted_at": "2026-11-21T01:24:57.613964+00:00",
+        "assigned_specialist_id": "50000000-0000-0000-0000-000000000003",
+        "assigned_secretary_id": "50000000-0000-0000-0000-000000000004",
+        "documents": [
+          {
+            "id": "74bf944b-06f3-41ad-ae69-e1d672098428",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.594511+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "b6be1aa1-6f91-47f8-9763-707e4e968dbf",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.606468+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "submissions": [
+          {
+            "id": "fba39045-fd5b-40fb-beb3-175dc0865990",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "74bf944b-06f3-41ad-ae69-e1d672098428",
+              "b6be1aa1-6f91-47f8-9763-707e4e968dbf"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.613964+00:00"
+          }
+        ],
+        "assignment_basis": "synthetic: assignment v1",
+        "staff_confirmation": {
+          "state": "confirmed",
+          "source_reference": "synthetic: workforce training v1",
+          "verified_by_actor_id": "50000000-0000-0000-0000-000000000003",
+          "verified_at": "2026-11-21T01:24:57.627626+00:00"
+        },
+        "public_message": null,
+        "staff_status": "confirmed",
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "specialist",
+      "method": "POST",
+      "path": "/cases/853f4382-9e8f-4a8b-a352-c49d6104b112/completeness",
+      "status": 200,
+      "response": {
+        "id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 7,
+        "status": "ready_for_review",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "created_at": "2026-11-21T01:24:57.585676+00:00",
+        "number": "SP-853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "submitted_at": "2026-11-21T01:24:57.613964+00:00",
+        "assigned_specialist_id": "50000000-0000-0000-0000-000000000003",
+        "assigned_secretary_id": "50000000-0000-0000-0000-000000000004",
+        "documents": [
+          {
+            "id": "74bf944b-06f3-41ad-ae69-e1d672098428",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.594511+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "b6be1aa1-6f91-47f8-9763-707e4e968dbf",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.606468+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "submissions": [
+          {
+            "id": "fba39045-fd5b-40fb-beb3-175dc0865990",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "74bf944b-06f3-41ad-ae69-e1d672098428",
+              "b6be1aa1-6f91-47f8-9763-707e4e968dbf"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.613964+00:00"
+          }
+        ],
+        "assignment_basis": "synthetic: assignment v1",
+        "staff_confirmation": {
+          "state": "confirmed",
+          "source_reference": "synthetic: workforce training v1",
+          "verified_by_actor_id": "50000000-0000-0000-0000-000000000003",
+          "verified_at": "2026-11-21T01:24:57.627626+00:00"
+        },
+        "checklists": [
+          {
+            "id": "09b4ef62-4df0-4565-93e6-c573324d66a2",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "submission_revision": 1,
+            "items": [
+              {
+                "key": "application",
+                "result": "present",
+                "document_id": "74bf944b-06f3-41ad-ae69-e1d672098428",
+                "reason": ""
+              },
+              {
+                "key": "evidence",
+                "result": "present",
+                "document_id": "b6be1aa1-6f91-47f8-9763-707e4e968dbf",
+                "reason": ""
+              }
+            ],
+            "reviewed_by": "50000000-0000-0000-0000-000000000003",
+            "reviewed_at": "2026-11-21T01:24:57.637931+00:00"
+          }
+        ],
+        "public_message": "Комплект проверен",
+        "staff_status": "confirmed",
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "secretary",
+      "method": "POST",
+      "path": "/cases/853f4382-9e8f-4a8b-a352-c49d6104b112/decision",
+      "status": 200,
+      "response": {
+        "id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 8,
+        "status": "decision_recorded",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "created_at": "2026-11-21T01:24:57.585676+00:00",
+        "number": "SP-853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "submitted_at": "2026-11-21T01:24:57.613964+00:00",
+        "assigned_specialist_id": "50000000-0000-0000-0000-000000000003",
+        "assigned_secretary_id": "50000000-0000-0000-0000-000000000004",
+        "documents": [
+          {
+            "id": "74bf944b-06f3-41ad-ae69-e1d672098428",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.594511+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "b6be1aa1-6f91-47f8-9763-707e4e968dbf",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.606468+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "submissions": [
+          {
+            "id": "fba39045-fd5b-40fb-beb3-175dc0865990",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "74bf944b-06f3-41ad-ae69-e1d672098428",
+              "b6be1aa1-6f91-47f8-9763-707e4e968dbf"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.613964+00:00"
+          }
+        ],
+        "assignment_basis": "synthetic: assignment v1",
+        "staff_confirmation": {
+          "state": "confirmed",
+          "source_reference": "synthetic: workforce training v1",
+          "verified_by_actor_id": "50000000-0000-0000-0000-000000000003",
+          "verified_at": "2026-11-21T01:24:57.627626+00:00"
+        },
+        "checklists": [
+          {
+            "id": "09b4ef62-4df0-4565-93e6-c573324d66a2",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "submission_revision": 1,
+            "items": [
+              {
+                "key": "application",
+                "result": "present",
+                "document_id": "74bf944b-06f3-41ad-ae69-e1d672098428",
+                "reason": ""
+              },
+              {
+                "key": "evidence",
+                "result": "present",
+                "document_id": "b6be1aa1-6f91-47f8-9763-707e4e968dbf",
+                "reason": ""
+              }
+            ],
+            "reviewed_by": "50000000-0000-0000-0000-000000000003",
+            "reviewed_at": "2026-11-21T01:24:57.637931+00:00"
+          }
+        ],
+        "public_message": "Учебное решение: помощь одобрена",
+        "decisions": [
+          {
+            "outcome": "approved",
+            "public_explanation": "Учебное решение: помощь одобрена",
+            "source_reference": "INTERNAL synthetic protocol for several cases",
+            "source_author": "Учебная комиссия",
+            "decided_on": "2026-11-21",
+            "recording_basis": "INTERNAL registrar authority",
+            "id": "e0381d3b-7fe2-41ad-860c-0b6b688aef10",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "version": 1,
+            "submission_revision": 1,
+            "recorded_by": "50000000-0000-0000-0000-000000000004",
+            "recorded_at": "2026-11-21T01:24:57.644718+00:00",
+            "replaces_decision_id": null
+          }
+        ],
+        "staff_status": "confirmed",
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        },
+        "extract": {
+          "id": "e0381d3b-7fe2-41ad-860c-0b6b688aef10",
+          "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+          "version": 1,
+          "outcome": "approved",
+          "public_explanation": "Учебное решение: помощь одобрена",
+          "decided_on": "2026-11-21"
+        }
+      }
+    },
+    {
+      "actor": "coordinator",
+      "method": "POST",
+      "path": "/cases/853f4382-9e8f-4a8b-a352-c49d6104b112/executor-assignment",
+      "status": 200,
+      "response": {
+        "id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "revision": 9,
+        "number": "SP-853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "support_type": "training-a",
+        "submitted_at": "2026-11-21T01:24:57.613964+00:00",
+        "status": "decision_recorded",
+        "applicant_ref": "50000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "actor": "executor",
+      "method": "GET",
+      "path": "/cases/853f4382-9e8f-4a8b-a352-c49d6104b112",
+      "status": 200,
+      "response": {
+        "id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "revision": 9,
+        "number": "SP-853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "support_type": "training-a",
+        "submitted_at": "2026-11-21T01:24:57.613964+00:00",
+        "status": "decision_recorded",
+        "applicant_ref": "50000000-0000-0000-0000-000000000001",
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        },
+        "extract": {
+          "id": "e0381d3b-7fe2-41ad-860c-0b6b688aef10",
+          "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+          "version": 1,
+          "outcome": "approved",
+          "public_explanation": "Учебное решение: помощь одобрена",
+          "decided_on": "2026-11-21"
+        }
+      }
+    },
+    {
+      "actor": "executor",
+      "method": "POST",
+      "path": "/cases/853f4382-9e8f-4a8b-a352-c49d6104b112/execution",
+      "status": 200,
+      "response": {
+        "id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "revision": 10,
+        "number": "SP-853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "support_type": "training-a",
+        "submitted_at": "2026-11-21T01:24:57.613964+00:00",
+        "status": "decision_recorded",
+        "applicant_ref": "50000000-0000-0000-0000-000000000001",
+        "execution": {
+          "id": "1304b984-0f89-437c-a50d-c62eb9b0ae9b",
+          "decision_id": "e0381d3b-7fe2-41ad-860c-0b6b688aef10",
+          "status": "confirmed",
+          "occurred_on": "2026-11-21",
+          "recorded_at": "2026-11-21T01:24:57.658808+00:00"
+        },
+        "extract": {
+          "id": "e0381d3b-7fe2-41ad-860c-0b6b688aef10",
+          "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+          "version": 1,
+          "outcome": "approved",
+          "public_explanation": "Учебное решение: помощь одобрена",
+          "decided_on": "2026-11-21"
+        }
+      }
+    },
+    {
+      "actor": "secretary",
+      "method": "GET",
+      "path": "/cases/853f4382-9e8f-4a8b-a352-c49d6104b112",
+      "status": 200,
+      "response": {
+        "id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 10,
+        "status": "decision_recorded",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "created_at": "2026-11-21T01:24:57.585676+00:00",
+        "number": "SP-853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "submitted_at": "2026-11-21T01:24:57.613964+00:00",
+        "assigned_specialist_id": "50000000-0000-0000-0000-000000000003",
+        "assigned_secretary_id": "50000000-0000-0000-0000-000000000004",
+        "documents": [
+          {
+            "id": "74bf944b-06f3-41ad-ae69-e1d672098428",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.594511+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "b6be1aa1-6f91-47f8-9763-707e4e968dbf",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.606468+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "submissions": [
+          {
+            "id": "fba39045-fd5b-40fb-beb3-175dc0865990",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "74bf944b-06f3-41ad-ae69-e1d672098428",
+              "b6be1aa1-6f91-47f8-9763-707e4e968dbf"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.613964+00:00"
+          }
+        ],
+        "assignment_basis": "synthetic: assignment v1",
+        "staff_confirmation": {
+          "state": "confirmed",
+          "source_reference": "synthetic: workforce training v1",
+          "verified_by_actor_id": "50000000-0000-0000-0000-000000000003",
+          "verified_at": "2026-11-21T01:24:57.627626+00:00"
+        },
+        "checklists": [
+          {
+            "id": "09b4ef62-4df0-4565-93e6-c573324d66a2",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "submission_revision": 1,
+            "items": [
+              {
+                "key": "application",
+                "result": "present",
+                "document_id": "74bf944b-06f3-41ad-ae69-e1d672098428",
+                "reason": ""
+              },
+              {
+                "key": "evidence",
+                "result": "present",
+                "document_id": "b6be1aa1-6f91-47f8-9763-707e4e968dbf",
+                "reason": ""
+              }
+            ],
+            "reviewed_by": "50000000-0000-0000-0000-000000000003",
+            "reviewed_at": "2026-11-21T01:24:57.637931+00:00"
+          }
+        ],
+        "public_message": "Учебное решение: помощь одобрена",
+        "decisions": [
+          {
+            "outcome": "approved",
+            "public_explanation": "Учебное решение: помощь одобрена",
+            "source_reference": "INTERNAL synthetic protocol for several cases",
+            "source_author": "Учебная комиссия",
+            "decided_on": "2026-11-21",
+            "recording_basis": "INTERNAL registrar authority",
+            "id": "e0381d3b-7fe2-41ad-860c-0b6b688aef10",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "version": 1,
+            "submission_revision": 1,
+            "recorded_by": "50000000-0000-0000-0000-000000000004",
+            "recorded_at": "2026-11-21T01:24:57.644718+00:00",
+            "replaces_decision_id": null
+          }
+        ],
+        "assigned_executor_id": "50000000-0000-0000-0000-000000000007",
+        "executor_assignment_basis": "synthetic: accounting registrar",
+        "executions": [
+          {
+            "status": "confirmed",
+            "source_reference": "INTERNAL synthetic accounting registry",
+            "source_author": "Учебный регистратор",
+            "occurred_on": "2026-11-21",
+            "note": "INTERNAL evidence note",
+            "id": "1304b984-0f89-437c-a50d-c62eb9b0ae9b",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "decision_id": "e0381d3b-7fe2-41ad-860c-0b6b688aef10",
+            "recorded_by": "50000000-0000-0000-0000-000000000007",
+            "recorded_at": "2026-11-21T01:24:57.658808+00:00"
+          }
+        ],
+        "execution": {
+          "id": "1304b984-0f89-437c-a50d-c62eb9b0ae9b",
+          "decision_id": "e0381d3b-7fe2-41ad-860c-0b6b688aef10",
+          "status": "confirmed",
+          "occurred_on": "2026-11-21",
+          "recorded_at": "2026-11-21T01:24:57.658808+00:00"
+        },
+        "staff_status": "confirmed",
+        "extract": {
+          "id": "e0381d3b-7fe2-41ad-860c-0b6b688aef10",
+          "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+          "version": 1,
+          "outcome": "approved",
+          "public_explanation": "Учебное решение: помощь одобрена",
+          "decided_on": "2026-11-21"
+        }
+      }
+    },
+    {
+      "actor": "secretary",
+      "method": "POST",
+      "path": "/cases/853f4382-9e8f-4a8b-a352-c49d6104b112/decision-corrections",
+      "status": 200,
+      "response": {
+        "id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 11,
+        "status": "decision_recorded",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "created_at": "2026-11-21T01:24:57.585676+00:00",
+        "number": "SP-853f4382-9e8f-4a8b-a352-c49d6104b112",
+        "submitted_at": "2026-11-21T01:24:57.613964+00:00",
+        "assigned_specialist_id": "50000000-0000-0000-0000-000000000003",
+        "assigned_secretary_id": "50000000-0000-0000-0000-000000000004",
+        "documents": [
+          {
+            "id": "74bf944b-06f3-41ad-ae69-e1d672098428",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.594511+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "b6be1aa1-6f91-47f8-9763-707e4e968dbf",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.606468+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "submissions": [
+          {
+            "id": "fba39045-fd5b-40fb-beb3-175dc0865990",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "74bf944b-06f3-41ad-ae69-e1d672098428",
+              "b6be1aa1-6f91-47f8-9763-707e4e968dbf"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.613964+00:00"
+          }
+        ],
+        "assignment_basis": "synthetic: assignment v1",
+        "staff_confirmation": {
+          "state": "confirmed",
+          "source_reference": "synthetic: workforce training v1",
+          "verified_by_actor_id": "50000000-0000-0000-0000-000000000003",
+          "verified_at": "2026-11-21T01:24:57.627626+00:00"
+        },
+        "checklists": [
+          {
+            "id": "09b4ef62-4df0-4565-93e6-c573324d66a2",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "submission_revision": 1,
+            "items": [
+              {
+                "key": "application",
+                "result": "present",
+                "document_id": "74bf944b-06f3-41ad-ae69-e1d672098428",
+                "reason": ""
+              },
+              {
+                "key": "evidence",
+                "result": "present",
+                "document_id": "b6be1aa1-6f91-47f8-9763-707e4e968dbf",
+                "reason": ""
+              }
+            ],
+            "reviewed_by": "50000000-0000-0000-0000-000000000003",
+            "reviewed_at": "2026-11-21T01:24:57.637931+00:00"
+          }
+        ],
+        "public_message": "Учебное решение: помощь одобрена",
+        "decisions": [
+          {
+            "outcome": "approved",
+            "public_explanation": "Учебное решение: помощь одобрена",
+            "source_reference": "INTERNAL synthetic protocol for several cases",
+            "source_author": "Учебная комиссия",
+            "decided_on": "2026-11-21",
+            "recording_basis": "INTERNAL registrar authority",
+            "id": "e0381d3b-7fe2-41ad-860c-0b6b688aef10",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "version": 1,
+            "submission_revision": 1,
+            "recorded_by": "50000000-0000-0000-0000-000000000004",
+            "recorded_at": "2026-11-21T01:24:57.644718+00:00",
+            "replaces_decision_id": null
+          },
+          {
+            "outcome": "approved",
+            "public_explanation": "Учебное решение: помощь одобрена",
+            "source_reference": "INTERNAL synthetic protocol for several cases",
+            "source_author": "Учебная комиссия",
+            "decided_on": "2026-11-21",
+            "recording_basis": "INTERNAL registrar authority",
+            "correction_reason": "Исправлены условия внешнего решения",
+            "id": "6c88ea5a-f5b2-4509-b3a2-f2152b10cf6f",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "version": 2,
+            "submission_revision": 1,
+            "recorded_by": "50000000-0000-0000-0000-000000000004",
+            "recorded_at": "2026-11-21T01:24:57.668916+00:00",
+            "replaces_decision_id": "e0381d3b-7fe2-41ad-860c-0b6b688aef10"
+          }
+        ],
+        "assigned_executor_id": "50000000-0000-0000-0000-000000000007",
+        "executor_assignment_basis": "synthetic: accounting registrar",
+        "executions": [
+          {
+            "status": "confirmed",
+            "source_reference": "INTERNAL synthetic accounting registry",
+            "source_author": "Учебный регистратор",
+            "occurred_on": "2026-11-21",
+            "note": "INTERNAL evidence note",
+            "id": "1304b984-0f89-437c-a50d-c62eb9b0ae9b",
+            "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+            "decision_id": "e0381d3b-7fe2-41ad-860c-0b6b688aef10",
+            "recorded_by": "50000000-0000-0000-0000-000000000007",
+            "recorded_at": "2026-11-21T01:24:57.658808+00:00"
+          }
+        ],
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        },
+        "staff_status": "confirmed",
+        "extract": {
+          "id": "6c88ea5a-f5b2-4509-b3a2-f2152b10cf6f",
+          "case_id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+          "version": 2,
+          "outcome": "approved",
+          "public_explanation": "Учебное решение: помощь одобрена",
+          "decided_on": "2026-11-21"
+        }
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "GET",
+      "path": "/rules",
+      "status": 200,
+      "response": [
+        {
+          "id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+          "support_type": "training-a",
+          "title": "Учебная помощь А — не нормативный перечень",
+          "required_items": [
+            {
+              "key": "application",
+              "title": "Учебное заявление"
+            },
+            {
+              "key": "evidence",
+              "title": "Учебное подтверждение"
+            }
+          ],
+          "source_reference": "synthetic:support-training-v1",
+          "is_synthetic": true,
+          "status": "published"
+        }
+      ]
+    },
+    {
+      "actor": "employee",
+      "method": "POST",
+      "path": "/cases",
+      "status": 201,
+      "response": {
+        "id": "e595240c-f342-447b-ad42-d57186458a6c",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 1,
+        "status": "draft",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": null,
+        "submitted_at": null,
+        "created_at": "2026-11-21T01:24:57.676626+00:00",
+        "submissions": [],
+        "public_message": null,
+        "staff_status": "unknown",
+        "documents": [],
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "POST",
+      "path": "/cases/e595240c-f342-447b-ad42-d57186458a6c/documents",
+      "status": 201,
+      "response": {
+        "id": "16ec8f9f-2481-4840-9097-36d788ac305f",
+        "case_id": "e595240c-f342-447b-ad42-d57186458a6c",
+        "item_key": "application",
+        "original_name": "original.txt",
+        "content_type": "text/plain",
+        "size_bytes": 20,
+        "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+        "uploaded_by": "50000000-0000-0000-0000-000000000001",
+        "created_at": "2026-11-21T01:24:57.685681+00:00",
+        "visibility": "applicant",
+        "case_revision": 2
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "GET",
+      "path": "/cases/e595240c-f342-447b-ad42-d57186458a6c",
+      "status": 200,
+      "response": {
+        "id": "e595240c-f342-447b-ad42-d57186458a6c",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 2,
+        "status": "draft",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": null,
+        "submitted_at": null,
+        "created_at": "2026-11-21T01:24:57.676626+00:00",
+        "submissions": [],
+        "public_message": null,
+        "staff_status": "unknown",
+        "documents": [
+          {
+            "id": "16ec8f9f-2481-4840-9097-36d788ac305f",
+            "case_id": "e595240c-f342-447b-ad42-d57186458a6c",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.685681+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "POST",
+      "path": "/cases/e595240c-f342-447b-ad42-d57186458a6c/documents",
+      "status": 201,
+      "response": {
+        "id": "b7720c76-c72a-4536-98ae-2289aab47b74",
+        "case_id": "e595240c-f342-447b-ad42-d57186458a6c",
+        "item_key": "evidence",
+        "original_name": "original.txt",
+        "content_type": "text/plain",
+        "size_bytes": 20,
+        "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+        "uploaded_by": "50000000-0000-0000-0000-000000000001",
+        "created_at": "2026-11-21T01:24:57.697418+00:00",
+        "visibility": "applicant",
+        "case_revision": 3
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "GET",
+      "path": "/cases/e595240c-f342-447b-ad42-d57186458a6c",
+      "status": 200,
+      "response": {
+        "id": "e595240c-f342-447b-ad42-d57186458a6c",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 3,
+        "status": "draft",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": null,
+        "submitted_at": null,
+        "created_at": "2026-11-21T01:24:57.676626+00:00",
+        "submissions": [],
+        "public_message": null,
+        "staff_status": "unknown",
+        "documents": [
+          {
+            "id": "16ec8f9f-2481-4840-9097-36d788ac305f",
+            "case_id": "e595240c-f342-447b-ad42-d57186458a6c",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.685681+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "b7720c76-c72a-4536-98ae-2289aab47b74",
+            "case_id": "e595240c-f342-447b-ad42-d57186458a6c",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.697418+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "POST",
+      "path": "/cases/e595240c-f342-447b-ad42-d57186458a6c/submit",
+      "status": 200,
+      "response": {
+        "id": "e595240c-f342-447b-ad42-d57186458a6c",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 4,
+        "status": "submitted",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": "SP-e595240c-f342-447b-ad42-d57186458a6c",
+        "submitted_at": "2026-11-21T01:24:57.709126+00:00",
+        "created_at": "2026-11-21T01:24:57.676626+00:00",
+        "submissions": [
+          {
+            "id": "eccef7b3-184c-4328-85c2-9c555b87aa03",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "16ec8f9f-2481-4840-9097-36d788ac305f",
+              "b7720c76-c72a-4536-98ae-2289aab47b74"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.709126+00:00"
+          }
+        ],
+        "public_message": null,
+        "staff_status": "unknown",
+        "documents": [
+          {
+            "id": "16ec8f9f-2481-4840-9097-36d788ac305f",
+            "case_id": "e595240c-f342-447b-ad42-d57186458a6c",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.685681+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "b7720c76-c72a-4536-98ae-2289aab47b74",
+            "case_id": "e595240c-f342-447b-ad42-d57186458a6c",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.697418+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "POST",
+      "path": "/cases/e595240c-f342-447b-ad42-d57186458a6c/withdraw",
+      "status": 200,
+      "response": {
+        "id": "e595240c-f342-447b-ad42-d57186458a6c",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 5,
+        "status": "withdrawn",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": "SP-e595240c-f342-447b-ad42-d57186458a6c",
+        "submitted_at": "2026-11-21T01:24:57.709126+00:00",
+        "created_at": "2026-11-21T01:24:57.676626+00:00",
+        "submissions": [
+          {
+            "id": "eccef7b3-184c-4328-85c2-9c555b87aa03",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "16ec8f9f-2481-4840-9097-36d788ac305f",
+              "b7720c76-c72a-4536-98ae-2289aab47b74"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.709126+00:00"
+          }
+        ],
+        "public_message": null,
+        "staff_status": "unknown",
+        "documents": [
+          {
+            "id": "16ec8f9f-2481-4840-9097-36d788ac305f",
+            "case_id": "e595240c-f342-447b-ad42-d57186458a6c",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.685681+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "b7720c76-c72a-4536-98ae-2289aab47b74",
+            "case_id": "e595240c-f342-447b-ad42-d57186458a6c",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.697418+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        },
+        "withdrawal": {
+          "reason": "Учебный отзыв",
+          "withdrawn_by": "50000000-0000-0000-0000-000000000001",
+          "withdrawn_at": "2026-11-21T01:24:57.715471+00:00"
+        }
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "GET",
+      "path": "/rules",
+      "status": 200,
+      "response": [
+        {
+          "id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+          "support_type": "training-a",
+          "title": "Учебная помощь А — не нормативный перечень",
+          "required_items": [
+            {
+              "key": "application",
+              "title": "Учебное заявление"
+            },
+            {
+              "key": "evidence",
+              "title": "Учебное подтверждение"
+            }
+          ],
+          "source_reference": "synthetic:support-training-v1",
+          "is_synthetic": true,
+          "status": "published"
+        }
+      ]
+    },
+    {
+      "actor": "employee",
+      "method": "POST",
+      "path": "/cases",
+      "status": 201,
+      "response": {
+        "id": "0fc92f22-41cd-40d6-86ef-a9482e00685d",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 1,
+        "status": "draft",
+        "statement": "Личный отозванный черновик",
+        "number": null,
+        "submitted_at": null,
+        "created_at": "2026-11-21T01:24:57.724193+00:00",
+        "submissions": [],
+        "public_message": null,
+        "staff_status": "unknown",
+        "documents": [],
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        }
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "POST",
+      "path": "/cases/0fc92f22-41cd-40d6-86ef-a9482e00685d/withdraw",
+      "status": 200,
+      "response": {
+        "id": "0fc92f22-41cd-40d6-86ef-a9482e00685d",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 2,
+        "status": "withdrawn",
+        "statement": "Личный отозванный черновик",
+        "number": null,
+        "submitted_at": null,
+        "created_at": "2026-11-21T01:24:57.724193+00:00",
+        "submissions": [],
+        "public_message": null,
+        "staff_status": "unknown",
+        "documents": [],
+        "execution": {
+          "status": "unknown",
+          "occurred_on": null
+        },
+        "withdrawal": {
+          "reason": "Не буду подавать",
+          "withdrawn_by": "50000000-0000-0000-0000-000000000001",
+          "withdrawn_at": "2026-11-21T01:24:57.731655+00:00"
+        }
+      }
+    },
+    {
+      "actor": "coordinator",
+      "method": "GET",
+      "path": "/cases",
+      "status": 200,
+      "response": [
+        {
+          "id": "95097575-872a-48b6-8833-16581c357289",
+          "revision": 13,
+          "number": "SP-95097575-872a-48b6-8833-16581c357289",
+          "support_type": "training-a",
+          "submitted_at": "2026-11-21T01:24:57.357720+00:00",
+          "status": "closed",
+          "applicant_ref": "50000000-0000-0000-0000-000000000001"
+        },
+        {
+          "id": "b7043b76-4470-4595-9270-d9031d43949a",
+          "revision": 9,
+          "number": "SP-b7043b76-4470-4595-9270-d9031d43949a",
+          "support_type": "training-a",
+          "submitted_at": "2026-11-21T01:24:57.468711+00:00",
+          "status": "closed",
+          "applicant_ref": "50000000-0000-0000-0000-000000000002"
+        },
+        {
+          "id": "d3343570-2648-4df9-a19d-ee19ffb28f1b",
+          "revision": 10,
+          "number": "SP-d3343570-2648-4df9-a19d-ee19ffb28f1b",
+          "support_type": "training-a",
+          "submitted_at": "2026-11-21T01:24:57.538459+00:00",
+          "status": "closed",
+          "applicant_ref": "50000000-0000-0000-0000-000000000001"
+        },
+        {
+          "id": "853f4382-9e8f-4a8b-a352-c49d6104b112",
+          "revision": 11,
+          "number": "SP-853f4382-9e8f-4a8b-a352-c49d6104b112",
+          "support_type": "training-a",
+          "submitted_at": "2026-11-21T01:24:57.613964+00:00",
+          "status": "decision_recorded",
+          "applicant_ref": "50000000-0000-0000-0000-000000000001"
+        },
+        {
+          "id": "e595240c-f342-447b-ad42-d57186458a6c",
+          "revision": 5,
+          "number": "SP-e595240c-f342-447b-ad42-d57186458a6c",
+          "support_type": "training-a",
+          "submitted_at": "2026-11-21T01:24:57.709126+00:00",
+          "status": "withdrawn",
+          "applicant_ref": "50000000-0000-0000-0000-000000000001"
+        }
+      ]
+    },
+    {
+      "actor": "employee",
+      "method": "GET",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289",
+      "status": 200,
+      "response": {
+        "id": "95097575-872a-48b6-8833-16581c357289",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 13,
+        "status": "closed",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": "SP-95097575-872a-48b6-8833-16581c357289",
+        "submitted_at": "2026-11-21T01:24:57.357720+00:00",
+        "created_at": "2026-11-21T01:24:57.330790+00:00",
+        "submissions": [
+          {
+            "id": "5a63392e-fa68-4b58-84b4-9fa2d516a988",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+              "b0afd752-db31-43ac-8639-7c2dfba42cda"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.357720+00:00"
+          }
+        ],
+        "public_message": "Учебное решение: помощь одобрена",
+        "staff_status": "confirmed",
+        "documents": [
+          {
+            "id": "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.340514+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "b0afd752-db31-43ac-8639-7c2dfba42cda",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.350413+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "execution": {
+          "id": "efd09d47-1d21-4e0a-9400-1e0e2b2fd181",
+          "decision_id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+          "status": "confirmed",
+          "occurred_on": "2026-11-21",
+          "recorded_at": "2026-11-21T01:24:57.422699+00:00"
+        },
+        "extract": {
+          "id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+          "case_id": "95097575-872a-48b6-8833-16581c357289",
+          "version": 1,
+          "outcome": "approved",
+          "public_explanation": "Учебное решение: помощь одобрена",
+          "decided_on": "2026-11-21"
+        },
+        "closure": {
+          "reason": "Явное учебное основание завершения",
+          "closed_by": "50000000-0000-0000-0000-000000000003",
+          "closed_at": "2026-11-21T01:24:57.428588+00:00",
+          "execution_status": "confirmed"
+        }
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "GET",
+      "path": "/cases/95097575-872a-48b6-8833-16581c357289",
+      "status": 200,
+      "response": {
+        "id": "95097575-872a-48b6-8833-16581c357289",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 13,
+        "status": "closed",
+        "statement": "Учебное заявление: без реальных личных данных",
+        "number": "SP-95097575-872a-48b6-8833-16581c357289",
+        "submitted_at": "2026-11-21T01:24:57.357720+00:00",
+        "created_at": "2026-11-21T01:24:57.330790+00:00",
+        "submissions": [
+          {
+            "id": "5a63392e-fa68-4b58-84b4-9fa2d516a988",
+            "submission_revision": 1,
+            "statement": "Учебное заявление: без реальных личных данных",
+            "document_ids": [
+              "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+              "b0afd752-db31-43ac-8639-7c2dfba42cda"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:24:57.357720+00:00"
+          }
+        ],
+        "public_message": "Учебное решение: помощь одобрена",
+        "staff_status": "confirmed",
+        "documents": [
+          {
+            "id": "5aa118bb-1d7c-475d-880b-6db0e766b6bc",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.340514+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "b0afd752-db31-43ac-8639-7c2dfba42cda",
+            "case_id": "95097575-872a-48b6-8833-16581c357289",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:24:57.350413+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "execution": {
+          "id": "efd09d47-1d21-4e0a-9400-1e0e2b2fd181",
+          "decision_id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+          "status": "confirmed",
+          "occurred_on": "2026-11-21",
+          "recorded_at": "2026-11-21T01:24:57.422699+00:00"
+        },
+        "extract": {
+          "id": "ce4d02c1-666b-405f-93c4-f093b89382bc",
+          "case_id": "95097575-872a-48b6-8833-16581c357289",
+          "version": 1,
+          "outcome": "approved",
+          "public_explanation": "Учебное решение: помощь одобрена",
+          "decided_on": "2026-11-21"
+        },
+        "closure": {
+          "reason": "Явное учебное основание завершения",
+          "closed_by": "50000000-0000-0000-0000-000000000003",
+          "closed_at": "2026-11-21T01:24:57.428588+00:00",
+          "execution_status": "confirmed"
+        }
+      }
+    }
+  ]
+}
