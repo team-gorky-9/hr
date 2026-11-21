@@ -12,12 +12,6 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       host: true,
       proxy: {
-        ...Object.fromEntries(['legacy', 'workforce', 'requirements', 'hiring', 'students', 'mobility', 'social-support', 'recognition', 'feedback'].map(service => [
-          '/' + service + '/', { target: env.API_GATEWAY_TARGET || 'http://127.0.0.1:8080', changeOrigin: true }
-        ])),
-        '/legacy-api': { target: env.ARCHIVE_API_TARGET || 'http://127.0.0.1:8000', changeOrigin: true, headers, rewrite: path => path.replace(/^\/legacy-api/, '') },
-        '/requirements-api': { target: env.API_GATEWAY_TARGET || 'http://127.0.0.1:8080', changeOrigin: true, rewrite: path => path.replace(/^\/requirements-api/, '/requirements/api/v1') },
-        '/hiring-api': { target: env.API_GATEWAY_TARGET || 'http://127.0.0.1:8080', changeOrigin: true, rewrite: path => path.replace(/^\/hiring-api/, '/hiring/api/v1') },
         '/api/v1/reports/annual': { target: env.REPORT_API_TARGET || 'http://127.0.0.1:18590', changeOrigin: true },
         '/api/v1/students': {
           target: env.STUDENTS_API_TARGET || 'http://127.0.0.1:8105',

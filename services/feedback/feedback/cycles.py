@@ -15,7 +15,6 @@ from feedback.store import (
     new,
     require_assignment,
     save,
-    rows,
     transaction,
 )
 
@@ -130,22 +129,3 @@ def submit(cycle_id: UUID, body: ResponseCreate, request: Request):
             ),
         )
     return {"accepted": True}
-
-
-@router.get("/session")
-def session(ctx: Context):
-    _, actor = ctx
-    return {key: actor[key] for key in ("id", "name", "roles", "assignments", "group_key")}
-
-
-@router.get("/cycles")
-def list_cycles(ctx: Context):
-    db, actor = ctx
-    organizer = "organizer" in actor["assignments"]
-    return {"items": [
-        ({key: cycle[key] for key in ("id", "title", "status", "revision", "question_version")}
-         | ({"groups": cycle["groups"]} if organizer else {}))
-        for cycle in rows(db, "cycle", actor)
-        if organizer or (cycle["status"] != "draft" and "employee" in actor["roles"]
-                         and actor["group_key"] in {g["key"] for g in cycle["groups"]})
-    ]}

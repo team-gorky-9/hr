@@ -139,35 +139,6 @@ def create_app(settings=None):
             row.update(status="not_selected", reason=body.reason)
             return unit.save("interest", row, "not_selected")
 
-    @app.get(PREFIX + "/session")
-    def session(actor: ActorDep):
-        return actor
-
-    @app.get(PREFIX + "/colleagues")
-    def colleagues(actor: ActorDep):
-        return {"items": [
-            {k: item[k] for k in ("actor_id", "login", "roles")}
-            for item in store.context()["actors"]
-            if item["active"] and item["organization_id"] == actor["organization_id"]
-        ]}
-
-    @app.get(PREFIX + "/manager-assignments")
-    def manager_assignments(actor: ActorDep):
-        with store.transaction(actor) as unit:
-            owned = {o["id"] for o in unit.all("opportunity") if o["owner_actor_id"] == actor["actor_id"]}
-            applicants = {i["employee_actor_id"] for i in unit.all("interest") if i["opportunity_id"] in owned}
-        return {"items": [a for a in store.context()["manager_assignments"]
-            if a["active"] and a["organization_id"] == actor["organization_id"]
-            and (a["employee_actor_id"] == actor["actor_id"] or a["employee_actor_id"] in applicants)]}
-
-    @app.get(PREFIX + "/interests")
-    def my_interests(actor: ActorDep):
-        with store.transaction(actor) as unit:
-            opportunities = {r["id"]: r for r in unit.all("opportunity")}
-            return {"items": [r for r in unit.all("interest")
-                if r["employee_actor_id"] == actor["actor_id"]
-                or opportunities[r["opportunity_id"]]["owner_actor_id"] == actor["actor_id"]]}
-
     from .agreements import register_agreements
     from .participation import register_participation
     register_agreements(app, store)

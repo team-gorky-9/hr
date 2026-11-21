@@ -656,7 +656,6 @@ def test_handoff_deadline_calendar_overdue_and_late_feedback(session, client, mo
     assert sent1.status_code == 201, sent1.text
     att1 = sent1.json()["handoff"]
     att1_id = att1["attempt_id"]
-    assert (att1["business_days_elapsed"], att1["business_days_total"]) == (0, 10)
     assert att1["initial_due_date"] == "2026-12-15"
     assert att1["due_date"] == "2026-12-15"
     assert att1["reminder_date"] == "2026-12-10"
@@ -695,7 +694,6 @@ def test_handoff_deadline_calendar_overdue_and_late_feedback(session, client, mo
     first = queue["items"][0]
     assert first["deadline_status"] == "overdue"
     assert first["business_days_left"] == -1
-    assert (first["business_days_elapsed"], first["business_days_total"]) == (11, 10)
     assert first["is_overdue"] is True
     assert first["overdue_notice"] == "Департамент не ответил"
     assert first["cross_assessments_url"] == f"/api/v1/candidates/{cand_id}/cross-assessments"
@@ -741,7 +739,6 @@ def test_handoff_deadline_calendar_overdue_and_late_feedback(session, client, mo
     sent3 = move(client, app3_id, "sent_to_department")
     assert sent3.status_code == 201
     assert sent3.json()["handoff"]["due_date"] == "2026-12-16"
-    assert sent3.json()["handoff"]["business_days_total"] == 10
     assert sent3.json()["handoff"]["reminder_date"] == "2026-12-11"
 
     session.add(ProductionCalendarDay(day=date(2026, 12, 5), is_working_day=True, title="Рабочая суббота"))
@@ -807,7 +804,6 @@ def test_handoff_deadline_extension_history_overdue_recovery_and_race(session, e
     assert d1["attempt"]["due_date"] == "2026-12-22"
     assert d1["attempt"]["reminder_date"] == "2026-12-17"
     assert d1["attempt"]["extensions_count"] == 1
-    assert (d1["attempt"]["business_days_elapsed"], d1["attempt"]["business_days_total"]) == (6, 15)
     assert (d1["extension"]["seq"], d1["extension"]["was_overdue"], d1["extension"]["reason_title"]) == (1, False, "Болезнь")
 
     # Идемпотентный повтор и конфликт повторного request_id.

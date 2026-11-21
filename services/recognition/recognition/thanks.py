@@ -77,7 +77,7 @@ def create(body: s.ThanksCreate, ctx: Context):
 
 @router.get("/thanks", response_model=s.ThanksPage, response_model_exclude_none=True)
 def listing(
-    ctx: Context, view: Literal["mine", "received", "wall", "moderation"] = "mine", limit: Limit = 30, cursor: Cursor = None
+    ctx: Context, view: Literal["mine", "received", "wall"] = "mine", limit: Limit = 30, cursor: Cursor = None
 ):
     db, actor = ctx
     items = [
@@ -86,8 +86,6 @@ def listing(
         if (view == "mine" and r["author_id"] == actor["id"])
         or (view == "received" and r["recipient_id"] == actor["id"])
         or (view == "wall" and r["status"] == "published")
-        or (view == "moderation" and "moderator" in actor["assignments"]
-            and r["status"] != "withdrawn" and r["recipient_choice"] == "organization")
     ]
     # Lists never expose the historical snapshots.
     return page([public_view(r) for r in items] if view == "wall" else items, limit, cursor)
@@ -163,22 +161,3 @@ def withdraw(record_id: UUID, body: s.WithReason, ctx: Context):
     record.update(status="withdrawn", withdrawal_reason=body.reason)
     save(db, "thanks", record, actor, "withdraw")
     return view(db, record, actor)
-
-
-@router.get("/session")
-def session(ctx: Context):
-    _, actor = ctx
-    return {key: actor[key] for key in ("id", "name", "roles", "assignments")}
-
-
-@router.get("/colleagues")
-def colleagues(ctx: Context):
-    import json
-    db, actor = ctx
-    require_employee(actor)
-    return {"items": [
-        {"id": row["id"], "name": row["name"]}
-        for row in db.execute("SELECT id,name,roles FROM actors WHERE organization_id=? ORDER BY name",
-                              (actor["organization_id"],))
-        if "employee" in json.loads(row["roles"])
-    ]}

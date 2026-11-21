@@ -170,9 +170,8 @@ def _with_reredact(result: ReportItem, outcome: dict) -> ReportItem:
 def _import_resume(
     session: Session, item: InputFile, route: Route, base: ReportItem, batch: str, text_index: _TextIndex,
     reredact: bool = False,
-    *, vacancy: Vacancy | None = None,
 ) -> ReportItem:
-    vacancy = vacancy or _find_vacancy(session, route)
+    vacancy = _find_vacancy(session, route)
     if vacancy is None:
         return base.model_copy(update={
             "status": ItemStatus.QUARANTINED,
@@ -358,16 +357,3 @@ def run_import(
             session.commit()
     report.finish(now().astimezone())
     return report
-
-
-def import_uploaded_resume(session: Session, item: InputFile, route: Route, vacancy: Vacancy) -> ReportItem:
-    """Import one explicitly selected vacancy using CLI deduplication and redaction rules.
-
-    The caller owns its transaction, contour access and upload size validation.
-    Unlike folder import, this entry never chooses the newest vacancy implicitly.
-    """
-    if route.position_code != vacancy.position.code or route.channel != vacancy.channel:
-        raise ValueError("Upload route does not match the selected vacancy")
-    base = ReportItem(source_path=item.source_path, sha256=item.sha256,
-                      status=ItemStatus.QUARANTINED, document_kind="resume")
-    return _import_resume(session, item, route, base, "staff-upload", _TextIndex(session), vacancy=vacancy)

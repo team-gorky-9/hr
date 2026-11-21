@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 
-export type ReserveSubTab = "municipal" | "students";
+export type ReserveSubTab = 'municipal' | 'students';
 
 interface TalentReserveProps {
   initialSubTab?: ReserveSubTab;
@@ -8,12 +8,10 @@ interface TalentReserveProps {
 }
 
 export const TalentReserve: React.FC<TalentReserveProps> = ({
-  initialSubTab = "municipal",
-  onOfferVacancy: _onOfferVacancy,
+  initialSubTab = 'municipal',
+  onOfferVacancy,
 }) => {
-  const [preview, setPreview] = useState(false);
-  const [activeSubTab, setActiveSubTab] =
-    useState<ReserveSubTab>(initialSubTab);
+  const [activeSubTab, setActiveSubTab] = useState<ReserveSubTab>(initialSubTab);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -23,136 +21,106 @@ export const TalentReserve: React.FC<TalentReserveProps> = ({
 
   const participants = [
     {
-      name: "Тихонов Роман",
-      targetRole: "Начальник отдела цифровизации",
+      name: 'Тихонов Роман',
+      targetRole: 'Начальник отдела цифровизации',
       problemScore: 9,
       projectScore: 8,
       presScore: 9,
-      verdict: "Рекомендован",
-      verdictColor: "bg-[#E6F4EA] text-[#15803D]",
+      verdict: 'Рекомендован',
+      verdictColor: 'bg-[#E6F4EA] text-[#15803D]',
     },
     {
-      name: "Фёдорова Елена",
-      targetRole: "Заместитель директора департамента экономики",
+      name: 'Фёдорова Елена',
+      targetRole: 'Заместитель директора департамента экономики',
       problemScore: 7,
       projectScore: 7,
       presScore: 6,
-      verdict: "Ждёт решения",
-      verdictColor: "bg-[#FEF3E6] text-[#B45309]",
+      verdict: 'Ждёт решения',
+      verdictColor: 'bg-[#FEF3E6] text-[#B45309]',
     },
     {
-      name: "Гусев Николай",
-      targetRole: "Начальник отдела благоустройства",
+      name: 'Гусев Николай',
+      targetRole: 'Начальник отдела благоустройства',
       problemScore: 5,
       projectScore: 4,
       presScore: 6,
-      verdict: "Не рекомендован",
-      verdictColor: "bg-[#FDE8E8] text-[#C5221F]",
+      verdict: 'Не рекомендован',
+      verdictColor: 'bg-[#FDE8E8] text-[#C5221F]',
     },
   ];
 
   const reservists = [
     {
-      name: "Павлова Ирина",
-      targetRole: "Заместитель начальника отдела кадров",
-      readiness: "Готов сейчас",
-      since: "03.2025",
-      status: "Актуально",
-      statusColor: "bg-[#E6F4EA] text-[#15803D]",
+      name: 'Павлова Ирина',
+      targetRole: 'Заместитель начальника отдела кадров',
+      readiness: 'Готов сейчас',
+      since: '03.2025',
+      status: 'Актуально',
+      statusColor: 'bg-[#E6F4EA] text-[#15803D]',
     },
     {
-      name: "Семёнов Максим",
-      targetRole: "Начальник финансового отдела",
-      readiness: "Через 1 год",
-      since: "09.2024",
-      status: "Подтвердить интерес",
-      statusColor: "bg-[#FEF3E6] text-[#B45309]",
+      name: 'Семёнов Максим',
+      targetRole: 'Начальник финансового отдела',
+      readiness: 'Через 1 год',
+      since: '09.2024',
+      status: 'Подтвердить интерес',
+      statusColor: 'bg-[#FEF3E6] text-[#B45309]',
     },
     {
-      name: "Волков Андрей",
-      targetRole: "Директор департамента строительства",
-      readiness: "Через 1 год",
-      since: "11.2023",
-      status: "Устарело: больше 2 лет",
-      statusColor: "bg-[#FDE8E8] text-[#C5221F]",
+      name: 'Волков Андрей',
+      targetRole: 'Директор департамента строительства',
+      readiness: 'Через 1 год',
+      since: '11.2023',
+      status: 'Устарело: больше 2 лет',
+      statusColor: 'bg-[#FDE8E8] text-[#C5221F]',
     },
     {
-      name: "Тихонов Роман",
-      targetRole: "Начальник отдела цифровизации",
-      readiness: "Готов сейчас",
-      since: "11.2026",
-      status: "Направлен в департамент",
-      statusColor: "text-[#4A5363]",
+      name: 'Тихонов Роман',
+      targetRole: 'Начальник отдела цифровизации',
+      readiness: 'Готов сейчас',
+      since: '11.2026',
+      status: 'Направлен в департамент',
+      statusColor: 'text-[#4A5363]',
       isPlain: true,
     },
   ];
 
   const students = [
     {
-      name: "Никитина Полина",
-      uniBadge: "ННГУ, 4 курс",
-      practiceDept: "Практика: Правовое управление, 2 месяца",
+      name: 'Никитина Полина',
+      uniBadge: 'ННГУ, 4 курс',
+      practiceDept: 'Практика: Правовое управление, 2 месяца',
       quote:
-        "«Готовила проекты ответов на обращения быстро и без ошибок. Взял бы в штат.» — руководитель практики",
-      skills: ["Работа с обращениями", "Нормативные акты"],
+        '«Готовила проекты ответов на обращения быстро и без ошибок. Взял бы в штат.» — руководитель практики',
+      skills: ['Работа с обращениями', 'Нормативные акты'],
     },
     {
-      name: "Воронов Кирилл",
-      uniBadge: "ВШЭ НН, 3 курс",
-      practiceDept: "Практика: Департамент цифрового развития",
+      name: 'Воронов Кирилл',
+      uniBadge: 'ВШЭ НН, 3 курс',
+      practiceDept: 'Практика: Департамент цифрового развития',
       quote:
-        "«Собрал дашборд по обращениям жителей, им пользуется весь отдел.» — руководитель практики",
-      skills: ["Power BI", "SQL"],
+        '«Собрал дашборд по обращениям жителей, им пользуется весь отдел.» — руководитель практики',
+      skills: ['Power BI', 'SQL'],
     },
     {
-      name: "Данилов Егор",
-      uniBadge: "ННГАСУ, 4 курс",
-      practiceDept: "Практика: Департамент строительства",
+      name: 'Данилов Егор',
+      uniBadge: 'ННГАСУ, 4 курс',
+      practiceDept: 'Практика: Департамент строительства',
       quote:
-        "«Аккуратно вёл проектную документацию, инициативен.» — руководитель практики",
-      skills: ["Проектная документация", "AutoCAD"],
+        '«Аккуратно вёл проектную документацию, инициативен.» — руководитель практики',
+      skills: ['Проектная документация', 'AutoCAD'],
     },
   ];
 
-  if (!preview)
-    return (
-      <div className="max-w-[1240px] mx-auto px-6 py-8">
-        <div className="bg-white border border-[#E1E5EB] rounded-2xl p-6 space-y-4">
-          <h1 className="text-[26px] font-bold">Кадровый резерв</h1>
-          <p>
-            Конкурсы, решения комиссии и официальный статус резервиста пока не
-            подключены. Здесь ещё нельзя подать заявку или подтвердить включение
-            в резерв.
-          </p>
-          <p className="text-[#616977]">
-            Сохранённый проект экрана доступен отдельно. Его примеры не являются
-            кадровыми данными.
-          </p>
-          <button className="text-[#1F4FD1]" onClick={() => setPreview(true)}>
-            Посмотреть проект экрана
-          </button>
-        </div>
-      </div>
-    );
   return (
     <div className="max-w-[1240px] mx-auto px-4 sm:px-6 py-6 space-y-6">
-      <div
-        role="status"
-        className="bg-[#FFF4E5] border border-[#F3D8A9] rounded-xl p-4"
-      >
-        Проект раздела · демонстрационные примеры, без сохранения.{" "}
-        <button className="underline ml-3" onClick={() => setPreview(false)}>
-          Закрыть просмотр
-        </button>
-      </div>
       {/* Title & Subtitle */}
       <div>
         <h1 className="text-[26px] font-bold text-[#141A24] tracking-tight mb-1">
           Кадровый резерв
         </h1>
         <p className="text-[14px] text-[#616977]">
-          Муниципальный резерв формируется по конкурсу с защитой проекта.
-          Студенческий — по итогам практики.
+          Муниципальный резерв формируется по конкурсу с защитой проекта. Студенческий — по итогам практики.
         </p>
       </div>
 
@@ -160,22 +128,22 @@ export const TalentReserve: React.FC<TalentReserveProps> = ({
       <div className="flex items-center gap-6 border-b border-[#E1E5EB]">
         <button
           type="button"
-          onClick={() => setActiveSubTab("municipal")}
+          onClick={() => setActiveSubTab('municipal')}
           className={`pb-3 text-[15px] font-medium transition-all relative ${
-            activeSubTab === "municipal"
-              ? "text-[#1F4FD1] font-semibold border-b-2 border-[#1F4FD1]"
-              : "text-[#616977] hover:text-[#141A24]"
+            activeSubTab === 'municipal'
+              ? 'text-[#1F4FD1] font-semibold border-b-2 border-[#1F4FD1]'
+              : 'text-[#616977] hover:text-[#141A24]'
           }`}
         >
           Муниципальный резерв
         </button>
         <button
           type="button"
-          onClick={() => setActiveSubTab("students")}
+          onClick={() => setActiveSubTab('students')}
           className={`pb-3 text-[15px] font-medium transition-all relative ${
-            activeSubTab === "students"
-              ? "text-[#1F4FD1] font-semibold border-b-2 border-[#1F4FD1]"
-              : "text-[#616977] hover:text-[#141A24]"
+            activeSubTab === 'students'
+              ? 'text-[#1F4FD1] font-semibold border-b-2 border-[#1F4FD1]'
+              : 'text-[#616977] hover:text-[#141A24]'
           }`}
         >
           Студенческий резерв
@@ -185,7 +153,7 @@ export const TalentReserve: React.FC<TalentReserveProps> = ({
       {/* ======================================================== */}
       {/* МАКЕТ 24: МУНИЦИПАЛЬНЫЙ РЕЗЕРВ (Кадровый резерв_ конкурс)*/}
       {/* ======================================================== */}
-      {activeSubTab === "municipal" && (
+      {activeSubTab === 'municipal' && (
         <div className="space-y-6">
           {/* Card 1: Конкурс в кадровый резерв 2026 */}
           <div className="bg-white border border-[#E1E5EB] rounded-2xl p-6 shadow-sm space-y-5">
@@ -211,9 +179,7 @@ export const TalentReserve: React.FC<TalentReserveProps> = ({
                 <div>Приём заявок</div>
                 <div>Проверка документов</div>
                 <div>Подготовка проекта</div>
-                <div className="font-semibold text-[#141A24]">
-                  Защита перед комиссией
-                </div>
+                <div className="font-semibold text-[#141A24]">Защита перед комиссией</div>
                 <div className="text-[#8E939D]">Решение комиссии</div>
               </div>
             </div>
@@ -221,18 +187,14 @@ export const TalentReserve: React.FC<TalentReserveProps> = ({
             {/* Details Box: 3 columns */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 bg-[#F8FAFC] border border-[#E1E5EB] rounded-xl p-5 text-[13px]">
               <div>
-                <div className="text-[12px] text-[#616977] mb-1">
-                  Тема защиты
-                </div>
+                <div className="text-[12px] text-[#616977] mb-1">Тема защиты</div>
                 <div className="font-bold text-[14px] text-[#141A24] leading-snug">
                   Стратегия развития департамента до 2030 года
                 </div>
               </div>
 
               <div>
-                <div className="text-[12px] text-[#616977] mb-1">
-                  Требования к презентации
-                </div>
+                <div className="text-[12px] text-[#616977] mb-1">Требования к презентации</div>
                 <ul className="text-[#334155] space-y-1">
                   <li>• 10–12 слайдов, 10 минут на защиту</li>
                   <li>• Проблематика, цели, план, бюджет</li>
@@ -262,24 +224,12 @@ export const TalentReserve: React.FC<TalentReserveProps> = ({
               <table className="w-full text-left text-[14px]">
                 <thead className="bg-[#FAFBFD] border-b border-[#E1E5EB] text-[13px] text-[#616977]">
                   <tr>
-                    <th className="py-3 px-6 font-medium whitespace-nowrap">
-                      Участник
-                    </th>
-                    <th className="py-3 px-4 font-medium whitespace-nowrap">
-                      Целевая должность
-                    </th>
-                    <th className="py-3 px-4 font-medium whitespace-nowrap">
-                      Проблематика
-                    </th>
-                    <th className="py-3 px-4 font-medium whitespace-nowrap">
-                      Проект
-                    </th>
-                    <th className="py-3 px-4 font-medium whitespace-nowrap">
-                      Презентация
-                    </th>
-                    <th className="py-3 px-6 font-medium whitespace-nowrap">
-                      Итог
-                    </th>
+                    <th className="py-3 px-6 font-medium whitespace-nowrap">Участник</th>
+                    <th className="py-3 px-4 font-medium whitespace-nowrap">Целевая должность</th>
+                    <th className="py-3 px-4 font-medium whitespace-nowrap">Проблематика</th>
+                    <th className="py-3 px-4 font-medium whitespace-nowrap">Проект</th>
+                    <th className="py-3 px-4 font-medium whitespace-nowrap">Презентация</th>
+                    <th className="py-3 px-6 font-medium whitespace-nowrap">Итог</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E1E5EB]">
@@ -301,9 +251,7 @@ export const TalentReserve: React.FC<TalentReserveProps> = ({
                         {p.presScore}
                       </td>
                       <td className="py-3.5 px-6 whitespace-nowrap">
-                        <span
-                          className={`inline-block px-2.5 py-0.5 rounded-full text-[12px] font-medium whitespace-nowrap ${p.verdictColor}`}
-                        >
+                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[12px] font-medium whitespace-nowrap ${p.verdictColor}`}>
                           {p.verdict}
                         </span>
                       </td>
@@ -325,21 +273,11 @@ export const TalentReserve: React.FC<TalentReserveProps> = ({
               <table className="w-full text-left text-[14px]">
                 <thead className="bg-[#FAFBFD] border-b border-[#E1E5EB] text-[13px] text-[#616977]">
                   <tr>
-                    <th className="py-3 px-6 font-medium whitespace-nowrap">
-                      Резервист
-                    </th>
-                    <th className="py-3 px-4 font-medium whitespace-nowrap">
-                      Целевая должность
-                    </th>
-                    <th className="py-3 px-4 font-medium whitespace-nowrap">
-                      Готовность
-                    </th>
-                    <th className="py-3 px-4 font-medium whitespace-nowrap">
-                      В резерве с
-                    </th>
-                    <th className="py-3 px-6 font-medium whitespace-nowrap">
-                      Актуальность
-                    </th>
+                    <th className="py-3 px-6 font-medium whitespace-nowrap">Резервист</th>
+                    <th className="py-3 px-4 font-medium whitespace-nowrap">Целевая должность</th>
+                    <th className="py-3 px-4 font-medium whitespace-nowrap">Готовность</th>
+                    <th className="py-3 px-4 font-medium whitespace-nowrap">В резерве с</th>
+                    <th className="py-3 px-6 font-medium whitespace-nowrap">Актуальность</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E1E5EB]">
@@ -363,9 +301,7 @@ export const TalentReserve: React.FC<TalentReserveProps> = ({
                             {r.status}
                           </span>
                         ) : (
-                          <span
-                            className={`inline-block px-2.5 py-0.5 rounded-full text-[12px] font-medium whitespace-nowrap ${r.statusColor}`}
-                          >
+                          <span className={`inline-block px-2.5 py-0.5 rounded-full text-[12px] font-medium whitespace-nowrap ${r.statusColor}`}>
                             {r.status}
                           </span>
                         )}
@@ -382,7 +318,7 @@ export const TalentReserve: React.FC<TalentReserveProps> = ({
       {/* ======================================================== */}
       {/* МАКЕТ 25: СТУДЕНЧЕСКИЙ РЕЗЕРВ (Кадровый резерв_ студенты) */}
       {/* ======================================================== */}
-      {activeSubTab === "students" && (
+      {activeSubTab === 'students' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
           {students.map((st) => (
             <div
@@ -422,9 +358,8 @@ export const TalentReserve: React.FC<TalentReserveProps> = ({
                 <button
                   type="button"
                   onClick={() => {
-                    showToast(
-                      "В проекте экрана действие не выполняется. Приглашение не отправлено.",
-                    );
+                    if (onOfferVacancy) onOfferVacancy(st.name);
+                    else showToast(`Вакансия предложена кандидату ${st.name}`);
                   }}
                   className="w-full py-2 px-4 text-[13px] font-medium text-[#141A24] bg-white border border-[#E1E5EB] rounded-lg hover:bg-[#F3F5F8] transition-colors shadow-sm text-center whitespace-nowrap"
                 >

@@ -202,10 +202,7 @@ def _assess_formal(profile: RequirementProfile, rules: dict[str, Rule], text: Ca
     experience = [r for r in rules.values() if isinstance(r, ExperienceRule) and r.key in active]
     requirements = {r.key: r for r in profile.formal_requirements}
     extraction = FormalExtraction()
-    per_requirement = None
-    if hasattr(llm, "formal_extractions"):
-        per_requirement = llm.formal_extractions(profile, rules, text, prompt_version)
-    elif education or experience:
+    if education or experience:
         hints = [{"requirement": r.key, "relevant_experience": r.relevance_hint,
                   "acceptance": requirements[r.key].acceptance} for r in experience]
         alternatives = [
@@ -235,9 +232,9 @@ def _assess_formal(profile: RequirementProfile, rules: dict[str, Rule], text: Ca
             draft = _CheckDraft(requirement, CheckResult.UNKNOWN,
                                 details={'notes': ['проверяется на интервью']})
         elif isinstance(rule, ExperienceRule):
-            draft = _experience_check(requirement, rule, per_requirement[requirement.key] if per_requirement is not None else extraction, text, as_of)
+            draft = _experience_check(requirement, rule, extraction, text, as_of)
         elif isinstance(rule, EducationRule):
-            draft = _education_check(requirement, rule, per_requirement[requirement.key] if per_requirement is not None else extraction, text)
+            draft = _education_check(requirement, rule, extraction, text)
             dependency = drafts.get(rule.requires) if rule.requires else None
             if dependency is not None and dependency.result != CheckResult.MET:
                 draft.result, draft.evidence = CheckResult.UNKNOWN, []
@@ -488,10 +485,7 @@ def _assess_competency(competency: Competency, text: CandidateText, llm: LLMClie
     screening = [i for i in competency.indicators if i not in excluded and i not in on_interview]
 
     answers = {}
-    if screening and hasattr(llm, "competency_extraction"):
-        extraction = llm.competency_extraction(text, competency, screening, prompt_version)
-        answers = {a.indicator_key: a for a in extraction.indicators}
-    elif screening:
+    if screening:
         extraction = llm.complete_structured(
             ASSESS_COMPETENCY_SYSTEM,
             competency_user(text.text, competency=competency.name,

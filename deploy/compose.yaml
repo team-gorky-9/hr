@@ -130,7 +130,6 @@ services:
       DATABASE_URL: postgresql+psycopg://hiring:${HIRING_DB_PASSWORD}@postgres:5432/hiring
       AUTH_MODE: workforce
       WORKFORCE_URL: http://workforce:8000
-      REQUIREMENTS_URL: http://requirements:8000
       SELECTION_SOURCE: manual-confirmed
       FILE_ROOT: /data/files
     volumes: [hiring-files:/data]

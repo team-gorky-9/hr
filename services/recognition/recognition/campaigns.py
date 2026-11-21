@@ -276,14 +276,3 @@ def results(record_id: UUID, ctx: Context, limit: Limit = 30, cursor: Cursor = N
         and r["publication_choice"] == "allowed"
     ]
     return page(items, limit, cursor)
-
-
-@router.get("/nominations")
-def list_nominations(ctx: Context, limit: Limit = 30, cursor: Cursor = None):
-    db, actor = ctx
-    campaigns = {c["id"]: c for c in rows(db, "campaign", actor)}
-    return page([
-        r for r in rows(db, "nomination", actor)
-        if actor["id"] in (r["author_id"], r["nominee_id"],
-                           campaigns[r["campaign_id"]]["reviewer_actor_id"])
-    ], limit, cursor)

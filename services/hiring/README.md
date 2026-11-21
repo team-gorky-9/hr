@@ -119,10 +119,3 @@ uv run python -m hiring.recruitment_demo --legacy-url http://127.0.0.1:8000 \
 ```
 
 Обращение → запрос уточнения → дополнение → поиск подготовленной записи в старом подборе (нужен `python -m app.search load-demo`) → ручная учебная регистрация рассмотрения → исход → чтение сообщения. Все запросы и ответы сохраняются в transcript. Подробности и ограничения — [отчёт](../../docs/reports/wave-6-recruitment-demo.md).
-
-
-### Live public vacancy catalog
-
-Set REQUIREMENTS_URL to the internal requirements origin (for example http://requirements:8000). Candidate portal vacancies then come from GET /api/v1/public/vacancies in the actor organization. The exact reference is {system: "requirements", id, revision}; title matching is never used. Before creating, editing, choosing, and submitting an application, hiring resolves the publication snapshot again. Closed vacancies remain identifiable and are accepted with target_question=vacancy_closed; missing/stale/cross-organization references yield vacancy_unknown. A catalog outage returns retryable 503 CATALOG_UNAVAILABLE and does not masquerade as an unknown vacancy. Existing fixture references remain resolvable for old applications. With no REQUIREMENTS_URL, the standalone training catalog behavior remains unchanged.
-
-The portal frontend uses this catalog and authenticated candidate requests: create draft, upload resume, submit using the current request revision. Confirmation appears only after server submission. Retry restores the saved draft; an idempotency key persists across a lost create response. A page refresh retrieves the stored request from the server. This creates a candidate request, not an automatic legacy selection application.
