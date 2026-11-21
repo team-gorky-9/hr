@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { demoRolesEnabled, logoutSession, selectDemoRole, useSession } from './api/session';
 import Header from './components/Header';
 import HeroSection from './components/portal/HeroSection';
@@ -30,8 +30,32 @@ import ReportPage from './components/report/ReportPage';
 import Workspace from './components/employee/Workspace';
 import Care from './components/employee/Care';
 import Surveys from './components/employee/Surveys';
+import RoleWelcomeModal from './components/tour/RoleWelcomeModal';
+import GuidedTourOverlay from './components/tour/GuidedTourOverlay';
+import { TOUR_STEPS, type TourNavigationTarget, type TourRole } from './components/tour/tourSteps';
 
 export type AppMode = 'portal' | 'hr' | 'dept' | 'employee';
+
+const TOUR_SEEN_KEY = 'hr-guided-tour-seen';
+
+function getInitialWelcomeOpen(): boolean {
+  const tourParam = new URLSearchParams(window.location.search).get('tour');
+  if (tourParam === '0') return false;
+  if (tourParam === '1') return true;
+  try {
+    return !window.sessionStorage.getItem(TOUR_SEEN_KEY);
+  } catch {
+    return true;
+  }
+}
+
+function markTourSeen(): void {
+  try {
+    window.sessionStorage.setItem(TOUR_SEEN_KEY, '1');
+  } catch {
+    // Ignore storage access errors in restricted modes.
+  }
+}
 
 const initialWorkspace = new URLSearchParams(window.location.search).get('workspace');
 const employeeWorkspaces = ['support', 'development', 'workforce', 'onboarding', 'surveys'];
@@ -72,6 +96,68 @@ export const App: React.FC = () => {
   const [hrView, setHrView] = useState<'list' | 'card'>('list');
   const [selectedResponseVacancyId, setSelectedResponseVacancyId] = useState<string>('');
   const [selectedCandidateId, setSelectedCandidateId] = useState<string>('');
+
+  // Interactive Guided Tour State
+  const [welcomeOpen, setWelcomeOpen] = useState<boolean>(getInitialWelcomeOpen);
+  const [tourRole, setTourRole] = useState<TourRole | null>(null);
+  const [tourStepIndex, setTourStepIndex] = useState<number>(0);
+
+  const applyTourNavigation = useCallback((target: TourNavigationTarget) => {
+    setAppMode(target.appMode);
+    if (target.portalRoute) {
+      setPortalVacancyId(null);
+      setPortalQuery('');
+      setPortalRoute(target.portalRoute);
+    }
+    if (target.hrTab) {
+      setHrTab(target.hrTab);
+      setDbView('list');
+      setHrView('list');
+    }
+    if (target.hrAnalyticsView) {
+      setHrAnalyticsView(target.hrAnalyticsView);
+    }
+    if (target.opkTab) {
+      setOpkTab(target.opkTab);
+    }
+    if (target.employeeTab) {
+      setEmployeeTab(target.employeeTab);
+    }
+  }, []);
+
+  const handleSelectTourRole = useCallback((role: TourRole) => {
+    markTourSeen();
+    setWelcomeOpen(false);
+    setTourRole(role);
+    setTourStepIndex(0);
+    const firstStep = TOUR_STEPS[role]?.[0];
+    if (firstStep) applyTourNavigation(firstStep.navigate);
+  }, [applyTourNavigation]);
+
+  const handleTourStepChange = useCallback((nextIndex: number) => {
+    if (!tourRole) return;
+    const steps = TOUR_STEPS[tourRole];
+    if (nextIndex < 0 || nextIndex >= steps.length) return;
+    setTourStepIndex(nextIndex);
+    applyTourNavigation(steps[nextIndex].navigate);
+  }, [tourRole, applyTourNavigation]);
+
+  const handleSwitchTourRole = useCallback(() => {
+    setTourRole(null);
+    setTourStepIndex(0);
+    setWelcomeOpen(true);
+  }, []);
+
+  const handleCloseTour = useCallback(() => {
+    markTourSeen();
+    setTourRole(null);
+    setTourStepIndex(0);
+  }, []);
+
+  const handleCloseWelcome = useCallback(() => {
+    markTourSeen();
+    setWelcomeOpen(false);
+  }, []);
   const demoLogin = ({ portal: 'candidate', hr: 'hr', dept: 'department', employee: 'employee' } as const)[appMode];
   const roleReady = !demoRolesEnabled || session?.actor.login === demoLogin;
   useEffect(() => {
@@ -128,6 +214,10 @@ export const App: React.FC = () => {
                 key={m.id}
                 type="button"
                 onClick={() => {
+                  if (tourRole && tourRole !== m.id) {
+                    setTourRole(null);
+                    setTourStepIndex(0);
+                  }
                   setAppMode(m.id);
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
@@ -143,10 +233,32 @@ export const App: React.FC = () => {
           </div>
         </div>
 
-        <div className="text-[#8E939D] text-xs hidden sm:block">
-          Кадровый ассистент
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setTourRole(null);
+              setTourStepIndex(0);
+              setWelcomeOpen(true);
+            }}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-[#232832] hover:bg-[#1F4FD1] text-white border border-white/15 transition-colors whitespace-nowrap"
+          >
+            <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" className="w-3.5 h-3.5 shrink-0">
+              <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.4" />
+              <path
+                d="m10.6 5.4-1.7 4.1-4.1 1.7 1.7-4.1 4.1-1.7Z"
+                stroke="currentColor"
+                strokeWidth="1.25"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <span>Гид по сайту</span>
+          </button>
+          <div className="text-[#8E939D] text-xs hidden sm:block">
+            Кадровый ассистент
+          </div>
+          {session && !demoRolesEnabled && appMode !== 'portal' && <button type="button" className="text-xs text-white" onClick={async () => { try { await logoutSession(); setSessionError(''); } catch (error) { setSessionError(error instanceof Error ? error.message : 'Не удалось выйти'); } }}>Выйти</button>}
         </div>
-        {session && !demoRolesEnabled && appMode !== 'portal' && <button type="button" className="text-xs text-white" onClick={async () => { try { await logoutSession(); setSessionError(''); } catch (error) { setSessionError(error instanceof Error ? error.message : 'Не удалось выйти'); } }}>Выйти</button>}
       </div>
       {sessionError && <p role="alert" className="px-6 py-2 text-red-700">{sessionError}</p>}
 
@@ -327,7 +439,7 @@ export const App: React.FC = () => {
             {hrTab === 'analytics' && (
               <>
                 <div className="max-w-[1240px] mx-auto px-4 sm:px-6 pt-6">
-                  <div className="inline-flex bg-[#E8ECF2] rounded-xl p-1">
+                  <div data-tour="hr-analytics-switcher" className="inline-flex bg-[#E8ECF2] rounded-xl p-1">
                     {([['dashboard', 'Аналитика подбора'], ['report', 'Годовой доклад']] as const).map(([id, l]) => (
                       <button
                         key={id}
@@ -361,7 +473,7 @@ export const App: React.FC = () => {
             {opkTab === 'mine' && <MyCandidates />}
             {opkTab === 'analytics' && <>
               <div className="max-w-[1240px] mx-auto px-4 sm:px-6 pt-6">
-                <div className="inline-flex bg-[#E8ECF2] rounded-xl p-1">
+                <div data-tour="dept-analytics-switcher" className="inline-flex bg-[#E8ECF2] rounded-xl p-1">
                   {([['dashboard', 'Аналитика подбора'], ['report', 'Годовой доклад']] as const).map(([id, label]) =>
                     <button key={id} type="button" onClick={() => setHrAnalyticsView(id)} className={`px-4 py-2 rounded-lg text-[14px] font-semibold ${hrAnalyticsView === id ? 'bg-white text-[#141A24] shadow-sm' : 'text-[#4A5363]'}`}>{label}</button>)}
                 </div>
@@ -400,6 +512,21 @@ export const App: React.FC = () => {
           </main>
         </>
       )}
+
+      <RoleWelcomeModal
+        open={welcomeOpen}
+        onSelectRole={handleSelectTourRole}
+        onClose={handleCloseWelcome}
+      />
+
+      <GuidedTourOverlay
+        role={tourRole}
+        stepIndex={tourStepIndex}
+        roleReady={roleReady}
+        onStepChange={handleTourStepChange}
+        onSwitchRole={handleSwitchTourRole}
+        onClose={handleCloseTour}
+      />
     </div>
   );
 };

@@ -287,7 +287,7 @@ export default function AnalyticsDashboard() {
       {view === 'dashboard' && (
         <>
           {/* Header & Filters Card */}
-          <div className="bg-white border border-[#E1E5EB] rounded-2xl p-6 shadow-sm">
+          <div data-tour="analytics-header" className="bg-white border border-[#E1E5EB] rounded-2xl p-6 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <div>
                 <h1 className="text-[22px] font-bold text-[#141A24] tracking-tight mb-1">

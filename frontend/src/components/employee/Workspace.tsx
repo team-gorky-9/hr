@@ -37,7 +37,7 @@ export default function Workspace({ onNavigate }: { onNavigate: (tab: string) =>
   ];
 
   return <div className="max-w-[1240px] mx-auto px-4 sm:px-6 py-8 space-y-5">
-    <div className="bg-[#1F4FD1] rounded-3xl p-8 text-white flex flex-wrap items-center justify-between gap-5">
+    <div data-tour="employee-workspace-hero" className="bg-[#1F4FD1] rounded-3xl p-8 text-white flex flex-wrap items-center justify-between gap-5">
       <div><h1 className="text-[32px] font-bold">Рабочее пространство</h1><p className="mt-2 text-[18px] text-[#DCE5FB]">Адаптация, документы и помощь сотруднику</p></div>
       {current[0] && <div className="bg-white/15 rounded-2xl px-5 py-4">
         <p className="text-[28px] font-bold">{current[0].completed_count} из {current[0].total_count}</p>
@@ -55,6 +55,7 @@ export default function Workspace({ onNavigate }: { onNavigate: (tab: string) =>
     </div>
     <div className="grid lg:grid-cols-[2fr_1fr] gap-5 items-start">
       <div className="space-y-5">
+    <div data-tour="employee-onboarding-card">
     <Card className="space-y-4">
       <h2 className="text-[22px] font-bold">Адаптация</h2>
       {(error || sessionError) && <p role="alert" className="text-[#A3171B]">{error || sessionError}</p>}
@@ -80,6 +81,7 @@ export default function Workspace({ onNavigate }: { onNavigate: (tab: string) =>
         </ul>
       </div>)}
     </Card>
+    </div>
         <Card className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-[22px] font-bold">Единое окно: мои документы</h2>

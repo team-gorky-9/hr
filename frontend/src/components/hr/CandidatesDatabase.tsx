@@ -145,7 +145,7 @@ export const CandidatesDatabase: React.FC<CandidatesDatabaseProps> = ({
         className="shrink-0 px-5 py-2.5 text-[14px] font-medium text-white bg-[#1F4FD1] rounded-lg hover:bg-[#1841B2] transition-colors shadow-sm whitespace-nowrap">Загрузить резюме</button>
     </div>
     {uploadNotice && <p role="status" className="mb-4 rounded-xl bg-[#EEF3FE] p-3 text-[14px] text-[#1F4FD1]">Загрузка резюме будет добавлена позже.</p>}
-    <div className="flex flex-wrap gap-2 mb-4">
+    <div data-tour="hr-database-filters" className="flex flex-wrap gap-2 mb-4">
       {[...typeCounts].map(([label, count]) => <button key={label} type="button" aria-pressed={type === label}
         onClick={() => setActiveType(label)} className={`px-4 py-1.5 rounded-full text-[13px] font-medium transition-colors whitespace-nowrap ${type === label ? 'bg-[#1F4FD1] text-white shadow-sm' : 'bg-white text-[#141A24] border border-[#E1E5EB] hover:bg-[#F3F5F8]'}`}>{label} · {count}</button>)}
     </div>
@@ -189,7 +189,7 @@ export const CandidatesDatabase: React.FC<CandidatesDatabaseProps> = ({
     </div>}
     {error && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-4 text-red-800">{error}</p>}
     {deadlineError && <p role="alert" className="mb-4 rounded-xl bg-amber-50 p-4 text-amber-900">Сроки временно недоступны. {deadlineError}</p>}
-    <div className="bg-white border border-[#E1E5EB] rounded-2xl shadow-sm overflow-x-auto">
+    <div data-tour="hr-database-table" className="bg-white border border-[#E1E5EB] rounded-2xl shadow-sm overflow-x-auto">
       {loading ? <p className="p-5">Загрузка кандидатов…</p> : visible.length ? <table className="w-full text-left text-[14px]">
         <thead className="bg-[#FAFBFD] border-b border-[#E1E5EB] text-[13px] text-[#616977] font-medium">
           <tr>

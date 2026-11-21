@@ -17,7 +17,7 @@ export default function Care({ onNavigate }: { onNavigate?: (tab: string) => voi
   const list = items.filter((item) => filter === 'Все' || item.category === filter);
 
   return <div className="max-w-[1240px] mx-auto px-4 sm:px-6 py-8 space-y-5">
-    <div className="bg-[#FFF2D6] rounded-3xl p-8 flex flex-wrap items-center justify-between gap-5">
+    <div data-tour="employee-care-hero" className="bg-[#FFF2D6] rounded-3xl p-8 flex flex-wrap items-center justify-between gap-5">
       <div className="flex flex-wrap items-center gap-5">
         <div aria-hidden="true" className="w-16 h-16 shrink-0 bg-white rounded-2xl grid place-items-center text-[28px]">🏅</div>
         <div>
@@ -28,7 +28,7 @@ export default function Care({ onNavigate }: { onNavigate?: (tab: string) => voi
       {onNavigate && <Btn onClick={() => onNavigate('support')}>Открыть материальную помощь</Btn>}
     </div>
 
-    <div className="flex flex-wrap items-center gap-3">
+    <div data-tour="employee-care-filters" className="flex flex-wrap items-center gap-3">
       {filters.map((option) => <Chip key={option} active={option === filter} onClick={() => { setFilter(option); setNoticeFor(''); }}>{option}</Chip>)}
     </div>
 

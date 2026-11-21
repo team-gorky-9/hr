@@ -32,7 +32,7 @@ export function NewVacanciesSection({ onSelectVacancy, catalog = false, query = 
     : vacancies.slice(0, 3);
 
   return (
-    <section>
+    <section data-tour="portal-vacancies-preview">
       <h2 className="text-[20px] font-bold text-[#141A24] mb-4">{catalog ? 'Вакансии' : 'Новые вакансии'}</h2>
       {catalog && (
         <div className="flex flex-wrap gap-3 mb-4">

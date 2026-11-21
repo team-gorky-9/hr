@@ -78,7 +78,7 @@ export const VacancyResponses: React.FC<VacancyResponsesProps> = ({
       </div>
 
       {/* Two Column Layout */}
-      <div className="flex flex-col lg:flex-row gap-6 items-start">
+      <div data-tour="hr-responses-board" className="flex flex-col lg:flex-row gap-6 items-start">
         {/* Left Column: Vacancies List Card */}
         <div className="w-full lg:w-[260px] lg:max-h-[calc(100dvh-320px)] overflow-y-auto shrink-0 bg-white border border-[#E1E5EB] rounded-2xl p-4 sm:p-5 shadow-sm">
           <h2 className="text-[18px] font-bold text-[#141A24] mb-3.5">
@@ -131,7 +131,7 @@ export const VacancyResponses: React.FC<VacancyResponsesProps> = ({
           {!loading && !error && currentVacancy.hasResponses ? (
             <>
               {/* Horizontal Filter Tabs / Chips */}
-              <div className="flex items-center gap-3.5 lg:gap-4 border-b border-[#E1E5EB] mb-6 overflow-x-auto">
+              <div data-tour="hr-responses-traffic-light" className="flex items-center gap-3.5 lg:gap-4 border-b border-[#E1E5EB] mb-6 overflow-x-auto">
                 {/* 1. Все */}
                 <button
                   type="button"

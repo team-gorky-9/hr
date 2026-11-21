@@ -225,9 +225,9 @@ export default function SupportPage() {
     finally { setBusy(false); }
   }
   const rule = rules.find((entry) => entry.id === detail?.rule_version_id);
-  return <div className="mx-auto max-w-[1240px] space-y-5 px-4 py-8 sm:px-6">
+  return <div data-tour="employee-support-page" className="mx-auto max-w-[1240px] space-y-5 px-4 py-8 sm:px-6">
     <PageTitle title="Материальная помощь" subtitle="Заявление, документы и личный результат рассмотрения." right={<Badge>Учебные условия</Badge>} />
-    <div className="flex items-center gap-4">
+    <div data-tour="employee-support-toolbar" className="flex items-center gap-4">
       <label htmlFor="support-role" className="text-[14px] text-[#4A5363]">Учебная роль</label>
       <select id="support-role" className={field + ' !mt-0 !w-auto'} value={role} disabled={busy} onChange={(e) => {
         setRole(e.target.value as SupportRole); setCases([]); setSelectedId(''); setCreating(false); setNotice('');

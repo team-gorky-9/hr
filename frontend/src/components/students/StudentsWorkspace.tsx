@@ -235,7 +235,7 @@ export default function StudentsWorkspace({ token, role = 'candidate' }: { token
 }
 
 function StudentsHero() {
-  return <section className="bg-[#FF6A3D] rounded-2xl p-8 lg:p-12 text-white shadow-sm">
+  return <section data-tour="students-hero" className="bg-[#FF6A3D] rounded-2xl p-8 lg:p-12 text-white shadow-sm">
     <span className="inline-block bg-white/95 text-[#C2410C] text-[12px] font-bold px-3 py-1 rounded-full mb-4 shadow-sm">
       Для студентов и выпускников
     </span>
@@ -292,7 +292,7 @@ function PracticeWorkspace({ token, role }: { token: string; role: StudentRole }
       {loading ? <Card>Загружаем практику…</Card> : <>
         {role === 'hr' && <Btn variant="primary" onClick={() => setCreateOpen((value) => !value)}>{createOpen ? 'Закрыть форму' : 'Создать место практики'}</Btn>}
         {createOpen && role === 'hr' && <CreateOpportunity perform={perform} busy={busy} />}
-        {role !== 'department' && <section>
+        {role !== 'department' && <section data-tour="students-opportunities">
           <h2 className="text-[20px] font-bold text-[#141A24] mb-4">{role === 'candidate' ? 'Практика и стажировки' : 'Места практики'}</h2>
           {opportunities.length === 0 && <Card>Доступных мест пока нет.</Card>}
           <div className={role === 'candidate' ? 'grid grid-cols-1 md:grid-cols-3 gap-5' : 'space-y-3'}>
