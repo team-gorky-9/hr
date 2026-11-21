@@ -102,3 +102,27 @@ PUBLICATION_PENDING. Числовых разностей и причинного
 методики состав людей мог измениться. Другие query-параметры не поддерживаются.
 [OpenAPI 5C](../../docs/reports/wave-5c-feedback-openapi.json) ·
 [пример 5C](../../docs/reports/wave-5c-feedback-examples.json).
+
+## 5D · отдельное конфиденциальное обращение
+
+`uv run python -m tests.smoke --part 5d`; `uv run pytest tests/test_confidential.py -q`.
+Перед подачей сотрудник получает `GET /confidential-recipients`: назначенные адресаты
+его организации, граница видимости и явно учебный ориентир ответа (три рабочих дня,
+не обещание рабочего SLA). `POST /confidential-cases {recipient_actor_id,subject,text}`
+создаёт именное обращение самого сотрудника; author_actor_id и organization_id определяет сервер.
+Принимать response_id, access_code или подставного автора запрещено схемой.
+Учебный адресат — actor `recipient` из DEMO_IDS, bearer `demo-recipient`.
+
+`GET /confidential-cases` и `GET /confidential-cases/{id}` доступны автору и конкретному
+назначенному получателю; прямое чтение посторонним возвращает 404, список — пустой.
+Получатель отвечает `POST /confidential-cases/{id}/reply {expected_revision,text}`;
+автор либо получатель закрывает `/close {expected_revision,reason}`.
+История хранит все версии и авторов изменений; закрытое обращение не принимает ответ.
+Роль HR/organizer/department не предоставляет дополнительного доступа к содержанию.
+Таблицы confidential_cases/confidential_history отделены от records и responses,
+ссылок на пульс нет. Переход из пульса — новое осознанное именное обращение.
+Это не экстренная помощь, диагностика или автоматическое обращение по результатам пульса.
+
+[OpenAPI 5D](../../docs/reports/wave-5d-feedback-openapi.json) ·
+[полный учебный путь 5D](../../docs/reports/wave-5d-feedback-examples.json).
+Общий короткий набор только этого сервиса: `uv run pytest -q` (четыре сценария).

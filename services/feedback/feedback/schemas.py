@@ -107,3 +107,17 @@ class ParticipantMessage(Input):
         if len(set(self.measure_ids)) != len(self.measure_ids):
             raise ValueError("Duplicate measures")
         return self
+
+
+class ConfidentialCreate(Input):
+    recipient_actor_id: UUID
+    subject: Text
+    text: Text
+
+
+class ConfidentialReply(Revision):
+    text: Text
+
+
+class ConfidentialClose(Revision):
+    reason: Text
