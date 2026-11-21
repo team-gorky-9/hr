@@ -167,6 +167,9 @@ INTERVIEW_ROUTES = {
     "/api/v1/management/annual-reports",  # wave-4 4B: годовой выпуск из фактов legacy-hr
     "/api/v1/management/annual-reports/{snapshot_id}",
     "/api/v1/management/annual-reports/{snapshot_id}/xlsx",
+    "/api/v1/management/plans",  # wave-4 4C: плановый снимок потребностей
+    "/api/v1/management/plans/{plan_id}",
+    "/api/v1/management/plans/{plan_id}/summary",
 }
 
 WORKFLOW_01_ROUTES = {
