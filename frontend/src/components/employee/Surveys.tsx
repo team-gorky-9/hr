@@ -1,87 +1,126 @@
-import React, { useState } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Card, Btn, Badge } from '../shared/ui';
 
-const options = ['Совещания и переписка', 'Работа с обращениями граждан', 'Отчётность и документы', 'Дорога на работу'];
-const results = [['Не хватает тишины', 41], ['Старый компьютер', 33], ['Неудобное кресло', 18], ['Всё устраивает', 8]] as const;
-
-export const Surveys: React.FC = () => {
-  const [choice, setChoice] = useState<number | null>(1);
-  const [step, setStep] = useState(1);
-  const [done, setDone] = useState(false);
-
-  const next = () => {
-    if (step >= 3) { setDone(true); return; }
-    setStep(step + 1);
-    setChoice(null);
-  };
-
-  return (
-    <div className="max-w-[1240px] mx-auto px-4 sm:px-6 py-8 space-y-5">
-      <div className="bg-[#F1EDFF] rounded-3xl p-8 flex items-center gap-5">
-        <div className="w-[64px] h-[64px] bg-white rounded-2xl flex items-center justify-center text-[28px]">🛡</div>
-        <div>
-          <h1 className="text-[32px] font-bold">Опросы</h1>
-          <p className="text-[18px] text-[#4A5363]">Все опросы анонимные: руководитель видит только общую сводку, а не ваши ответы.</p>
-        </div>
-      </div>
-
-      <div className="grid lg:grid-cols-[2fr_1fr] gap-5 items-start">
-        <Card className="space-y-4">
-          {done ? (
-            <div className="py-10 text-center space-y-2">
-              <div className="text-[22px] font-bold text-[#1D7A40]">Спасибо! Ответы приняты анонимно</div>
-              <Btn onClick={() => { setDone(false); setStep(1); setChoice(null); }}>Пройти заново</Btn>
-            </div>
-          ) : (
-            <>
-              <div className="flex items-center gap-3"><Badge tone="purple">Новый</Badge><span className="text-[15px] text-[#4A5363]">Вопрос {step} из 3 · около 2 минут</span></div>
-              <h2 className="text-[24px] font-bold">Где вы устаёте больше всего?</h2>
-              {options.map((o, i) => (
-                <button key={o} type="button" onClick={() => setChoice(i)}
-                  className={`w-full text-left rounded-xl border-2 px-5 py-5 text-[18px] transition-colors ${choice === i ? 'border-[#1F4FD1] bg-[#EEF3FE]' : 'border-[#E1E5EB] bg-white hover:bg-[#F8F9FB]'}`}>
-                  {o}
-                </button>
-              ))}
-              <div className="flex items-center gap-4">
-                <Btn variant="primary" disabled={choice === null} onClick={next}>Дальше</Btn>
-                <Btn variant="link" onClick={next}>Пропустить вопрос</Btn>
-              </div>
-            </>
-          )}
-        </Card>
-        <Card className="space-y-3 min-h-[300px]">
-          <h2 className="text-[22px] font-bold">Все опросы</h2>
-          {[['Где вы устаёте больше всего?', 'Новый', 'purple'], ['Удобно ли рабочее место?', 'Пройден', 'green'], ['Оценка адаптации', 'С 1 декабря', 'gray']].map(([t, b, tone]) => (
-            <div key={t} className="flex items-center justify-between gap-3 text-[16px]">
-              {t}<Badge tone={tone as 'purple' | 'green' | 'gray'}>{b}</Badge>
-            </div>
-          ))}
-        </Card>
-      </div>
-
-      <div className="grid lg:grid-cols-[2fr_1fr] gap-5 items-start">
-        <Card className="space-y-3">
-          <h2 className="text-[22px] font-bold">Итоги опроса «Удобно ли рабочее место?»</h2>
-          <p className="text-[15px] text-[#4A5363]">Ответили 212 сотрудников · октябрь 2026</p>
-          {results.map(([l, v]) => (
-            <div key={l} className="flex items-center gap-4 text-[17px]">
-              <span className="w-[200px] shrink-0">{l}</span>
-              <div className="flex-1 h-[30px] rounded-md bg-[#F0F2F6] overflow-hidden"><div className="h-full bg-[#7C5CDB] rounded-md" style={{ width: `${(v / 41) * 100}%` }} /></div>
-              <span className="w-10 font-bold text-right">{v}</span><span className="text-[#4A5363]">%</span>
-            </div>
-          ))}
-        </Card>
-        <Card className="space-y-3">
-          <h2 className="text-[22px] font-bold">Что изменили по итогам</h2>
-          {['Сделали 2 переговорные для тихой работы', 'Заменили 40 компьютеров в 3 департаментах', 'Закупку кресел включили в план на 2027 год'].map((t) => (
-            <div key={t} className="flex items-center gap-3 text-[17px]">
-              <span className="w-6 h-6 rounded bg-[#1F4FD1] text-white flex items-center justify-center text-[14px] shrink-0">✓</span>{t}
-            </div>
-          ))}
-        </Card>
-      </div>
-    </div>
-  );
+type Survey = {
+  title: string;
+  status: string;
+  privacy_notice: string;
+  questions: { key: string; text: string; min: number; max: number }[];
+  topic_options: { key: string; label: string }[];
 };
 
-export default Surveys;
+const env = (import.meta as ImportMeta & { env: Record<string, string> }).env;
+const base = (env.VITE_FEEDBACK_API_BASE || '/feedback/api/v1/feedback').replace(/\/$/, '');
+const cycleId = new URLSearchParams(window.location.search).get('cycle');
+const validCycle = Boolean(cycleId && /^[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{12}$/i.test(cycleId));
+const field = 'block w-full rounded-xl border border-[#C9D0DB] bg-white px-4 py-3';
+
+async function surveyRequest<T>(suffix: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(base + '/cycles/' + cycleId + suffix, {
+    ...init, credentials: 'omit', cache: 'no-store', referrerPolicy: 'no-referrer',
+  });
+  const result = await response.json().catch(() => null);
+  if (!response.ok) {
+    const code = result?.detail?.code;
+    if (code === 'CODE_ALREADY_USED') throw new Error('Этот код уже использован.');
+    if (code === 'INVALID_CODE') throw new Error('Проверьте код для этого опроса.');
+    if (response.status === 409) throw new Error('Ответы на этот опрос больше не принимаются.');
+    if (response.status === 404) throw new Error('Опрос по этому приглашению недоступен.');
+    throw new Error('Не удалось выполнить запрос. Проверьте поля или повторите позже.');
+  }
+  if (!result) throw new Error('Сервис опросов недоступен.');
+  return result as T;
+}
+
+export default function Surveys() {
+  const [survey, setSurvey] = useState<Survey | null>(null);
+  const [choices, setChoices] = useState<Record<string, string>>({});
+  const [topic, setTopic] = useState('');
+  const [code, setCode] = useState('');
+  const [done, setDone] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [reload, setReload] = useState(0);
+
+  useEffect(() => {
+    if (!validCycle) return;
+    const controller = new AbortController();
+    setError('');
+    surveyRequest<Survey>('/form', { signal: controller.signal })
+      .then((form) => { if (!controller.signal.aborted) setSurvey(form); })
+      .catch((failure) => { if (!controller.signal.aborted) setError(failure.message); });
+    return () => controller.abort();
+  }, [reload]);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!survey || busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      const result = await surveyRequest<{ accepted: boolean }>('/responses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          access_code: code.trim(),
+          answers: survey.questions.map(({ key }) => ({ question_key: key, value: Number(choices[key]) })),
+          topic_key: topic,
+        }),
+      });
+      if (!result.accepted) throw new Error('Ответы не приняты. Повторите запрос.');
+      setCode('');
+      setChoices({});
+      setTopic('');
+      setDone(true);
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : 'Не удалось отправить ответы.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return <div className="max-w-[1240px] mx-auto px-4 sm:px-6 py-8 space-y-5">
+    <div className="bg-[#F1EDFF] rounded-3xl p-8 flex items-center gap-5">
+      <div aria-hidden="true" className="w-16 h-16 shrink-0 bg-white rounded-2xl grid place-items-center text-[28px]">🛡</div>
+      <div><h1 className="text-[32px] font-bold">Опросы</h1><p className="text-[#4A5363]">Анонимные опросы сотрудников</p></div>
+    </div>
+    <div className="grid lg:grid-cols-[2fr_1fr] gap-5 items-start">
+      <Card className="space-y-4">
+        {!validCycle && <p>{cycleId ? 'Ссылка на опрос некорректна. Проверьте приглашение.' : 'Откройте ссылку из приглашения на опрос.'}</p>}
+        {validCycle && !survey && !error && <p>Загружаем опрос…</p>}
+        {error && <p role="alert" className="text-[#A3171B]">{error}</p>}
+        {error && !survey && <Btn variant="link" onClick={() => setReload((value) => value + 1)}>Повторить</Btn>}
+        {done && <p role="status" className="text-[22px] font-bold text-[#1D7A40]">Спасибо, ответы приняты анонимно.</p>}
+        {survey && !done && <>
+          <h2 className="text-[24px] font-bold">{survey.title}</h2>
+          {survey.status !== 'open' ? <Badge>Приём ответов завершён</Badge> : <form onSubmit={submit}>
+            <fieldset disabled={busy} className="space-y-4">
+              {survey.questions.map((question) => <label key={question.key} className="block space-y-2">
+                <span className="font-semibold">{question.text}</span>
+                <select className={field} required value={choices[question.key] ?? ''} onChange={(event) => {
+                  const value = event.target.value;
+                  setChoices((previous) => ({ ...previous, [question.key]: value }));
+                }}>
+                  <option value="">Выберите оценку</option>
+                  {Array.from({ length: question.max - question.min + 1 }, (_, index) => question.min + index).map((value) => <option key={value} value={value}>{value}</option>)}
+                </select>
+              </label>)}
+              <label className="block space-y-2"><span className="font-semibold">Тема</span>
+                <select className={field} required value={topic} onChange={(event) => setTopic(event.target.value)}>
+                  <option value="">Выберите тему</option>
+                  {survey.topic_options.map((option) => <option key={option.key} value={option.key}>{option.label}</option>)}
+                </select>
+              </label>
+              <label className="block space-y-2"><span className="font-semibold">Одноразовый код из приглашения</span>
+                <input className={field} type="password" autoComplete="off" value={code} minLength={20} maxLength={200} required onChange={(event) => setCode(event.target.value)} />
+              </label>
+              <Btn type="submit" variant="primary" disabled={busy}>{busy ? 'Отправляем…' : 'Отправить ответы'}</Btn>
+            </fieldset>
+          </form>}
+        </>}
+      </Card>
+      {survey?.privacy_notice && <Card className="space-y-3"><h2 className="text-[20px] font-bold">Как сохраняются ответы</h2><p>{survey.privacy_notice}</p></Card>}
+    </div>
+  </div>;
+}
+

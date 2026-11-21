@@ -125,6 +125,7 @@ class PublicVacancy(BaseModel):
     title: str
     description: str
     position_code: str
+    revision: int
     published_at: datetime
 
 
@@ -250,6 +251,19 @@ def close(vacancy_id: uuid.UUID, body: CloseVacancy, actor: ActorDep, session: S
 
 
 @router.get("/public/vacancies", response_model=PublicList)
-def list_public(session: SessionDep):
-    return {"items": list(session.scalars(select(Vacancy).where(
-        Vacancy.status == "published").order_by(Vacancy.published_at, Vacancy.id)))}
+def list_public(session: SessionDep, organization_id: uuid.UUID | None = None):
+    query = select(Vacancy).where(Vacancy.status == "published")
+    if organization_id is not None:
+        query = query.where(Vacancy.organization_id == organization_id)
+    return {"items": list(session.scalars(query.order_by(Vacancy.published_at, Vacancy.id)))}
+
+
+@router.get("/public/vacancies/{vacancy_id}", response_model=PublicVacancy)
+def public_vacancy(vacancy_id: uuid.UUID, session: SessionDep, organization_id: uuid.UUID | None = None):
+    query = select(Vacancy).where(Vacancy.id == vacancy_id, Vacancy.status == "published")
+    if organization_id is not None:
+        query = query.where(Vacancy.organization_id == organization_id)
+    vacancy = session.scalar(query)
+    if vacancy is None:
+        raise ServiceError(404, "NOT_FOUND", "Опубликованная вакансия не найдена.")
+    return vacancy

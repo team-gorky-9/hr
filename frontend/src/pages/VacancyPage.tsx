@@ -1,278 +1,175 @@
-import React, { useState } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { getPublicVacancy, type PublicVacancy } from '../api/publicVacancies';
+import { hiringRequest, uploadBody, type CandidateRequest, type Document } from '../api/hiring';
 
 interface VacancyPageProps {
+  vacancyId?: string;
+  token?: string;
   onGoHome?: () => void;
-  onGoCabinet?: () => void;
-  initialSubmitted?: boolean;
+  onGoCabinet?: (requestId?: string) => void;
+  onLogin?: () => void;
 }
 
-export const VacancyPage: React.FC<VacancyPageProps> = ({
-  onGoHome,
-  onGoCabinet,
-  initialSubmitted = false,
-}) => {
-  const [isSubmitted, setIsSubmitted] = useState<boolean>(initialSubmitted);
-  const [fio, setFio] = useState('');
-  const [email, setEmail] = useState('');
-  const [agreed, setAgreed] = useState(false);
+const field = 'w-full px-3.5 py-2.5 bg-white border border-[#E1E5EB] rounded-lg text-[14px] text-[#141A24]';
+const primary = 'w-full min-h-11 px-4 bg-[#1F4FD1] hover:bg-[#1841B2] text-white font-medium text-[14px] rounded-lg transition-colors disabled:opacity-60';
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitted(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+export function VacancyPage(props: VacancyPageProps) {
+  return <VacancyDetails key={props.vacancyId} {...props} />;
+}
+
+function VacancyDetails({ vacancyId, token, onGoHome, onGoCabinet, onLogin }: VacancyPageProps) {
+  const [vacancy, setVacancy] = useState<PublicVacancy | null>(null);
+  const [loadError, setLoadError] = useState('');
+  const [reload, setReload] = useState(0);
+  const [message, setMessage] = useState('');
+  const [email, setEmail] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [draftId, setDraftId] = useState<string>();
+  const [submitted, setSubmitted] = useState<CandidateRequest>();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const creation = useRef<{ body: string; key: string }>();
+  const sending = useRef(false);
+
+  useEffect(() => {
+    if (!vacancyId) return;
+    const controller = new AbortController();
+    setLoadError('');
+    getPublicVacancy(vacancyId, controller.signal)
+      .then(setVacancy)
+      .catch((failure: unknown) => {
+        if (!controller.signal.aborted) {
+          setVacancy(null);
+          setLoadError(failure instanceof Error ? failure.message : 'Не удалось открыть вакансию.');
+        }
+      });
+    return () => controller.abort();
+  }, [vacancyId, reload]);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    if (!token || !vacancy || sending.current) return;
+    setError('');
+    if (!file?.size) {
+      setError('Приложите непустой файл резюме.');
+      return;
+    }
+    sending.current = true;
+    setBusy(true);
+    try {
+      let request: CandidateRequest;
+      if (draftId) {
+        request = await hiringRequest<CandidateRequest>(token, '/candidate-requests/' + draftId);
+      } else {
+        const body = {
+          vacancy_ref: { system: vacancy.system, id: vacancy.id, revision: vacancy.revision },
+          message: message.trim(),
+          contact: { channel: 'email', value: email.trim() },
+        };
+        const encoded = JSON.stringify(body);
+        if (creation.current?.body !== encoded) creation.current = { body: encoded, key: crypto.randomUUID() };
+        request = await hiringRequest<CandidateRequest>(token, '/candidate-requests', body, 'POST', creation.current.key);
+        setDraftId(request.id);
+      }
+
+      if (request.status === 'draft') {
+        const path = '/candidate-requests/' + request.id;
+        const possibleMatches = request.documents.filter((document) => document.kind === 'candidate_resume' && document.size_bytes === file.size);
+        let saved = false;
+        if (possibleMatches.length) {
+          const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
+          const fingerprint = Array.from(new Uint8Array(digest), (value) => value.toString(16).padStart(2, '0')).join('');
+          saved = possibleMatches.some((document) => document.sha256 === fingerprint);
+        }
+        const revision = saved ? request.revision : (
+          await hiringRequest<Document & { request_revision: number }>(token, path + '/documents', uploadBody(file, 'candidate_resume'))
+        ).request_revision;
+        request = await hiringRequest<CandidateRequest>(token, path + '/submit', { expected_revision: revision });
+      }
+
+      if (!request.number || request.status !== 'submitted' || request.vacancy_ref?.id !== vacancy.id || request.vacancy_ref?.system !== vacancy.system || request.vacancy_ref?.revision !== vacancy.revision) {
+        throw new Error('Обращение изменилось. Проверьте его состояние в личном кабинете.');
+      }
+      setSubmitted(request);
+    } catch (failure: unknown) {
+      setError(failure instanceof Error ? failure.message : 'Не удалось отправить обращение.');
+    } finally {
+      sending.current = false;
+      setBusy(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
-      {/* Breadcrumbs */}
-      <nav className="text-[13px] text-[#616977] flex items-center gap-1.5">
-        <button
-          type="button"
-          onClick={onGoHome}
-          className="hover:text-[#1F4FD1] transition-colors"
-        >
-          Главная
-        </button>
-        <span>›</span>
-        <button
-          type="button"
-          onClick={onGoHome}
-          className="hover:text-[#1F4FD1] transition-colors"
-        >
-          Вакансии
-        </button>
-        <span>›</span>
-        <span className="text-[#141A24] font-medium">Python-разработчик</span>
+      <nav aria-label="Путь к вакансии" className="text-[13px] text-[#616977] flex flex-wrap items-center gap-1.5">
+        <button type="button" onClick={onGoHome} className="hover:text-[#1F4FD1] transition-colors">Вакансии</button>
+        {vacancy && <><span aria-hidden="true">›</span><span className="text-[#141A24] font-medium">{vacancy.title}</span></>}
       </nav>
-
-      {/* Two Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Vacancy Details (8 cols) */}
-        <div className="lg:col-span-8 bg-white border border-[#E1E5EB] rounded-2xl p-6 sm:p-8 shadow-sm">
-          {/* Badges */}
-          <div className="flex flex-wrap items-center gap-2 mb-3">
-            <span className="px-3 py-1 rounded-md text-[12px] font-medium bg-[#EEF3FE] text-[#1F4FD1]">
-              Департамент цифрового развития
-            </span>
-            <span className="px-3 py-1 rounded-md text-[12px] font-medium bg-[#F1F3F5] text-[#4A5363]">
-              Нижегородский район
-            </span>
-            <span className="px-3 py-1 rounded-md text-[12px] font-medium bg-[#F1F3F5] text-[#4A5363]">
-              Муниципальная служба
-            </span>
-          </div>
-
-          {/* Job Title */}
-          <h1 className="text-[28px] sm:text-[34px] font-bold text-[#141A24] tracking-tight mb-2">
-            Python-разработчик
-          </h1>
-
-          {/* Salary */}
-          <div className="text-[16px] text-[#616977] mb-8">
-            <span className="text-[18px] sm:text-[20px] font-bold text-[#141A24]">
-              60 000 – 90 000 ₽
-            </span>{' '}
-            до вычета налогов · оклад и надбавки за выслугу и классный чин
-          </div>
-
-          {/* Section: Чем предстоит заниматься */}
-          <div className="mb-8">
-            <h2 className="text-[16px] font-bold text-[#141A24] mb-3">
-              Чем предстоит заниматься
-            </h2>
-            <ul className="space-y-2 text-[14px] text-[#334155] leading-relaxed">
-              <li className="flex items-start gap-2">
-                <span className="text-[#141A24]">•</span>
-                <span>Разработка и поддержка городских цифровых сервисов</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-[#141A24]">•</span>
-                <span>Автоматизированное тестирование API</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-[#141A24]">•</span>
-                <span>Интеграция с ведомственными системами</span>
-              </li>
-            </ul>
-          </div>
-
-          {/* Side-by-side Requirement Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-            {/* Обязательные требования */}
-            <div className="bg-[#FFF6EC] border border-[#F3DDBF] rounded-xl p-5">
-              <h3 className="text-[15px] font-bold text-[#141A24] mb-3">
-                Обязательные требования
-              </h3>
-              <ul className="space-y-2 text-[13px] text-[#334155] leading-relaxed">
-                <li className="flex items-start gap-2">
-                  <span>•</span>
-                  <span>Высшее образование</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span>•</span>
-                  <span>Подтверждённый коммерческий опыт не менее 2 лет</span>
-                </li>
-              </ul>
-            </div>
-
-            {/* Будет плюсом */}
-            <div className="bg-[#F7F8FA] border border-[#E1E5EB] rounded-xl p-5">
-              <h3 className="text-[15px] font-bold text-[#141A24] mb-3">
-                Будет плюсом
-              </h3>
-              <ul className="space-y-2 text-[13px] text-[#334155] leading-relaxed">
-                <li className="flex items-start gap-2">
-                  <span>•</span>
-                  <span>pytest и PostgreSQL</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span>•</span>
-                  <span>Работа с госсистемами</span>
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          {/* Section: Условия */}
-          <div>
-            <h2 className="text-[16px] font-bold text-[#141A24] mb-3">
-              Условия
-            </h2>
-            <ul className="space-y-2 text-[14px] text-[#334155] leading-relaxed">
-              <li className="flex items-start gap-2">
-                <span className="text-[#141A24]">•</span>
-                <span>Пятидневная рабочая неделя</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-[#141A24]">•</span>
-                <span>Социальные гарантии муниципальной службы</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-[#141A24]">•</span>
-                <span>Наставник и курс адаптации в первый месяц</span>
-              </li>
-            </ul>
-          </div>
+      {loadError ? (
+        <div role="alert" className="bg-white border border-[#E1E5EB] rounded-2xl p-6">
+          <p>{loadError}</p>
+          <button type="button" onClick={() => setReload((current) => current + 1)} className="mt-3 text-[#1F4FD1] font-semibold">Повторить</button>
         </div>
+      ) : !vacancy ? (
+        <p role="status">{vacancyId ? 'Загружаем вакансию…' : 'Выберите вакансию в каталоге.'}</p>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <article className="lg:col-span-8 bg-white border border-[#E1E5EB] rounded-2xl p-6 sm:p-8 shadow-sm min-w-0">
+            {vacancy.is_synthetic && <span className="inline-block mb-3 px-3 py-1 rounded-md text-[12px] font-medium bg-[#EEF3FE] text-[#1F4FD1]">Учебная вакансия</span>}
+            <h1 className="text-[26px] sm:text-[32px] font-bold text-[#141A24] leading-tight break-words">{vacancy.title}</h1>
+            {vacancy.employer && <p className="mt-3 text-[14px] text-[#4A5363]">{vacancy.employer}</p>}
+            {vacancy.published_at && <p className="mt-3 text-[13px] text-[#616977]">
+              Опубликовано {new Date(vacancy.published_at).toLocaleDateString('ru-RU')}
+            </p>}
+            <h2 className="mt-7 mb-3 font-bold text-[18px] text-[#141A24]">О вакансии</h2>
+            <p className="whitespace-pre-wrap break-words leading-relaxed text-[#4A5363]">{vacancy.description || 'Подробное описание вакансии пока отсутствует.'}</p>
+          </article>
 
-        {/* Right Column: Sticky Action Form / State (4 cols) */}
-        <div className="lg:col-span-4 bg-white border border-[#E1E5EB] rounded-2xl p-6 sm:p-7 shadow-sm sticky top-24">
-          {/* STATE A: Форма отклика */}
-          {!isSubmitted && (
-            <form onSubmit={handleSubmit}>
-              <h2 className="text-[20px] font-bold text-[#141A24] mb-1">
-                Откликнуться
-              </h2>
-              <p className="text-[13px] text-[#616977] leading-snug mb-5">
-                Уже есть аккаунт? Войдите, данные подставятся сами.
-              </p>
-
-              {/* Field: ФИО */}
-              <div className="mb-4">
-                <label className="block text-[13px] font-medium text-[#141A24] mb-1.5">
-                  ФИО
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={fio}
-                  onChange={(e) => setFio(e.target.value)}
-                  placeholder="Иванов Иван"
-                  className="w-full h-11 px-3.5 bg-white border border-[#E1E5EB] rounded-lg text-[14px] text-[#141A24] placeholder-[#8E939D] focus:outline-none focus:border-[#1F4FD1]"
-                />
-              </div>
-
-              {/* Field: Электронная почта */}
-              <div className="mb-4">
-                <label className="block text-[13px] font-medium text-[#141A24] mb-1.5">
-                  Электронная почта
-                </label>
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@mail.ru"
-                  className="w-full h-11 px-3.5 bg-white border border-[#E1E5EB] rounded-lg text-[14px] text-[#141A24] placeholder-[#8E939D] focus:outline-none focus:border-[#1F4FD1]"
-                />
-              </div>
-
-              {/* Field: Резюме Dropzone */}
-              <div className="mb-4">
-                <label className="block text-[13px] font-medium text-[#141A24] mb-1.5">
-                  Резюме
-                </label>
-                <div className="bg-[#F5F8FF] border-2 border-dashed border-[#94B4FB] rounded-xl p-5 text-center cursor-pointer hover:bg-[#EEF3FE] transition-colors">
-                  <div className="text-[14px] font-bold text-[#141A24] mb-1">
-                    Перетащите резюме сюда
-                  </div>
-                  <div className="text-[12px] text-[#616977]">
-                    или выберите файл: PDF, DOCX до 10 МБ
-                  </div>
+          <div className="lg:col-span-4 bg-white border border-[#E1E5EB] rounded-2xl p-6 sm:p-7 shadow-sm lg:sticky lg:top-24">
+            {submitted ? (
+              <div className="py-2" role="status">
+                <div className="mb-3 rounded-full bg-[#E6F4EA] w-12 h-12 flex items-center justify-center">
+                  <img src="/icons/check.svg" alt="" className="w-6 h-6" />
                 </div>
+                <h2 className="text-[20px] font-bold text-[#141A24] mb-2">Обращение отправлено</h2>
+                <p className="text-[14px] text-[#4A5363] mb-6">Номер {submitted.number}. Статус и документы доступны в личном кабинете.</p>
+                <button type="button" className={primary} onClick={() => onGoCabinet?.(submitted.id)}>Перейти в личный кабинет</button>
               </div>
-
-              {/* Checkbox: 152-ФЗ */}
-              <label className="flex items-start gap-2.5 mb-5 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  required
-                  checked={agreed}
-                  onChange={(e) => setAgreed(e.target.checked)}
-                  className="mt-1 w-4 h-4 rounded border-[#E1E5EB] text-[#1F4FD1] focus:ring-0"
-                />
-                <span className="text-[13px] text-[#334155] leading-snug">
-                  Согласен на обработку персональных данных (152-ФЗ)
-                </span>
-              </label>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                className="w-full h-11 bg-[#1F4FD1] hover:bg-[#1841B2] text-white font-medium text-[14px] rounded-lg transition-colors shadow-sm"
-              >
-                Отправить отклик
-              </button>
-
-              {/* Automatic note */}
-              <p className="text-[11px] text-[#616977] text-center mt-3.5">
-                Отметка согласия и дата сохраняются автоматически.
-              </p>
-            </form>
-          )}
-
-          {/* STATE B: Отклик отправлен */}
-          {isSubmitted && (
-            <div className="py-2">
-              {/* Green Check Icon Badge */}
-              <div className="w-12 h-12 rounded-full bg-[#E6F4EA] flex items-center justify-center mb-4">
-                <img src="/icons/check.svg" alt="" className="w-6 h-6" />
-              </div>
-
-              {/* Heading */}
-              <h2 className="text-[20px] font-bold text-[#141A24] mb-2">
-                Отклик отправлен
-              </h2>
-
-              {/* Body text */}
-              <p className="text-[14px] text-[#4A5363] leading-relaxed mb-6">
-                Мы разберём резюме в течение 3 рабочих дней. Если чего-то не хватит, вопрос придёт в личный кабинет.
-              </p>
-
-              {/* Cabinet Button */}
-              <button
-                type="button"
-                onClick={onGoCabinet}
-                className="w-full h-11 bg-[#1F4FD1] hover:bg-[#1841B2] text-white font-medium text-[14px] rounded-lg transition-colors shadow-sm"
-              >
-                Перейти в личный кабинет
-              </button>
-            </div>
-          )}
+            ) : !token ? (
+              <>
+                <h2 className="text-[20px] font-bold text-[#141A24] mb-3">Откликнуться</h2>
+                <p className="text-[13px] text-[#616977] mb-5">Войдите, чтобы отправить резюме по этой вакансии.</p>
+                <button type="button" className={primary} onClick={onLogin}>Войти</button>
+              </>
+            ) : (
+              <form onSubmit={submit} className="space-y-4">
+                <h2 className="text-[20px] font-bold text-[#141A24]">Откликнуться</h2>
+                {draftId && error && <p className="text-[13px] text-[#616977]">Текст и контакт сохранены в черновике. Их можно изменить в личном кабинете.</p>}
+                <label className="block space-y-1.5 text-[13px] font-medium text-[#141A24]">
+                  О себе и желаемой работе
+                  <textarea required className={field} rows={3} value={message} disabled={busy || !!draftId} onChange={(event) => setMessage(event.target.value)} />
+                </label>
+                <label className="block space-y-1.5 text-[13px] font-medium text-[#141A24]">
+                  Электронная почта
+                  <input type="email" required className={field} value={email} disabled={busy || !!draftId} onChange={(event) => setEmail(event.target.value)} />
+                </label>
+                <label className="block space-y-1.5 text-[13px] font-medium text-[#141A24]">
+                  Резюме
+                  <span className="block bg-[#F5F8FF] border-2 border-dashed border-[#94B4FB] rounded-xl p-3">
+                    <span className="block mb-2 text-[#616977]">Выберите PDF, JPEG или PNG</span>
+                    <input type="file" required accept="application/pdf,image/jpeg,image/png" className="block max-w-full text-[13px] file:mr-2 file:border-0 file:rounded-md file:px-2 file:py-1 file:bg-white" disabled={busy} onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
+                  </span>
+                </label>
+                {error && <p role="alert" className="text-[14px] text-[#A3171B]">{error}</p>}
+                <button type="submit" disabled={busy} className={primary}>{busy ? 'Отправляем…' : 'Отправить отклик'}</button>
+                {draftId && error && <button type="button" onClick={() => onGoCabinet?.(draftId)} className="text-[14px] text-[#1F4FD1]">Открыть сохранённый черновик</button>}
+              </form>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
-};
+}
 
 export default VacancyPage;

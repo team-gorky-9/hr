@@ -20,6 +20,7 @@ from hiring.auth import Actor
 from hiring.domain import iso, uid
 from hiring.errors import Problem, forbidden, invalid_state, not_found, stale
 from hiring.models import CandidateRequest, CandidateRequestEvent, CandidateRequestMessage, Document, now
+from hiring.vacancy_catalog import resolve_published_vacancy
 
 EDITABLE = ("draft",)
 CHOOSE_VACANCY = ("submitted", "needs_information", "ready")
@@ -32,7 +33,7 @@ def _vacancy_file(path: Path) -> dict:
 
 
 def public_vacancies(settings) -> dict:
-    """Учебный снимок публичных вакансий (source=training_snapshot). Живой каталог не подключён."""
+    """Учебный снимок опубликованных вакансий (source=training_snapshot)."""
     return _vacancy_file(settings.public_vacancies_file)
 
 
@@ -40,6 +41,8 @@ def resolve_vacancy(settings, organization_id: uuid.UUID, ref: s.PortalVacancyRe
     """(снимок вакансии для обращения, вопрос цели). Точная редакция; похожее название не используется."""
     if ref is None:
         return None, "no_target"
+    if ref.system in {"requirements", "legacy"}:
+        return resolve_published_vacancy(settings, organization_id, ref), None
     data = public_vacancies(settings)
     for item in data["vacancies"]:
         known = item["ref"]
@@ -346,7 +349,7 @@ class Portal:
         row.revision += 1
         self.record(row, "vacancy.chosen", {"vacancy_ref": row.vacancy_ref})
         view = self.view(row)
-        view["vacancy_conditions"] = vacancy_conditions(self.settings, body.vacancy_ref)
+        view["vacancy_conditions"] = vacancy if body.vacancy_ref.system in {"requirements", "legacy"} else vacancy_conditions(self.settings, body.vacancy_ref)
         return view
 
     def record_consideration(self, request_id, body: s.RecordConsideration) -> dict:

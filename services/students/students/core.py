@@ -1,9 +1,12 @@
-"""Durable resource envelopes, audit snapshots and fixture authentication."""
+"""Durable resource envelopes, audit snapshots and server-validated identities."""
 from contextlib import contextmanager
 from copy import deepcopy
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+from typing import Literal
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 import uuid
 
 from pydantic import Field
@@ -19,6 +22,8 @@ class Settings(BaseSettings):
     database_url: str = f"sqlite:///{ROOT / 'data' / 'students.db'}"
     actors_path: Path = ROOT / "fixtures" / "actors.json"
     mentor_capacity: int = Field(default=1, ge=1)
+    auth_mode: Literal["fixture", "workforce"] = "fixture"
+    workforce_url: str = "http://localhost:8101"
 
 
 class Base(DeclarativeBase):
@@ -69,6 +74,11 @@ def organizer(actor):
                and g["scope_id"] == actor["organization_id"] for g in actor["grants"])
 
 
+def candidate(actor):
+    return any(g["role"] == "candidate" and g["scope_type"] == "self"
+               and g["scope_id"] == actor["actor_id"] for g in actor["grants"])
+
+
 def require(condition):
     if not condition:
         fail("FORBIDDEN", "Недостаточно прав для действия.", 403)
@@ -87,11 +97,32 @@ class Store:
         self.actors = json.loads(settings.actors_path.read_text(encoding="utf-8-sig"))["actors"]
 
     def authenticate(self, authorization):
+        if self.settings.auth_mode == "workforce":
+            return self.workforce_actor(authorization)
         login = authorization.removeprefix("Bearer fixture:") if authorization and authorization.startswith("Bearer fixture:") else None
         actor = next((a for a in self.actors if a["login"] == login and a.get("active", True)), None)
         if actor is None:
             fail("AUTH_REQUIRED", "Нужен учебный Bearer fixture:<login>.", 401)
         return actor
+
+    def workforce_actor(self, authorization):
+        if not authorization or not authorization.startswith("Bearer ") or authorization.startswith("Bearer fixture:"):
+            fail("AUTH_REQUIRED", "Войдите, чтобы открыть практику.", 401)
+        request = Request(self.settings.workforce_url.rstrip("/") + "/api/v1/session",
+                          headers={"Authorization": authorization, "Accept": "application/json"})
+        try:
+            with urlopen(request, timeout=3) as response:
+                actor = json.load(response)
+            if (not isinstance(actor, dict) or not actor.get("actor_id") or not actor.get("organization_id")
+                    or not isinstance(actor.get("grants"), list)):
+                raise ValueError("Invalid actor response")
+            return actor
+        except HTTPError as exc:
+            if exc.code in (401, 403):
+                fail("INVALID_SESSION", "Сеанс завершён. Войдите снова.", 401)
+        except (URLError, TimeoutError, ValueError):
+            fail("DEPENDENCY_UNAVAILABLE", "Сервис входа недоступен. Повторите позже.", 503)
+        fail("DEPENDENCY_UNAVAILABLE", "Сервис входа недоступен. Повторите позже.", 503)
 
     def mentor(self, actor, mentor_id):
         mentor = next((a for a in self.actors if a["actor_id"] == str(mentor_id)

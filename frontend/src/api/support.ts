@@ -51,6 +51,7 @@ export async function supportRequest<T>(role: SupportRole, path: string, init: R
   }
   const result = await response.json().catch(() => null);
   if (!response.ok) throw new Error(result?.error?.message || `Ошибка сервера ${response.status}`);
+  if (result === null) throw new Error('Сервис помощи вернул некорректный ответ.');
   return result as T;
 }
 export async function downloadSupportDocument(role: SupportRole, item: SupportCase, doc: SupportDocument) {
@@ -58,8 +59,16 @@ export async function downloadSupportDocument(role: SupportRole, item: SupportCa
     headers: { Authorization: 'Bearer fixture:' + role },
   });
   if (!response.ok) throw new Error('Документ недоступен.');
-  const url = URL.createObjectURL(await response.blob());
+  const contentType = response.headers.get('Content-Type')?.split(';')[0].trim();
+  if (contentType !== 'application/octet-stream') throw new Error('Сервер не вернул исходный документ.');
+  const documentBlob = await response.blob();
+  if (documentBlob.size !== doc.size_bytes) throw new Error('Размер полученного файла не совпадает с карточкой документа.');
+  const url = URL.createObjectURL(documentBlob);
   const link = document.createElement('a');
-  link.href = url; link.download = doc.original_name; link.click();
+  link.href = url;
+  link.download = doc.original_name;
+  document.body.append(link);
+  link.click();
+  link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

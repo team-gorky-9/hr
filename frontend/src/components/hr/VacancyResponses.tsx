@@ -12,7 +12,7 @@ export interface ResponseItem {
 
 interface VacancyResponsesProps {
   initialVacancyId?: string;
-  onOpenCard?: (responseId: string) => void;
+  onOpenCard?: (applicationId: string, vacancyId: string) => void;
   onManualUpload?: () => void;
 }
 
@@ -49,7 +49,7 @@ export const VacancyResponses: React.FC<VacancyResponsesProps> = ({
     return () => controller.abort();
   }, [reload]);
   useEffect(() => {
-    if (!selectedVacancyId || selectedVacancyId === 'v1') return;
+    if (!selectedVacancyId) return;
     const controller = new AbortController();
     setResponses([]); setError(''); setLoading(true);
     api.applications(selectedVacancyId, controller.signal).then(({ items }) => {
@@ -295,7 +295,7 @@ export const VacancyResponses: React.FC<VacancyResponsesProps> = ({
                           <td className="py-4 pl-4 pr-6 text-right whitespace-nowrap">
                             <button
                               type="button"
-                              onClick={() => onOpenCard?.(r.id)}
+                              onClick={() => onOpenCard?.(r.id, selectedVacancyId)}
                               className="px-6 py-2 text-[14px] font-medium text-[#141A24] bg-white border border-[#E1E5EB] rounded-xl hover:bg-[#F8FAFC] transition-colors shadow-sm whitespace-nowrap"
                             >
                               Открыть
@@ -317,13 +317,13 @@ export const VacancyResponses: React.FC<VacancyResponsesProps> = ({
               <p className="text-[14px] text-[#616977] max-w-xl leading-relaxed mb-6">
                 Для выбранной вакансии в этом контуре нет откликов.
               </p>
-              <button
+              {_onManualUpload && <button
                 type="button"
-                disabled={!_onManualUpload} onClick={() => _onManualUpload?.()}
+                onClick={_onManualUpload}
                 className="px-5 py-2.5 text-[14px] font-medium text-[#141A24] bg-white border border-[#D2D4D8] rounded-xl hover:bg-[#F8FAFC] transition-colors shadow-sm"
               >
                 Загрузить отклик вручную
-              </button>
+              </button>}
             </div>
           ) : null}
         </div>

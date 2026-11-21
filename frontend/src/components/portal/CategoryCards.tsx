@@ -9,7 +9,7 @@ export const CategoryCards: React.FC<CategoryCardsProps> = ({ onSelectCategory }
     {
       id: 'vacancies',
       title: 'Вакансии',
-      description: 'Должности в департаментах и районах города. Откликайтесь с резюме в PDF или Word.',
+      description: 'Должности в департаментах и районах города. Откликайтесь с резюме в PDF.',
       linkText: 'Смотреть вакансии →',
       iconSrc: '/icons/briefcase.svg',
       iconBg: 'bg-[#E8EEFC]',
@@ -17,23 +17,15 @@ export const CategoryCards: React.FC<CategoryCardsProps> = ({ onSelectCategory }
     {
       id: 'students',
       title: 'Студентам',
-      description: 'Практика, стажировки и мероприятия. Лучшие попадают в студенческий резерв.',
+      description: 'Выбирайте место практики и следите за своей заявкой.',
       linkText: 'Найти практику →',
       iconSrc: '/icons/graduation-cap.svg',
       iconBg: 'bg-[#FFE5CC]',
     },
-    {
-      id: 'reserve',
-      title: 'Кадровый резерв',
-      description: 'Конкурс с защитой проекта перед комиссией города. Путь к руководящим должностям.',
-      linkText: 'Узнать о конкурсе →',
-      iconSrc: '/icons/ribbon.svg',
-      iconBg: 'bg-[#D7F0DD]',
-    },
   ];
 
   return (
-    <section className="grid grid-cols-1 md:grid-cols-3 gap-5">
+    <section className="grid grid-cols-1 md:grid-cols-2 gap-5">
       {cards.map((card) => (
         <div
           key={card.id}

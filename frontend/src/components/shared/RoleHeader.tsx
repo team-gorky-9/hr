@@ -22,7 +22,7 @@ export const RoleHeader: React.FC<RoleHeaderProps> = ({
   onLogoClick,
 }) => (
   <header className="w-full bg-white border-b border-[#E1E5EB] sticky top-0 z-40">
-    <div className="max-w-[1240px] mx-auto px-4 sm:px-6 min-h-[72px] py-3 grid grid-cols-2 items-center gap-x-4 gap-y-4">
+    <div className="max-w-[1240px] mx-auto px-4 sm:px-6 min-h-[72px] py-3 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 sm:gap-x-4 gap-y-3">
       <div className="contents">
         <button
           type="button"
@@ -30,11 +30,11 @@ export const RoleHeader: React.FC<RoleHeaderProps> = ({
           className="flex items-center gap-3 min-w-0 justify-self-start text-left hover:opacity-90 transition-opacity"
         >
           <img src="/images/Header/Mark.svg" alt="GorkyCode" className="w-9 h-9 shrink-0" />
-          <span className="text-[16px] font-bold text-[#141A24] tracking-tight sm:whitespace-nowrap">
+          <span className="hidden sm:inline text-[16px] font-bold text-[#141A24] tracking-tight whitespace-nowrap">
             GorkyCode - team 9
           </span>
         </button>
-        <nav className="col-span-2 row-start-2 hidden md:flex flex-wrap items-center gap-1.5">
+        <nav aria-label="Разделы кабинета" className="col-span-2 row-start-2 flex min-w-0 overflow-x-auto pb-1 md:overflow-visible md:flex-wrap items-center gap-1.5">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -51,7 +51,7 @@ export const RoleHeader: React.FC<RoleHeaderProps> = ({
           ))}
         </nav>
       </div>
-      <div aria-label="Текущая учётная запись" className="col-start-2 row-start-1 justify-self-end max-w-full text-right text-[14px] leading-5 text-[#4A5363] font-medium">
+      <div title={roleLabel} aria-label="Текущая учётная запись" className="col-start-2 row-start-1 justify-self-end max-w-full truncate text-right text-[14px] leading-5 text-[#4A5363] font-medium">
         {roleLabel}
       </div>
     </div>
