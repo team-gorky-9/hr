@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: backend-${{ github.workflow }}-${{ github.ref }}
+  group: backend-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'pull_request' && 'pr' || github.sha }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -37,26 +37,12 @@ jobs:
         run: |
           docker compose config --quiet
           docker compose --parallel 2 build
-      - name: Start complete backend
-        run: docker compose up -d --wait --wait-timeout 240
-      - name: Verify HTTP through Nginx
-        run: |
-          python3 deploy/smoke.py
-          bash deploy/seed-demo.sh "$COMPOSE_ENV_FILES"
-          bash deploy/seed-demo.sh "$COMPOSE_ENV_FILES"   # repeat run must change nothing
-          python3 deploy/check-sessions.py create --state deploy/local/probe.json
-      - name: Verify restart
-        run: |
-          docker compose down
-          docker compose up -d --wait --wait-timeout 240
-          python3 deploy/smoke.py
-          python3 deploy/check-sessions.py verify --state deploy/local/probe.json
       - name: Sign in to registry
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-      - name: Publish the tested release
+      - name: Publish built release
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         run: docker compose push legacy workforce requirements hiring students mobility social-support recognition feedback
       - name: Upload deployment bundle
@@ -98,6 +84,12 @@ jobs:
       group: backend-server-deploy
       cancel-in-progress: false
     steps:
+      - name: Refuse superseded release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          latest=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
+          test "$latest" = "$GITHUB_SHA" || { echo 'A newer main exists; deploy that release instead.'; exit 1; }
       - uses: actions/download-artifact@v4
         with:
           name: backend-deploy

@@ -1,193 +1,79 @@
-import { useState } from "react";
-import { Card, Kpi, Badge, Btn, PageTitle } from "../shared/ui";
-import { rangeFor, useAnalytics } from "../../api/analytics";
-import {
-  api,
-  deadlineLabel,
-  feedbackLabel,
-  type Handoff,
-} from "../../api/recruitment";
-export const HeadSummary = () => {
-  const [refresh, setRefresh] = useState(0),
-    [selected, setSelected] = useState<Handoff | null>(null);
-  const [detailError, setDetailError] = useState(""),
-    [busy, setBusy] = useState(false);
-  const range = rangeFor("Неделя");
-  const { data, error, loading } = useAnalytics(
-    range.from,
-    range.to,
-    "",
-    refresh,
-  );
-  const attention =
-    data?.handoffs.filter(
-      (h) =>
-        h.deadline_status === "overdue" || h.deadline_status === "due_soon",
-    ) || [];
-  const open = async (id: string) => {
-    setBusy(true);
-    setDetailError("");
-    setSelected(null);
-    try {
-      setSelected(await api.handoff(id, "hr"));
-    } catch (e) {
-      setDetailError(
-        e instanceof Error ? e.message : "Не удалось открыть передачу",
-      );
-    } finally {
-      setBusy(false);
-    }
+import React, { useState } from 'react';
+import { Card, Kpi, Badge, Btn, PageTitle, Toast } from '../shared/ui';
+
+// Заглушка: макет «Сводка начальника отдела кадров» (бэкенд: GET /api/v1/head/summary)
+const rows = [
+  { vacancy: 'Python-разработчик', responses: 6, clarify: 1, manual: 3, forwarded: 1, wait: '3 дня', tone: 'gray' as const, hr: 'Марина С.' },
+  { vacancy: 'Аналитик данных', responses: 14, clarify: 4, manual: 1, forwarded: 3, wait: '6 дней', tone: 'red' as const, hr: 'Ольга К.' },
+  { vacancy: 'Инженер ПТО', responses: 27, clarify: 7, manual: 2, forwarded: 1, wait: '9 дней', tone: 'red' as const, hr: 'Сергей Д.' },
+  { vacancy: 'Главный специалист по обращениям граждан', responses: 0, clarify: 0, manual: 0, forwarded: 0, wait: '—', tone: 'gray' as const, hr: 'Марина С.' },
+];
+
+const attention = [
+  { days: 'Ждёт 6 дней', text: 'Аналитик данных · Департамент цифрового развития' },
+  { days: 'Ждёт 9 дней', text: 'Инженер ПТО · Департамент строительства' },
+];
+
+export const HeadSummary: React.FC = () => {
+  const [toast, setToast] = useState<string | null>(null);
+  const remind = (t: string) => {
+    setToast(`Напоминание отправлено: ${t}`);
+    setTimeout(() => setToast(null), 3000);
   };
-  const f = data?.funnel;
   return (
     <div className="max-w-[1240px] mx-auto px-4 sm:px-6 py-8 space-y-6">
-      <PageTitle
-        title="Сводка по подбору"
-        subtitle={
-          f
-            ? `Срез ${new Date(f.as_of).toLocaleString("ru-RU")}`
-            : "Актуальные данные подбора"
-        }
-        right={
-          <Btn disabled={loading} onClick={() => setRefresh((x) => x + 1)}>
-            Обновить
-          </Btn>
-        }
-      />
-      {error && (
-        <Card>
-          <p role="alert" className="text-red-700">
-            {error}
-          </p>
-        </Card>
-      )}
-      {loading && <p role="status">Загружаем сводку…</p>}
-      {f && (
-        <>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Kpi
-              label="Вакансии в контуре"
-              value={String(data.vacancies.length)}
-              caption="каталог подбора"
-            />
-            <Kpi
-              label="Откликов в контуре"
-              value={String(f.total_applications)}
-              caption="за всё время"
-            />
-            <Kpi
-              label="Ждут решения руководителя"
-              value={String(f.open_waits.unique_applications)}
-              caption={`${f.open_waits.total} открытых передач`}
-            />
-            <Kpi
-              label="Просрочено передач"
-              value={String(f.open_waits.overdue_total)}
-              caption={`${f.open_waits.due_soon_total} со скорым сроком ответа`}
-            />
+      <PageTitle title="Сводка по подбору" subtitle="Все открытые вакансии администрации · обновлено сегодня в 09:00" />
+
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Kpi label="Открытые вакансии" value="4" caption="в 3 подразделениях" />
+        <Kpi label="Откликов за неделю" value="47" caption="из 4 каналов" />
+        <Kpi label="Нужно уточнить" value="12" caption="вопросы кандидатам отправлены" />
+        <Kpi label="Ждут решения руководителя" value="5" caption="2 дольше 5 дней" />
+      </div>
+
+      <Card className="space-y-4">
+        <div>
+          <h2 className="text-[22px] font-bold text-[#141A24]">Требует внимания</h2>
+          <p className="text-[16px] text-[#4A5363] mt-2">Руководители не ответили по переданным кандидатам дольше 5 дней</p>
+        </div>
+        {attention.map((a) => (
+          <div key={a.text} className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-4">
+              <Badge tone="red">{a.days}</Badge>
+              <span className="text-[17px] font-bold text-[#141A24]">{a.text}</span>
+            </div>
+            <Btn onClick={() => remind(a.text)}>Напомнить руководителю</Btn>
           </div>
-          <Card className="space-y-4">
-            <h2 className="text-[22px] font-bold text-[#141A24]">
-              Требует внимания
-            </h2>
-            <p className="text-[16px] text-[#4A5363]">
-              Открытые передачи с подходящим или нарушенным сроком ответа.
-            </p>
-            {!attention.length && <p>Таких передач сейчас нет.</p>}
-            {attention.map((a) => (
-              <div
-                key={a.attempt_id}
-                className="flex items-center justify-between gap-3 border-b pb-3"
-              >
-                <div>
-                  <Badge
-                    tone={a.deadline_status === "overdue" ? "red" : "amber"}
-                  >
-                    {deadlineLabel(a.deadline_status)}
-                  </Badge>
-                  <p className="text-[17px] font-bold mt-2">
-                    {a.candidate_code} ·{" "}
-                    {a.vacancy_title || "Вакансия не указана"}
-                  </p>
-                  <p className="text-[#616977] text-[13px]">
-                    {a.recipient_name} · {a.recipient_department} · ответ до{" "}
-                    {a.due_date}
-                  </p>
-                </div>
-                <Btn disabled={busy} onClick={() => void open(a.attempt_id)}>
-                  Открыть передачу
-                </Btn>
-              </div>
+        ))}
+      </Card>
+
+      <Card className="overflow-x-auto">
+        <table className="w-full text-left min-w-[860px]">
+          <thead>
+            <tr className="text-[14px] text-[#4A5363] border-b border-[#E1E5EB]">
+              {['Вакансия', 'Откликов', 'Нужно уточнить', 'Проверить вручную', 'Передано руководителю', 'Ожидание ответа', 'HR-менеджер'].map((h) => (
+                <th key={h} className="py-4 pr-4 font-semibold align-bottom">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.vacancy} className="border-b border-[#E1E5EB] last:border-0 text-[17px] text-[#141A24]">
+                <td className="py-4 pr-4">{r.vacancy}</td>
+                <td className="pr-4">{r.responses}</td>
+                <td className="pr-4">{r.clarify}</td>
+                <td className="pr-4">{r.manual}</td>
+                <td className="pr-4">{r.forwarded}</td>
+                <td className="pr-4"><Badge tone={r.tone}>{r.wait}</Badge></td>
+                <td>{r.hr}</td>
+              </tr>
             ))}
-          </Card>
-          {detailError && (
-            <p role="alert" className="text-red-700">
-              {detailError}
-            </p>
-          )}
-          {selected && (
-            <Card>
-              <div className="flex justify-between">
-                <h2 className="text-[20px] font-bold">
-                  {selected.candidate_code} · {selected.vacancy_title}
-                </h2>
-                <Btn onClick={() => setSelected(null)}>Закрыть</Btn>
-              </div>
-              <p className="my-3">
-                {selected.recipient_name} ·{" "}
-                {deadlineLabel(selected.deadline_status)} · до{" "}
-                {selected.due_date}
-              </p>
-              {selected.latest_feedback ? (
-                <p>
-                  {feedbackLabel(selected.latest_feedback.outcome)}.{" "}
-                  {selected.latest_feedback.comment}
-                </p>
-              ) : (
-                <p>Ответ департамента ещё не получен.</p>
-              )}
-              {selected.markdown && (
-                <p className="whitespace-pre-wrap text-[14px] mt-4">
-                  {selected.markdown}
-                </p>
-              )}
-            </Card>
-          )}
-          <Card className="overflow-x-auto">
-            <h2 className="text-[20px] font-bold mb-3">Вакансии и отклики</h2>
-            <table className="w-full text-left">
-              <thead>
-                <tr className="text-[14px] text-[#4A5363] border-b">
-                  {["Вакансия", "Откликов", "Работодатель", "Канал"].map(
-                    (h) => (
-                      <th className="py-4 pr-4" key={h}>
-                        {h}
-                      </th>
-                    ),
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {data.vacancies.map((v) => (
-                  <tr
-                    key={v.vacancy_id}
-                    className="border-b last:border-0 text-[16px]"
-                  >
-                    <td className="py-4 pr-4">{v.title}</td>
-                    <td>{v.applications_count}</td>
-                    <td>{v.employer || "Не указан"}</td>
-                    <td>{v.channel || "Не указан"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {!data.vacancies.length && (
-              <p className="text-[#616977] mt-3">В контуре нет вакансий.</p>
-            )}
-          </Card>
-        </>
-      )}
+          </tbody>
+        </table>
+      </Card>
+      <Toast message={toast} />
     </div>
   );
 };
+
 export default HeadSummary;

@@ -106,14 +106,3 @@ def read(publication_id: UUID, request: Request, ctx: Context):
     fixed_view(request)
     db, actor = ctx
     return scoped_publication(get(db, "publication", publication_id, actor), actor)
-
-
-@router.get("/publications")
-def list_publications(request: Request, ctx: Context):
-    fixed_view(request)
-    db, actor = ctx
-    privileged = bool({"organizer", "publisher"}.intersection(actor["assignments"]))
-    if not privileged and "department" not in actor["roles"]:
-        return {"items": []}
-    return {"items": [scoped_publication(p, actor) for p in rows(db, "publication", actor)
-        if privileged or any(g["key"] == actor["group_key"] for g in p["groups"])]}

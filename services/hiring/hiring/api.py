@@ -240,13 +240,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get(f"{api}/candidate-portal/vacancies")
     def portal_vacancies(request: Request):
-        """Публичные вакансии организации из настроенного источника каталога."""
-        actor = actor_of(request)
+        """Публичные вакансии для выбора цели: учебный снимок (source=training_snapshot)."""
+        actor_of(request)
         data = portal_public_vacancies(settings)
         return {"source": data["source"], "observed_at": data["observed_at"], "is_synthetic": data["is_synthetic"],
                 "items": [{"ref": v["ref"], "title": v["title"], "description": v["description"],
                            "position_code": v["position_code"], "status": v["status"]}
-                          for v in data["vacancies"] if v["status"] == "published" and v["organization_id"] == str(actor.organization_id)]}
+                          for v in data["vacancies"] if v["status"] == "published"]}
 
     @app.post(f"{api}/candidate-requests", status_code=201)
     def create_candidate_request(request: Request, body: s.CreateCandidateRequest):

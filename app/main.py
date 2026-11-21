@@ -9,7 +9,6 @@ from app.api.errors import install_error_handlers
 from app.api.routes import router
 from app.api.interaction import install_gateway, router as interaction_router
 from app.api.archive import router as archive_router
-from app.api.candidates import router as candidates_router
 from app.config import settings
 from app.management.api import router as management_router
 from app.matching.api import router as matching_router
@@ -36,7 +35,6 @@ def create_app() -> FastAPI:
     app.include_router(interaction_router)
     app.include_router(router)
     app.include_router(archive_router)
-    app.include_router(candidates_router)
     app.include_router(search_router)
     app.include_router(matching_router)
     app.include_router(management_router)

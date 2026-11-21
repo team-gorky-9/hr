@@ -8,8 +8,6 @@ fixtures/public-vacancies.json), прикладывает резюме и отп
 Если выбранная вакансия закрыта или не найдена, обращение принимается с вопросом цели
 (vacancy_closed / vacancy_unknown) и откликом в подборе автоматически не становится."""
 import json
-import httpx
-from datetime import datetime, timezone
 import uuid
 from functools import lru_cache
 from pathlib import Path
@@ -33,29 +31,8 @@ def _vacancy_file(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def requirements_get(settings, path):
-    try:
-        response = httpx.get(settings.requirements_url.rstrip("/") + "/api/v1/public/vacancies" + path,
-                             timeout=settings.auth_timeout_seconds, follow_redirects=False)
-        if response.status_code == 404:
-            return None
-        response.raise_for_status()
-        return response.json()
-    except (httpx.HTTPError, ValueError) as exc:
-        raise Problem(503, "CATALOG_UNAVAILABLE", "Каталог вакансий временно недоступен. Повторите запрос.") from exc
-
-
-def live_vacancy(item):
-    return {**item, "ref": {"system": "requirements", "id": item["id"], "revision": item["revision"]}}
-
-
 def public_vacancies(settings) -> dict:
-    """Configured live authority, or explicit training snapshot in standalone fixture mode."""
-    if settings.requirements_url:
-        data = requirements_get(settings, "")
-        return {"source": "requirements", "is_synthetic": False,
-                "observed_at": datetime.now(timezone.utc).isoformat(),
-                "vacancies": [live_vacancy(item) for item in data["items"]]}
+    """Учебный снимок публичных вакансий (source=training_snapshot). Живой каталог не подключён."""
     return _vacancy_file(settings.public_vacancies_file)
 
 
@@ -63,17 +40,7 @@ def resolve_vacancy(settings, organization_id: uuid.UUID, ref: s.PortalVacancyRe
     """(снимок вакансии для обращения, вопрос цели). Точная редакция; похожее название не используется."""
     if ref is None:
         return None, "no_target"
-    if ref.system == "requirements":
-        if not settings.requirements_url:
-            raise Problem(503, "CATALOG_UNAVAILABLE", "Живой каталог вакансий не настроен.")
-        item = requirements_get(settings, "/" + str(ref.id))
-        if not item or item["organization_id"] != str(organization_id) or item["revision"] != ref.revision:
-            return None, "vacancy_unknown"
-        snapshot = {"title": item["title"], "status": item["status"], "position_code": item["position_code"],
-                    "source": "requirements", "observed_at": datetime.now(timezone.utc).isoformat()}
-        return snapshot, None if item["status"] == "published" else "vacancy_closed"
-    # Historical fixture references remain resolvable after enabling the live catalog.
-    data = _vacancy_file(settings.public_vacancies_file)
+    data = public_vacancies(settings)
     for item in data["vacancies"]:
         known = item["ref"]
         if (known["system"], known["id"], known["revision"]) == (ref.system, str(ref.id), ref.revision) \

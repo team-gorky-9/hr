@@ -19,10 +19,11 @@ docker image prune -f >/dev/null
 if [[ -L /opt/hr/current ]]; then
   # Backup with the previous release's configuration before any new migrations.
   previous=$(readlink /opt/hr/current)
-  RELEASE=$(basename "$previous") bash "$previous/backup.sh" /opt/hr/runtime.env "/opt/hr/backups/$(date -u +%Y%m%dT%H%M%SZ)-$release"
+  # Use the new backup behavior with the previous release's configuration.
+  RELEASE=$(basename "$previous") BACKUP_COMPOSE_FILE="$previous/compose.yaml" bash backup.sh /opt/hr/runtime.env "/opt/hr/backups/$(date -u +%Y%m%dT%H%M%SZ)-$release" deploy
 else
   # First managed release still backs up the existing Compose project and volumes.
-  bash backup.sh /opt/hr/runtime.env "/opt/hr/backups/$(date -u +%Y%m%dT%H%M%SZ)-$release"
+  bash backup.sh /opt/hr/runtime.env "/opt/hr/backups/$(date -u +%Y%m%dT%H%M%SZ)-$release" deploy
 fi
 "${compose[@]}" up -d --wait --wait-timeout 240
 python3 smoke.py

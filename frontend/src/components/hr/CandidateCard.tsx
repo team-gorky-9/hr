@@ -1,5 +1,3 @@
-import HandoffDeadlinePanel from './HandoffDeadlinePanel';
-import { moscowDay } from './handoffDeadline';
 import React, { useEffect, useState } from 'react';
 import { Card, Btn, Badge, PageTitle } from '../shared/ui';
 import { api, request, recipientId, readableExplanation, resultLabel, assessmentLabel, deadlineLabel, feedbackLabel, errorMessage, type ApplicationDetail, type History, type Handoff, type Stage, type Reason, type Evidence } from '../../api/recruitment';
@@ -48,16 +46,6 @@ export const CandidateCard: React.FC<CandidateCardProps> = ({ candidateId = '', 
       }).catch(e => { if (live) { setError(errorMessage(e)); setLoading(false); } });
     return () => { live = false; };
   }, [candidateId, reload]);
-  useEffect(() => {
-    if (!candidateId) return;
-    let active = true;
-    const refresh = () => { void api.applicationHandoffs(candidateId)
-      .then(value => { if (active) setHandoffs(value.items); })
-      .catch(e => { if (active) setError(errorMessage(e)); }); };
-    const timer = window.setInterval(refresh, 30000);
-    window.addEventListener('focus', refresh);
-    return () => { active = false; window.clearInterval(timer); window.removeEventListener('focus', refresh); };
-  }, [candidateId]);
   const action = async (work: () => Promise<void>) => {
     setBusy(true); setError(''); setNotice('');
     try { await work(); } catch (e) { setError(errorMessage(e)); } finally { setBusy(false); }
@@ -105,10 +93,7 @@ export const CandidateCard: React.FC<CandidateCardProps> = ({ candidateId = '', 
       </div>
       <Card className="space-y-4 sticky top-4"><h2 className="text-xl font-bold">Текст источника</h2>{sourceError ? <p role="alert">{sourceError}</p> : source ? <><p className="text-sm text-[#616977]">Версия {source.version} · {source.is_current ? 'текущая' : 'предыдущая'}</p><pre className="whitespace-pre-wrap font-sans text-[14px] leading-7 max-h-[650px] overflow-auto">{highlight ? <>{source.text.slice(0, highlight.utf16_start)}<mark className="bg-[#FFF4CC]">{source.text.slice(highlight.utf16_start, highlight.utf16_end)}</mark>{source.text.slice(highlight.utf16_end)}</> : source.text}</pre></> : <p>Загрузка источника…</p>}</Card>
     </div>
-    <Card className="space-y-4"><h2 className="text-xl font-bold">Передачи и ответы подразделения</h2>{!handoffs.length && <p>Передач пока нет.</p>}{handoffs.map(a => <div key={a.attempt_id} className="border border-[#E1E5EB] p-4 rounded-xl space-y-3"><div className="flex justify-between"><b>{a.recipient_name} · {a.recipient_department}</b><Badge tone={a.deadline_status === 'overdue' ? 'red' : 'blue'}>{deadlineLabel(a.deadline_status)}</Badge></div><p className="text-sm">Передан {new Date(a.handed_off_at).toLocaleString('ru-RU')} · срок {a.due_date} · переносов {a.extensions_count}</p>{a.status === 'awaiting_response' && a.business_days_elapsed != null && a.business_days_total != null && <HandoffDeadlinePanel
-        handoff={{ sentOn: moscowDay(new Date(a.handed_off_at)), dueOn: a.due_date, department: a.recipient_department, recipient: a.recipient_name }}
-        today={moscowDay()} serverProgress={{ elapsed: a.business_days_elapsed, total: a.business_days_total, status: a.deadline_status as 'on_track' | 'due_soon' | 'overdue' }}
-        onExtend={() => { setSelectedAttempt(a.attempt_id); setNewDate(''); setExtensionComment(''); }} />}{a.latest_feedback && <p className="bg-[#E3F2E7] rounded-xl p-3">{feedbackLabel(a.latest_feedback.outcome)} · {a.latest_feedback.rejection_reason?.title} {a.latest_feedback.comment}</p>}<div className="flex gap-3"><Btn onClick={() => action(async () => setAttemptDetail(await api.handoff(a.attempt_id, 'hr')))}>Сводка и история</Btn>{a.status === 'awaiting_response' && <Btn onClick={() => { setSelectedAttempt(a.attempt_id); setNewDate(''); setExtensionComment(''); }}>Перенести срок</Btn>}</div>{selectedAttempt === a.attempt_id && <div className="flex gap-3"><input aria-label="Новый срок" type="date" className={field} min={a.due_date} value={newDate} onChange={e => setNewDate(e.target.value)} /><input aria-label="Причина переноса" className={field} placeholder="Причина переноса" value={extensionComment} onChange={e => setExtensionComment(e.target.value)} /><Btn disabled={busy || !newDate || !extensionComment.trim()} onClick={() => extend(a)}>Сохранить</Btn></div>}</div>)}
+    <Card className="space-y-4"><h2 className="text-xl font-bold">Передачи и ответы подразделения</h2>{!handoffs.length && <p>Передач пока нет.</p>}{handoffs.map(a => <div key={a.attempt_id} className="border border-[#E1E5EB] p-4 rounded-xl space-y-3"><div className="flex justify-between"><b>{a.recipient_name} · {a.recipient_department}</b><Badge tone={a.deadline_status === 'overdue' ? 'red' : 'blue'}>{deadlineLabel(a.deadline_status)}</Badge></div><p className="text-sm">Передан {new Date(a.handed_off_at).toLocaleString('ru-RU')} · срок {a.due_date} · переносов {a.extensions_count}</p>{a.latest_feedback && <p className="bg-[#E3F2E7] rounded-xl p-3">{feedbackLabel(a.latest_feedback.outcome)} · {a.latest_feedback.rejection_reason?.title} {a.latest_feedback.comment}</p>}<div className="flex gap-3"><Btn onClick={() => action(async () => setAttemptDetail(await api.handoff(a.attempt_id, 'hr')))}>Сводка и история</Btn>{a.status === 'awaiting_response' && <Btn onClick={() => { setSelectedAttempt(a.attempt_id); setNewDate(''); setExtensionComment(''); }}>Перенести срок</Btn>}</div>{selectedAttempt === a.attempt_id && <div className="flex gap-3"><input aria-label="Новый срок" type="date" className={field} min={a.due_date} value={newDate} onChange={e => setNewDate(e.target.value)} /><input aria-label="Причина переноса" className={field} placeholder="Причина переноса" value={extensionComment} onChange={e => setExtensionComment(e.target.value)} /><Btn disabled={busy || !newDate || !extensionComment.trim()} onClick={() => extend(a)}>Сохранить</Btn></div>}</div>)}
       {attemptDetail && <div className="bg-[#F6F7F9] rounded-xl p-4 space-y-3"><Btn onClick={() => setAttemptDetail(null)}>Закрыть сводку</Btn><pre className="whitespace-pre-wrap font-sans text-sm">{attemptDetail.markdown}</pre>{attemptDetail.feedback_history?.map(f => <p key={f.feedback_id}>{new Date(f.received_at).toLocaleString('ru-RU')} · {feedbackLabel(f.outcome)} · {f.comment}</p>)}{attemptDetail.deadline_extensions?.map((e, i) => <p key={i}>{e.previous_due_date} → {e.new_due_date} · {e.reason_title} · {e.comment}</p>)}</div>}
     </Card>
     <Card><h2 className="text-xl font-bold mb-4">История этапов</h2><div className="space-y-3">{history?.items.map(e => <div key={e.seq} className="border-b border-[#E1E5EB] pb-3"><b>{e.to_stage.title}</b> · {new Date(e.created_at).toLocaleString('ru-RU')} · {e.actor?.login}<p className="text-sm mt-1">{e.comment} {e.rejection_reason?.title}</p></div>)}</div></Card>

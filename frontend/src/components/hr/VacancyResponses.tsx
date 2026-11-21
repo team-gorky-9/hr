@@ -267,13 +267,9 @@ export const VacancyResponses: React.FC<VacancyResponsesProps> = ({
                         <tr key={r.id} className="hover:bg-[#F8FAFC] transition-colors">
                           {/* Col 1: Кандидат и источник */}
                           <td className="py-4 pl-6 pr-4 whitespace-nowrap">
-                            <button
-                              type="button"
-                              onClick={() => onOpenCard?.(r.id)}
-                              className="text-[15px] font-bold text-[#1F4FD1] hover:underline leading-snug text-left"
-                            >
+                            <div className="text-[15px] font-bold text-[#1F4FD1] leading-snug">
                               {r.name}
-                            </button>
+                            </div>
                             <div className="text-[13px] text-[#616977] mt-0.5">
                               {r.source}
                             </div>
