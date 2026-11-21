@@ -258,6 +258,24 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def candidate_request_consideration(request: Request, request_id: uuid.UUID, body: s.RecordConsideration):
         return portal_command(request, body, lambda p: p.record_consideration(request_id, body))
 
+    @app.post(f"{api}/candidate-requests/{{request_id}}/public-outcome")
+    def candidate_request_outcome(request: Request, request_id: uuid.UUID, body: s.PublicOutcome):
+        return portal_command(request, body, lambda p: p.publish_outcome(request_id, body))
+
+    @app.post(f"{api}/candidate-requests/{{request_id}}/withdraw")
+    def candidate_request_withdraw(request: Request, request_id: uuid.UUID, body: s.WithdrawRequest):
+        return portal_command(request, body, lambda p: p.withdraw(request_id, body))
+
+    @app.get(f"{api}/candidate-requests/{{request_id}}/messages")
+    def candidate_request_messages(request: Request, request_id: uuid.UUID):
+        return portal_read(request, lambda p: p.messages(request_id))
+
+    @app.post(f"{api}/candidate-requests/{{request_id}}/messages/{{message_id}}/read")
+    def candidate_request_message_read(request: Request, request_id: uuid.UUID, message_id: uuid.UUID):
+        actor = actor_of(request)
+        with Session(app.state.engine) as session, session.begin():
+            return JSONResponse(Portal(session, actor, settings).mark_read(request_id, message_id))
+
     @app.post(f"{api}/candidate-requests/{{request_id}}/documents", status_code=201)
     def upload_request_document(request: Request, request_id: uuid.UUID, file: Annotated[UploadFile, File()],
                                 kind: Annotated[str, Form()] = "candidate_resume"):

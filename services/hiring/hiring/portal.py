@@ -19,7 +19,7 @@ from hiring import schemas as s
 from hiring.auth import Actor
 from hiring.domain import iso, uid
 from hiring.errors import Problem, forbidden, invalid_state, not_found, stale
-from hiring.models import CandidateRequest, CandidateRequestEvent, Document, now
+from hiring.models import CandidateRequest, CandidateRequestEvent, CandidateRequestMessage, Document, now
 
 EDITABLE = ("draft",)
 CHOOSE_VACANCY = ("submitted", "needs_information", "ready")
@@ -55,6 +55,15 @@ def document_view(document: Document) -> dict:
     return {"id": uid(document.id), "kind": document.kind, "original_name": document.original_name,
             "media_type": document.media_type, "size_bytes": document.size_bytes, "sha256": document.sha256,
             "created_at": iso(document.created_at)}
+
+
+OUTCOME_TITLES = {
+    "continue": "Рассмотрение продолжается",
+    "declined": "Решение по обращению",
+    "no_open_opportunity": "Сейчас нет подходящей открытой вакансии",
+    "completed": "Обращение завершено",
+}
+OPEN_FOR_WITHDRAWAL = ("draft", "submitted", "needs_information", "ready", "forwarded")
 
 
 class Portal:
@@ -113,11 +122,20 @@ class Portal:
         body["information_request"] = None if info is None else {
             k: info[k] for k in ("public_message", "requested_items", "requested_at", "answered")}
         body["addenda"] = [{k: a[k] for k in ("text", "document_ids", "added_at")} for a in row.addenda]
+        public = ("outcome", "public_explanation", "next_action", "decided_at")
         if self.actor.is_hr():
             body |= {"organization_id": uid(row.organization_id), "author_actor_id": uid(row.author_actor_id),
                      "submitted_snapshot": row.submitted_snapshot, "review": row.review,
-                     "consideration": row.consideration}
+                     "consideration": row.consideration, "outcomes": row.outcomes, "withdrawal": row.withdrawal}
         else:
+            # Кандидат видит согласованное публичное объяснение, без ссылки на источник решения и автора.
+            body["outcomes"] = [{k: o[k] for k in public} for o in row.outcomes]
+            body["withdrawal"] = None if row.withdrawal is None else {
+                k: row.withdrawal[k] for k in ("reason", "withdrawn_at", "notice")}
+        body["unread_messages"] = self.session.scalar(
+            select(func.count()).select_from(CandidateRequestMessage).where(
+                CandidateRequestMessage.request_id == row.id, CandidateRequestMessage.read_at.is_(None))) or 0
+        if not self.actor.is_hr():
             # Кандидат видит факт принятия к рассмотрению и выбранную вакансию, но не ссылки на записи
             # подбора, основание связи личности и внутреннюю проверку достаточности.
             consideration = row.consideration
@@ -270,6 +288,9 @@ class Portal:
         row.revision += 1
         self.record(row, "information.requested", {"public_message": body.public_message,
                                                    "requested_items": body.requested_items, "previous": previous})
+        self.message(row, "information_request", "Нужны дополнительные сведения",
+                     body.public_message + "\nЧто нужно: " + "; ".join(body.requested_items),
+                     "Ответьте дополнением в кабинете")
         return self.view(row)
 
     def add_addendum(self, request_id, body: s.Addendum) -> dict:
@@ -333,6 +354,71 @@ class Portal:
         row.revision += 1
         self.record(row, "consideration.recorded", row.consideration)
         return self.view(row)
+
+
+    # --- 5C · исход, отзыв и сообщения кабинета
+
+    def message(self, row: CandidateRequest, kind: str, title: str, body: str, next_action: str | None) -> None:
+        self.session.add(CandidateRequestMessage(request_id=row.id, kind=kind, title=title, body=body,
+                                                 next_action=next_action, created_by_actor_id=self.actor.actor_id))
+
+    def publish_outcome(self, request_id, body: s.PublicOutcome) -> dict:
+        row = self.hr_load(request_id)
+        self.check(row, body.expected_revision, ("ready", "forwarded"), "Public outcome")
+        if body.outcome == "continue" and row.status != "forwarded":
+            # continue оставляет обращение в forwarded, а это требует записанной регистрации рассмотрения.
+            raise invalid_state("Record the consideration before publishing that it continues")
+        outcome = {
+            "outcome": body.outcome, "public_explanation": body.public_explanation, "next_action": body.next_action,
+            "source_reference": body.source_reference, "origin": "hr_decision",
+            "decided_by_actor_id": uid(self.actor.actor_id), "decided_at": iso(now()),
+        }
+        row.outcomes = [*row.outcomes, outcome]
+        row.status = "forwarded" if body.outcome == "continue" else "closed"
+        row.revision += 1
+        self.record(row, "outcome.published", outcome)
+        self.message(row, "outcome", OUTCOME_TITLES[body.outcome], body.public_explanation, body.next_action)
+        return self.view(row)
+
+    def withdraw(self, request_id, body: s.WithdrawRequest) -> dict:
+        row = self.own(request_id)
+        self.check(row, body.expected_revision, OPEN_FOR_WITHDRAWAL, "Withdrawal")
+        external = row.status == "forwarded"
+        row.withdrawal = {
+            "reason": body.reason, "withdrawn_at": iso(now()), "previous_status": row.status,
+            "external_consideration_open": external,
+            # Локальный отзыв не останавливает рассмотрение у владельца подбора.
+            "notice": ("Обращение отозвано в кабинете. Рассмотрение в подборе завершает его владелец после "
+                       "подтверждения." if external else "Обращение отозвано."),
+        }
+        row.status = "withdrawn"
+        row.revision += 1
+        self.record(row, "request.withdrawn", row.withdrawal)
+        return self.view(row)
+
+    def messages(self, request_id) -> dict:
+        row = self.load(request_id)
+        rows = self.session.scalars(select(CandidateRequestMessage).where(CandidateRequestMessage.request_id == row.id)
+                                    .order_by(CandidateRequestMessage.created_at, CandidateRequestMessage.id))
+        return {"items": [message_view(m) for m in rows]}
+
+    def mark_read(self, request_id, message_id) -> dict:
+        row = self.own(request_id)  # отметку прочтения ставит только автор
+        message = self.session.scalar(select(CandidateRequestMessage).where(
+            CandidateRequestMessage.id == message_id, CandidateRequestMessage.request_id == row.id).with_for_update())
+        if message is None:
+            raise not_found("Message")
+        if message.read_at is None:  # повтор возвращает первую отметку
+            message.read_at = now()
+            self.record(row, "message.read", {"message_id": uid(message.id)})
+        self.session.flush()
+        self.session.refresh(message)  # первый ответ и повтор показывают одно сохранённое значение
+        return message_view(message)
+
+
+def message_view(message: CandidateRequestMessage) -> dict:
+    return {"id": uid(message.id), "kind": message.kind, "title": message.title, "body": message.body,
+            "next_action": message.next_action, "created_at": iso(message.created_at), "read_at": iso(message.read_at)}
 
 
 def vacancy_conditions(settings, ref: s.PortalVacancyRef) -> dict | None:
