@@ -62,4 +62,17 @@
 - **Снимок подачи.** `submitted_snapshot` фиксирует текст, контакт, цель и список файлов на момент подачи. Поздние файлы его не меняют.
 - **Права.** Второй учебный кандидат (`candidate2`) задан в `fixtures/extra-actors.json` сервиса, общий набор не меняется. HR не создаёт обращение за кандидата (403). Department — 403. Другая организация — 404.
 
-Следующие части — 5B (запрос сведений, дополнение, готовность, ручная регистрация рассмотрения) и 5C (публичный исход и сообщения кабинета).
+
+### 5B · уточнение и передача в подбор
+
+Миграция `0003`: колонки `information_request`, `addenda`, `review`, `consideration`; статус `forwarded` невозможен без записанного рассмотрения (`CHECK`).
+
+| Операция | Кто | Переход |
+|---|---|---|
+| `POST …/information-request {expected_revision, public_message, requested_items}` | HR | `submitted` / `ready` / `needs_information` → `needs_information`; из `ready` готовность снимается |
+| `POST …/addendum {expected_revision, text, document_ids}` | автор | `needs_information` → `submitted`; файлы — только этого обращения; прежние материалы и снимок подачи сохраняются |
+| `POST …/choose-vacancy {expected_revision, vacancy_ref}` | автор | в `submitted` / `needs_information` / `ready`; только опубликованная точная редакция, иначе `409 VACANCY_NOT_AVAILABLE`; в ответе `vacancy_conditions` — условия этой редакции |
+| `POST …/ready {expected_revision, review_basis}` | HR | `submitted` → `ready` |
+| `POST …/record-consideration {expected_revision, candidate_ref, application_ref, selected_vacancy_ref, identity_basis, source_reference}` | HR | `ready` → `forwarded`; `confirmation_method=manual-confirmed` |
+
+**Идентичность.** Сервис не сопоставляет кабинет с записью подбора по имени или телефону. HR сам выбирает запись подбора (`candidate_ref`) и записывает основание выбора (`identity_basis`). Ссылки на записи и основание видит только HR. Кандидат получает только `{status: registered, recorded_at, selected_vacancy}`. Пока HR не записал регистрацию, например потому что подбор недоступен, обращение остаётся `ready`. Основание готовности (`review`) кандидату не показывается.

@@ -191,3 +191,44 @@ class SubmitCandidateRequest(Strict):
 
 REQUEST_DOCUMENT_KINDS = ("candidate_resume", "candidate_addendum")
 REQUEST_STATUSES = ("draft", "submitted", "needs_information", "ready", "forwarded", "closed", "withdrawn")
+
+
+# --- candidate-portal 5B --------------------------------------------------------------------
+
+class InformationRequest(Strict):
+    expected_revision: Revision
+    public_message: Text
+    requested_items: Annotated[list[Annotated[str, StringConstraints(strip_whitespace=True, min_length=1,
+                                                                     max_length=200)]],
+                               Field(min_length=1, max_length=20)]
+
+
+class Addendum(Strict):
+    expected_revision: Revision
+    text: Text
+    document_ids: Annotated[list[UUID], Field(max_length=20)] = []
+
+
+class RequestReady(Strict):
+    expected_revision: Revision
+    review_basis: Text
+
+
+class ChooseVacancy(Strict):
+    expected_revision: Revision
+    vacancy_ref: PortalVacancyRef
+
+
+class ExternalRecordRef(Strict):
+    """Ссылка на запись другой системы; system называет её явно (например, legacy-hr или legacy-hr-training)."""
+    system: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=40)]
+    id: UUID
+
+
+class RecordConsideration(Strict):
+    expected_revision: Revision
+    candidate_ref: ExternalRecordRef
+    application_ref: ExternalRecordRef
+    selected_vacancy_ref: PortalVacancyRef
+    identity_basis: Text
+    source_reference: Text
