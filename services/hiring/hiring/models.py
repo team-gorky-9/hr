@@ -190,6 +190,9 @@ class CandidateRequest(Timestamps, Base):
     addenda: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     review: Mapped[dict | None] = mapped_column(JSONB)
     consideration: Mapped[dict | None] = mapped_column(JSONB)
+    # 5C: опубликованные HR исходы (continue может смениться итоговым) и отзыв обращения автором.
+    outcomes: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    withdrawal: Mapped[dict | None] = mapped_column(JSONB)
 
 
 class CandidateRequestEvent(Base):
@@ -208,3 +211,20 @@ class CandidateRequestEvent(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, nullable=False)
 
     __table_args__ = (UniqueConstraint("request_id", "sequence", name="uq_candidate_request_events_sequence"),)
+
+
+class CandidateRequestMessage(Base):
+    """Сообщение в кабинете кандидата о запросе сведений или опубликованном исходе (5C).
+    Доставка только внутри кабинета; email, СЭД и брокер не используются."""
+
+    __tablename__ = "candidate_request_messages"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, default=uuid.uuid4)
+    request_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("candidate_requests.id"), nullable=False, index=True)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    next_action: Mapped[str | None] = mapped_column(Text)
+    created_by_actor_id: Mapped[uuid.UUID] = mapped_column(UUID, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, nullable=False)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

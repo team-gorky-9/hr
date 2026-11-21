@@ -76,3 +76,16 @@
 | `POST …/record-consideration {expected_revision, candidate_ref, application_ref, selected_vacancy_ref, identity_basis, source_reference}` | HR | `ready` → `forwarded`; `confirmation_method=manual-confirmed` |
 
 **Идентичность.** Сервис не сопоставляет кабинет с записью подбора по имени или телефону. HR сам выбирает запись подбора (`candidate_ref`) и записывает основание выбора (`identity_basis`). Ссылки на записи и основание видит только HR. Кандидат получает только `{status: registered, recorded_at, selected_vacancy}`. Пока HR не записал регистрацию, например потому что подбор недоступен, обращение остаётся `ready`. Основание готовности (`review`) кандидату не показывается.
+
+### 5C · понятный исход и сообщения кабинета
+
+Миграция `0004`: таблица `candidate_request_messages`, колонки `outcomes` и `withdrawal`. Статус `withdrawn` невозможен без записи отзыва (`CHECK`).
+
+| Операция | Кто | Правило |
+|---|---|---|
+| `POST …/public-outcome {expected_revision, outcome, public_explanation, next_action?, source_reference}` | HR | Из `ready` / `forwarded`. `continue` — только после регистрации рассмотрения, обязателен `next_action`, статус `forwarded`. `declined` / `no_open_opportunity` / `completed` → `closed`. Создаётся сообщение кабинета |
+| `POST …/withdraw {expected_revision, reason}` | автор | Из любого незакрытого статуса → `withdrawn`. Для `forwarded`: `external_consideration_open=true` и пояснение, что рассмотрение в подборе завершает его владелец |
+| `GET …/messages` | автор, HR | Сообщения о запросе сведений (создаёт `information-request`) и об исходе |
+| `POST …/messages/{message_id}/read` | автор | Отметка прочтения. Повтор возвращает первую отметку. HR — 403, чужая учётка — 404 |
+
+**Публичный текст.** В объяснение кандидату попадает только то, что HR явно написал в `public_explanation` / `next_action`. Основание готовности, отзыв департамента и оценка в него автоматически не копируются. `source_reference` и автор решения видны только HR. «Нет открытой вакансии» (`no_open_opportunity`) — отдельный исход с отдельным заголовком сообщения, его нельзя спутать с `declined`. Сохранение человека в кадровом архиве — отдельное действие с собственным основанием, исход его не выполняет.

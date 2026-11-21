@@ -96,3 +96,11 @@ uv run python -m hiring.portal_clarification_demo   # запрос сведен�
 ```
 
 HR: `POST /candidate-requests/{id}/information-request`, `…/ready`, `…/record-consideration`. Кандидат: `…/addendum`, `…/choose-vacancy`. Все операции принимают `expected_revision`. Ссылки на записи подбора в демо учебные (`system=legacy-hr-training`), реального соединения нет.
+
+### 5C · понятный исход и сообщения кабинета
+
+```bash
+uv run python -m hiring.portal_outcome_demo   # запрос → прочтение → итог со следующим шагом; «нет открытой вакансии»; отзыв
+```
+
+HR публикует исход: `POST /candidate-requests/{id}/public-outcome {expected_revision, outcome, public_explanation, next_action, source_reference}`. Кандидат работает с сообщениями — `GET …/messages`, `POST …/messages/{message_id}/read` — и может отозвать обращение: `POST …/withdraw {expected_revision, reason}`. Сообщения доставляются только внутри кабинета, без email, СЭД и брокера.

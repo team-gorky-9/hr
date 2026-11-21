@@ -232,3 +232,24 @@ class RecordConsideration(Strict):
     selected_vacancy_ref: PortalVacancyRef
     identity_basis: Text
     source_reference: Text
+
+
+# --- candidate-portal 5C --------------------------------------------------------------------
+
+class PublicOutcome(Strict):
+    expected_revision: Revision
+    outcome: Literal["continue", "declined", "no_open_opportunity", "completed"]
+    public_explanation: Text
+    next_action: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)] | None = None
+    source_reference: Text
+
+    @model_validator(mode="after")
+    def next_step_for_continue(self):
+        if self.outcome == "continue" and self.next_action is None:
+            raise ValueError("next_action is required when the consideration continues")
+        return self
+
+
+class WithdrawRequest(Strict):
+    expected_revision: Revision
+    reason: Text
