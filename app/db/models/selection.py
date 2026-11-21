@@ -163,6 +163,11 @@ class Interview(Base):
         server_default="pending",
     )
     summary: Mapped[str | None] = mapped_column(Text)
+    # wave-2: итог встречи записывается явным действием HR (POST /interviews/{id}/outcome).
+    # attempt_at — время попытки (у no_answer held_at пуст), outcome_recorded_at — время записи сервером.
+    attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    outcome_recorded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revision: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     created_at: Mapped[datetime] = created_at_column()
 
     questions: Mapped[list["InterviewQuestion"]] = relationship(

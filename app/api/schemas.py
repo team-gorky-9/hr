@@ -13,7 +13,7 @@ from app.postings.service import ApplicationResolution
 from app.assessment.state import AssessmentStatus, StaleReason  # noqa: F401
 from app.schemas.competency_details import CompetencyDetails, IndicatorResult, ProfileCounters
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.db.enums import (
     ApplicationSource,
@@ -870,6 +870,52 @@ class AnswerIn(BaseModel):
 class AnswerListOut(BaseModel):
     question_id: uuid.UUID
     items: list[AnswerOut]
+
+
+# --- Итог телефонной встречи (wave-2-stage-1, раздел «Илья») ---------------------------------
+
+class InterviewOutcomeIn(BaseModel):
+    """Итог встречи явным действием HR. occurred_at — когда был разговор (или попытка для no_answer)."""
+    model_config = ConfigDict(extra="forbid")
+
+    expected_revision: int = Field(ge=1)
+    result: Literal["continue", "stop", "no_answer"]
+    occurred_at: datetime
+    summary: str = Field(max_length=4000)
+
+    @field_validator("occurred_at")
+    @classmethod
+    def aware(cls, value: datetime) -> datetime:
+        if value.tzinfo is None:
+            raise ValueError("occurred_at must include a time zone")
+        return value
+
+    @field_validator("summary")
+    @classmethod
+    def meaningful(cls, value: str) -> str:
+        value = " ".join(value.split())
+        if len(value) < 5:
+            raise ValueError("summary must explain the outcome (at least 5 characters)")
+        return value
+
+
+class InterviewOut(BaseModel):
+    id: uuid.UUID
+    application_id: uuid.UUID
+    kind: str
+    scheduled_at: datetime | None
+    held_at: datetime | None
+    attempt_at: datetime | None
+    result: str
+    summary: str | None
+    interviewer_user_id: uuid.UUID | None
+    outcome_recorded_at: datetime | None
+    revision: int
+
+
+class InterviewListOut(BaseModel):
+    application_id: uuid.UUID
+    items: list[InterviewOut]
 
 
 class ConfirmIn(BaseModel):

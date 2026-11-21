@@ -12,6 +12,7 @@
 """
 import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import select
@@ -30,6 +31,9 @@ from app.api.schemas import (
     DocumentRequestOut,
     InterviewGuideIn,
     InterviewGuideOut,
+    InterviewListOut,
+    InterviewOut,
+    InterviewOutcomeIn,
     InterviewQuestionOut,
     InterviewUserOut,
     ResolvedByOut,
@@ -39,7 +43,7 @@ from app.api.workflow import get_application_or_404, require_working_application
 from app.assessment.service import record_llm_calls
 from app.assessment.state import AssessmentState, AssessmentStatus, resolve_states
 from app.db import repository as repo
-from app.db.enums import AnswerSource, CheckResult, InterviewKind, InterviewQuestionKind, RubricStatus, VerificationMethod
+from app.db.enums import AnswerSource, AuditAction, CheckResult, InterviewKind, InterviewResult, InterviewQuestionKind, RubricStatus, VerificationMethod
 from app.db.models import (
     Application,
     Assessment,
@@ -523,3 +527,76 @@ def _assessment_out(session: Session, assessment: Assessment) -> AssessmentOut:
         if resolved[candidate.id].assessment is not None and resolved[candidate.id].assessment.id == assessment.id:
             state = resolved[candidate.id]
     return assessment_out(session, candidate, state)
+
+
+# --- Итог телефонной встречи (wave-2-stage-1, раздел «Илья») ------------------------------------
+
+# Допуск на расхождение часов клиента и сервера: «разговор через минуту» — ещё не ошибка ввода.
+CLOCK_SKEW = timedelta(minutes=5)
+
+
+def interview_out(interview: Interview) -> InterviewOut:
+    return InterviewOut(
+        id=interview.id, application_id=interview.application_id, kind=str(interview.kind),
+        scheduled_at=interview.scheduled_at, held_at=interview.held_at, attempt_at=interview.attempt_at,
+        result=str(interview.result), summary=interview.summary, interviewer_user_id=interview.interviewer_user_id,
+        outcome_recorded_at=interview.outcome_recorded_at, revision=interview.revision,
+    )
+
+
+def list_interviews(session: Session, application_id: uuid.UUID) -> InterviewListOut:
+    """Все встречи отклика, старые сначала: завершённые с итогом, прежние без итога и текущая pending."""
+    application = get_application_or_404(session, application_id)
+    rows = session.scalars(select(Interview).where(Interview.application_id == application.id)
+                           .order_by(Interview.created_at, Interview.id))
+    return InterviewListOut(application_id=application.id, items=[interview_out(i) for i in rows])
+
+
+def _same_outcome(interview: Interview, body: InterviewOutcomeIn, user: User) -> bool:
+    """Повтор в точности той же команды того же актора (expected_revision не сравнивается:
+    после первой записи она уже устарела, а повтор должен вернуть прежний результат)."""
+    return (str(interview.result) == body.result and interview.attempt_at == body.occurred_at
+            and interview.summary == body.summary and interview.interviewer_user_id == user.id)
+
+
+def record_outcome(session: Session, interview_id: uuid.UUID, body: InterviewOutcomeIn, user: User) -> InterviewOut:
+    """Завершить телефонную встречу: continue/stop — разговор состоялся (held_at = attempt_at = occurred_at),
+    no_answer — только попытка (held_at пуст). Этап отклика, отказ и резерв не меняются.
+
+    Строка встречи блокируется (FOR UPDATE), поэтому две параллельные команды не перезапишут один итог:
+    вторая увидит завершённую встречу и получит повтор либо 409 INTERVIEW_ALREADY_COMPLETED."""
+    interview = session.scalar(select(Interview).where(Interview.id == interview_id).with_for_update())
+    if interview is None:
+        raise not_found("INTERVIEW_NOT_FOUND", "Интервью не найдено", interview_id=interview_id)
+    require_working_application(session.get(Application, interview.application_id))
+    if interview.kind != InterviewKind.PHONE:
+        raise ApiError(409, "UNSUPPORTED_INTERVIEW_KIND", "Итог записывается только для телефонной встречи",
+                       {"kind": str(interview.kind)})
+    if interview.result != InterviewResult.PENDING:
+        if _same_outcome(interview, body, user):
+            return interview_out(interview)
+        raise ApiError(409, "INTERVIEW_ALREADY_COMPLETED", "Итог встречи уже записан: исправление — отдельная команда",
+                       {"result": str(interview.result), "revision": interview.revision})
+    if interview.revision != body.expected_revision:
+        raise ApiError(409, "STALE_REVISION", "Встречу уже изменили: перечитайте её",
+                       {"revision": interview.revision})
+    now = datetime.now(UTC)
+    if body.occurred_at > now + CLOCK_SKEW:
+        raise ApiError(422, "INVALID_OCCURRED_AT", "Время разговора не может быть в будущем",
+                       {"field": "occurred_at"})
+
+    held = body.result != InterviewResult.NO_ANSWER
+    interview.result = InterviewResult(body.result)
+    interview.attempt_at = body.occurred_at
+    interview.held_at = body.occurred_at if held else None
+    interview.summary = body.summary
+    interview.interviewer_user_id = user.id
+    interview.outcome_recorded_at = now
+    interview.revision += 1
+    repo.write_audit(session, action=AuditAction.OTHER, entity_type="interview", entity_id=str(interview.id),
+                     user_id=user.id, details={
+                         "event": "interview.outcome_recorded", "application_id": str(interview.application_id),
+                         "result": body.result, "occurred_at": body.occurred_at.isoformat(),
+                         "held": held, "revision": interview.revision})
+    session.commit()
+    return interview_out(interview)

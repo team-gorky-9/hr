@@ -155,6 +155,9 @@ INTERVIEW_ROUTES = {
     "/api/v1/applications/{application_id}/interview-guide",
     "/api/v1/interviews/{interview_id}/questions/{question_id}/answers",
     "/api/v1/assessments/{assessment_id}/formal-checks/{requirement_id}/confirm",
+    # wave-2-stage-1: итог телефонной встречи и чтение встреч отклика.
+    "/api/v1/applications/{application_id}/interviews",
+    "/api/v1/interviews/{interview_id}/outcome",
 }
 
 WORKFLOW_01_ROUTES = {
