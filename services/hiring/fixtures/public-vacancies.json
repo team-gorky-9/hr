@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0",
+  "is_synthetic": true,
+  "source": "training_snapshot",
+  "note": "Учебный снимок публичных вакансий для candidate-portal. Живой каталог вакансий не подключён; ссылки и тексты вымышленные.",
+  "observed_at": "2026-11-21T09:00:00+03:00",
+  "vacancies": [
+    {
+      "ref": {"system": "catalog", "id": "00000000-0000-4000-8000-000000000c01", "revision": 1},
+      "organization_id": "00000000-0000-4000-8000-000000000001",
+      "title": "Экономист отдела планирования (учебная)",
+      "description": "Учебное объявление: планирование бюджета подразделения, отчётность, работа с таблицами.",
+      "position_code": "economist-training",
+      "status": "published"
+    },
+    {
+      "ref": {"system": "catalog", "id": "00000000-0000-4000-8000-000000000c02", "revision": 1},
+      "organization_id": "00000000-0000-4000-8000-000000000001",
+      "title": "Аналитик информационных систем (учебная, закрыта)",
+      "description": "Учебное объявление закрыто: набор завершён.",
+      "position_code": "analyst-training",
+      "status": "closed"
+    }
+  ]
+}

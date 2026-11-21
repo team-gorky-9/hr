@@ -72,3 +72,19 @@ curl -s -X POST localhost:8103/api/v1/cases \
 Ответ `201` — дело: `status=preparing`, `revision=1`, `workforce_status=not_sent`, `transfer_mode=manual`, `provenance.source_mode=fixture`, `checklist[0].status=requested`. Повтор того же `application_ref` возвращает `200` и то же дело.
 
 После `start` HR читает `GET /cases/{id}/registration-data`, регистрирует сотрудника в Workforce или внешней кадровой системе и записывает результат `POST /cases/{id}/record-assignment`. Полный порядок вызовов — в `hiring/demo.py`.
+
+## Candidate-portal: собственное обращение кандидата (wave-5, 5A)
+
+Контракт — [wave-5-candidate-portal-stage-1](../../docs/contracts/wave-5-candidate-portal-stage-1.md), раздел 5A. Маршруты `/api/v1/candidate-requests` в этом же сервисе. Миграция `0002`, применяется командой `python -m hiring serve`.
+
+Учебные кандидаты: `fixture:candidate` из общего набора и `fixture:candidate2` из `fixtures/extra-actors.json`. HR — `fixture:hr`. Публичные вакансии — учебный снимок `fixtures/public-vacancies.json` (`source=training_snapshot`): живой каталог вакансий не подключён.
+
+```bash
+uv run python -m hiring serve &            # API на 127.0.0.1:8103
+uv run python -m hiring.portal_demo        # два кандидата, чужой доступ, второе резюме, очередь HR
+curl -s -X POST localhost:8103/api/v1/candidate-requests \
+  -H 'Authorization: Bearer fixture:candidate2' -H 'Content-Type: application/json' \
+  -d '{"message": "Ищу работу по специальности (учебно)", "contact": {"channel": "email", "value": "c2@example.test"}}'
+```
+
+Ответ `201` — черновик: `status=draft`, `target_question=no_target`, `contact.source=candidate_reported`. Подача — `POST /candidate-requests/{id}/submit {expected_revision}`, она присваивает номер `ОБР-000001`.

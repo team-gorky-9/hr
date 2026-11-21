@@ -113,6 +113,8 @@ class Document(Timestamps, Base):
     organization_id: Mapped[uuid.UUID] = mapped_column(UUID, nullable=False, index=True)
     # Bound on first use (submit or start); a document never moves to another case.
     case_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("cases.id"), index=True)
+    # Документ собственного обращения кандидата (candidate-portal, wave-5); с делом не связан.
+    request_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("candidate_requests.id"), index=True)
     kind: Mapped[str] = mapped_column(String(40), nullable=False)
     original_name: Mapped[str] = mapped_column(Text, nullable=False)
     media_type: Mapped[str] = mapped_column(String(80), nullable=False)
@@ -157,3 +159,46 @@ class IdempotentCommand(Base):
     status_code: Mapped[int] = mapped_column(Integer, nullable=False)
     result: Mapped[dict] = mapped_column(JSONB, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, nullable=False)
+
+
+class CandidateRequest(Timestamps, Base):
+    """Собственное обращение кандидата (candidate-portal, wave-5-candidate-portal-stage-1).
+
+    Автор — актор входа, а не поле тела запроса. Контакт — то, что сообщил сам кандидат
+    (source=candidate_reported), внешне не проверен. Вакансия — ссылка на точную редакцию публикации;
+    если она закрыта или не найдена, обращение принимается с вопросом цели (target_question),
+    откликом оно автоматически не становится."""
+
+    __tablename__ = "candidate_requests"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, default=uuid.uuid4)
+    organization_id: Mapped[uuid.UUID] = mapped_column(UUID, nullable=False, index=True)
+    author_actor_id: Mapped[uuid.UUID] = mapped_column(UUID, nullable=False, index=True)
+    number: Mapped[str | None] = mapped_column(String(32), unique=True)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="draft")
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    vacancy_ref: Mapped[dict | None] = mapped_column(JSONB)
+    vacancy: Mapped[dict | None] = mapped_column(JSONB)  # title/status из источника на момент выбора
+    target_question: Mapped[str | None] = mapped_column(String(32))
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    contact: Mapped[dict] = mapped_column(JSONB, nullable=False)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    submitted_snapshot: Mapped[dict | None] = mapped_column(JSONB)
+
+
+class CandidateRequestEvent(Base):
+    """История обращения: только добавляется."""
+
+    __tablename__ = "candidate_request_events"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID, primary_key=True, default=uuid.uuid4)
+    request_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("candidate_requests.id"), nullable=False, index=True)
+    sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    request_revision: Mapped[int] = mapped_column(Integer, nullable=False)
+    event_type: Mapped[str] = mapped_column(String(60), nullable=False)
+    actor_id: Mapped[uuid.UUID] = mapped_column(UUID, nullable=False)
+    actor_role: Mapped[str] = mapped_column(String(20), nullable=False)
+    data: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, nullable=False)
+
+    __table_args__ = (UniqueConstraint("request_id", "sequence", name="uq_candidate_request_events_sequence"),)

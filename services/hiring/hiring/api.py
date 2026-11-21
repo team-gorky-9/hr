@@ -17,6 +17,8 @@ from hiring.auth import authenticate
 from hiring.config import Settings
 from hiring.database import at_head, make_engine
 from hiring.domain import Hiring, document_view
+from hiring.portal import Portal
+from hiring.portal import public_vacancies as portal_public_vacancies
 from hiring.errors import Problem, forbidden
 from hiring.models import Document, IdempotentCommand
 
@@ -191,6 +193,89 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.post(f"{api}/cases/{{case_id}}/record-assignment")
     def record_assignment(request: Request, case_id: uuid.UUID, body: s.RecordAssignment):
         return command(request, body, lambda h: h.record_assignment(case_id, body))
+
+    # ------------------------------------------------------------ candidate-portal (wave-5, 5A)
+
+    def portal_read(request: Request, action):
+        actor = actor_of(request)
+        with Session(app.state.engine) as session, session.begin():
+            return JSONResponse(action(Portal(session, actor, settings)))
+
+    def portal_command(request: Request, body, action, status: int = 200):
+        return command(request, body, lambda h: action(Portal(h.session, h.actor, h.settings)), status)
+
+    @app.get(f"{api}/candidate-portal/vacancies")
+    def portal_vacancies(request: Request):
+        """Публичные вакансии для выбора цели: учебный снимок (source=training_snapshot)."""
+        actor_of(request)
+        data = portal_public_vacancies(settings)
+        return {"source": data["source"], "observed_at": data["observed_at"], "is_synthetic": data["is_synthetic"],
+                "items": [{"ref": v["ref"], "title": v["title"], "description": v["description"],
+                           "position_code": v["position_code"], "status": v["status"]}
+                          for v in data["vacancies"] if v["status"] == "published"]}
+
+    @app.post(f"{api}/candidate-requests", status_code=201)
+    def create_candidate_request(request: Request, body: s.CreateCandidateRequest):
+        return portal_command(request, body, lambda p: p.create(body))
+
+    @app.get(f"{api}/candidate-requests")
+    def list_candidate_requests(request: Request, status: str | None = None):
+        return portal_read(request, lambda p: p.list_requests(status))
+
+    @app.get(f"{api}/candidate-requests/{{request_id}}")
+    def get_candidate_request(request: Request, request_id: uuid.UUID):
+        return portal_read(request, lambda p: p.get(request_id))
+
+    @app.get(f"{api}/candidate-requests/{{request_id}}/history")
+    def candidate_request_history(request: Request, request_id: uuid.UUID):
+        return portal_read(request, lambda p: p.history(request_id))
+
+    @app.patch(f"{api}/candidate-requests/{{request_id}}")
+    def update_candidate_request(request: Request, request_id: uuid.UUID, body: s.UpdateCandidateRequest):
+        return portal_command(request, body, lambda p: p.update(request_id, body))
+
+    @app.post(f"{api}/candidate-requests/{{request_id}}/submit")
+    def submit_candidate_request(request: Request, request_id: uuid.UUID, body: s.SubmitCandidateRequest):
+        return portal_command(request, body, lambda p: p.submit(request_id, body))
+
+    @app.post(f"{api}/candidate-requests/{{request_id}}/documents", status_code=201)
+    def upload_request_document(request: Request, request_id: uuid.UUID, file: Annotated[UploadFile, File()],
+                                kind: Annotated[str, Form()] = "candidate_resume"):
+        """Резюме или дополнение своего обращения: новый неизменяемый документ, прежние сохраняются."""
+        actor = actor_of(request)
+        if kind not in s.REQUEST_DOCUMENT_KINDS:
+            raise Problem(422, "VALIDATION_ERROR", f"kind must be one of {', '.join(s.REQUEST_DOCUMENT_KINDS)}", "kind")
+        if not actor.is_candidate():
+            raise forbidden("Only the author uploads documents of a candidate request")
+        with Session(app.state.engine) as session, session.begin():
+            Portal(session, actor, settings).own(request_id)  # чужое обращение — 404 до записи файла
+        original_name = (file.filename or "document").replace("\\", "/").rsplit("/", 1)[-1][:255] or "document"
+        document_id = uuid.uuid4()
+        stored = storage.save(settings.file_root, actor.organization_id, document_id, file.file, settings.file_max_bytes)
+        committed = False
+        try:
+            with Session(app.state.engine) as session, session.begin():
+                document = Document(
+                    id=document_id, organization_id=actor.organization_id, kind=kind, original_name=original_name,
+                    media_type=stored.media_type, size_bytes=stored.size, sha256=stored.sha256, revision=1,
+                    uploaded_by=actor.actor_id, uploaded_by_role=actor.role, storage_key=stored.key)
+                payload = Portal(session, actor, settings).attach(request_id, document)
+            committed = True
+            return JSONResponse(payload, status_code=201)
+        finally:
+            if not committed:
+                storage.remove(settings.file_root, stored.key)
+
+    @app.get(f"{api}/candidate-requests/{{request_id}}/documents/{{document_id}}/content")
+    def request_document_content(request: Request, request_id: uuid.UUID, document_id: uuid.UUID):
+        actor = actor_of(request)
+        with Session(app.state.engine) as session:
+            document = Portal(session, actor, settings).document(request_id, document_id)
+            path, media_type, name = storage.path_of(settings.file_root, document.storage_key), \
+                document.media_type, document.original_name
+        if not path.exists():
+            raise Problem(503, "DEPENDENCY_UNAVAILABLE", "Stored original is not available")
+        return FileResponse(path, media_type=media_type, filename=name)
 
     # ------------------------------------------------------------ documents
 

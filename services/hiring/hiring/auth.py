@@ -57,10 +57,23 @@ def actor_from_json(data: dict) -> Actor:
     )
 
 
-@lru_cache(maxsize=4)
-def fixture_actors(path: Path) -> dict[str, Actor]:
+@lru_cache(maxsize=8)
+def _actors_file(path: Path) -> dict[str, Actor]:
     data = json.loads(path.read_text(encoding="utf-8"))
     return {item["login"]: actor_from_json(item) for item in data["actors"] if item.get("active", True)}
+
+
+def fixture_actors(settings) -> dict[str, Actor]:
+    """Общие учебные акторы fixtures/wave-1/actors.json плюс учебные акторы сервиса
+    (второй кандидат для проверки объектных прав candidate-portal). Логины не пересекаются."""
+    actors = dict(_actors_file(settings.fixture_dir / "actors.json"))
+    extra = settings.extra_actors_file
+    if extra is not None and extra.exists():
+        for login, actor in _actors_file(extra).items():
+            if login in actors:
+                raise ValueError(f"extra actor login {login} duplicates a shared fixture actor")
+            actors[login] = actor
+    return actors
 
 
 def bearer(header: str | None) -> str:
@@ -75,7 +88,7 @@ def authenticate(settings, header: str | None) -> Actor:
     if settings.auth_mode == "fixture":
         if not token.startswith("fixture:"):
             raise Problem(401, "INVALID_SESSION", "Fixture mode accepts only fixture:<login>")
-        actor = fixture_actors(settings.fixture_dir / "actors.json").get(token.removeprefix("fixture:"))
+        actor = fixture_actors(settings).get(token.removeprefix("fixture:"))
         if actor is None:
             raise Problem(401, "INVALID_SESSION", "Unknown fixture actor")
         return actor
@@ -99,7 +112,7 @@ def known_candidate(settings, actor_id: uuid.UUID, organization_id: uuid.UUID) -
     """True/False when the server can check the candidate account; None when it cannot (workforce mode)."""
     if settings.auth_mode != "fixture":
         return None
-    for actor in fixture_actors(settings.fixture_dir / "actors.json").values():
+    for actor in fixture_actors(settings).values():
         if actor.actor_id == actor_id:
             return actor.is_candidate() and actor.organization_id == organization_id
     return False

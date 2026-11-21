@@ -45,7 +45,8 @@ def settings(database_url, tmp_path):
     engine = make_engine(database_url)
     with engine.begin() as connection:
         connection.execute(text(
-            "TRUNCATE case_events, checklist_items, documents, cases, idempotent_commands"))
+            "TRUNCATE case_events, checklist_items, documents, cases, idempotent_commands, "
+            "candidate_request_events, candidate_requests"))
     engine.dispose()
     return Settings(database_url=database_url, auth_mode="fixture", source_mode="fixture",
                     fixture_dir=FIXTURES, extra_selections_file=EXTRA, file_root=tmp_path / "files",

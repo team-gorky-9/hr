@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "is_synthetic": true,
+  "note": "Второй учебный кандидат для проверки объектных прав candidate-portal (wave-5). Общий набор fixtures/wave-1/actors.json не меняется.",
+  "actors": [
+    {
+      "actor_id": "00000000-0000-4000-8000-000000000107",
+      "login": "candidate2",
+      "password": "123",
+      "organization_id": "00000000-0000-4000-8000-000000000001",
+      "grants": [
+        {
+          "role": "candidate",
+          "scope_type": "self",
+          "scope_id": "00000000-0000-4000-8000-000000000107"
+        }
+      ],
+      "active": true
+    }
+  ]
+}

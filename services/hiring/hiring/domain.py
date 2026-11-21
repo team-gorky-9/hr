@@ -587,6 +587,15 @@ class Hiring:
     def can_read_document(self, document: Document | None) -> bool:
         if document is None or document.organization_id != self.actor.organization_id:
             return False
+        if document.request_id is not None:
+            # Документ обращения candidate-portal: автор либо HR организации после подачи.
+            from hiring.models import CandidateRequest
+            request = self.session.get(CandidateRequest, document.request_id)
+            if request is None:
+                return False
+            if request.author_actor_id == self.actor.actor_id:
+                return True
+            return self.actor.is_hr() and request.status != "draft"
         if self.actor.is_hr():
             return True
         if not self.actor.is_candidate():

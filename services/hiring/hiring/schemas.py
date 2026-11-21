@@ -146,4 +146,48 @@ class RecordAssignment(Strict):
         return value
 
 
-DOCUMENT_KINDS = ("hiring_application", "hiring_evidence", "employment_basis")
+DOCUMENT_KINDS = ("hiring_application", "hiring_evidence", "employment_basis")  # дела оформления
+
+
+# --- candidate-portal (wave-5-candidate-portal-stage-1, 5A) ---------------------------------
+
+class PortalVacancyRef(Strict):
+    system: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=40)]
+    id: UUID
+    revision: Revision
+
+
+class CandidateContact(Strict):
+    """Контакт, который сообщил сам кандидат; внешне не проверен."""
+    channel: Literal["email", "phone", "messenger", "other"]
+    value: Annotated[str, StringConstraints(strip_whitespace=True, min_length=3, max_length=200)]
+
+
+class CreateCandidateRequest(Strict):
+    vacancy_ref: PortalVacancyRef | None = None
+    message: Text
+    contact: CandidateContact
+
+
+class UpdateCandidateRequest(Strict):
+    expected_revision: Revision
+    message: Text | None = None
+    contact: CandidateContact | None = None
+    vacancy_ref: PortalVacancyRef | None = None
+    clear_vacancy: bool = False  # явный отказ от выбранной вакансии (null в vacancy_ref неотличим от «не менять»)
+
+    @model_validator(mode="after")
+    def something_changes(self):
+        if self.clear_vacancy and self.vacancy_ref is not None:
+            raise ValueError("clear_vacancy and vacancy_ref cannot be combined")
+        if not (self.message or self.contact or self.vacancy_ref or self.clear_vacancy):
+            raise ValueError("nothing to change")
+        return self
+
+
+class SubmitCandidateRequest(Strict):
+    expected_revision: Revision
+
+
+REQUEST_DOCUMENT_KINDS = ("candidate_resume", "candidate_addendum")
+REQUEST_STATUSES = ("draft", "submitted", "needs_information", "ready", "forwarded", "closed", "withdrawn")

@@ -35,6 +35,15 @@ class Settings:
             _env("EXTRA_SELECTIONS_FILE", str(SERVICE_ROOT / "fixtures/extra-selections.json"))
         )
     )
+    extra_actors_file: Path | None = field(
+        default_factory=lambda: Path(_env("EXTRA_ACTORS_FILE", str(SERVICE_ROOT / "fixtures/extra-actors.json")))
+    )
+    # Учебный снимок публичных вакансий для candidate-portal, пока каталог вакансий не подключён.
+    public_vacancies_file: Path = field(
+        default_factory=lambda: Path(
+            _env("PUBLIC_VACANCIES_FILE", str(SERVICE_ROOT / "fixtures/public-vacancies.json"))
+        )
+    )
     file_root: Path = field(default_factory=lambda: Path(_env("FILE_ROOT", str(SERVICE_ROOT / ".files"))))
     file_max_bytes: int = field(default_factory=lambda: int(_env("FILE_MAX_BYTES", str(20 * 1024 * 1024))))
     auth_timeout_seconds: float = field(default_factory=lambda: float(_env("AUTH_TIMEOUT_SECONDS", "3")))
