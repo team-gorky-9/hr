@@ -4,7 +4,7 @@ export function HeroSection({ onSearch }: { onSearch?: (query: string) => void }
   const [query, setQuery] = useState('');
 
   return (
-    <section className="bg-[#1F4FD1] rounded-2xl p-8 lg:p-12 text-white shadow-sm">
+    <section data-tour="portal-hero" className="bg-[#1F4FD1] rounded-2xl p-8 lg:p-12 text-white shadow-sm">
       <h1 className="text-[32px] sm:text-[38px] font-bold tracking-tight mb-3">
         Работа, которая меняет город
       </h1>

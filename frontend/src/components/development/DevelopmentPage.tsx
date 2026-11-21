@@ -248,12 +248,12 @@ export default function DevelopmentPage() {
   const goal = selected?.kind === 'goal' ? goals.find((row) => row.id === selected.id) : undefined;
   const plan = selected?.kind === 'plan' ? plans.find((row) => row.id === selected.id) : undefined;
   const employee = session?.actor.grants.some((grant) => grant.role === 'employee');
-  return <div className="max-w-[1240px] mx-auto px-4 sm:px-6 py-8 space-y-5">
+  return <div data-tour="employee-development-page" className="max-w-[1240px] mx-auto px-4 sm:px-6 py-8 space-y-5">
     <PageTitle title="Развитие сотрудника" subtitle="Цель, договорённость о работе и подтверждённый результат." />
     {!session ? <Card>{sessionError || (loading ? 'Проверяем вход…' : 'Войдите в кабинет сотрудника, чтобы увидеть цели и планы.')}</Card> : <>
       <p className="break-all text-[14px] text-[#4A5363]">Код учётной записи для назначения {session.actor.actor_id}</p>
       {error && <div role="alert" className="bg-[#FCE8E8] rounded-xl p-4">{error} <Btn onClick={() => void run(refresh)} disabled={busy}>Обновить данные</Btn></div>}
-      <div className="grid lg:grid-cols-[300px_minmax(0,1fr)] items-start gap-5">
+      <div data-tour="employee-development-grid" className="grid lg:grid-cols-[300px_minmax(0,1fr)] items-start gap-5">
         <Card className="space-y-3">
           <h2 className="text-[17px] font-bold">Цели и планы</h2>
           {employee && <Btn onClick={() => setSelected(null)}>Новая цель</Btn>}

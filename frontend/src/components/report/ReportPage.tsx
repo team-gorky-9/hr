@@ -100,7 +100,7 @@ export default function ReportPage({ embeddedView, onPrepared }: {
   }
 
   return <div className={embedded ? 'space-y-5' : 'max-w-[1240px] mx-auto px-4 sm:px-6 py-8 space-y-5'}>
-    <div className={'bg-white border border-[#E1E5EB] rounded-2xl px-6 pt-6 ' + (embedded ? 'pb-6' : '')}>
+    <div data-tour="report-header" className={'bg-white border border-[#E1E5EB] rounded-2xl px-6 pt-6 ' + (embedded ? 'pb-6' : '')}>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div><div className="flex flex-wrap items-center gap-3"><h1 className="text-[28px] font-bold text-[#141A24]">{embeddedView === 'config' ? 'Новый отчёт' : embeddedView === 'ready' ? 'Готовый отчёт' : 'Годовой кадровый доклад'}{snapshot && ' · '+snapshot.year}</h1>{snapshot && <Badge tone={snapshot.mode==='demo' ? 'amber' : 'gray'}>{snapshot.mode==='demo'?'Учебный':'Рабочий'}</Badge>}</div>
           {snapshot && <p className="text-[16px] text-[#4A5363] mt-1">{snapshot.scope_label} · период с {snapshot.period_start} до {snapshot.period_end_exclusive}</p>}

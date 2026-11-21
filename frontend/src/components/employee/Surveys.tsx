@@ -165,11 +165,11 @@ export default function Surveys() {
   }
 
   return <div className="max-w-[1240px] mx-auto px-4 sm:px-6 py-8 space-y-5">
-    <div className="bg-[#F1EDFF] rounded-3xl p-8 flex items-center gap-5">
+    <div data-tour="employee-surveys-hero" className="bg-[#F1EDFF] rounded-3xl p-8 flex items-center gap-5">
       <div aria-hidden="true" className="w-16 h-16 shrink-0 bg-white rounded-2xl grid place-items-center text-[28px]">🛡</div>
       <div><h1 className="text-[32px] font-bold">Опросы</h1><p className="text-[#4A5363]">Анонимные опросы сотрудников</p></div>
     </div>
-    <div className="grid lg:grid-cols-[2fr_1fr] gap-5 items-start">
+    <div data-tour="employee-surveys-workspace" className="grid lg:grid-cols-[2fr_1fr] gap-5 items-start">
       <aside className="space-y-3 lg:col-start-2">
         <Card className="space-y-3">
           <h2 className="text-[20px] font-bold">Учебные опросы</h2>

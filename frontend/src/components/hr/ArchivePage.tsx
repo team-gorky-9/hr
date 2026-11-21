@@ -190,7 +190,7 @@ export default function ArchivePage() {
       </div>
       {selected && vacancy ? <CandidateArchive key={selected.candidate_id + vacancyId} hit={selected} vacancy={vacancy} onBack={() => setSelected(null)} /> : (
         <div className="space-y-5">
-          <form className="bg-white border border-[#E1E5EB] rounded-2xl p-6 space-y-4" onSubmit={(e) => { e.preventDefault(); void search(); }}>
+          <form data-tour="hr-archive-search" className="bg-white border border-[#E1E5EB] rounded-2xl p-6 space-y-4" onSubmit={(e) => { e.preventDefault(); void search(); }}>
             <div className="grid grid-cols-2 gap-5">
               <label className="text-[14px] font-medium">Целевая вакансия<select aria-label="Целевая вакансия" className={field} value={vacancyId} onChange={(e) => { setVacancyId(e.target.value); setSelected(null); }}>
                 <option value="">Выберите вакансию</option>
