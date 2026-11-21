@@ -814,8 +814,8 @@ export default function AnalyticsDashboard() {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <img src="/images/Header/Mark.svg" alt="GorkyCode" className="w-6 h-6" />
-                  <span className="text-[13px] font-bold text-[#141A24]">GorkyCode - team 9</span>
+                  <img src="/images/Header/Mark.svg" alt="Кадровый ассистент" className="w-6 h-6" />
+                  <span className="text-[13px] font-bold text-[#141A24]">Кадровый ассистент</span>
                 </div>
               </div>
 
