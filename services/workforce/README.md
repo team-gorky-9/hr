@@ -1,5 +1,42 @@
 # Workforce · кадровые назначения и вводные программы
 
+## Развитие · третья волна, этап 1
+
+`workforce/development` работает в этой же БД и с теми же сессиями, без worker и брокера.
+Контракт: [wave-3-development-stage-1](../../docs/contracts/wave-3-development-stage-1.md).
+Устройство и границы: [development](../../docs/modules/development.md).
+Все пути имеют префикс `/api/v1/development`, модели команд/ответов доступны в `/openapi.json` и `/docs`.
+`Idempotency-Key` для новых development-операций не требуется; PATCH/share/respond требуют
+`expected_revision`, устаревшая версия даёт `409 STALE_REVISION`.
+
+Быстрый запуск из `services/workforce` без контейнеров:
+
+```powershell
+uv sync --locked
+$env:DATABASE_URL = 'sqlite:///development-demo.db'
+$env:AUTH_MODE = 'fixture'
+uv run python -m workforce prepare
+uv run uvicorn workforce.api:create_app --factory --host 127.0.0.1 --port 8101
+```
+
+Fixture-вход включается только `AUTH_MODE=fixture`: `Bearer fixture:employee` — владелец,
+`Bearer fixture:department` — назначаемый руководитель/проверяющий. При `AUTH_MODE=workforce`
+используются обычные серверные сессии через `POST /api/v1/sessions`, как описано ниже.
+
+Пример первого запроса: `POST /api/v1/development/goals`, заголовок
+`Authorization: Bearer fixture:employee`, тело
+`{"title":"Аналитическая сводка","description":"Источник: ДИ экономиста, версия 2"}`.
+Полученный `id` передать в `POST /goals/{id}/share` с
+`{"expected_revision":1,"recipient_actor_id":"00000000-0000-4000-8000-000000000103"}`.
+Руководитель создаёт `/plans` по этой редакции; сотрудник вызывает `/plans/{id}/respond`.
+Полный воспроизводимый пример с двумя критериями и двумя действиями —
+`tests/test_development.py`; короткая проверка: `uv run pytest tests/test_development.py -q`.
+
+Обычная HR-роль не получает личные цели. Правка отправленной цели создаёт личный черновик:
+до повторного share новый текст видит только автор. Уже предложенный/согласованный план сохраняет
+свой снимок. После accept критерии и действия плана не редактируются. `resource_note` фиксирует
+договорённость, а не автоматически зарезервированное место курса или проекта.
+
 ## Вводная программа · этап 1 второй волны
 
 Модуль `workforce/onboarding` использует ту же БД и серверные сессии. `python -m workforce prepare`

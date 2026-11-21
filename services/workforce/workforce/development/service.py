@@ -1,0 +1,219 @@
+from copy import deepcopy
+
+from sqlalchemy import or_, select
+
+from workforce.development import schemas as s
+from workforce.development.models import Goal, GoalVersion, Plan
+from workforce.domain import Problem, changed, iso, owned, revision, serialize
+from workforce.models import Actor, Department, now
+from workforce.onboarding.service import self_access
+
+
+def missing():
+    raise Problem(404, "NOT_FOUND", "Development object not found")
+
+
+def state(row, *allowed):
+    if row.status not in allowed:
+        raise Problem(409, "INVALID_STATE", "Operation is not allowed in this state")
+
+
+class Development:
+    def __init__(self, session, actor):
+        self.session, self.actor = session, actor
+
+    def save(self, row):
+        self.session.add(row)
+        self.session.flush()
+        return serialize(row)
+
+    def save_goal(self, row):
+        snapshot = self.save(row)
+        self.session.add(GoalVersion(goal_id=row.id, revision=row.revision, snapshot=snapshot))
+        self.session.flush()
+        return snapshot
+
+    def participant_filter(self):
+        return or_(
+            Plan.owner_actor_id == self.actor.id,
+            Plan.manager_actor_id == self.actor.id,
+            Plan.reviewer_actor_id == self.actor.id,
+        )
+
+    def goal_filter(self):
+        return or_(
+            Goal.owner_actor_id == self.actor.id,
+            (Goal.status == "shared") & (Goal.shared_with_actor_id == self.actor.id),
+        )
+
+    def goal(self, id):
+        row = self.session.scalar(
+            select(Goal).where(
+                Goal.id == str(id),
+                Goal.organization_id == self.actor.organization_id,
+                self.goal_filter(),
+            )
+        )
+        if row is None:
+            missing()
+        return row
+
+    def plan(self, id):
+        row = self.session.scalar(
+            select(Plan).where(
+                Plan.id == str(id),
+                Plan.organization_id == self.actor.organization_id,
+                self.participant_filter(),
+            )
+        )
+        if row is None:
+            missing()
+        return row
+
+    def owner(self, row):
+        if row.owner_actor_id != self.actor.id:
+            missing()
+
+    def department_actor(self, id, owner_id):
+        candidate = owned(self.session, Actor, id, self.actor.organization_id)
+        if not candidate.active or candidate.id == owner_id:
+            raise Problem(422, "INVALID_PARTICIPANT", "Participant must be active and different from owner")
+        grants = []
+        for grant in candidate.grants:
+            if grant["role"] != "department" or grant["scope_type"] != "department":
+                continue
+            department = self.session.get(Department, grant["scope_id"])
+            if department and department.organization_id == candidate.organization_id:
+                grants.append(deepcopy(grant))
+        if not grants:
+            raise Problem(
+                422, "INVALID_PARTICIPANT", "A department assignment in this organization is required"
+            )
+        return {"actor_id": candidate.id, "organization_id": candidate.organization_id, "grants": grants}
+
+    def goals(self):
+        return {
+            "items": [
+                serialize(row)
+                for row in self.session.scalars(
+                    select(Goal)
+                    .where(
+                        Goal.organization_id == self.actor.organization_id,
+                        self.goal_filter(),
+                    )
+                    .order_by(Goal.created_at, Goal.id)
+                )
+            ]
+        }
+
+    def plans(self):
+        return {
+            "items": [
+                serialize(row)
+                for row in self.session.scalars(
+                    select(Plan)
+                    .where(
+                        Plan.organization_id == self.actor.organization_id,
+                        self.participant_filter(),
+                    )
+                    .order_by(Plan.created_at, Plan.id)
+                )
+            ]
+        }
+
+    def create_goal(self, body):
+        if not self_access(self.actor):
+            raise Problem(403, "FORBIDDEN", "Employee self grant required")
+        return self.save_goal(
+            Goal(
+                organization_id=self.actor.organization_id, owner_actor_id=self.actor.id, **body.model_dump()
+            )
+        )
+
+    def patch_goal(self, id, body):
+        row = self.goal(id)
+        self.owner(row)
+        revision(row, body.expected_revision)
+        for key, value in body.model_dump(exclude_unset=True, exclude={"expected_revision"}).items():
+            setattr(row, key, value)
+        # Editing is a new private draft. An old share must not expose unsent personal text.
+        row.status, row.shared_with_actor_id, row.share_basis = "private", None, None
+        changed(row)
+        return self.save_goal(row)
+
+    def share_goal(self, id, body):
+        row = self.goal(id)
+        self.owner(row)
+        revision(row, body.expected_revision)
+        recipient = self.department_actor(body.recipient_actor_id, row.owner_actor_id)
+        row.status, row.shared_with_actor_id = "shared", str(body.recipient_actor_id)
+        row.share_basis = {"shared_by": self.actor.id, "shared_at": iso(now()), "recipient": recipient}
+        changed(row)
+        return self.save_goal(row)
+
+    def create_plan(self, body):
+        goal = self.goal(body.goal_id)
+        if goal.status != "shared" or goal.shared_with_actor_id != self.actor.id:
+            missing()
+        revision(goal, body.goal_revision)
+        manager = self.department_actor(self.actor.id, goal.owner_actor_id)
+        reviewer = self.department_actor(body.reviewer_actor_id, goal.owner_actor_id)
+        data = body.model_dump(mode="json", exclude={"goal_id", "goal_revision"})
+        return self.save(
+            Plan(
+                organization_id=goal.organization_id,
+                goal_id=goal.id,
+                goal_revision=goal.revision,
+                goal_snapshot=s.GoalView.model_validate(serialize(goal)).model_dump(mode="json"),
+                owner_actor_id=goal.owner_actor_id,
+                manager_actor_id=self.actor.id,
+                assignment_basis={
+                    "share": deepcopy(goal.share_basis),
+                    "manager": manager,
+                    "reviewer": reviewer,
+                    "assigned_by": self.actor.id,
+                    "assigned_at": iso(now()),
+                },
+                **data,
+            )
+        )
+
+    def patch_plan(self, id, body):
+        row = self.plan(id)
+        if row.manager_actor_id != self.actor.id:
+            missing()
+        self.department_actor(self.actor.id, row.owner_actor_id)
+        revision(row, body.expected_revision)
+        state(row, "proposed", "returned")
+        data = body.model_dump(mode="json", exclude_unset=True, exclude={"expected_revision"})
+        try:
+            s.validate_plan(data.get("criteria", row.criteria), data.get("activities", row.activities))
+        except ValueError as exc:
+            raise Problem(422, "VALIDATION_ERROR", str(exc)) from exc
+        if "reviewer_actor_id" in data:
+            reviewer = self.department_actor(data["reviewer_actor_id"], row.owner_actor_id)
+            row.assignment_basis = {
+                **row.assignment_basis,
+                "reviewer": reviewer,
+                "assigned_by": self.actor.id,
+                "assigned_at": iso(now()),
+            }
+        for key, value in data.items():
+            setattr(row, key, value)
+        row.status = "proposed"
+        changed(row)
+        return self.save(row)
+
+    def respond(self, id, body):
+        row = self.plan(id)
+        self.owner(row)
+        revision(row, body.expected_revision)
+        state(row, "proposed")
+        row.status = "active" if body.decision == "accept" else "returned"
+        row.decision_note = body.note
+        changed(row)
+        if row.status == "active":
+            self.department_actor(row.manager_actor_id, row.owner_actor_id)
+            self.department_actor(row.reviewer_actor_id, row.owner_actor_id)
+            row.agreed_revision = row.revision
+        return self.save(row)
