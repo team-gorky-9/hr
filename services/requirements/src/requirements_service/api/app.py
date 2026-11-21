@@ -14,6 +14,7 @@ from ..seed import seed_positions
 from ..service import RequirementsService
 from ..storage import LocalFileStorage
 from .routes import api_router, health_router
+from ..catalog import router as catalog_router
 
 
 def build_actor_directory(settings: Settings) -> ActorDirectory:
@@ -104,4 +105,5 @@ def create_app(
     install_error_handlers(app)
     app.include_router(health_router)
     app.include_router(api_router)
+    app.include_router(catalog_router)
     return app

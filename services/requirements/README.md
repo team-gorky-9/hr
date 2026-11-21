@@ -99,3 +99,17 @@ Swagger: http://127.0.0.1:8102/docs. Для локальной диагност�
 Воспроизводимый учебный API-проход: `uv run pytest tests/test_stage1.py -v -s`. Проверяет источник, возврат, исправление, согласование, v1/v2, историю, OpenAPI и повторное открытие данных/файла. Идентификаторы выводятся в конце. Полный набор: `uv run pytest -q -rs`.
 
 Compose этапа 1 запускает PostgreSQL и API без RabbitMQ. Для дальнейшей проверки доставки: `docker compose -f services/requirements/compose.yml --profile messaging up --build` и OUTBOX_POLL_INTERVAL_SEC=1. Docker-команды на текущем Windows-хосте не проверены. test_stage1 использует отдельный uvicorn-процесс и реальные HTTP-запросы; рестарт завершает процесс и запускает новый на том же хранилище.
+
+## Волна 2: внутренний каталог вакансий
+
+Применить новую миграцию: `uv run alembic upgrade head`, затем запустить API прежней командой. Контракт: [wave-2-stage-1](../../docs/contracts/wave-2-stage-1.md). Новые операции не требуют Idempotency-Key; изменения требуют expected_revision.
+
+- POST/GET /api/v1/catalog/vacancies — создать черновик / список HR, фильтр status.
+- GET/PATCH /api/v1/catalog/vacancies/{id} — прочитать (включая history) / изменить черновик.
+- POST /api/v1/catalog/vacancies/{id}/publish — опубликовать по текущему approved-профилю.
+- POST /api/v1/catalog/vacancies/{id}/close — закрыть с reason.
+- GET /api/v1/public/vacancies — без авторизации, только опубликованные объявления с полями id/title/description/position_code/published_at.
+
+HR использует `Authorization: Bearer fixture:hr`. Учебное подразделение: 00000000-0000-4000-8000-000000000011. Передать реальный ID утверждённого профиля, полученный через API первой волны. При смене текущего профиля публикация прежнего черновика возвращает 409 PROFILE_NOT_READY; HR явно выбирает новый profile_id через PATCH. Опубликованные условия неизменяемы. Публичный каталог намеренно включает опубликованные объявления всех организаций, но не внутренние сведения.
+
+Короткий воспроизводимый пример: `uv run pytest tests/test_vacancies.py -q -s`. Тест поднимает отдельный uvicorn, выполняет реальные HTTP-запросы на учебных данных, печатает ID и проверяет закрытие/историю, ограничения доступа, ревизий и профиля. Это SQLite-проверка; PostgreSQL и внешние площадки здесь не проверены. Фронтенду доступны схемы запросов/ответов в /openapi.json и /docs.
