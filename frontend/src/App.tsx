@@ -144,7 +144,7 @@ export const App: React.FC = () => {
         </div>
 
         <div className="text-[#8E939D] text-xs hidden sm:block">
-          GorkyCode · team 9
+          Кадровый ассистент
         </div>
         {session && !demoRolesEnabled && appMode !== 'portal' && <button type="button" className="text-xs text-white" onClick={async () => { try { await logoutSession(); setSessionError(''); } catch (error) { setSessionError(error instanceof Error ? error.message : 'Не удалось выйти'); } }}>Выйти</button>}
       </div>

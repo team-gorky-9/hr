@@ -37,11 +37,11 @@ export const HeaderHR: React.FC<HeaderHRProps> = ({
           >
             <img
               src="/images/Header/Mark.svg"
-              alt="GorkyCode"
+              alt="Кадровый ассистент"
               className="w-9 h-9 shrink-0"
             />
             <span className="hidden sm:inline text-[16px] font-bold text-[#141A24] tracking-tight whitespace-nowrap">
-              GorkyCode - team 9
+              Кадровый ассистент
             </span>
           </button>
 

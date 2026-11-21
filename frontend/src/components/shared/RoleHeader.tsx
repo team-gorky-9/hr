@@ -29,9 +29,9 @@ export const RoleHeader: React.FC<RoleHeaderProps> = ({
           onClick={onLogoClick}
           className="flex items-center gap-3 min-w-0 justify-self-start text-left hover:opacity-90 transition-opacity"
         >
-          <img src="/images/Header/Mark.svg" alt="GorkyCode" className="w-9 h-9 shrink-0" />
+          <img src="/images/Header/Mark.svg" alt="Кадровый ассистент" className="w-9 h-9 shrink-0" />
           <span className="hidden sm:inline text-[16px] font-bold text-[#141A24] tracking-tight whitespace-nowrap">
-            GorkyCode - team 9
+            Кадровый ассистент
           </span>
         </button>
         <nav aria-label="Разделы кабинета" className="col-span-2 row-start-2 flex min-w-0 overflow-x-auto pb-1 md:overflow-visible md:flex-wrap items-center gap-1.5">
