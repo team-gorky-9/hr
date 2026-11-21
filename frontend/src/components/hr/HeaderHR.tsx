@@ -28,25 +28,25 @@ export const HeaderHR: React.FC<HeaderHRProps> = ({
 
   return (
     <header className="w-full bg-white border-b border-[#E1E5EB] sticky top-0 z-40">
-      <div className="max-w-[1240px] mx-auto px-4 sm:px-6 min-h-[72px] py-3 flex flex-wrap items-center justify-between">
-        {/* Left: Brand + Navigation */}
-        <div className="flex flex-wrap items-center gap-4 lg:gap-6">
+      <div className="max-w-[1240px] mx-auto px-4 sm:px-6 min-h-[72px] py-3 grid grid-cols-2 items-center gap-x-4 gap-y-4">
+        {/* Brand and navigation occupy separate rows. */}
+        <div className="contents">
           <button
             type="button"
             onClick={onLogoClick || (() => onTabChange('database'))}
-            className="flex items-center gap-3 text-left hover:opacity-90 transition-opacity"
+            className="flex items-center gap-3 min-w-0 justify-self-start text-left hover:opacity-90 transition-opacity"
           >
             <img
               src="/images/Header/Mark.svg"
               alt="GorkyCode"
               className="w-9 h-9 shrink-0"
             />
-            <span className="text-[16px] font-bold text-[#141A24] tracking-tight whitespace-nowrap">
+            <span className="text-[16px] font-bold text-[#141A24] tracking-tight sm:whitespace-nowrap">
               GorkyCode - team 9
             </span>
           </button>
 
-          <nav className="hidden md:flex flex-wrap items-center gap-1.5">
+          <nav className="col-span-2 row-start-2 hidden md:flex flex-wrap items-center gap-1.5">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
@@ -68,7 +68,7 @@ export const HeaderHR: React.FC<HeaderHRProps> = ({
         </div>
 
         {/* Right: Manager Profile */}
-        <div className="text-[14px] text-[#4A5363] font-medium whitespace-nowrap">
+        <div aria-label="Текущая учётная запись" className="col-start-2 row-start-1 justify-self-end max-w-full text-right text-[14px] leading-5 text-[#4A5363] font-medium">
           {managerName}
         </div>
       </div>
