@@ -2,8 +2,10 @@ name: Backend delivery
 on:
   pull_request:
     branches: [main]
+    paths-ignore: ["frontend/**", "docs/**", ".github/workflows/frontend.yaml", "deploy/frontend-*"]
   push:
     branches: [main]
+    paths-ignore: ["frontend/**", "docs/**", ".github/workflows/frontend.yaml", "deploy/frontend-*"]
   workflow_dispatch:
 
 permissions:
@@ -40,7 +42,8 @@ jobs:
       - name: Verify HTTP through Nginx
         run: |
           python3 deploy/smoke.py
-          bash deploy/seed-roles.sh "$COMPOSE_ENV_FILES"
+          bash deploy/seed-demo.sh "$COMPOSE_ENV_FILES"
+          bash deploy/seed-demo.sh "$COMPOSE_ENV_FILES"   # repeat run must change nothing
           python3 deploy/check-sessions.py create --state deploy/local/probe.json
       - name: Verify restart
         run: |
@@ -68,6 +71,9 @@ jobs:
             deploy/smoke.py
             deploy/release.sh
             deploy/backup.sh
+            deploy/seed-roles.sh
+            deploy/seed-demo.sh
+            deploy/seed_demo.py
       - name: Container status
         if: failure()
         run: docker compose ps -a

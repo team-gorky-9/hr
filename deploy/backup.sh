@@ -15,7 +15,7 @@ restart_previous() {
 trap restart_previous EXIT
 "${compose[@]}" exec -T postgres pg_dumpall -U postgres > "$destination/postgres.sql"
 test -s "$destination/postgres.sql"
-for volume in requirements-files hiring-files students mobility social-support recognition feedback; do
+for volume in legacy-data requirements-files hiring-files students mobility social-support recognition feedback; do
   docker run --rm --network none \
     -v "hr-backend_${volume}:/data:ro" -v "$destination:/backup" \
     alpine:3.22 tar -czf "/backup/$volume.tgz" -C /data .

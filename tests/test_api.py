@@ -546,3 +546,28 @@ def test_no_pii_or_raw_text_in_any_response(session, client):
         dumped = json.dumps(response.json(), ensure_ascii=False)
         for value in [*PII.values(), RAW_MARKER, "raw_text", "full_name", "birth_date"]:
             assert value not in dumped, f"{value!r} в ответе {response.url}"
+
+
+def test_hr_sees_candidate_contacts_and_each_view_is_journaled(session, client):
+    """Кадровик видит контакты в карточке отклика (решение команды с HR); чтение пишется в журнал.
+    Анонимное чтение остаётся слепым, исходный текст резюме по-прежнему не отдаётся."""
+    from sqlalchemy import func, select
+
+    from app.db.enums import AuditAction
+    from app.db.models import AuditLog
+    from app.db.seed import seed_demo_users
+
+    seed_demo_users(session)
+    built = build_case(session, "C5-non-bmp")
+    views = lambda: session.scalar(select(func.count()).select_from(AuditLog).where(  # noqa: E731
+        AuditLog.action == AuditAction.VIEW_PII, AuditLog.entity_id == str(built["candidate_id"])))
+    before = views()
+    hr = client.get(f"/api/v1/applications/{built['application_id']}", headers={"X-User-Login": "hr_demo"}).json()
+    assert hr["candidate"]["pii_hidden"] is False
+    assert hr["candidate"]["contacts"] == {"full_name": PII["full_name"], "phone": PII["phone"],
+                                           "email": PII["email"], "city": PII["city"]}
+    assert views() == before + 1
+    assert "raw_text" not in json.dumps(hr, ensure_ascii=False)
+    anonymous = detail(client, built["application_id"])
+    assert anonymous["candidate"]["contacts"] is None and anonymous["candidate"]["pii_hidden"] is True
+    assert views() == before + 1
