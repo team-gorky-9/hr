@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.errors import install_error_handlers
 from app.api.routes import router
 from app.config import settings
+from app.management.api import router as management_router
 from app.matching.api import router as matching_router
 from app.reporting.api import create_router as create_reporting_router
 from app.search.api import router as search_router
@@ -31,6 +32,7 @@ def create_app() -> FastAPI:
     app.include_router(router)
     app.include_router(search_router)
     app.include_router(matching_router)
+    app.include_router(management_router)
     app.include_router(create_reporting_router())
     return app
 

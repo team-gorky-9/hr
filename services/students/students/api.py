@@ -29,7 +29,7 @@ def create_app(settings=None):
         yield
         store.engine.dispose()
 
-    app = FastAPI(title="Student practice", version="3A", lifespan=lifespan)
+    app = FastAPI(title="Student practice", version="3C", lifespan=lifespan)
     app.state.store = store
 
     @app.exception_handler(Problem)
@@ -162,6 +162,13 @@ def create_app(settings=None):
     def placement(ident: UUID, actor: ActorDep):
         with store.transaction(actor) as unit:
             row = read_placement(unit, ident)
-            return {**row, "history": unit.history(ident)}
+            from .work import work_state
+            return {**row, "history": unit.history(ident), "work_state": work_state(unit, ident),
+                    "university_result": row.get("university_result", {"result": "unknown"}),
+                    "career_interest": row.get("career_interest", {"interested": False})}
 
+    from .work import install
+    install(app, store)
+    from .results import install as install_results
+    install_results(app, store)
     return app
