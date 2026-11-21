@@ -16,6 +16,7 @@ from recognition.api import create_app
 from recognition.store import seed_demo
 from tests.test_events import event_path
 from tests.test_nominations import nomination_path
+from tests.test_sessions_materials import session_path
 from tests.test_thanks import call, thanks_path
 
 
@@ -44,14 +45,16 @@ def serve(app):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--part", choices=["4a", "4b", "4c"], default="4a")
+    parser.add_argument("--part", choices=["4a", "4b", "4c", "4d"], default="4a")
     args = parser.parse_args()
     directory = Path(tempfile.mkdtemp(prefix="recognition-smoke-"))
     db = directory / "recognition.db"
     seed_demo(db)
     app = create_app(db)
     with serve(app) as client:
-        result = {"4a": thanks_path, "4b": nomination_path, "4c": event_path}[args.part](client)
+        result = {"4a": thanks_path, "4b": nomination_path, "4c": event_path, "4d": session_path}[args.part](
+            client
+        )
         spec = client.get("/openapi.json").json()
     with serve(create_app(db)) as client:
         if args.part == "4a":
@@ -60,10 +63,14 @@ def main():
         elif args.part == "4b":
             saved = call(client, "GET", "/nominations/" + result["nomination_id"], "bob")
             assert saved["status"] == "selected" and saved["publication_choice"] == "allowed"
-        else:
+        elif args.part == "4c":
             saved = call(client, "GET", "/registrations/" + result["registration_id"], "bob")
             assert saved["status"] == "confirmed"
             assert call(client, "GET", "/events/" + result["event_id"])["available_places"] == 1
+        else:
+            saved = call(client, "GET", "/materials/" + result["material_id"])
+            assert saved["status"] == "withdrawn" and "url" not in saved
+            assert call(client, "GET", "/registrations/" + result["registration_id"])["status"] == "cancelled"
         result["reopened_revision"] = saved["revision"]
     reports = Path(__file__).resolve().parents[3] / "docs" / "reports"
     reports.mkdir(parents=True, exist_ok=True)

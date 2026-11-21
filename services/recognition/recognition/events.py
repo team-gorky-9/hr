@@ -16,6 +16,7 @@ from recognition.store import (
     history,
     new,
     page,
+    peer,
     require_assignment,
     require_employee,
     rows,
@@ -27,6 +28,8 @@ RESERVED = ("confirmed", "awaiting_reconfirmation")
 
 
 class EventCreate(Input):
+    type: Literal["general", "confidential_session"] = "general"
+    facilitator_actor_id: UUID | None = None
     title: Text
     description: Text
     starts_at: AwareDatetime
@@ -69,6 +72,8 @@ class CancelRegistration(Revision):
 
 
 class EventView(BaseModel):
+    type: Literal["general", "confidential_session"] = "general"
+    facilitator_actor_id: UUID | None = None
     id: UUID
     organization_id: UUID
     organizer_id: UUID
@@ -145,7 +150,9 @@ def owned_event(db, actor, event_id, expected):
 
 
 def manages_list(event, actor):
-    return event["organizer_id"] == actor["id"]
+    return event["organizer_id"] == actor["id"] or (
+        event.get("type") == "confidential_session" and event.get("facilitator_actor_id") == actor["id"]
+    )
 
 
 def registration_access(db, actor, record_id):
@@ -160,6 +167,8 @@ def registration_access(db, actor, record_id):
 def create(body: EventCreate, ctx: Context):
     db, actor = ctx
     require_assignment(actor, "organizer")
+    if body.facilitator_actor_id:
+        peer(db, actor, body.facilitator_actor_id)
     event = new(actor, **body.model_dump(mode="json"), organizer_id=actor["id"], status="draft")
     save(db, "event", event, actor, "create", creating=True)
     return event_view(db, event)
@@ -212,6 +221,8 @@ def register(event_id: UUID, body: RegistrationCreate, ctx: Context):
     event = get(db, "event", event_id, actor)
     event_visible(event, actor)
     check_state(event["status"] == "open")
+    if event.get("type") == "confidential_session" and (body.participants_count != 1 or body.child_age_bands):
+        fail(422, "SESSION_SINGLE_PARTICIPANT_ONLY")
     if any(
         r["actor_id"] == actor["id"] and r["status"] != "cancelled" for r in registrations(db, event, actor)
     ):
