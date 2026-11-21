@@ -11,47 +11,56 @@ interface VacancyPageProps {
   onLogin?: () => void;
 }
 
-const field = 'w-full px-3.5 py-2.5 bg-white border border-[#E1E5EB] rounded-lg text-[14px] text-[#141A24]';
-const primary = 'w-full min-h-11 px-4 bg-[#1F4FD1] hover:bg-[#1841B2] text-white font-medium text-[14px] rounded-lg transition-colors disabled:opacity-60';
-const heading = 'mb-3 font-bold text-[18px] text-[#141A24]';
-const facts = 'list-disc pl-5 space-y-2 break-words leading-relaxed text-[#4A5363]';
+const field = 'w-full px-3.5 bg-white border border-[#E1E5EB] rounded-lg text-[14px] text-[#141A24] placeholder-[#8E939D] focus:outline-none focus:border-[#1F4FD1]';
+const primary = 'w-full h-11 bg-[#1F4FD1] hover:bg-[#1841B2] text-white font-medium text-[14px] rounded-lg transition-colors disabled:opacity-60';
+const heading = 'text-[16px] font-bold text-[#141A24] mb-3';
+
+function VacancyFactList({ items, compact = false }: { items: string[]; compact?: boolean }) {
+  return <ul className={`space-y-2 text-[#334155] leading-relaxed ${compact ? 'text-[13px]' : 'text-[14px]'}`}>
+    {items.map((item) => <li key={item} className="flex items-start gap-2">
+      <span aria-hidden="true" className="text-[#141A24]">•</span>
+      <span className="break-words min-w-0">{item}</span>
+    </li>)}
+  </ul>;
+}
 
 function VacancyFacts({ vacancy }: { vacancy: PublicVacancy }) {
   const { description, duties, duties_source, requirements, advertised_requirements, conditions } = vacancy;
   const training = vacancy.system === 'legacy';
+  const mandatory = requirements?.filter((item) => item.mandatory).map((item) => item.text) ?? [];
+  const optional = requirements?.filter((item) => !item.mandatory).map((item) => item.text) ?? [];
 
   return (
-    <div className="mt-7 space-y-7">
-      <section>
-        <h2 className={heading}>О вакансии</h2>
-        <p className="whitespace-pre-wrap break-words leading-relaxed text-[#4A5363]">{description || 'В источнике нет отдельного описания вакансии.'}</p>
-      </section>
-      {(training || !!duties?.length) && <section>
-        <h2 className={heading}>Что нужно делать</h2>
+    <>
+      {description && <p className="mb-8 whitespace-pre-wrap break-words text-[14px] text-[#334155] leading-relaxed">{description}</p>}
+      {(training || !!duties?.length) && <section className="mb-8">
+        <h2 className={heading}>Чем предстоит заниматься</h2>
         {duties_source && <p className="mb-3 text-[13px] text-[#616977]">{duties_source}</p>}
-        {duties?.length ? <ul className={facts}>{duties.map((duty) => <li key={duty}>{duty}</li>)}</ul> :
+        {duties?.length ? <VacancyFactList items={duties} /> :
           <p className="text-[14px] text-[#616977]">Обязанности в доступных источниках не указаны.</p>}
       </section>}
-      {(training || !!(requirements?.length || advertised_requirements?.length)) && <section>
-        <h2 className={heading}>Требования</h2>
-        {!!advertised_requirements?.length && <>
-          <p className="mb-3 text-[13px] text-[#616977]">Из объявления</p>
-          <ul className={facts}>{advertised_requirements.map((item) => <li key={item}>{item}</li>)}</ul>
-        </>}
-        {!!requirements?.length && <>
-          <p className="mt-3 mb-3 text-[13px] text-[#616977]">Из утверждённого учебного профиля</p>
-          <ul className={facts}>{requirements.map(({ text, mandatory }) => <li key={text}>
-            {text}{!mandatory && <span className="ml-2 text-[13px] text-[#616977]">Будет преимуществом</span>}
-          </li>)}</ul>
-        </>}
-        {!requirements?.length && !advertised_requirements?.length && <p className="text-[14px] text-[#616977]">Требования в доступных источниках не указаны.</p>}
+      {!!advertised_requirements?.length && <section className="mb-4">
+        <h2 className={heading}>Требования из объявления</h2>
+        <VacancyFactList items={advertised_requirements} compact />
       </section>}
+      {(training || !!requirements?.length) && <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+        <section className="bg-[#FFF6EC] border border-[#F3DDBF] rounded-xl p-5">
+          <h2 className="text-[15px] font-bold text-[#141A24] mb-3">Обязательные требования</h2>
+          {mandatory.length ? <VacancyFactList items={mandatory} compact /> :
+            <p className="text-[13px] text-[#616977]">В профиле не указаны.</p>}
+        </section>
+        <section className="bg-[#F7F8FA] border border-[#E1E5EB] rounded-xl p-5">
+          <h2 className="text-[15px] font-bold text-[#141A24] mb-3">Будет плюсом</h2>
+          {optional.length ? <VacancyFactList items={optional} compact /> :
+            <p className="text-[13px] text-[#616977]">В профиле не указано.</p>}
+        </section>
+      </div>}
       {(training || !!conditions?.length) && <section>
-        <h2 className={heading}>Условия работы</h2>
-        {conditions?.length ? <ul className={facts}>{conditions.map((item) => <li key={item}>{item}</li>)}</ul> :
+        <h2 className={heading}>Условия</h2>
+        {conditions?.length ? <VacancyFactList items={conditions} /> :
           <p className="text-[14px] text-[#616977]">Условия работы в доступном объявлении не указаны.</p>}
       </section>}
-    </div>
+    </>
   );
 }
 
@@ -157,19 +166,21 @@ function VacancyDetails({ vacancyId, token, onGoHome, onGoCabinet, onLogin }: Va
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           <article className="lg:col-span-8 bg-white border border-[#E1E5EB] rounded-2xl p-6 sm:p-8 shadow-sm min-w-0">
-            {vacancy.is_synthetic && <span className="inline-block mb-3 px-3 py-1 rounded-md text-[12px] font-medium bg-[#EEF3FE] text-[#1F4FD1]">Учебная вакансия</span>}
-            <h1 className="text-[26px] sm:text-[32px] font-bold text-[#141A24] leading-tight break-words">{vacancy.title}</h1>
-            {vacancy.employer && <p className="mt-3 text-[14px] text-[#4A5363]">{vacancy.employer}</p>}
-            {vacancy.published_at && <p className="mt-3 text-[13px] text-[#616977]">
-              Опубликовано {new Date(vacancy.published_at).toLocaleDateString('ru-RU')}
-            </p>}
+            {vacancy.is_synthetic && <div className="flex flex-wrap items-center gap-2 mb-3">
+              <span className="px-3 py-1 rounded-md text-[12px] font-medium bg-[#EEF3FE] text-[#1F4FD1]">Учебная вакансия</span>
+            </div>}
+            <h1 className="text-[28px] sm:text-[34px] font-bold text-[#141A24] tracking-tight mb-2 break-words">{vacancy.title}</h1>
+            {(vacancy.employer || vacancy.published_at) && <div className="text-[16px] text-[#616977] mb-8">
+              {vacancy.employer && <p className="text-[18px] sm:text-[20px] font-bold text-[#141A24]">{vacancy.employer}</p>}
+              {vacancy.published_at && <p className="mt-1 text-[13px]">Опубликовано {new Date(vacancy.published_at).toLocaleDateString('ru-RU')}</p>}
+            </div>}
             <VacancyFacts vacancy={vacancy} />
           </article>
 
           <div className="lg:col-span-4 bg-white border border-[#E1E5EB] rounded-2xl p-6 sm:p-7 shadow-sm lg:sticky lg:top-24">
             {submitted ? (
               <div className="py-2" role="status">
-                <div className="mb-3 rounded-full bg-[#E6F4EA] w-12 h-12 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-full bg-[#E6F4EA] flex items-center justify-center mb-4">
                   <img src="/icons/check.svg" alt="" className="w-6 h-6" />
                 </div>
                 <h2 className="text-[20px] font-bold text-[#141A24] mb-2">Обращение отправлено</h2>
@@ -183,22 +194,29 @@ function VacancyDetails({ vacancyId, token, onGoHome, onGoCabinet, onLogin }: Va
                 <button type="button" className={primary} onClick={onLogin}>Войти</button>
               </>
             ) : (
-              <form onSubmit={submit} className="space-y-4">
-                <h2 className="text-[20px] font-bold text-[#141A24]">Откликнуться</h2>
+              <form onSubmit={submit}>
+                <h2 className="text-[20px] font-bold text-[#141A24] mb-4">Откликнуться</h2>
                 {draftId && error && <p className="text-[13px] text-[#616977]">Текст и контакт сохранены в черновике. Их можно изменить в личном кабинете.</p>}
-                <label className="block space-y-1.5 text-[13px] font-medium text-[#141A24]">
+                <label className="block mb-4 space-y-1.5 text-[13px] font-medium text-[#141A24]">
                   О себе и желаемой работе
-                  <textarea required className={field} rows={3} value={message} disabled={busy || !!draftId} onChange={(event) => setMessage(event.target.value)} />
+                  <textarea required className={field + ' py-2.5'} rows={3} value={message} disabled={busy || !!draftId} onChange={(event) => setMessage(event.target.value)} />
                 </label>
-                <label className="block space-y-1.5 text-[13px] font-medium text-[#141A24]">
+                <label className="block mb-4 space-y-1.5 text-[13px] font-medium text-[#141A24]">
                   Электронная почта
-                  <input type="email" required className={field} value={email} disabled={busy || !!draftId} onChange={(event) => setEmail(event.target.value)} />
+                  <input type="email" required className={field + ' h-11'} placeholder="name@mail.ru" value={email} disabled={busy || !!draftId} onChange={(event) => setEmail(event.target.value)} />
                 </label>
-                <label className="block space-y-1.5 text-[13px] font-medium text-[#141A24]">
+                <label className="block mb-4 space-y-1.5 text-[13px] font-medium text-[#141A24]">
                   Резюме
-                  <span className="block bg-[#F5F8FF] border-2 border-dashed border-[#94B4FB] rounded-xl p-3">
-                    <span className="block mb-2 text-[#616977]">Выберите PDF, JPEG или PNG</span>
-                    <input type="file" required accept="application/pdf,image/jpeg,image/png" className="block max-w-full text-[13px] file:mr-2 file:border-0 file:rounded-md file:px-2 file:py-1 file:bg-white" disabled={busy} onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
+                  <input type="file" aria-label="Выбрать файл резюме" aria-required="true" accept="application/pdf,image/jpeg,image/png" className="sr-only peer" disabled={busy} onChange={(event) => {
+                    setFile(event.target.files?.[0] ?? null);
+                    event.target.value = '';
+                  }} />
+                  <span className="block bg-[#F5F8FF] border-2 border-dashed border-[#94B4FB] rounded-xl p-5 text-center cursor-pointer hover:bg-[#EEF3FE] transition-colors peer-focus-visible:ring-2 peer-focus-visible:ring-[#1F4FD1] peer-disabled:cursor-default" onDragOver={(event) => event.preventDefault()} onDrop={(event) => {
+                    event.preventDefault();
+                    if (!busy && event.dataTransfer.files[0]) setFile(event.dataTransfer.files[0]);
+                  }}>
+                    <span className="block text-[14px] font-bold text-[#141A24] mb-1 break-words">{file?.name || 'Перетащите резюме сюда'}</span>
+                    <span className="block text-[12px] text-[#616977]">{file ? 'Нажмите, чтобы выбрать другой файл' : 'или выберите файл: PDF, JPEG или PNG'}</span>
                   </span>
                 </label>
                 {error && <p role="alert" className="text-[14px] text-[#A3171B]">{error}</p>}

@@ -23,6 +23,8 @@ const channelLabels: Record<string, string> = {
 };
 
 function candidateType(candidate: CandidateRecord) {
+  if (candidate.channel === 'internship') return 'Студент';
+  if (candidate.channel === 'internal') return 'Ротация';
   const application = candidate.applications.find(item => item.application_id === candidate.applicationId);
   if (application?.source === 'response') return 'Внешний отклик';
   if (application?.source === 'history') return 'История откликов';
@@ -57,6 +59,7 @@ export const CandidatesDatabase: React.FC<CandidatesDatabaseProps> = ({
   const [sourceFilter, setSourceFilter] = useState<string[] | null>(null);
   const [activeType, setActiveType] = useState('Все');
   const [sourcesOpen, setSourcesOpen] = useState(false);
+  const [uploadNotice, setUploadNotice] = useState(false);
   const [loading, setLoading] = useState(true);
   const [deadlineLoading, setDeadlineLoading] = useState(true);
   const [error, setError] = useState('');
@@ -105,7 +108,9 @@ export const CandidatesDatabase: React.FC<CandidatesDatabaseProps> = ({
     return { ...row, id: row.candidate_id, candidateId: row.candidate_id, applicationId: application?.application_id ?? null, vacancyId: application?.vacancy_id ?? null };
   });
   const sourceCounts = new Map<string, number>();
-  const typeCounts = new Map<string, number>([['Все', records.length]]);
+  const typeCounts = new Map<string, number>([
+    ['Все', records.length], ['Внешний отклик', 0], ['Студент', 0], ['Архив кадров', 0], ['Ротация', 0],
+  ]);
   for (const candidate of records) {
     sourceCounts.set(candidate.channel, (sourceCounts.get(candidate.channel) ?? 0) + 1);
     const type = candidateType(candidate);
@@ -133,11 +138,16 @@ export const CandidatesDatabase: React.FC<CandidatesDatabaseProps> = ({
   return <div className="max-w-[1240px] mx-auto px-4 sm:px-6 py-8">
     <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
       <div>
-        <h1 className="text-[26px] font-bold text-[#141A24]">Единая база кандидатов</h1>
-        <p className="text-[14px] text-[#616977] mt-1">Резюме, отклики и повторное рассмотрение</p>
+        <h1 className="text-[26px] font-bold text-[#141A24] tracking-tight mb-1">Единая база кандидатов</h1>
+        <p className="text-[14px] text-[#616977]">Внешние отклики, студенты, архив кадров и внутренняя ротация в одном месте</p>
       </div>
-      {onUploadResume && <Btn variant="primary" onClick={onUploadResume}>Загрузить резюме</Btn>}
-      <Btn onClick={() => setReload(n => n + 1)}>Обновить</Btn>
+      <button type="button" onClick={onUploadResume ?? (() => setUploadNotice(true))}
+        className="shrink-0 px-5 py-2.5 text-[14px] font-medium text-white bg-[#1F4FD1] rounded-lg hover:bg-[#1841B2] transition-colors shadow-sm whitespace-nowrap">Загрузить резюме</button>
+    </div>
+    {uploadNotice && <p role="status" className="mb-4 rounded-xl bg-[#EEF3FE] p-3 text-[14px] text-[#1F4FD1]">Загрузка резюме будет добавлена позже.</p>}
+    <div className="flex flex-wrap gap-2 mb-4">
+      {[...typeCounts].map(([label, count]) => <button key={label} type="button" aria-pressed={type === label}
+        onClick={() => setActiveType(label)} className={`px-4 py-1.5 rounded-full text-[13px] font-medium transition-colors whitespace-nowrap ${type === label ? 'bg-[#1F4FD1] text-white shadow-sm' : 'bg-white text-[#141A24] border border-[#E1E5EB] hover:bg-[#F3F5F8]'}`}>{label} · {count}</button>)}
     </div>
     <div className="flex flex-wrap items-end gap-3 mb-4">
       <label className="block text-sm font-medium min-w-0 max-w-full">
@@ -148,43 +158,61 @@ export const CandidatesDatabase: React.FC<CandidatesDatabaseProps> = ({
         </select>
       </label>
       {vacancyId && <Btn onClick={() => selectVacancy('')}>Сбросить вакансию</Btn>}
-    </div>
-    <div className="flex flex-wrap gap-2 mb-4">
-      {[...typeCounts].map(([label, count]) => <button key={label} type="button" aria-pressed={type === label}
-        onClick={() => setActiveType(label)} className={`px-4 py-1.5 rounded-full text-[13px] font-medium border ${type === label ? 'bg-[#1F4FD1] border-[#1F4FD1] text-white' : 'bg-white border-[#E1E5EB] text-[#141A24]'}`}>{label} · {count}</button>)}
+      <Btn variant="link" onClick={() => setReload(n => n + 1)}>Обновить</Btn>
     </div>
     {allSources.length > 0 && <div className="mb-6">
-      <Btn aria-expanded={sourcesOpen} onClick={() => setSourcesOpen(!sourcesOpen)}>Источники: {selectedSources.length} из {allSources.length}</Btn>
+      <div className="flex flex-wrap items-center gap-3 text-[13px]">
+        <button type="button" aria-expanded={sourcesOpen} onClick={() => setSourcesOpen(!sourcesOpen)}
+          className="px-3.5 py-1.5 bg-white border border-[#E1E5EB] rounded-lg text-[#141A24] font-medium hover:bg-[#F3F5F8] transition-colors flex items-center gap-2 whitespace-nowrap shadow-xs">
+          <span>Источники: {selectedSources.length === allSources.length ? `все (${allSources.length})` : `${selectedSources.length} из ${allSources.length}`}</span>
+          <span aria-hidden="true" className="text-[10px] text-[#616977]">{sourcesOpen ? '▲' : '▼'}</span>
+        </button>
+        <span className="text-[13px] text-[#616977]">Выберите источники откликов</span>
+      </div>
       {sourcesOpen && <div className="mt-3 bg-white border border-[#1F4FD1] rounded-2xl p-5 space-y-3">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-[14px] font-bold text-[#141A24]">Источники откликов</h2>
+          <div className="flex gap-3 text-[13px]">
+            <button type="button" className="text-[#1F4FD1] hover:underline font-medium" onClick={() => setSourceFilter(null)}>Выбрать все</button>
+            <button type="button" className="text-[#1F4FD1] hover:underline font-medium" onClick={() => setSourceFilter([])}>Сбросить</button>
+          </div>
+        </div>
         <div className="flex flex-wrap gap-3">
           {allSources.map(source => <label key={source} className="inline-flex gap-2 rounded-xl border border-[#E1E5EB] px-3 py-2 text-sm">
             <input type="checkbox" checked={selectedSources.includes(source)} onChange={e => setSourceFilter(e.target.checked ? [...selectedSources, source] : selectedSources.filter(item => item !== source))} />
             {channelLabels[source] || 'Другой источник'} · {sourceCounts.get(source)}
           </label>)}
         </div>
-        <Btn variant="link" onClick={() => setSourceFilter(null)}>Выбрать все</Btn>
+        <Btn variant="primary" onClick={() => setSourcesOpen(false)}>Применить</Btn>
+        <Btn className="ml-2" onClick={() => setSourcesOpen(false)}>Свернуть</Btn>
       </div>}
     </div>}
     {error && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-4 text-red-800">{error}</p>}
     {deadlineError && <p role="alert" className="mb-4 rounded-xl bg-amber-50 p-4 text-amber-900">Сроки временно недоступны. {deadlineError}</p>}
     <div className="bg-white border border-[#E1E5EB] rounded-2xl shadow-sm overflow-x-auto">
       {loading ? <p className="p-5">Загрузка кандидатов…</p> : visible.length ? <table className="w-full text-left text-[14px]">
-        <thead className="bg-[#FAFBFD] text-[13px] text-[#616977]">
-          <tr>{['Кандидат', 'Тип', 'Источник', 'Вакансия', 'Этап', 'Срок ответа'].map(label => <th key={label} className="px-4 py-3.5 whitespace-nowrap">{label}</th>)}</tr>
+        <thead className="bg-[#FAFBFD] border-b border-[#E1E5EB] text-[13px] text-[#616977] font-medium">
+          <tr>
+            <th className="py-3.5 pl-5 pr-3 whitespace-nowrap">Кандидат</th>
+            {['Тип', 'Источник', 'Вакансия', 'Совпадение', 'Статус'].map(label => <th key={label} className="py-3.5 px-3 whitespace-nowrap">{label}</th>)}
+            <th className="py-3.5 pl-3 pr-5 text-right whitespace-nowrap">Срок ответа</th>
+          </tr>
         </thead>
         <tbody className="divide-y divide-[#E1E5EB]">
           {visible.map(candidate => {
             const application = candidate.applications.find(item => item.application_id === candidate.applicationId);
             return <tr key={candidate.id} className="hover:bg-[#F8FAFC]">
-              <td className="px-4 py-3.5 min-w-48">
+              <td className="py-3.5 pl-5 pr-3 min-w-40">
                 <button type="button" disabled={!onSelectCandidate} onClick={() => onSelectCandidate?.(candidate)} className="text-[#1F4FD1] hover:underline text-left font-medium">{candidate.candidate_code}</button>
                 {candidate.headline && <p className="text-sm text-[#4A5363]">{candidate.headline}</p>}
               </td>
-              <td className="px-4 py-3.5 whitespace-nowrap"><Badge tone="blue">{candidateType(candidate)}</Badge>{candidate.in_archive && <span className="block text-xs mt-1">В архиве</span>}</td>
-              <td className="px-4 py-3.5 whitespace-nowrap">{channelLabels[candidate.channel] || 'Другой источник'}</td>
-              <td className="px-4 py-3.5 min-w-36">{application?.vacancy_title || 'Без вакансии'}{candidate.applications.length > 1 && <span className="block text-xs text-[#616977]">Всего рассмотрений: {candidate.applications.length}</span>}</td>
-              <td className="px-4 py-3.5">{application?.stage_title || 'Без отклика'}</td>
-              <td className="px-4 py-3.5 min-w-40">{deadlineLoading ? 'Загрузка срока…' : deadlineError ? 'Недоступно' : <ResponseDeadline attempt={application ? byApplication.get(application.application_id) : undefined} />}</td>
+              <td className="py-3.5 px-3 whitespace-nowrap"><span className="inline-block px-2.5 py-0.5 rounded-full text-[12px] font-medium bg-[#EEF3FE] text-[#1F4FD1]">{candidateType(candidate)}</span>{candidate.in_archive && <span className="block text-xs mt-1">В архиве</span>}</td>
+              <td className="py-3.5 px-3 text-[#4A5363] whitespace-nowrap">{channelLabels[candidate.channel] || 'Другой источник'}</td>
+              <td className="py-3.5 px-3 text-[#141A24] font-medium min-w-36">{application?.vacancy_title || 'Без вакансии'}{candidate.applications.length > 1 && <span className="block text-xs text-[#616977]">Всего рассмотрений: {candidate.applications.length}</span>}</td>
+              <td className="py-3.5 px-3 whitespace-nowrap">{application && onSelectCandidate ? <button type="button" onClick={() => onSelectCandidate(candidate)}
+                className="inline-block px-2.5 py-0.5 rounded-full text-[12px] font-medium bg-[#F3F4F6] text-[#4B5563] hover:underline">Смотреть оценку</button> : '—'}</td>
+              <td className="py-3.5 px-3 text-[#4A5363]">{application?.stage_title || 'Без отклика'}</td>
+              <td className="py-3.5 pl-3 pr-5 text-right min-w-40">{deadlineLoading ? 'Загрузка срока…' : deadlineError ? 'Недоступно' : <ResponseDeadline attempt={application ? byApplication.get(application.application_id) : undefined} />}</td>
             </tr>;
           })}
         </tbody>

@@ -6,11 +6,13 @@ import {
 } from '../../api/recruitment';
 import { Badge, Btn, Card, PageTitle } from '../shared/ui';
 import RecruitmentSummary from '../shared/RecruitmentSummary';
+import { ProfileOtherVacancies, ProfilePsychology, ProfileQuestions, profilePanel, profileTitle } from './CandidateProfileDetails';
 
 interface CandidateCardProps {
   candidateId?: string;
   backLabel?: string;
   context?: ReactNode;
+  databaseProfile?: boolean;
   onBack?: () => void;
   onRequestClarification?: () => void;
   onOpenArchive?: () => void;
@@ -23,7 +25,7 @@ const field = 'w-full border border-[#C9D0DB] rounded-xl px-4 py-3 text-sm bg-wh
 const extensionReasons = { illness: 'Болезнь', vacation: 'Отпуск', business_trip: 'Командировка', other: 'Другое' };
 
 export function CandidateCard({
-  candidateId: applicationId = '', backLabel = 'Отклики', context, onBack, onRequestClarification, onOpenArchive,
+  candidateId: applicationId = '', backLabel = 'Отклики', context, databaseProfile = false, onBack, onRequestClarification, onOpenArchive,
 }: CandidateCardProps) {
   const [detail, setDetail] = useState<ApplicationDetail | null>(null);
   const [history, setHistory] = useState<History | null>(null);
@@ -161,14 +163,52 @@ export function CandidateCard({
   const alreadyAssigned = handoffs.some(attempt => !attempt.access_revoked_at);
   const distinctPositions = [...new Map(vacancies.map(item => [item.position_id, item])).values()];
   const extendsPastDue = extension && newDate > extension.dueDate;
+  const displayName = detail.candidate.contacts?.full_name || detail.candidate.code;
+  const vacancyTitle = detail.vacancy?.title || detail.posting_title;
+  const contacts = detail.candidate.contacts;
+  const unknownChecks = detail.assessment?.formal_checks.filter(item => item.result === 'unknown') ?? [];
+  const missingInformation = Array.isArray(detail.candidate.card?.missing)
+    ? detail.candidate.card.missing.filter((item): item is string => typeof item === 'string')
+    : [];
+  const gaps = [...new Set([...unknownChecks.map(item => item.description), ...missingInformation])];
+  const actionClass = 'w-full py-2.5 px-4 text-[14px] font-medium rounded-lg transition-colors shadow-sm text-center disabled:opacity-50 disabled:cursor-not-allowed';
+  const secondaryAction = `${actionClass} text-[#141A24] bg-white border border-[#E1E5EB] hover:bg-[#F3F5F8]`;
+  const sourcePanel = <Card className="space-y-3 min-w-0">
+    <h2 className="text-xl font-bold">Текст источника</h2>
+    {sourceError ? <p role="alert">{sourceError}</p> : source ? <>
+      <p className="text-sm text-[#616977]">Версия {source.version} · {source.is_current ? 'текущая' : 'предыдущая'}</p>
+      <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-7 max-h-[650px] overflow-auto">{highlight ? <>
+        {source.text.slice(0, highlight.utf16_start)}<mark className="bg-[#FFF4CC]">{source.text.slice(highlight.utf16_start, highlight.utf16_end)}</mark>{source.text.slice(highlight.utf16_end)}
+      </> : source.text}</pre>
+    </> : <p>Загрузка источника…</p>}
+  </Card>;
 
   return <div className="max-w-[1240px] mx-auto px-4 sm:px-6 py-6 space-y-5">
-    <div className="flex justify-between gap-3">
+    {databaseProfile ? <nav className="text-[14px] text-[#616977] flex items-center gap-1.5 font-normal">
+      <button type="button" onClick={onBack} className="hover:text-[#1F4FD1] hover:underline transition-colors">Единая база</button>
+      <span>›</span><span className="text-[#141A24] font-medium">{displayName}</span>
+    </nav> : <div className="flex justify-between gap-3">
       <Btn variant="link" onClick={onBack}>← {backLabel}</Btn>
       <Btn variant="link" onClick={() => setReload(value => value + 1)}>Обновить</Btn>
-    </div>
+    </div>}
     {context}
-    <Card className="space-y-3">
+    {databaseProfile ? <div className={profilePanel}>
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+        <div>
+          <h1 className="text-[24px] font-bold text-[#141A24] tracking-tight mb-1">{displayName}</h1>
+          {vacancyTitle && <p className="text-[14px] text-[#4A5363] mb-1">Вакансия «{vacancyTitle}»</p>}
+          {detail.candidate.headline && <p className="text-[13px] text-[#616977]">{detail.candidate.headline}</p>}
+        </div>
+        <div className="flex flex-col sm:items-end gap-2">
+          {contacts && <p className="text-[13px] text-[#4A5363] font-medium flex flex-wrap gap-2">
+            {contacts.phone && <a href={'tel:' + contacts.phone.replace(/[^+\d]/g, '')}>{contacts.phone}</a>}
+            {contacts.email && <a href={'mailto:' + contacts.email}>{contacts.email}</a>}
+          </p>}
+          {detail.candidate.is_training && <span className="text-[12px] text-[#616977]">Учебная запись</span>}
+          <span className="bg-[#EDF3FD] text-[#1F4FD1] px-3 py-1 rounded-full text-[12px] font-medium whitespace-nowrap">{detail.stage.title}</span>
+        </div>
+      </div>
+    </div> : <Card className="space-y-3">
       <PageTitle title={detail.candidate.contacts?.full_name || detail.candidate.code}
         subtitle={detail.vacancy?.title || detail.posting_title || detail.candidate.headline || 'Карточка отклика'}
         right={<Badge tone="blue">{detail.stage.title}</Badge>} />
@@ -179,28 +219,30 @@ export function CandidateCard({
         {detail.candidate.contacts.city && <span>{detail.candidate.contacts.city}</span>}
         {detail.candidate.is_training && <span className="text-[#616977]">Учебная запись, контакты вымышленные.</span>}
       </p> : <p className="text-sm text-[#616977]">{detail.candidate.is_training ? 'Учебная запись · ' : ''}Контакты не показаны</p>}
-    </Card>
+    </Card>}
     {error && <div role="alert" className="p-4 bg-red-50 text-red-800 rounded-xl">{error}</div>}
     {notice && <div role="status" className="p-4 bg-[#E3F2E7] text-[#1D7A40] rounded-xl">{notice}</div>}
-    <div className="grid lg:grid-cols-[1.65fr_1fr] gap-5 items-start">
-      <div className="space-y-5 min-w-0">
-        <Card className="space-y-4"><h2 className="text-xl font-bold">Сравнение с профилем должности</h2>
+    <div className={databaseProfile ? 'grid grid-cols-1 lg:grid-cols-12 gap-6 items-start' : 'grid lg:grid-cols-[1.15fr_1fr] gap-6 items-start'}>
+      <div className={databaseProfile ? 'lg:col-span-8 space-y-6 min-w-0' : 'space-y-5 min-w-0'}>
+        <div className={profilePanel + ' space-y-3'}><h2 className={profileTitle}>Сравнение с профилем должности</h2>
           <Badge tone={detail.assessment?.is_stale ? 'amber' : 'blue'}>{assessmentLabel(detail.assessment_status)}</Badge>
-          <p>{detail.assessment?.summary || 'Данных для вывода пока недостаточно.'}</p>
-          {detail.assessment?.formal_checks.length ? <div className="overflow-x-auto rounded-xl border border-[#E1E5EB]">
-            <table className="w-full min-w-[32rem] text-left text-sm">
-              <thead className="bg-[#FAFBFD] text-[#4A5363]">
-                <tr><th className="p-3 font-semibold">Требование профиля</th><th className="p-3 font-semibold">Что в резюме</th><th className="p-3 font-semibold">Итог</th></tr>
+          <p className="text-[13px] text-[#616977]">{detail.assessment?.summary || 'Данных для вывода пока недостаточно.'}</p>
+          {detail.assessment?.formal_checks.length ? <div className="border border-[#E1E5EB] rounded-xl overflow-x-auto">
+            <table className="w-full min-w-[28rem] text-left text-[13px]">
+              <thead className="bg-[#FAFBFD] border-b border-[#E1E5EB] text-[#616977] font-medium">
+                <tr><th className="py-3 px-4 w-[34%]">Требование профиля</th><th className="py-3 px-4 w-[46%]">Что в резюме</th><th className="py-3 px-4 w-[20%] text-right sm:text-left">Итог</th></tr>
               </thead>
               <tbody className="divide-y divide-[#E1E5EB]">
-                {detail.assessment.formal_checks.map(check => <tr key={check.requirement_id}>
-                  <td className="p-3">{check.description}</td>
-                  <td className="p-3 space-y-1">
+                {detail.assessment.formal_checks.map(check => <tr key={check.requirement_id} className="hover:bg-[#F8FAFC]">
+                  <td className="py-3.5 px-4 font-medium text-[#141A24]">{check.description}</td>
+                  <td className="py-3.5 px-4 text-[#4A5363] space-y-1">
                     {readableExplanation(check.explanation) && <p>{readableExplanation(check.explanation)}</p>}
                     {check.evidence.map((evidence, index) => <button key={index} onClick={() => showEvidence(evidence)} className="block text-left text-[#1F4FD1]">«{evidence.quote}» ↗</button>)}
                     {!check.evidence.length && !readableExplanation(check.explanation) && <p className="text-[#616977]">Сведений нет</p>}
                   </td>
-                  <td className="p-3"><Badge tone={check.result === 'met' ? 'green' : check.result === 'not_met' ? 'red' : 'amber'}>{resultLabel(check.result)}{check.is_preliminary ? ' · предварительно' : ''}</Badge></td>
+                  <td className="py-3.5 px-4 text-right sm:text-left">
+                    <span className={`inline-block px-2.5 py-0.5 rounded-full text-[12px] font-medium ${check.result === 'met' ? 'bg-[#E6F4EA] text-[#15803D]' : check.result === 'not_met' ? 'bg-[#FDE8E8] text-[#C5221F]' : 'bg-[#FEF3E6] text-[#B45309]'}`}>{resultLabel(check.result)}{check.is_preliminary ? ' · предварительно' : ''}</span>
+                  </td>
                 </tr>)}
               </tbody>
             </table>
@@ -211,26 +253,27 @@ export function CandidateCard({
             <p className="text-sm mt-2">{readableExplanation(item.explanation) || 'Сведений недостаточно'}</p>
             {item.evidence.map((evidence, index) => <button key={index} onClick={() => showEvidence(evidence)} className="block text-left text-sm text-[#1F4FD1] mt-2">«{evidence.quote}» ↗</button>)}
           </div>)}
-        </Card>
-        <Card className="space-y-3 min-w-0">
-          <h2 className="text-xl font-bold">Текст источника</h2>
-          {sourceError ? <p role="alert">{sourceError}</p> : source ? <>
-            <p className="text-sm text-[#616977]">Версия {source.version} · {source.is_current ? 'текущая' : 'предыдущая'}</p>
-            <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-7 max-h-[650px] overflow-auto">{highlight ? <>
-              {source.text.slice(0, highlight.utf16_start)}<mark className="bg-[#FFF4CC]">{source.text.slice(highlight.utf16_start, highlight.utf16_end)}</mark>{source.text.slice(highlight.utf16_end)}
-            </> : source.text}</pre>
-          </> : <p>Загрузка источника…</p>}
-        </Card>
+        </div>
+        {databaseProfile && <>
+          <section className={profilePanel}>
+            <h2 className={profileTitle + ' mb-2'}>Недостающие данные</h2>
+            {gaps.length ? <ul className="text-[13px] text-[#4A5363] space-y-1 list-disc pl-4">{gaps.map(item => <li key={item}>{item}</li>)}</ul>
+              : <p className="text-[13px] text-[#616977]">Недостающие сведения пока не отмечены.</p>}
+          </section>
+          <ProfileQuestions applicationId={applicationId} canReadGuide={history?.source === 'response'} onInterview={canMove ? onRequestClarification : undefined} />
+          <ProfilePsychology />
+        </>}
+        {!databaseProfile && sourcePanel}
       </div>
-      <div className="space-y-5 min-w-0">
-        <Card className="space-y-3">
-          <h2 className="text-xl font-bold">Действия</h2>
-          <div className="grid gap-2">
-            <Btn className="text-left" variant="primary" disabled={busy || !canMove} onClick={() => openPanel('handoff')}>Направить в департамент</Btn>
-            <Btn className="text-left" disabled={busy} onClick={() => openPanel('archive')}>В архив кадров</Btn>
-            <Btn className="text-left" disabled={busy || !canMove} onClick={() => openPanel('reject')}>Отклонить с причиной</Btn>
+      <div className={databaseProfile ? 'lg:col-span-4 space-y-6 min-w-0' : 'space-y-5 min-w-0'}>
+        <div className={profilePanel}>
+          <h2 className={profileTitle + ' mb-4'}>Действия</h2>
+          <div className="space-y-3">
+            <button type="button" className={`${actionClass} text-white bg-[#1F4FD1] hover:bg-[#1841B2]`} disabled={busy || !canMove} onClick={() => openPanel('handoff')}>Направить в департамент</button>
+            <button type="button" className={secondaryAction} disabled={busy} onClick={() => openPanel('archive')}>В архив кадров</button>
+            <button type="button" className={secondaryAction} disabled={busy || !canMove} onClick={() => openPanel('reject')}>Отклонить с причиной</button>
+            <p className="text-[12px] text-[#616977] pt-1">ИИ подсказывает, решение принимает человек</p>
           </div>
-          <p className="text-sm text-[#616977]">Итоговое решение принимает HR.</p>
           {panel === 'handoff' && <div className="space-y-3 border-t pt-4">
             <h3 className="font-bold">Сводка перед отправкой</h3>
             {summary ? <div className="max-h-[30rem] overflow-auto"><RecruitmentSummary summary={summary.summary} /></div> : busy ? <p>Загрузка сводки…</p> : <Btn onClick={() => openPanel('handoff')}>Повторить загрузку сводки</Btn>}
@@ -263,21 +306,23 @@ export function CandidateCard({
             </Btn>
           </div>}
           {panel && <Btn variant="link" disabled={busy} onClick={() => { setPanel(null); setError(''); }}>Отмена</Btn>}
-        </Card>
+        </div>
+        {databaseProfile && <ProfileOtherVacancies />}
         {onOpenArchive && <div className="text-sm text-[#4A5363]">{inArchive && <p>Подборка сохранена</p>}<Btn variant="link" onClick={onOpenArchive}>Открыть архив кадров</Btn></div>}
         <div className="flex flex-wrap gap-3">
-          {onRequestClarification && <Btn disabled={busy || !canMove} onClick={onRequestClarification}>Телефонное интервью</Btn>}
+          {!databaseProfile && onRequestClarification && <Btn disabled={busy || !canMove} onClick={onRequestClarification}>Телефонное интервью</Btn>}
           {canMove && <Btn disabled={busy} onClick={() => openPanel('stage')}>Изменить этап</Btn>}
         </div>
-        <Card className="space-y-3">
-          <h2 className="text-xl font-bold">История этапов</h2>
+        <div className={profilePanel + ' space-y-2 text-[13px] text-[#4A5363] leading-relaxed'}>
+          <h2 className={profileTitle + ' mb-3'}>История</h2>
           {!history?.items.length && <p>Переходов пока нет.</p>}
           {history?.items.map(item => <div key={item.seq} className="border-b border-[#E1E5EB] pb-3 text-sm">
             <b>{item.to_stage.title}</b> · {new Date(item.created_at).toLocaleString('ru-RU')}<p>{item.comment} {item.rejection_reason?.title}</p>
           </div>)}
-        </Card>
+        </div>
       </div>
     </div>
+    {databaseProfile && sourcePanel}
     <Card className="space-y-4">
       <h2 className="text-xl font-bold">Передачи и ответы подразделения</h2>
       {!handoffs.length && <p>Передач пока нет.</p>}

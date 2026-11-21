@@ -26,7 +26,7 @@ export default function CandidateProfile({ candidate, onBackToDatabase, onOpenIn
     return () => { active = false; };
   }, [applicationId, candidate.current_text_id]);
 
-  if (applicationId) return <CandidateCard key={applicationId} candidateId={applicationId} backLabel="Единая база"
+  if (applicationId) return <CandidateCard key={applicationId} candidateId={applicationId} backLabel="Единая база" databaseProfile
     onBack={onBackToDatabase} onOpenArchive={onOpenReserve} onRequestClarification={onOpenInterview ? () => onOpenInterview(applicationId) : undefined}
     context={candidate.applications.length > 1 && <label className="block max-w-lg font-medium text-sm">
       Рассмотрение

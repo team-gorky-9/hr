@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface CategoryCardsProps {
   onSelectCategory?: (id: string) => void;
 }
 
 export const CategoryCards: React.FC<CategoryCardsProps> = ({ onSelectCategory }) => {
+  const [showReserveNotice, setShowReserveNotice] = useState(false);
   const cards = [
     {
       id: 'vacancies',
@@ -22,10 +23,18 @@ export const CategoryCards: React.FC<CategoryCardsProps> = ({ onSelectCategory }
       iconSrc: '/icons/graduation-cap.svg',
       iconBg: 'bg-[#FFE5CC]',
     },
+    {
+      id: 'reserve',
+      title: 'Кадровый резерв',
+      description: 'Конкурс с защитой проекта перед комиссией города. Путь к руководящим должностям.',
+      linkText: 'Узнать о конкурсе →',
+      iconSrc: '/icons/ribbon.svg',
+      iconBg: 'bg-[#D7F0DD]',
+    },
   ];
 
   return (
-    <section className="grid grid-cols-1 md:grid-cols-2 gap-5">
+    <section className="grid grid-cols-1 md:grid-cols-3 gap-5">
       {cards.map((card) => (
         <div
           key={card.id}
@@ -51,13 +60,16 @@ export const CategoryCards: React.FC<CategoryCardsProps> = ({ onSelectCategory }
           </div>
 
           {/* Action Link */}
-          <button
-            type="button"
-            onClick={() => onSelectCategory?.(card.id)}
-            className="text-[14px] font-semibold text-[#1F4FD1] hover:underline inline-flex items-center gap-1.5 text-left"
-          >
-            {card.linkText}
-          </button>
+          <div>
+            <button
+              type="button"
+              onClick={() => card.id === 'reserve' ? setShowReserveNotice(true) : onSelectCategory?.(card.id)}
+              className="text-[14px] font-semibold text-[#1F4FD1] hover:underline inline-flex items-center gap-1.5 text-left"
+            >
+              {card.linkText}
+            </button>
+            {card.id === 'reserve' && showReserveNotice && <p role="status" className="mt-2 text-[13px] text-[#616977]">Будет добавлено позже</p>}
+          </div>
         </div>
       ))}
     </section>
