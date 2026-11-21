@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { getPublicVacancy, type PublicVacancy } from '../api/publicVacancies';
 import { hiringRequest, uploadBody, type CandidateRequest, type Document } from '../api/hiring';
+import PersonalDataLawLinks from '../components/portal/PersonalDataLawLinks';
 
 interface VacancyPageProps {
   vacancyId?: string;
@@ -161,6 +162,7 @@ function VacancyDetails({ vacancyId, token, onGoHome, onGoCabinet, onLogin }: Va
                   </span>
                 </label>
                 {error && <p role="alert" className="text-[14px] text-[#A3171B]">{error}</p>}
+                <PersonalDataLawLinks />
                 <button type="submit" disabled={busy} className={primary}>{busy ? 'Отправляем…' : 'Отправить отклик'}</button>
                 {draftId && error && <button type="button" onClick={() => onGoCabinet?.(draftId)} className="text-[14px] text-[#1F4FD1]">Открыть сохранённый черновик</button>}
               </form>
