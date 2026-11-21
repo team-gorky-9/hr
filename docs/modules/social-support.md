@@ -18,3 +18,8 @@ application/octet-stream, nosniff, no-store. Внешний протокол о�
 
 Реализованная часть 5A проверена настоящим HTTP, SQLite и рестартом процесса.
 OpenAPI и ответы: docs/reports/wave-5a-support-*.json. Внешние системы и UI не проверены.
+
+5B хранит staff_confirmation отдельно от роли employee. ChecklistResult содержит
+submission_revision и точные document_id. Addenda создаёт новый снимок, заменяя
+только выбранные пункты, и возвращает submitted; проверку нужно повторить.
+История выдаёт заявителю public, назначенным сотрудникам также internal.
