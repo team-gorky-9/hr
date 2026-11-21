@@ -1,0 +1,1479 @@
+{
+  "is_synthetic": true,
+  "source": "practice-training-wave6-v1",
+  "ids": {
+    "opportunity": "304203d2-70ce-4bb7-a982-2aca2e95aa2c",
+    "application": "4cb0b0f9-e0b8-432c-9d93-5852f7c3d260",
+    "second_application": "3c2dda5b-341f-44d8-b346-bf4b4b3e5284",
+    "placement": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+    "task": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+    "first_submission": "84711ff5-efa3-47ff-8002-b1f171de01b3",
+    "corrected_submission": "3d23b8ad-8931-471b-b7f0-73270cd5da5b",
+    "package": "efd2251c-15d7-42a7-86f7-34c282d6ee1e"
+  },
+  "restart_verified": true,
+  "archive_receipt": null,
+  "trace": [
+    {
+      "actor": "hr",
+      "method": "POST",
+      "path": "/api/v1/students/opportunities",
+      "request": {
+        "title": "Учебная практика",
+        "description": "Разбор обращений",
+        "starts_on": "2026-12-01",
+        "ends_on": "2026-12-31",
+        "capacity": 1,
+        "mentor_actor_id": "00000000-0000-4000-8000-000000000103"
+      },
+      "status": 201,
+      "response": {
+        "title": "Учебная практика",
+        "description": "Разбор обращений",
+        "starts_on": "2026-12-01",
+        "ends_on": "2026-12-31",
+        "capacity": 1,
+        "mentor_actor_id": "00000000-0000-4000-8000-000000000103",
+        "status": "draft",
+        "is_synthetic": true,
+        "id": "304203d2-70ce-4bb7-a982-2aca2e95aa2c",
+        "organization_id": "00000000-0000-4000-8000-000000000001",
+        "revision": 1,
+        "created_at": "2026-11-21T01:48:45.441731+00:00",
+        "created_by": "00000000-0000-4000-8000-000000000101",
+        "updated_at": "2026-11-21T01:48:45.441731+00:00",
+        "updated_by": "00000000-0000-4000-8000-000000000101"
+      }
+    },
+    {
+      "actor": "hr",
+      "method": "POST",
+      "path": "/api/v1/students/opportunities/304203d2-70ce-4bb7-a982-2aca2e95aa2c/publish",
+      "request": {
+        "expected_revision": 1
+      },
+      "status": 200,
+      "response": {
+        "title": "Учебная практика",
+        "description": "Разбор обращений",
+        "starts_on": "2026-12-01",
+        "ends_on": "2026-12-31",
+        "capacity": 1,
+        "mentor_actor_id": "00000000-0000-4000-8000-000000000103",
+        "status": "published",
+        "is_synthetic": true,
+        "id": "304203d2-70ce-4bb7-a982-2aca2e95aa2c",
+        "organization_id": "00000000-0000-4000-8000-000000000001",
+        "revision": 2,
+        "created_at": "2026-11-21T01:48:45.441731+00:00",
+        "created_by": "00000000-0000-4000-8000-000000000101",
+        "updated_at": "2026-11-21T01:48:45.449370+00:00",
+        "updated_by": "00000000-0000-4000-8000-000000000101"
+      }
+    },
+    {
+      "actor": "candidate",
+      "method": "POST",
+      "path": "/api/v1/students/applications",
+      "request": {
+        "opportunity_id": "304203d2-70ce-4bb7-a982-2aca2e95aa2c",
+        "university_label": "Учебный вуз",
+        "programme_label": "Учебная программа",
+        "comment": "Пример"
+      },
+      "status": 201,
+      "response": {
+        "opportunity_id": "304203d2-70ce-4bb7-a982-2aca2e95aa2c",
+        "university_label": "Учебный вуз",
+        "programme_label": "Учебная программа",
+        "comment": "Пример",
+        "student_actor_id": "00000000-0000-4000-8000-000000000105",
+        "status": "submitted",
+        "reason": null,
+        "source_mode": "synthetic_student_statement",
+        "id": "4cb0b0f9-e0b8-432c-9d93-5852f7c3d260",
+        "organization_id": "00000000-0000-4000-8000-000000000001",
+        "revision": 1,
+        "created_at": "2026-11-21T01:48:45.457795+00:00",
+        "created_by": "00000000-0000-4000-8000-000000000105",
+        "updated_at": "2026-11-21T01:48:45.457795+00:00",
+        "updated_by": "00000000-0000-4000-8000-000000000105"
+      }
+    },
+    {
+      "actor": "candidate2",
+      "method": "POST",
+      "path": "/api/v1/students/applications",
+      "request": {
+        "opportunity_id": "304203d2-70ce-4bb7-a982-2aca2e95aa2c",
+        "university_label": "Учебный вуз",
+        "programme_label": "Учебная программа",
+        "comment": "Пример"
+      },
+      "status": 201,
+      "response": {
+        "opportunity_id": "304203d2-70ce-4bb7-a982-2aca2e95aa2c",
+        "university_label": "Учебный вуз",
+        "programme_label": "Учебная программа",
+        "comment": "Пример",
+        "student_actor_id": "00000000-0000-4000-8000-000000000107",
+        "status": "submitted",
+        "reason": null,
+        "source_mode": "synthetic_student_statement",
+        "id": "3c2dda5b-341f-44d8-b346-bf4b4b3e5284",
+        "organization_id": "00000000-0000-4000-8000-000000000001",
+        "revision": 1,
+        "created_at": "2026-11-21T01:48:45.465465+00:00",
+        "created_by": "00000000-0000-4000-8000-000000000107",
+        "updated_at": "2026-11-21T01:48:45.465465+00:00",
+        "updated_by": "00000000-0000-4000-8000-000000000107"
+      }
+    },
+    {
+      "actor": "hr",
+      "method": "POST",
+      "path": "/api/v1/students/applications/4cb0b0f9-e0b8-432c-9d93-5852f7c3d260/assign",
+      "request": {
+        "expected_revision": 1,
+        "confirmation_basis": "synthetic: HR manually checked training dates and mentor"
+      },
+      "status": 200,
+      "response": {
+        "application_id": "4cb0b0f9-e0b8-432c-9d93-5852f7c3d260",
+        "opportunity_id": "304203d2-70ce-4bb7-a982-2aca2e95aa2c",
+        "student_actor_id": "00000000-0000-4000-8000-000000000105",
+        "mentor_actor_id": "00000000-0000-4000-8000-000000000103",
+        "starts_on": "2026-12-01",
+        "ends_on": "2026-12-31",
+        "status": "active",
+        "confirmation_basis": "synthetic: HR manually checked training dates and mentor",
+        "source_mode": "synthetic_manual_confirmation",
+        "id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+        "organization_id": "00000000-0000-4000-8000-000000000001",
+        "revision": 1,
+        "created_at": "2026-11-21T01:48:45.473801+00:00",
+        "created_by": "00000000-0000-4000-8000-000000000101",
+        "updated_at": "2026-11-21T01:48:45.473801+00:00",
+        "updated_by": "00000000-0000-4000-8000-000000000101"
+      }
+    },
+    {
+      "actor": "hr",
+      "method": "POST",
+      "path": "/api/v1/students/applications/3c2dda5b-341f-44d8-b346-bf4b4b3e5284/assign",
+      "request": {
+        "expected_revision": 1,
+        "confirmation_basis": "synthetic: second applicant"
+      },
+      "status": 409,
+      "response": {
+        "error": {
+          "code": "CAPACITY_UNAVAILABLE",
+          "message": "Свободных мест нет; заявка сохранена."
+        }
+      }
+    },
+    {
+      "actor": "candidate2",
+      "method": "GET",
+      "path": "/api/v1/students/applications/3c2dda5b-341f-44d8-b346-bf4b4b3e5284",
+      "request": null,
+      "status": 200,
+      "response": {
+        "opportunity_id": "304203d2-70ce-4bb7-a982-2aca2e95aa2c",
+        "university_label": "Учебный вуз",
+        "programme_label": "Учебная программа",
+        "comment": "Пример",
+        "student_actor_id": "00000000-0000-4000-8000-000000000107",
+        "status": "submitted",
+        "reason": null,
+        "source_mode": "synthetic_student_statement",
+        "id": "3c2dda5b-341f-44d8-b346-bf4b4b3e5284",
+        "organization_id": "00000000-0000-4000-8000-000000000001",
+        "revision": 1,
+        "created_at": "2026-11-21T01:48:45.465465+00:00",
+        "created_by": "00000000-0000-4000-8000-000000000107",
+        "updated_at": "2026-11-21T01:48:45.465465+00:00",
+        "updated_by": "00000000-0000-4000-8000-000000000107",
+        "history": [
+          {
+            "revision": 1,
+            "actor_id": "00000000-0000-4000-8000-000000000107",
+            "action": "submitted",
+            "recorded_at": "2026-11-21T01:48:45.465465+00:00",
+            "snapshot": {
+              "opportunity_id": "304203d2-70ce-4bb7-a982-2aca2e95aa2c",
+              "university_label": "Учебный вуз",
+              "programme_label": "Учебная программа",
+              "comment": "Пример",
+              "student_actor_id": "00000000-0000-4000-8000-000000000107",
+              "status": "submitted",
+              "reason": null,
+              "source_mode": "synthetic_student_statement",
+              "id": "3c2dda5b-341f-44d8-b346-bf4b4b3e5284",
+              "organization_id": "00000000-0000-4000-8000-000000000001",
+              "revision": 1,
+              "created_at": "2026-11-21T01:48:45.465465+00:00",
+              "created_by": "00000000-0000-4000-8000-000000000107",
+              "updated_at": "2026-11-21T01:48:45.465465+00:00",
+              "updated_by": "00000000-0000-4000-8000-000000000107"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "actor": "department",
+      "method": "POST",
+      "path": "/api/v1/students/placements/be0c2ef0-8a40-4861-9d8b-0aac6fe561e1/tasks",
+      "request": {
+        "title": "Разбор обращений",
+        "description": "Объяснить классификацию",
+        "criteria": [
+          {
+            "key": "classification",
+            "text": "Объясняет спорные категории",
+            "required": true
+          }
+        ]
+      },
+      "status": 201,
+      "response": {
+        "title": "Разбор обращений",
+        "description": "Объяснить классификацию",
+        "criteria": [
+          {
+            "key": "classification",
+            "text": "Объясняет спорные категории",
+            "required": true
+          }
+        ],
+        "placement_id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+        "version": 1,
+        "id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+        "organization_id": "00000000-0000-4000-8000-000000000001",
+        "revision": 1,
+        "created_at": "2026-11-21T01:48:45.488198+00:00",
+        "created_by": "00000000-0000-4000-8000-000000000103",
+        "updated_at": "2026-11-21T01:48:45.488198+00:00",
+        "updated_by": "00000000-0000-4000-8000-000000000103"
+      }
+    },
+    {
+      "actor": "candidate",
+      "method": "POST",
+      "path": "/api/v1/students/placements/be0c2ef0-8a40-4861-9d8b-0aac6fe561e1/submissions",
+      "request": {
+        "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+        "text": "Учебная классификация без объяснения спорной категории"
+      },
+      "status": 201,
+      "response": {
+        "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+        "text": "Учебная классификация без объяснения спорной категории",
+        "artifact_url": null,
+        "placement_id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+        "attempt_no": 1,
+        "submitted_at": "2026-11-21T01:48:45.494943+00:00",
+        "submitted_by": "00000000-0000-4000-8000-000000000105",
+        "artifact_source": "saved_text",
+        "id": "84711ff5-efa3-47ff-8002-b1f171de01b3",
+        "organization_id": "00000000-0000-4000-8000-000000000001",
+        "revision": 1,
+        "created_at": "2026-11-21T01:48:45.495078+00:00",
+        "created_by": "00000000-0000-4000-8000-000000000105",
+        "updated_at": "2026-11-21T01:48:45.495078+00:00",
+        "updated_by": "00000000-0000-4000-8000-000000000105"
+      }
+    },
+    {
+      "actor": "department",
+      "method": "POST",
+      "path": "/api/v1/students/submissions/84711ff5-efa3-47ff-8002-b1f171de01b3/review",
+      "request": {
+        "results": [
+          {
+            "criterion_key": "classification",
+            "result": "needs_revision",
+            "reason": "Учебное основание"
+          }
+        ]
+      },
+      "status": 200,
+      "response": {
+        "placement_id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+        "submission_id": "84711ff5-efa3-47ff-8002-b1f171de01b3",
+        "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+        "reviewed_by": "00000000-0000-4000-8000-000000000103",
+        "reviewed_at": "2026-11-21T01:48:45.502051+00:00",
+        "results": [
+          {
+            "criterion_key": "classification",
+            "result": "needs_revision",
+            "reason": "Учебное основание"
+          }
+        ],
+        "id": "5b36e122-69ba-4349-aacc-39352abb2b05",
+        "organization_id": "00000000-0000-4000-8000-000000000001",
+        "revision": 1,
+        "created_at": "2026-11-21T01:48:45.502183+00:00",
+        "created_by": "00000000-0000-4000-8000-000000000103",
+        "updated_at": "2026-11-21T01:48:45.502183+00:00",
+        "updated_by": "00000000-0000-4000-8000-000000000103"
+      }
+    },
+    {
+      "actor": "candidate",
+      "method": "GET",
+      "path": "/api/v1/students/placements/be0c2ef0-8a40-4861-9d8b-0aac6fe561e1/submissions",
+      "request": null,
+      "status": 200,
+      "response": {
+        "items": [
+          {
+            "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+            "text": "Учебная классификация без объяснения спорной категории",
+            "artifact_url": null,
+            "placement_id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+            "attempt_no": 1,
+            "submitted_at": "2026-11-21T01:48:45.494943+00:00",
+            "submitted_by": "00000000-0000-4000-8000-000000000105",
+            "artifact_source": "saved_text",
+            "id": "84711ff5-efa3-47ff-8002-b1f171de01b3",
+            "organization_id": "00000000-0000-4000-8000-000000000001",
+            "revision": 1,
+            "created_at": "2026-11-21T01:48:45.495078+00:00",
+            "created_by": "00000000-0000-4000-8000-000000000105",
+            "updated_at": "2026-11-21T01:48:45.495078+00:00",
+            "updated_by": "00000000-0000-4000-8000-000000000105",
+            "review": {
+              "placement_id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+              "submission_id": "84711ff5-efa3-47ff-8002-b1f171de01b3",
+              "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+              "reviewed_by": "00000000-0000-4000-8000-000000000103",
+              "reviewed_at": "2026-11-21T01:48:45.502051+00:00",
+              "results": [
+                {
+                  "criterion_key": "classification",
+                  "result": "needs_revision",
+                  "reason": "Учебное основание"
+                }
+              ],
+              "id": "5b36e122-69ba-4349-aacc-39352abb2b05",
+              "organization_id": "00000000-0000-4000-8000-000000000001",
+              "revision": 1,
+              "created_at": "2026-11-21T01:48:45.502183+00:00",
+              "created_by": "00000000-0000-4000-8000-000000000103",
+              "updated_at": "2026-11-21T01:48:45.502183+00:00",
+              "updated_by": "00000000-0000-4000-8000-000000000103"
+            }
+          }
+        ],
+        "work_state": "needs_revision"
+      }
+    },
+    {
+      "actor": "candidate",
+      "method": "POST",
+      "path": "/api/v1/students/placements/be0c2ef0-8a40-4861-9d8b-0aac6fe561e1/submissions",
+      "request": {
+        "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+        "text": "Учебное исправление: категория выбрана по предмету обращения; основание объяснено"
+      },
+      "status": 201,
+      "response": {
+        "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+        "text": "Учебное исправление: категория выбрана по предмету обращения; основание объяснено",
+        "artifact_url": null,
+        "placement_id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+        "attempt_no": 2,
+        "submitted_at": "2026-11-21T01:48:45.511539+00:00",
+        "submitted_by": "00000000-0000-4000-8000-000000000105",
+        "artifact_source": "saved_text",
+        "id": "3d23b8ad-8931-471b-b7f0-73270cd5da5b",
+        "organization_id": "00000000-0000-4000-8000-000000000001",
+        "revision": 1,
+        "created_at": "2026-11-21T01:48:45.511672+00:00",
+        "created_by": "00000000-0000-4000-8000-000000000105",
+        "updated_at": "2026-11-21T01:48:45.511672+00:00",
+        "updated_by": "00000000-0000-4000-8000-000000000105"
+      }
+    },
+    {
+      "actor": "department",
+      "method": "POST",
+      "path": "/api/v1/students/submissions/3d23b8ad-8931-471b-b7f0-73270cd5da5b/review",
+      "request": {
+        "results": [
+          {
+            "criterion_key": "classification",
+            "result": "confirmed",
+            "reason": "Учебное основание"
+          }
+        ]
+      },
+      "status": 200,
+      "response": {
+        "placement_id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+        "submission_id": "3d23b8ad-8931-471b-b7f0-73270cd5da5b",
+        "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+        "reviewed_by": "00000000-0000-4000-8000-000000000103",
+        "reviewed_at": "2026-11-21T01:48:45.518028+00:00",
+        "results": [
+          {
+            "criterion_key": "classification",
+            "result": "confirmed",
+            "reason": "Учебное основание"
+          }
+        ],
+        "id": "65fe71fe-02d0-47ce-ae31-71ad965bcc9f",
+        "organization_id": "00000000-0000-4000-8000-000000000001",
+        "revision": 1,
+        "created_at": "2026-11-21T01:48:45.518152+00:00",
+        "created_by": "00000000-0000-4000-8000-000000000103",
+        "updated_at": "2026-11-21T01:48:45.518152+00:00",
+        "updated_by": "00000000-0000-4000-8000-000000000103"
+      }
+    },
+    {
+      "actor": "candidate",
+      "method": "GET",
+      "path": "/api/v1/students/placements/be0c2ef0-8a40-4861-9d8b-0aac6fe561e1/submissions",
+      "request": null,
+      "status": 200,
+      "response": {
+        "items": [
+          {
+            "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+            "text": "Учебная классификация без объяснения спорной категории",
+            "artifact_url": null,
+            "placement_id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+            "attempt_no": 1,
+            "submitted_at": "2026-11-21T01:48:45.494943+00:00",
+            "submitted_by": "00000000-0000-4000-8000-000000000105",
+            "artifact_source": "saved_text",
+            "id": "84711ff5-efa3-47ff-8002-b1f171de01b3",
+            "organization_id": "00000000-0000-4000-8000-000000000001",
+            "revision": 1,
+            "created_at": "2026-11-21T01:48:45.495078+00:00",
+            "created_by": "00000000-0000-4000-8000-000000000105",
+            "updated_at": "2026-11-21T01:48:45.495078+00:00",
+            "updated_by": "00000000-0000-4000-8000-000000000105",
+            "review": {
+              "placement_id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+              "submission_id": "84711ff5-efa3-47ff-8002-b1f171de01b3",
+              "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+              "reviewed_by": "00000000-0000-4000-8000-000000000103",
+              "reviewed_at": "2026-11-21T01:48:45.502051+00:00",
+              "results": [
+                {
+                  "criterion_key": "classification",
+                  "result": "needs_revision",
+                  "reason": "Учебное основание"
+                }
+              ],
+              "id": "5b36e122-69ba-4349-aacc-39352abb2b05",
+              "organization_id": "00000000-0000-4000-8000-000000000001",
+              "revision": 1,
+              "created_at": "2026-11-21T01:48:45.502183+00:00",
+              "created_by": "00000000-0000-4000-8000-000000000103",
+              "updated_at": "2026-11-21T01:48:45.502183+00:00",
+              "updated_by": "00000000-0000-4000-8000-000000000103"
+            }
+          },
+          {
+            "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+            "text": "Учебное исправление: категория выбрана по предмету обращения; основание объяснено",
+            "artifact_url": null,
+            "placement_id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+            "attempt_no": 2,
+            "submitted_at": "2026-11-21T01:48:45.511539+00:00",
+            "submitted_by": "00000000-0000-4000-8000-000000000105",
+            "artifact_source": "saved_text",
+            "id": "3d23b8ad-8931-471b-b7f0-73270cd5da5b",
+            "organization_id": "00000000-0000-4000-8000-000000000001",
+            "revision": 1,
+            "created_at": "2026-11-21T01:48:45.511672+00:00",
+            "created_by": "00000000-0000-4000-8000-000000000105",
+            "updated_at": "2026-11-21T01:48:45.511672+00:00",
+            "updated_by": "00000000-0000-4000-8000-000000000105",
+            "review": {
+              "placement_id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+              "submission_id": "3d23b8ad-8931-471b-b7f0-73270cd5da5b",
+              "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+              "reviewed_by": "00000000-0000-4000-8000-000000000103",
+              "reviewed_at": "2026-11-21T01:48:45.518028+00:00",
+              "results": [
+                {
+                  "criterion_key": "classification",
+                  "result": "confirmed",
+                  "reason": "Учебное основание"
+                }
+              ],
+              "id": "65fe71fe-02d0-47ce-ae31-71ad965bcc9f",
+              "organization_id": "00000000-0000-4000-8000-000000000001",
+              "revision": 1,
+              "created_at": "2026-11-21T01:48:45.518152+00:00",
+              "created_by": "00000000-0000-4000-8000-000000000103",
+              "updated_at": "2026-11-21T01:48:45.518152+00:00",
+              "updated_by": "00000000-0000-4000-8000-000000000103"
+            }
+          }
+        ],
+        "work_state": "confirmed"
+      }
+    },
+    {
+      "actor": "candidate2",
+      "method": "GET",
+      "path": "/api/v1/students/placements/be0c2ef0-8a40-4861-9d8b-0aac6fe561e1/submissions",
+      "request": null,
+      "status": 404,
+      "response": {
+        "error": {
+          "code": "NOT_FOUND",
+          "message": "Участие не найдено."
+        }
+      }
+    },
+    {
+      "actor": "department",
+      "method": "POST",
+      "path": "/api/v1/students/placements/be0c2ef0-8a40-4861-9d8b-0aac6fe561e1/complete",
+      "request": {
+        "expected_revision": 1,
+        "outcome": "completed",
+        "reason": "Учебный итог принимающей стороны: исправленная работа подтверждена"
+      },
+      "status": 200,
+      "response": {
+        "application_id": "4cb0b0f9-e0b8-432c-9d93-5852f7c3d260",
+        "opportunity_id": "304203d2-70ce-4bb7-a982-2aca2e95aa2c",
+        "student_actor_id": "00000000-0000-4000-8000-000000000105",
+        "mentor_actor_id": "00000000-0000-4000-8000-000000000103",
+        "starts_on": "2026-12-01",
+        "ends_on": "2026-12-31",
+        "status": "completed",
+        "confirmation_basis": "synthetic: HR manually checked training dates and mentor",
+        "source_mode": "synthetic_manual_confirmation",
+        "id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+        "organization_id": "00000000-0000-4000-8000-000000000001",
+        "revision": 2,
+        "created_at": "2026-11-21T01:48:45.473801+00:00",
+        "created_by": "00000000-0000-4000-8000-000000000101",
+        "updated_at": "2026-11-21T01:48:45.529261+00:00",
+        "updated_by": "00000000-0000-4000-8000-000000000103",
+        "completion": {
+          "outcome": "completed",
+          "reason": "Учебный итог принимающей стороны: исправленная работа подтверждена",
+          "actor_id": "00000000-0000-4000-8000-000000000103",
+          "completed_at": "2026-11-21T01:48:45.529104+00:00",
+          "criteria_snapshot": [
+            {
+              "criterion_key": "classification",
+              "text": "Объясняет спорные категории",
+              "required": true,
+              "result": "confirmed",
+              "reason": "Учебное основание",
+              "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+              "task_version": 1,
+              "submission_id": "3d23b8ad-8931-471b-b7f0-73270cd5da5b",
+              "review_id": "65fe71fe-02d0-47ce-ae31-71ad965bcc9f",
+              "reviewed_by": "00000000-0000-4000-8000-000000000103",
+              "reviewed_at": "2026-11-21T01:48:45.518028+00:00"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "actor": "candidate",
+      "method": "GET",
+      "path": "/api/v1/students/placements/be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+      "request": null,
+      "status": 200,
+      "response": {
+        "application_id": "4cb0b0f9-e0b8-432c-9d93-5852f7c3d260",
+        "opportunity_id": "304203d2-70ce-4bb7-a982-2aca2e95aa2c",
+        "student_actor_id": "00000000-0000-4000-8000-000000000105",
+        "mentor_actor_id": "00000000-0000-4000-8000-000000000103",
+        "starts_on": "2026-12-01",
+        "ends_on": "2026-12-31",
+        "status": "completed",
+        "confirmation_basis": "synthetic: HR manually checked training dates and mentor",
+        "source_mode": "synthetic_manual_confirmation",
+        "id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+        "organization_id": "00000000-0000-4000-8000-000000000001",
+        "revision": 2,
+        "created_at": "2026-11-21T01:48:45.473801+00:00",
+        "created_by": "00000000-0000-4000-8000-000000000101",
+        "updated_at": "2026-11-21T01:48:45.529261+00:00",
+        "updated_by": "00000000-0000-4000-8000-000000000103",
+        "completion": {
+          "outcome": "completed",
+          "reason": "Учебный итог принимающей стороны: исправленная работа подтверждена",
+          "actor_id": "00000000-0000-4000-8000-000000000103",
+          "completed_at": "2026-11-21T01:48:45.529104+00:00",
+          "criteria_snapshot": [
+            {
+              "criterion_key": "classification",
+              "text": "Объясняет спорные категории",
+              "required": true,
+              "result": "confirmed",
+              "reason": "Учебное основание",
+              "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+              "task_version": 1,
+              "submission_id": "3d23b8ad-8931-471b-b7f0-73270cd5da5b",
+              "review_id": "65fe71fe-02d0-47ce-ae31-71ad965bcc9f",
+              "reviewed_by": "00000000-0000-4000-8000-000000000103",
+              "reviewed_at": "2026-11-21T01:48:45.518028+00:00"
+            }
+          ]
+        },
+        "history": [
+          {
+            "revision": 1,
+            "actor_id": "00000000-0000-4000-8000-000000000101",
+            "action": "assigned",
+            "recorded_at": "2026-11-21T01:48:45.473801+00:00",
+            "snapshot": {
+              "application_id": "4cb0b0f9-e0b8-432c-9d93-5852f7c3d260",
+              "opportunity_id": "304203d2-70ce-4bb7-a982-2aca2e95aa2c",
+              "student_actor_id": "00000000-0000-4000-8000-000000000105",
+              "mentor_actor_id": "00000000-0000-4000-8000-000000000103",
+              "starts_on": "2026-12-01",
+              "ends_on": "2026-12-31",
+              "status": "active",
+              "confirmation_basis": "synthetic: HR manually checked training dates and mentor",
+              "source_mode": "synthetic_manual_confirmation",
+              "id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+              "organization_id": "00000000-0000-4000-8000-000000000001",
+              "revision": 1,
+              "created_at": "2026-11-21T01:48:45.473801+00:00",
+              "created_by": "00000000-0000-4000-8000-000000000101",
+              "updated_at": "2026-11-21T01:48:45.473801+00:00",
+              "updated_by": "00000000-0000-4000-8000-000000000101"
+            }
+          },
+          {
+            "revision": 2,
+            "actor_id": "00000000-0000-4000-8000-000000000103",
+            "action": "completed_completed",
+            "recorded_at": "2026-11-21T01:48:45.529261+00:00",
+            "snapshot": {
+              "application_id": "4cb0b0f9-e0b8-432c-9d93-5852f7c3d260",
+              "opportunity_id": "304203d2-70ce-4bb7-a982-2aca2e95aa2c",
+              "student_actor_id": "00000000-0000-4000-8000-000000000105",
+              "mentor_actor_id": "00000000-0000-4000-8000-000000000103",
+              "starts_on": "2026-12-01",
+              "ends_on": "2026-12-31",
+              "status": "completed",
+              "confirmation_basis": "synthetic: HR manually checked training dates and mentor",
+              "source_mode": "synthetic_manual_confirmation",
+              "id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+              "organization_id": "00000000-0000-4000-8000-000000000001",
+              "revision": 2,
+              "created_at": "2026-11-21T01:48:45.473801+00:00",
+              "created_by": "00000000-0000-4000-8000-000000000101",
+              "updated_at": "2026-11-21T01:48:45.529261+00:00",
+              "updated_by": "00000000-0000-4000-8000-000000000103",
+              "completion": {
+                "outcome": "completed",
+                "reason": "Учебный итог принимающей стороны: исправленная работа подтверждена",
+                "actor_id": "00000000-0000-4000-8000-000000000103",
+                "completed_at": "2026-11-21T01:48:45.529104+00:00",
+                "criteria_snapshot": [
+                  {
+                    "criterion_key": "classification",
+                    "text": "Объясняет спорные категории",
+                    "required": true,
+                    "result": "confirmed",
+                    "reason": "Учебное основание",
+                    "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+                    "task_version": 1,
+                    "submission_id": "3d23b8ad-8931-471b-b7f0-73270cd5da5b",
+                    "review_id": "65fe71fe-02d0-47ce-ae31-71ad965bcc9f",
+                    "reviewed_by": "00000000-0000-4000-8000-000000000103",
+                    "reviewed_at": "2026-11-21T01:48:45.518028+00:00"
+                  }
+                ]
+              }
+            }
+          }
+        ],
+        "work_state": "confirmed",
+        "university_result": {
+          "result": "unknown"
+        },
+        "career_interest": {
+          "interested": false
+        }
+      }
+    },
+    {
+      "actor": "hr",
+      "method": "POST",
+      "path": "/api/v1/students/placements/be0c2ef0-8a40-4861-9d8b-0aac6fe561e1/university-result",
+      "request": {
+        "expected_revision": 2,
+        "result": "passed",
+        "source_reference": "synthetic: university letter DEMO-6A dated 2026-12-31",
+        "source_author": "Учебный координатор вуза (внешний автор)",
+        "occurred_on": "2026-12-31"
+      },
+      "status": 200,
+      "response": {
+        "application_id": "4cb0b0f9-e0b8-432c-9d93-5852f7c3d260",
+        "opportunity_id": "304203d2-70ce-4bb7-a982-2aca2e95aa2c",
+        "student_actor_id": "00000000-0000-4000-8000-000000000105",
+        "mentor_actor_id": "00000000-0000-4000-8000-000000000103",
+        "starts_on": "2026-12-01",
+        "ends_on": "2026-12-31",
+        "status": "completed",
+        "confirmation_basis": "synthetic: HR manually checked training dates and mentor",
+        "source_mode": "synthetic_manual_confirmation",
+        "id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+        "organization_id": "00000000-0000-4000-8000-000000000001",
+        "revision": 3,
+        "created_at": "2026-11-21T01:48:45.473801+00:00",
+        "created_by": "00000000-0000-4000-8000-000000000101",
+        "updated_at": "2026-11-21T01:48:45.540216+00:00",
+        "updated_by": "00000000-0000-4000-8000-000000000101",
+        "completion": {
+          "outcome": "completed",
+          "reason": "Учебный итог принимающей стороны: исправленная работа подтверждена",
+          "actor_id": "00000000-0000-4000-8000-000000000103",
+          "completed_at": "2026-11-21T01:48:45.529104+00:00",
+          "criteria_snapshot": [
+            {
+              "criterion_key": "classification",
+              "text": "Объясняет спорные категории",
+              "required": true,
+              "result": "confirmed",
+              "reason": "Учебное основание",
+              "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+              "task_version": 1,
+              "submission_id": "3d23b8ad-8931-471b-b7f0-73270cd5da5b",
+              "review_id": "65fe71fe-02d0-47ce-ae31-71ad965bcc9f",
+              "reviewed_by": "00000000-0000-4000-8000-000000000103",
+              "reviewed_at": "2026-11-21T01:48:45.518028+00:00"
+            }
+          ]
+        },
+        "university_result": {
+          "result": "passed",
+          "source_reference": "synthetic: university letter DEMO-6A dated 2026-12-31",
+          "source_author": "Учебный координатор вуза (внешний автор)",
+          "occurred_on": "2026-12-31",
+          "recorded_by": "00000000-0000-4000-8000-000000000101",
+          "recorded_at": "2026-11-21T01:48:45.540029+00:00",
+          "source_mode": "registered_external_statement"
+        }
+      }
+    },
+    {
+      "actor": "candidate",
+      "method": "POST",
+      "path": "/api/v1/students/placements/be0c2ef0-8a40-4861-9d8b-0aac6fe561e1/career-interest",
+      "request": {
+        "expected_revision": 3,
+        "interested": true,
+        "note": "Учебное согласие обсудить работу после выпуска"
+      },
+      "status": 200,
+      "response": {
+        "application_id": "4cb0b0f9-e0b8-432c-9d93-5852f7c3d260",
+        "opportunity_id": "304203d2-70ce-4bb7-a982-2aca2e95aa2c",
+        "student_actor_id": "00000000-0000-4000-8000-000000000105",
+        "mentor_actor_id": "00000000-0000-4000-8000-000000000103",
+        "starts_on": "2026-12-01",
+        "ends_on": "2026-12-31",
+        "status": "completed",
+        "confirmation_basis": "synthetic: HR manually checked training dates and mentor",
+        "source_mode": "synthetic_manual_confirmation",
+        "id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+        "organization_id": "00000000-0000-4000-8000-000000000001",
+        "revision": 4,
+        "created_at": "2026-11-21T01:48:45.473801+00:00",
+        "created_by": "00000000-0000-4000-8000-000000000101",
+        "updated_at": "2026-11-21T01:48:45.547104+00:00",
+        "updated_by": "00000000-0000-4000-8000-000000000105",
+        "completion": {
+          "outcome": "completed",
+          "reason": "Учебный итог принимающей стороны: исправленная работа подтверждена",
+          "actor_id": "00000000-0000-4000-8000-000000000103",
+          "completed_at": "2026-11-21T01:48:45.529104+00:00",
+          "criteria_snapshot": [
+            {
+              "criterion_key": "classification",
+              "text": "Объясняет спорные категории",
+              "required": true,
+              "result": "confirmed",
+              "reason": "Учебное основание",
+              "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+              "task_version": 1,
+              "submission_id": "3d23b8ad-8931-471b-b7f0-73270cd5da5b",
+              "review_id": "65fe71fe-02d0-47ce-ae31-71ad965bcc9f",
+              "reviewed_by": "00000000-0000-4000-8000-000000000103",
+              "reviewed_at": "2026-11-21T01:48:45.518028+00:00"
+            }
+          ]
+        },
+        "university_result": {
+          "result": "passed",
+          "source_reference": "synthetic: university letter DEMO-6A dated 2026-12-31",
+          "source_author": "Учебный координатор вуза (внешний автор)",
+          "occurred_on": "2026-12-31",
+          "recorded_by": "00000000-0000-4000-8000-000000000101",
+          "recorded_at": "2026-11-21T01:48:45.540029+00:00",
+          "source_mode": "registered_external_statement"
+        },
+        "career_interest": {
+          "interested": true,
+          "note": "Учебное согласие обсудить работу после выпуска",
+          "actor_id": "00000000-0000-4000-8000-000000000105",
+          "recorded_at": "2026-11-21T01:48:45.546907+00:00"
+        }
+      }
+    },
+    {
+      "actor": "hr",
+      "method": "POST",
+      "path": "/api/v1/students/placements/be0c2ef0-8a40-4861-9d8b-0aac6fe561e1/career-package",
+      "request": {
+        "criterion_keys": [
+          "classification"
+        ],
+        "purpose": "Учебное ручное рассмотрение после выпуска",
+        "contact_basis": "synthetic: expressed career interest in this placement"
+      },
+      "status": 200,
+      "response": {
+        "id": "efd2251c-15d7-42a7-86f7-34c282d6ee1e",
+        "package_id": "efd2251c-15d7-42a7-86f7-34c282d6ee1e",
+        "placement_id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+        "student_actor_id": "00000000-0000-4000-8000-000000000105",
+        "selected_results": [
+          {
+            "criterion_key": "classification",
+            "text": "Объясняет спорные категории",
+            "required": true,
+            "result": "confirmed",
+            "reason": "Учебное основание",
+            "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+            "task_version": 1,
+            "submission_id": "3d23b8ad-8931-471b-b7f0-73270cd5da5b",
+            "review_id": "65fe71fe-02d0-47ce-ae31-71ad965bcc9f",
+            "reviewed_by": "00000000-0000-4000-8000-000000000103",
+            "reviewed_at": "2026-11-21T01:48:45.518028+00:00"
+          }
+        ],
+        "university_result": {
+          "result": "passed",
+          "source_reference": "synthetic: university letter DEMO-6A dated 2026-12-31",
+          "source_author": "Учебный координатор вуза (внешний автор)",
+          "occurred_on": "2026-12-31",
+          "recorded_by": "00000000-0000-4000-8000-000000000101",
+          "recorded_at": "2026-11-21T01:48:45.540029+00:00",
+          "source_mode": "registered_external_statement"
+        },
+        "education_status": "unconfirmed",
+        "purpose": "Учебное ручное рассмотрение после выпуска",
+        "contact_basis": "synthetic: expressed career interest in this placement",
+        "transfer_status": "prepared",
+        "interest_withdrawn": false,
+        "interest_snapshot": {
+          "interested": true,
+          "note": "Учебное согласие обсудить работу после выпуска",
+          "actor_id": "00000000-0000-4000-8000-000000000105",
+          "recorded_at": "2026-11-21T01:48:45.546907+00:00"
+        },
+        "organization_id": "00000000-0000-4000-8000-000000000001",
+        "revision": 1,
+        "created_at": "2026-11-21T01:48:45.556409+00:00",
+        "created_by": "00000000-0000-4000-8000-000000000101",
+        "updated_at": "2026-11-21T01:48:45.556409+00:00",
+        "updated_by": "00000000-0000-4000-8000-000000000101"
+      }
+    },
+    {
+      "actor": "candidate2",
+      "method": "GET",
+      "path": "/api/v1/students/career-packages/efd2251c-15d7-42a7-86f7-34c282d6ee1e",
+      "request": null,
+      "status": 404,
+      "response": {
+        "error": {
+          "code": "NOT_FOUND",
+          "message": "Пакет не найден."
+        }
+      }
+    },
+    {
+      "actor": "candidate",
+      "method": "GET",
+      "path": "/api/v1/students/career-packages/efd2251c-15d7-42a7-86f7-34c282d6ee1e",
+      "request": null,
+      "status": 200,
+      "response": {
+        "id": "efd2251c-15d7-42a7-86f7-34c282d6ee1e",
+        "package_id": "efd2251c-15d7-42a7-86f7-34c282d6ee1e",
+        "placement_id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+        "student_actor_id": "00000000-0000-4000-8000-000000000105",
+        "selected_results": [
+          {
+            "criterion_key": "classification",
+            "text": "Объясняет спорные категории",
+            "required": true,
+            "result": "confirmed",
+            "reason": "Учебное основание",
+            "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+            "task_version": 1,
+            "submission_id": "3d23b8ad-8931-471b-b7f0-73270cd5da5b",
+            "review_id": "65fe71fe-02d0-47ce-ae31-71ad965bcc9f",
+            "reviewed_by": "00000000-0000-4000-8000-000000000103",
+            "reviewed_at": "2026-11-21T01:48:45.518028+00:00"
+          }
+        ],
+        "university_result": {
+          "result": "passed",
+          "source_reference": "synthetic: university letter DEMO-6A dated 2026-12-31",
+          "source_author": "Учебный координатор вуза (внешний автор)",
+          "occurred_on": "2026-12-31",
+          "recorded_by": "00000000-0000-4000-8000-000000000101",
+          "recorded_at": "2026-11-21T01:48:45.540029+00:00",
+          "source_mode": "registered_external_statement"
+        },
+        "education_status": "unconfirmed",
+        "purpose": "Учебное ручное рассмотрение после выпуска",
+        "contact_basis": "synthetic: expressed career interest in this placement",
+        "transfer_status": "prepared",
+        "interest_withdrawn": false,
+        "interest_snapshot": {
+          "interested": true,
+          "note": "Учебное согласие обсудить работу после выпуска",
+          "actor_id": "00000000-0000-4000-8000-000000000105",
+          "recorded_at": "2026-11-21T01:48:45.546907+00:00"
+        },
+        "organization_id": "00000000-0000-4000-8000-000000000001",
+        "revision": 1,
+        "created_at": "2026-11-21T01:48:45.556409+00:00",
+        "created_by": "00000000-0000-4000-8000-000000000101",
+        "updated_at": "2026-11-21T01:48:45.556409+00:00",
+        "updated_by": "00000000-0000-4000-8000-000000000101",
+        "history": [
+          {
+            "revision": 1,
+            "actor_id": "00000000-0000-4000-8000-000000000101",
+            "action": "career_package_prepared",
+            "recorded_at": "2026-11-21T01:48:45.556409+00:00",
+            "snapshot": {
+              "id": "efd2251c-15d7-42a7-86f7-34c282d6ee1e",
+              "package_id": "efd2251c-15d7-42a7-86f7-34c282d6ee1e",
+              "placement_id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+              "student_actor_id": "00000000-0000-4000-8000-000000000105",
+              "selected_results": [
+                {
+                  "criterion_key": "classification",
+                  "text": "Объясняет спорные категории",
+                  "required": true,
+                  "result": "confirmed",
+                  "reason": "Учебное основание",
+                  "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+                  "task_version": 1,
+                  "submission_id": "3d23b8ad-8931-471b-b7f0-73270cd5da5b",
+                  "review_id": "65fe71fe-02d0-47ce-ae31-71ad965bcc9f",
+                  "reviewed_by": "00000000-0000-4000-8000-000000000103",
+                  "reviewed_at": "2026-11-21T01:48:45.518028+00:00"
+                }
+              ],
+              "university_result": {
+                "result": "passed",
+                "source_reference": "synthetic: university letter DEMO-6A dated 2026-12-31",
+                "source_author": "Учебный координатор вуза (внешний автор)",
+                "occurred_on": "2026-12-31",
+                "recorded_by": "00000000-0000-4000-8000-000000000101",
+                "recorded_at": "2026-11-21T01:48:45.540029+00:00",
+                "source_mode": "registered_external_statement"
+              },
+              "education_status": "unconfirmed",
+              "purpose": "Учебное ручное рассмотрение после выпуска",
+              "contact_basis": "synthetic: expressed career interest in this placement",
+              "transfer_status": "prepared",
+              "interest_withdrawn": false,
+              "interest_snapshot": {
+                "interested": true,
+                "note": "Учебное согласие обсудить работу после выпуска",
+                "actor_id": "00000000-0000-4000-8000-000000000105",
+                "recorded_at": "2026-11-21T01:48:45.546907+00:00"
+              },
+              "organization_id": "00000000-0000-4000-8000-000000000001",
+              "revision": 1,
+              "created_at": "2026-11-21T01:48:45.556409+00:00",
+              "created_by": "00000000-0000-4000-8000-000000000101",
+              "updated_at": "2026-11-21T01:48:45.556409+00:00",
+              "updated_by": "00000000-0000-4000-8000-000000000101"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "actor": "candidate",
+      "method": "GET",
+      "path": "/api/v1/students/placements/be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+      "request": null,
+      "status": 200,
+      "response": {
+        "application_id": "4cb0b0f9-e0b8-432c-9d93-5852f7c3d260",
+        "opportunity_id": "304203d2-70ce-4bb7-a982-2aca2e95aa2c",
+        "student_actor_id": "00000000-0000-4000-8000-000000000105",
+        "mentor_actor_id": "00000000-0000-4000-8000-000000000103",
+        "starts_on": "2026-12-01",
+        "ends_on": "2026-12-31",
+        "status": "completed",
+        "confirmation_basis": "synthetic: HR manually checked training dates and mentor",
+        "source_mode": "synthetic_manual_confirmation",
+        "id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+        "organization_id": "00000000-0000-4000-8000-000000000001",
+        "revision": 4,
+        "created_at": "2026-11-21T01:48:45.473801+00:00",
+        "created_by": "00000000-0000-4000-8000-000000000101",
+        "updated_at": "2026-11-21T01:48:45.547104+00:00",
+        "updated_by": "00000000-0000-4000-8000-000000000105",
+        "completion": {
+          "outcome": "completed",
+          "reason": "Учебный итог принимающей стороны: исправленная работа подтверждена",
+          "actor_id": "00000000-0000-4000-8000-000000000103",
+          "completed_at": "2026-11-21T01:48:45.529104+00:00",
+          "criteria_snapshot": [
+            {
+              "criterion_key": "classification",
+              "text": "Объясняет спорные категории",
+              "required": true,
+              "result": "confirmed",
+              "reason": "Учебное основание",
+              "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+              "task_version": 1,
+              "submission_id": "3d23b8ad-8931-471b-b7f0-73270cd5da5b",
+              "review_id": "65fe71fe-02d0-47ce-ae31-71ad965bcc9f",
+              "reviewed_by": "00000000-0000-4000-8000-000000000103",
+              "reviewed_at": "2026-11-21T01:48:45.518028+00:00"
+            }
+          ]
+        },
+        "university_result": {
+          "result": "passed",
+          "source_reference": "synthetic: university letter DEMO-6A dated 2026-12-31",
+          "source_author": "Учебный координатор вуза (внешний автор)",
+          "occurred_on": "2026-12-31",
+          "recorded_by": "00000000-0000-4000-8000-000000000101",
+          "recorded_at": "2026-11-21T01:48:45.540029+00:00",
+          "source_mode": "registered_external_statement"
+        },
+        "career_interest": {
+          "interested": true,
+          "note": "Учебное согласие обсудить работу после выпуска",
+          "actor_id": "00000000-0000-4000-8000-000000000105",
+          "recorded_at": "2026-11-21T01:48:45.546907+00:00"
+        },
+        "history": [
+          {
+            "revision": 1,
+            "actor_id": "00000000-0000-4000-8000-000000000101",
+            "action": "assigned",
+            "recorded_at": "2026-11-21T01:48:45.473801+00:00",
+            "snapshot": {
+              "application_id": "4cb0b0f9-e0b8-432c-9d93-5852f7c3d260",
+              "opportunity_id": "304203d2-70ce-4bb7-a982-2aca2e95aa2c",
+              "student_actor_id": "00000000-0000-4000-8000-000000000105",
+              "mentor_actor_id": "00000000-0000-4000-8000-000000000103",
+              "starts_on": "2026-12-01",
+              "ends_on": "2026-12-31",
+              "status": "active",
+              "confirmation_basis": "synthetic: HR manually checked training dates and mentor",
+              "source_mode": "synthetic_manual_confirmation",
+              "id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+              "organization_id": "00000000-0000-4000-8000-000000000001",
+              "revision": 1,
+              "created_at": "2026-11-21T01:48:45.473801+00:00",
+              "created_by": "00000000-0000-4000-8000-000000000101",
+              "updated_at": "2026-11-21T01:48:45.473801+00:00",
+              "updated_by": "00000000-0000-4000-8000-000000000101"
+            }
+          },
+          {
+            "revision": 2,
+            "actor_id": "00000000-0000-4000-8000-000000000103",
+            "action": "completed_completed",
+            "recorded_at": "2026-11-21T01:48:45.529261+00:00",
+            "snapshot": {
+              "application_id": "4cb0b0f9-e0b8-432c-9d93-5852f7c3d260",
+              "opportunity_id": "304203d2-70ce-4bb7-a982-2aca2e95aa2c",
+              "student_actor_id": "00000000-0000-4000-8000-000000000105",
+              "mentor_actor_id": "00000000-0000-4000-8000-000000000103",
+              "starts_on": "2026-12-01",
+              "ends_on": "2026-12-31",
+              "status": "completed",
+              "confirmation_basis": "synthetic: HR manually checked training dates and mentor",
+              "source_mode": "synthetic_manual_confirmation",
+              "id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+              "organization_id": "00000000-0000-4000-8000-000000000001",
+              "revision": 2,
+              "created_at": "2026-11-21T01:48:45.473801+00:00",
+              "created_by": "00000000-0000-4000-8000-000000000101",
+              "updated_at": "2026-11-21T01:48:45.529261+00:00",
+              "updated_by": "00000000-0000-4000-8000-000000000103",
+              "completion": {
+                "outcome": "completed",
+                "reason": "Учебный итог принимающей стороны: исправленная работа подтверждена",
+                "actor_id": "00000000-0000-4000-8000-000000000103",
+                "completed_at": "2026-11-21T01:48:45.529104+00:00",
+                "criteria_snapshot": [
+                  {
+                    "criterion_key": "classification",
+                    "text": "Объясняет спорные категории",
+                    "required": true,
+                    "result": "confirmed",
+                    "reason": "Учебное основание",
+                    "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+                    "task_version": 1,
+                    "submission_id": "3d23b8ad-8931-471b-b7f0-73270cd5da5b",
+                    "review_id": "65fe71fe-02d0-47ce-ae31-71ad965bcc9f",
+                    "reviewed_by": "00000000-0000-4000-8000-000000000103",
+                    "reviewed_at": "2026-11-21T01:48:45.518028+00:00"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "revision": 3,
+            "actor_id": "00000000-0000-4000-8000-000000000101",
+            "action": "university_result_recorded",
+            "recorded_at": "2026-11-21T01:48:45.540216+00:00",
+            "snapshot": {
+              "application_id": "4cb0b0f9-e0b8-432c-9d93-5852f7c3d260",
+              "opportunity_id": "304203d2-70ce-4bb7-a982-2aca2e95aa2c",
+              "student_actor_id": "00000000-0000-4000-8000-000000000105",
+              "mentor_actor_id": "00000000-0000-4000-8000-000000000103",
+              "starts_on": "2026-12-01",
+              "ends_on": "2026-12-31",
+              "status": "completed",
+              "confirmation_basis": "synthetic: HR manually checked training dates and mentor",
+              "source_mode": "synthetic_manual_confirmation",
+              "id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+              "organization_id": "00000000-0000-4000-8000-000000000001",
+              "revision": 3,
+              "created_at": "2026-11-21T01:48:45.473801+00:00",
+              "created_by": "00000000-0000-4000-8000-000000000101",
+              "updated_at": "2026-11-21T01:48:45.540216+00:00",
+              "updated_by": "00000000-0000-4000-8000-000000000101",
+              "completion": {
+                "outcome": "completed",
+                "reason": "Учебный итог принимающей стороны: исправленная работа подтверждена",
+                "actor_id": "00000000-0000-4000-8000-000000000103",
+                "completed_at": "2026-11-21T01:48:45.529104+00:00",
+                "criteria_snapshot": [
+                  {
+                    "criterion_key": "classification",
+                    "text": "Объясняет спорные категории",
+                    "required": true,
+                    "result": "confirmed",
+                    "reason": "Учебное основание",
+                    "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+                    "task_version": 1,
+                    "submission_id": "3d23b8ad-8931-471b-b7f0-73270cd5da5b",
+                    "review_id": "65fe71fe-02d0-47ce-ae31-71ad965bcc9f",
+                    "reviewed_by": "00000000-0000-4000-8000-000000000103",
+                    "reviewed_at": "2026-11-21T01:48:45.518028+00:00"
+                  }
+                ]
+              },
+              "university_result": {
+                "result": "passed",
+                "source_reference": "synthetic: university letter DEMO-6A dated 2026-12-31",
+                "source_author": "Учебный координатор вуза (внешний автор)",
+                "occurred_on": "2026-12-31",
+                "recorded_by": "00000000-0000-4000-8000-000000000101",
+                "recorded_at": "2026-11-21T01:48:45.540029+00:00",
+                "source_mode": "registered_external_statement"
+              }
+            }
+          },
+          {
+            "revision": 4,
+            "actor_id": "00000000-0000-4000-8000-000000000105",
+            "action": "interest_recorded",
+            "recorded_at": "2026-11-21T01:48:45.547104+00:00",
+            "snapshot": {
+              "application_id": "4cb0b0f9-e0b8-432c-9d93-5852f7c3d260",
+              "opportunity_id": "304203d2-70ce-4bb7-a982-2aca2e95aa2c",
+              "student_actor_id": "00000000-0000-4000-8000-000000000105",
+              "mentor_actor_id": "00000000-0000-4000-8000-000000000103",
+              "starts_on": "2026-12-01",
+              "ends_on": "2026-12-31",
+              "status": "completed",
+              "confirmation_basis": "synthetic: HR manually checked training dates and mentor",
+              "source_mode": "synthetic_manual_confirmation",
+              "id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+              "organization_id": "00000000-0000-4000-8000-000000000001",
+              "revision": 4,
+              "created_at": "2026-11-21T01:48:45.473801+00:00",
+              "created_by": "00000000-0000-4000-8000-000000000101",
+              "updated_at": "2026-11-21T01:48:45.547104+00:00",
+              "updated_by": "00000000-0000-4000-8000-000000000105",
+              "completion": {
+                "outcome": "completed",
+                "reason": "Учебный итог принимающей стороны: исправленная работа подтверждена",
+                "actor_id": "00000000-0000-4000-8000-000000000103",
+                "completed_at": "2026-11-21T01:48:45.529104+00:00",
+                "criteria_snapshot": [
+                  {
+                    "criterion_key": "classification",
+                    "text": "Объясняет спорные категории",
+                    "required": true,
+                    "result": "confirmed",
+                    "reason": "Учебное основание",
+                    "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+                    "task_version": 1,
+                    "submission_id": "3d23b8ad-8931-471b-b7f0-73270cd5da5b",
+                    "review_id": "65fe71fe-02d0-47ce-ae31-71ad965bcc9f",
+                    "reviewed_by": "00000000-0000-4000-8000-000000000103",
+                    "reviewed_at": "2026-11-21T01:48:45.518028+00:00"
+                  }
+                ]
+              },
+              "university_result": {
+                "result": "passed",
+                "source_reference": "synthetic: university letter DEMO-6A dated 2026-12-31",
+                "source_author": "Учебный координатор вуза (внешний автор)",
+                "occurred_on": "2026-12-31",
+                "recorded_by": "00000000-0000-4000-8000-000000000101",
+                "recorded_at": "2026-11-21T01:48:45.540029+00:00",
+                "source_mode": "registered_external_statement"
+              },
+              "career_interest": {
+                "interested": true,
+                "note": "Учебное согласие обсудить работу после выпуска",
+                "actor_id": "00000000-0000-4000-8000-000000000105",
+                "recorded_at": "2026-11-21T01:48:45.546907+00:00"
+              }
+            }
+          }
+        ],
+        "work_state": "confirmed"
+      }
+    },
+    {
+      "actor": "candidate",
+      "method": "GET",
+      "path": "/api/v1/students/placements/be0c2ef0-8a40-4861-9d8b-0aac6fe561e1/submissions",
+      "request": null,
+      "status": 200,
+      "response": {
+        "items": [
+          {
+            "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+            "text": "Учебная классификация без объяснения спорной категории",
+            "artifact_url": null,
+            "placement_id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+            "attempt_no": 1,
+            "submitted_at": "2026-11-21T01:48:45.494943+00:00",
+            "submitted_by": "00000000-0000-4000-8000-000000000105",
+            "artifact_source": "saved_text",
+            "id": "84711ff5-efa3-47ff-8002-b1f171de01b3",
+            "organization_id": "00000000-0000-4000-8000-000000000001",
+            "revision": 1,
+            "created_at": "2026-11-21T01:48:45.495078+00:00",
+            "created_by": "00000000-0000-4000-8000-000000000105",
+            "updated_at": "2026-11-21T01:48:45.495078+00:00",
+            "updated_by": "00000000-0000-4000-8000-000000000105",
+            "review": {
+              "placement_id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+              "submission_id": "84711ff5-efa3-47ff-8002-b1f171de01b3",
+              "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+              "reviewed_by": "00000000-0000-4000-8000-000000000103",
+              "reviewed_at": "2026-11-21T01:48:45.502051+00:00",
+              "results": [
+                {
+                  "criterion_key": "classification",
+                  "result": "needs_revision",
+                  "reason": "Учебное основание"
+                }
+              ],
+              "id": "5b36e122-69ba-4349-aacc-39352abb2b05",
+              "organization_id": "00000000-0000-4000-8000-000000000001",
+              "revision": 1,
+              "created_at": "2026-11-21T01:48:45.502183+00:00",
+              "created_by": "00000000-0000-4000-8000-000000000103",
+              "updated_at": "2026-11-21T01:48:45.502183+00:00",
+              "updated_by": "00000000-0000-4000-8000-000000000103"
+            }
+          },
+          {
+            "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+            "text": "Учебное исправление: категория выбрана по предмету обращения; основание объяснено",
+            "artifact_url": null,
+            "placement_id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+            "attempt_no": 2,
+            "submitted_at": "2026-11-21T01:48:45.511539+00:00",
+            "submitted_by": "00000000-0000-4000-8000-000000000105",
+            "artifact_source": "saved_text",
+            "id": "3d23b8ad-8931-471b-b7f0-73270cd5da5b",
+            "organization_id": "00000000-0000-4000-8000-000000000001",
+            "revision": 1,
+            "created_at": "2026-11-21T01:48:45.511672+00:00",
+            "created_by": "00000000-0000-4000-8000-000000000105",
+            "updated_at": "2026-11-21T01:48:45.511672+00:00",
+            "updated_by": "00000000-0000-4000-8000-000000000105",
+            "review": {
+              "placement_id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+              "submission_id": "3d23b8ad-8931-471b-b7f0-73270cd5da5b",
+              "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+              "reviewed_by": "00000000-0000-4000-8000-000000000103",
+              "reviewed_at": "2026-11-21T01:48:45.518028+00:00",
+              "results": [
+                {
+                  "criterion_key": "classification",
+                  "result": "confirmed",
+                  "reason": "Учебное основание"
+                }
+              ],
+              "id": "65fe71fe-02d0-47ce-ae31-71ad965bcc9f",
+              "organization_id": "00000000-0000-4000-8000-000000000001",
+              "revision": 1,
+              "created_at": "2026-11-21T01:48:45.518152+00:00",
+              "created_by": "00000000-0000-4000-8000-000000000103",
+              "updated_at": "2026-11-21T01:48:45.518152+00:00",
+              "updated_by": "00000000-0000-4000-8000-000000000103"
+            }
+          }
+        ],
+        "work_state": "confirmed"
+      }
+    },
+    {
+      "actor": "candidate",
+      "method": "GET",
+      "path": "/api/v1/students/career-packages/efd2251c-15d7-42a7-86f7-34c282d6ee1e",
+      "request": null,
+      "status": 200,
+      "response": {
+        "id": "efd2251c-15d7-42a7-86f7-34c282d6ee1e",
+        "package_id": "efd2251c-15d7-42a7-86f7-34c282d6ee1e",
+        "placement_id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+        "student_actor_id": "00000000-0000-4000-8000-000000000105",
+        "selected_results": [
+          {
+            "criterion_key": "classification",
+            "text": "Объясняет спорные категории",
+            "required": true,
+            "result": "confirmed",
+            "reason": "Учебное основание",
+            "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+            "task_version": 1,
+            "submission_id": "3d23b8ad-8931-471b-b7f0-73270cd5da5b",
+            "review_id": "65fe71fe-02d0-47ce-ae31-71ad965bcc9f",
+            "reviewed_by": "00000000-0000-4000-8000-000000000103",
+            "reviewed_at": "2026-11-21T01:48:45.518028+00:00"
+          }
+        ],
+        "university_result": {
+          "result": "passed",
+          "source_reference": "synthetic: university letter DEMO-6A dated 2026-12-31",
+          "source_author": "Учебный координатор вуза (внешний автор)",
+          "occurred_on": "2026-12-31",
+          "recorded_by": "00000000-0000-4000-8000-000000000101",
+          "recorded_at": "2026-11-21T01:48:45.540029+00:00",
+          "source_mode": "registered_external_statement"
+        },
+        "education_status": "unconfirmed",
+        "purpose": "Учебное ручное рассмотрение после выпуска",
+        "contact_basis": "synthetic: expressed career interest in this placement",
+        "transfer_status": "prepared",
+        "interest_withdrawn": false,
+        "interest_snapshot": {
+          "interested": true,
+          "note": "Учебное согласие обсудить работу после выпуска",
+          "actor_id": "00000000-0000-4000-8000-000000000105",
+          "recorded_at": "2026-11-21T01:48:45.546907+00:00"
+        },
+        "organization_id": "00000000-0000-4000-8000-000000000001",
+        "revision": 1,
+        "created_at": "2026-11-21T01:48:45.556409+00:00",
+        "created_by": "00000000-0000-4000-8000-000000000101",
+        "updated_at": "2026-11-21T01:48:45.556409+00:00",
+        "updated_by": "00000000-0000-4000-8000-000000000101",
+        "history": [
+          {
+            "revision": 1,
+            "actor_id": "00000000-0000-4000-8000-000000000101",
+            "action": "career_package_prepared",
+            "recorded_at": "2026-11-21T01:48:45.556409+00:00",
+            "snapshot": {
+              "id": "efd2251c-15d7-42a7-86f7-34c282d6ee1e",
+              "package_id": "efd2251c-15d7-42a7-86f7-34c282d6ee1e",
+              "placement_id": "be0c2ef0-8a40-4861-9d8b-0aac6fe561e1",
+              "student_actor_id": "00000000-0000-4000-8000-000000000105",
+              "selected_results": [
+                {
+                  "criterion_key": "classification",
+                  "text": "Объясняет спорные категории",
+                  "required": true,
+                  "result": "confirmed",
+                  "reason": "Учебное основание",
+                  "task_version_id": "856a14bb-d6b9-46fd-9d9f-95e4eab06b87",
+                  "task_version": 1,
+                  "submission_id": "3d23b8ad-8931-471b-b7f0-73270cd5da5b",
+                  "review_id": "65fe71fe-02d0-47ce-ae31-71ad965bcc9f",
+                  "reviewed_by": "00000000-0000-4000-8000-000000000103",
+                  "reviewed_at": "2026-11-21T01:48:45.518028+00:00"
+                }
+              ],
+              "university_result": {
+                "result": "passed",
+                "source_reference": "synthetic: university letter DEMO-6A dated 2026-12-31",
+                "source_author": "Учебный координатор вуза (внешний автор)",
+                "occurred_on": "2026-12-31",
+                "recorded_by": "00000000-0000-4000-8000-000000000101",
+                "recorded_at": "2026-11-21T01:48:45.540029+00:00",
+                "source_mode": "registered_external_statement"
+              },
+              "education_status": "unconfirmed",
+              "purpose": "Учебное ручное рассмотрение после выпуска",
+              "contact_basis": "synthetic: expressed career interest in this placement",
+              "transfer_status": "prepared",
+              "interest_withdrawn": false,
+              "interest_snapshot": {
+                "interested": true,
+                "note": "Учебное согласие обсудить работу после выпуска",
+                "actor_id": "00000000-0000-4000-8000-000000000105",
+                "recorded_at": "2026-11-21T01:48:45.546907+00:00"
+              },
+              "organization_id": "00000000-0000-4000-8000-000000000001",
+              "revision": 1,
+              "created_at": "2026-11-21T01:48:45.556409+00:00",
+              "created_by": "00000000-0000-4000-8000-000000000101",
+              "updated_at": "2026-11-21T01:48:45.556409+00:00",
+              "updated_by": "00000000-0000-4000-8000-000000000101"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "actor": "candidate2",
+      "method": "GET",
+      "path": "/api/v1/students/career-packages/efd2251c-15d7-42a7-86f7-34c282d6ee1e",
+      "request": null,
+      "status": 404,
+      "response": {
+        "error": {
+          "code": "NOT_FOUND",
+          "message": "Пакет не найден."
+        }
+      }
+    }
+  ]
+}
