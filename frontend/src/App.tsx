@@ -64,6 +64,7 @@ export const App: React.FC = () => {
   // HR Manager Routing State
   const [hrTab, setHrTab] = useState<HRNavTab>('database');
   const [dbView, setDbView] = useState<'list' | 'profile'>('list');
+  const [databaseCandidateId, setDatabaseCandidateId] = useState('c1');
   const [hrView, setHrView] = useState<'list' | 'card'>('list');
   const [selectedResponseVacancyId] = useState<string>('v1');
   const [selectedCandidateId, setSelectedCandidateId] = useState<string>('r1');
@@ -224,7 +225,8 @@ export const App: React.FC = () => {
             {/* 1. ЕДИНАЯ БАЗА: ТАБЛИЦА (макет 1) И ПРОФИЛЬ КАНДИДАТА (макеты 13–19) */}
             {hrTab === 'database' && dbView === 'list' && (
               <CandidatesDatabase
-                onSelectCandidate={(_c: CandidateRecord) => {
+                onSelectCandidate={(candidate: CandidateRecord) => {
+                  setDatabaseCandidateId(candidate.id);
                   setDbView('profile');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
@@ -234,6 +236,8 @@ export const App: React.FC = () => {
             {/* МАКЕТЫ 13–19: ПРОФИЛЬ КАНДИДАТА И ДЕЙСТВИЯ */}
             {hrTab === 'database' && dbView === 'profile' && (
               <CandidateProfile
+                key={databaseCandidateId}
+                candidateId={databaseCandidateId}
                 onBackToDatabase={() => {
                   setDbView('list');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
