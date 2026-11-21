@@ -1,0 +1,90 @@
+{
+  "schema_version": "1.0",
+  "is_synthetic": true,
+  "actors": [
+    {
+      "actor_id": "00000000-0000-4000-8000-000000000101",
+      "login": "hr",
+      "password": "123",
+      "organization_id": "00000000-0000-4000-8000-000000000001",
+      "grants": [
+        {
+          "role": "hr",
+          "scope_type": "organization",
+          "scope_id": "00000000-0000-4000-8000-000000000001"
+        }
+      ],
+      "active": true
+    },
+    {
+      "actor_id": "00000000-0000-4000-8000-000000000102",
+      "login": "admin",
+      "password": "123",
+      "organization_id": "00000000-0000-4000-8000-000000000001",
+      "grants": [
+        {
+          "role": "admin",
+          "scope_type": "organization",
+          "scope_id": "00000000-0000-4000-8000-000000000001"
+        }
+      ],
+      "active": true
+    },
+    {
+      "actor_id": "00000000-0000-4000-8000-000000000103",
+      "login": "department",
+      "password": "123",
+      "organization_id": "00000000-0000-4000-8000-000000000001",
+      "grants": [
+        {
+          "role": "department",
+          "scope_type": "department",
+          "scope_id": "00000000-0000-4000-8000-000000000011"
+        }
+      ],
+      "active": true
+    },
+    {
+      "actor_id": "00000000-0000-4000-8000-000000000104",
+      "login": "employee",
+      "password": "123",
+      "organization_id": "00000000-0000-4000-8000-000000000001",
+      "grants": [
+        {
+          "role": "employee",
+          "scope_type": "self",
+          "scope_id": "00000000-0000-4000-8000-000000000104"
+        }
+      ],
+      "active": true
+    },
+    {
+      "actor_id": "00000000-0000-4000-8000-000000000105",
+      "login": "candidate",
+      "password": "123",
+      "organization_id": "00000000-0000-4000-8000-000000000001",
+      "grants": [
+        {
+          "role": "candidate",
+          "scope_type": "self",
+          "scope_id": "00000000-0000-4000-8000-000000000105"
+        }
+      ],
+      "active": true
+    },
+    {
+      "actor_id": "00000000-0000-4000-8000-000000000106",
+      "login": "hr_other",
+      "password": "123",
+      "organization_id": "00000000-0000-4000-8000-000000000002",
+      "grants": [
+        {
+          "role": "hr",
+          "scope_type": "organization",
+          "scope_id": "00000000-0000-4000-8000-000000000002"
+        }
+      ],
+      "active": true
+    }
+  ]
+}
