@@ -1005,7 +1005,8 @@ def has_department_application_access(session: Session, user_id: uuid.UUID, appl
     return (
         session.scalar(
             select(HandoffAttempt.id)
-            .where(HandoffAttempt.application_id == application_id, HandoffAttempt.recipient_user_id == user_id)
+            .where(HandoffAttempt.application_id == application_id, HandoffAttempt.recipient_user_id == user_id,
+                   HandoffAttempt.access_revoked_at.is_(None))
             .limit(1)
         )
         is not None
@@ -1016,7 +1017,8 @@ def has_department_text_access(session: Session, user_id: uuid.UUID, candidate_t
     """Упомянут ли очищенный текст в снимке сводки, переданном этому сотруднику департамента."""
     target = str(candidate_text_id)
     snapshots = session.scalars(
-        select(HandoffAttempt.summary_snapshot).where(HandoffAttempt.recipient_user_id == user_id)
+        select(HandoffAttempt.summary_snapshot).where(HandoffAttempt.recipient_user_id == user_id,
+                                                     HandoffAttempt.access_revoked_at.is_(None))
     )
     return any(target in (snap.get("referenced_text_ids") or ()) for snap in snapshots if snap)
 

@@ -1,0 +1,23 @@
+# Explicit, synthetic O1 training profile. Merge with compose.yaml; never use on real HR data.
+# Legacy has no published port; the public prefix is closed as well as source middleware.
+services:
+  legacy:
+    environment:
+      INTERACTION_GATEWAY_KEY: ${INTERACTION_GATEWAY_KEY:?Set a fresh internal secret}
+      INTERACTION_ORGANIZATION_ID: '00000000-0000-4000-8000-000000000001'
+      INTERACTION_INSTANCE_ID: training-legacy
+  hiring:
+    environment:
+      INTERACTION_ENABLED: 'true'
+      AUTH_MODE: fixture
+      INTERACTION_GATEWAY_KEY: ${INTERACTION_GATEWAY_KEY:?Set a fresh internal secret}
+      INTERACTION_CURSOR_SECRET: ${INTERACTION_CURSOR_SECRET:?Set a separate cursor secret}
+      INTERACTION_ORGANIZATION_ID: '00000000-0000-4000-8000-000000000001'
+      INTERACTION_INSTANCE_ID: training-legacy
+      INTERACTION_LEGACY_URL: http://legacy:8000
+      INTERACTION_MAPPING_FILE: /run/interaction/mapping.json
+    volumes:
+      - ./local/interaction-mapping.json:/run/interaction/mapping.json:ro
+  gateway:
+    volumes:
+      - ./interaction-nginx-deny.conf:/etc/nginx/interaction/legacy.conf:ro

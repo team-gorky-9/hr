@@ -693,6 +693,10 @@ class HandoffDeadlineExtensionOut(BaseModel):
 
 
 class HandoffAttemptOut(BaseModel):
+    assignment_revision: int = 1
+    access_revoked_at: datetime | None = None
+    access_revoked_by_user_id: uuid.UUID | None = None
+    access_revocation_reason: str | None = None
     attempt_id: uuid.UUID
     application_id: uuid.UUID
     candidate_id: uuid.UUID

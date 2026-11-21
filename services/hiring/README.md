@@ -1,5 +1,7 @@
 # Hiring · оформление выбранного кандидата (первая волна, этап 1)
 
+Stage 2: [серверное единое окно взаимодействия](../../docs/modules/interaction-window.md) объединяет кабинет кандидата и legacy-передачи. Включается отдельным закрытым учебным профилем; по умолчанию выключено.
+
 Отдельный сервис: от положительного решения по отклику до подтверждённого выхода на работу. Контракты: [этап 1](../../docs/contracts/wave-1-stage-1.md) (приоритет), [hiring](../../docs/contracts/wave-1-hiring.md), [common](../../docs/contracts/wave-1-common.md). Устройство — [docs/modules/hiring-service.md](../../docs/modules/hiring-service.md), итог проверки — [docs/reports/wave-1-hiring.md](../../docs/reports/wave-1-hiring.md).
 
 Этап 1: передача в кадровый учёт ручная (`transfer_mode=manual`). Сервис не зависит от RabbitMQ и соседних API. Вход по умолчанию — учебные акторы `AUTH_MODE=fixture`.
@@ -96,6 +98,10 @@ uv run python -m hiring.portal_clarification_demo   # запрос сведен�
 ```
 
 HR: `POST /candidate-requests/{id}/information-request`, `…/ready`, `…/record-consideration`. Кандидат: `…/addendum`, `…/choose-vacancy`. Все операции принимают `expected_revision`. Ссылки на записи подбора в демо учебные (`system=legacy-hr-training`), реального соединения нет.
+
+После запроса уточнения ответ и `GET /candidate-requests/{id}` содержат `information_request_ref={request_id,event_sequence}`. Клиент сохраняет эту ссылку для формы ответа и отправляет её в `…/addendum` вместе с `expected_revision`. Загрузка документа обновляет только ожидаемую revision: Q-ref формы сохраняется. Если HR заменил вопрос, старое дополнение получает `409 STALE_REVISION` с `field=information_request_ref`; нельзя автоматически подставлять ссылку нового вопроса и повторять отправку. Только исторический запрос без сохранённого event_sequence принимает прежнее тело без Q-ref; окно помечает его `basis_unknown` и не предлагает действие ответа до открытия прежнего предметного экрана.
+
+В окне `related_ref` — ссылка-основание, вручную подтверждённая HR (`record-consideration` / `source_reference`), а не автоматическое соединение R1 и A1. Поле `instance` сохраняет исходный `application_ref.system`; совпадение ID с записью другого экземпляра не подтверждает связь и не разрешает переход в него. Кандидат этой ссылки и внутреннего основания не видит. Ключ строки включает организацию и контур `training`.
 
 ### 5C · понятный исход и сообщения кабинета
 

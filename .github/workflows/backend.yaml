@@ -66,6 +66,9 @@ jobs:
           name: backend-deploy
           path: |
             deploy/compose.yaml
+            deploy/compose.interaction.yaml
+            deploy/interaction-nginx-deny.conf
+            services/hiring/fixtures/interaction-mapping.example.json
             deploy/nginx.conf
             deploy/init-databases.sh
             deploy/smoke.py

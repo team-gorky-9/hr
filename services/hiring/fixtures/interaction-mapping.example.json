@@ -1,0 +1,32 @@
+{
+  "mappings": [
+    {
+      "issuer": "fixture",
+      "actor_id": "00000000-0000-4000-8000-000000000101",
+      "organization_id": "00000000-0000-4000-8000-000000000001",
+      "contour": "training",
+      "instance_id": "training-legacy",
+      "legacy_user_id": "REPLACE_WITH_EXPLICIT_HR_USER_UUID",
+      "legacy_login": "hr_demo",
+      "legacy_role": "hr",
+      "scope_type": "organization",
+      "scope_id": "00000000-0000-4000-8000-000000000001",
+      "revision": 1,
+      "active": true
+    },
+    {
+      "issuer": "fixture",
+      "actor_id": "00000000-0000-4000-8000-000000000103",
+      "organization_id": "00000000-0000-4000-8000-000000000001",
+      "contour": "training",
+      "instance_id": "training-legacy",
+      "legacy_user_id": "REPLACE_WITH_EXPLICIT_DEPARTMENT_USER_UUID",
+      "legacy_login": "dept_demo",
+      "legacy_role": "department",
+      "scope_type": "department",
+      "scope_id": "00000000-0000-4000-8000-000000000011",
+      "revision": 1,
+      "active": true
+    }
+  ]
+}

@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.errors import install_error_handlers
 from app.api.routes import router
+from app.api.interaction import install_gateway, router as interaction_router
 from app.api.archive import router as archive_router
 from app.config import settings
 from app.management.api import router as management_router
@@ -30,6 +31,8 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     install_error_handlers(app)
+    install_gateway(app)
+    app.include_router(interaction_router)
     app.include_router(router)
     app.include_router(archive_router)
     app.include_router(search_router)
