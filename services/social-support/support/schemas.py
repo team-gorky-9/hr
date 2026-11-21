@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Annotated, Literal
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
@@ -39,3 +40,14 @@ class Completeness(Revision):
 class Addendum(Revision):
     text: Text
     document_ids: list[UUID] = Field(default_factory=list, max_length=100)
+
+class Decision(Revision):
+    outcome: Literal["approved", "declined", "needs_information"]
+    public_explanation: Text
+    source_reference: Text
+    source_author: Text
+    decided_on: date
+    recording_basis: Text
+
+class DecisionCorrection(Decision):
+    correction_reason: Text

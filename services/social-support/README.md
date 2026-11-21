@@ -64,3 +64,15 @@ public_message. У present/unreadable/needs_clarification документ об�
 история не перезаписывается. Проверяющий читает его перед новой completeness.
 GET /history отделяет публичные объяснения от служебных деталей.
 Проверка: uv run pytest tests/test_5b.py -q.
+
+## 5C: внешнее решение и личная выписка
+
+Назначенный секретарь POST /cases/{id}/decision регистрирует outcome,
+public_explanation,source_reference,source_author,decided_on,recording_basis
+и expected_revision. Это внешний человеческий итог, не цифровое голосование.
+Самому себе секретарь решение не регистрирует; координатор назначает другого.
+GET /cases/{id}/extract выдаёт id,case_id,version,outcome,public_explanation,decided_on.
+Внутренние source_reference/recording_basis и общий протокол в выписку не входят.
+POST /decision-corrections требует те же поля и correction_reason, создаёт новую
+запись. Старое решение сохранено. needs_information возвращает дело к комплектности.
+Проверка: uv run pytest tests/test_5c.py -q.

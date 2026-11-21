@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from .core import Problem, Store
 from .api import router
+from .decisions import router as decisions_router
 from .completeness import router as completeness_router
 
 def create_app(data_dir=None):
@@ -14,6 +15,7 @@ def create_app(data_dir=None):
                             content={"error": {"code": exc.code, "message": exc.message}})
 
     app.include_router(router)
+    app.include_router(decisions_router)
     app.include_router(completeness_router)
     return app
 
