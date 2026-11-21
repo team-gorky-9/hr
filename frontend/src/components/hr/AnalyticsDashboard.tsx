@@ -96,7 +96,6 @@ export const AnalyticsDashboard: React.FC = () => {
       {/* Quick Mockup Switcher for convenience (Экраны 21, 22, 23) */}
       <div className="flex items-center justify-end">
         <div className="flex items-center gap-1 bg-white border border-[#E1E5EB] rounded-lg p-1 text-xs">
-          <span className="text-[#8E939D] px-2 font-medium whitespace-nowrap">Макет:</span>
           <button
             type="button"
             onClick={() => setView('dashboard')}
@@ -106,7 +105,7 @@ export const AnalyticsDashboard: React.FC = () => {
                 : 'text-[#4A5363] hover:text-[#141A24]'
             }`}
           >
-            21. Дашборд
+            Дашборд
           </button>
           <button
             type="button"
@@ -117,7 +116,7 @@ export const AnalyticsDashboard: React.FC = () => {
                 : 'text-[#4A5363] hover:text-[#141A24]'
             }`}
           >
-            22. Настройка отчёта
+            Настройка отчёта
           </button>
           <button
             type="button"
@@ -128,7 +127,7 @@ export const AnalyticsDashboard: React.FC = () => {
                 : 'text-[#4A5363] hover:text-[#141A24]'
             }`}
           >
-            23. Готовый отчёт
+            Готовый отчёт
           </button>
         </div>
       </div>
