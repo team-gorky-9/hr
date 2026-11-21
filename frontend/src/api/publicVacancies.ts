@@ -11,16 +11,21 @@ export interface PublicVacancy {
   system: 'requirements' | 'legacy';
   is_synthetic: boolean;
   employer?: string;
+  duties?: string[];
+  duties_source?: string | null;
+  requirements?: { text: string; mandatory: boolean }[];
+  advertised_requirements?: string[];
+  conditions?: string[];
 }
 
 interface Publication extends Omit<PublicVacancy, 'system' | 'id' | 'revision' | 'description' | 'published_at'> {
   ref: Pick<PublicVacancy, 'id' | 'system' | 'revision'>;
-  description?: string;
-  published_at?: string;
+  description?: string | null;
+  published_at?: string | null;
 }
 
-function toVacancy({ ref, description = '', published_at = '', ...row }: Publication): PublicVacancy {
-  return { ...row, ...ref, description, published_at };
+function toVacancy({ ref, description, published_at, ...row }: Publication): PublicVacancy {
+  return { ...row, ...ref, description: description ?? '', published_at: published_at ?? '' };
 }
 
 async function request<T>(path: string, signal?: AbortSignal): Promise<T> {

@@ -7,6 +7,7 @@ interface HeaderProps {
   onLoginClick?: () => void;
   authenticated?: boolean;
   onLogoutClick?: () => void;
+  demoMode?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -16,10 +17,12 @@ export const Header: React.FC<HeaderProps> = ({
   onLoginClick,
   authenticated = false,
   onLogoutClick,
+  demoMode = false,
 }) => {
   const navItems = [
     { id: 'vacancies', label: 'Вакансии', href: '#' },
     { id: 'students', label: 'Студентам', href: '#' },
+    ...(demoMode ? [{ id: 'cabinet', label: 'Мои отклики', href: '#' }] : []),
   ];
 
   return (
@@ -67,7 +70,7 @@ export const Header: React.FC<HeaderProps> = ({
               );
             })}
           </nav>
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className={demoMode ? "hidden" : "flex items-center gap-2 sm:gap-3"}>
           {authenticated ? <>
             <button type="button" onClick={() => onNavClick?.('cabinet')} className="px-2.5 sm:px-5 py-2 text-[14px] font-medium text-white bg-[#1F4FD1] rounded-lg hover:bg-[#1841B2] transition-colors shadow-sm">Кабинет</button>
             <button type="button" onClick={onLogoutClick} className="px-2.5 sm:px-5 py-2 text-[14px] font-medium text-[#141A24] bg-white border border-[#E1E5EB] rounded-lg hover:bg-[#F3F5F8] transition-colors">Выйти</button>

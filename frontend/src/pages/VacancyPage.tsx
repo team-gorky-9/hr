@@ -13,6 +13,47 @@ interface VacancyPageProps {
 
 const field = 'w-full px-3.5 py-2.5 bg-white border border-[#E1E5EB] rounded-lg text-[14px] text-[#141A24]';
 const primary = 'w-full min-h-11 px-4 bg-[#1F4FD1] hover:bg-[#1841B2] text-white font-medium text-[14px] rounded-lg transition-colors disabled:opacity-60';
+const heading = 'mb-3 font-bold text-[18px] text-[#141A24]';
+const facts = 'list-disc pl-5 space-y-2 break-words leading-relaxed text-[#4A5363]';
+
+function VacancyFacts({ vacancy }: { vacancy: PublicVacancy }) {
+  const { description, duties, duties_source, requirements, advertised_requirements, conditions } = vacancy;
+  const training = vacancy.system === 'legacy';
+
+  return (
+    <div className="mt-7 space-y-7">
+      <section>
+        <h2 className={heading}>О вакансии</h2>
+        <p className="whitespace-pre-wrap break-words leading-relaxed text-[#4A5363]">{description || 'В источнике нет отдельного описания вакансии.'}</p>
+      </section>
+      {(training || !!duties?.length) && <section>
+        <h2 className={heading}>Что нужно делать</h2>
+        {duties_source && <p className="mb-3 text-[13px] text-[#616977]">{duties_source}</p>}
+        {duties?.length ? <ul className={facts}>{duties.map((duty) => <li key={duty}>{duty}</li>)}</ul> :
+          <p className="text-[14px] text-[#616977]">Обязанности в доступных источниках не указаны.</p>}
+      </section>}
+      {(training || !!(requirements?.length || advertised_requirements?.length)) && <section>
+        <h2 className={heading}>Требования</h2>
+        {!!advertised_requirements?.length && <>
+          <p className="mb-3 text-[13px] text-[#616977]">Из объявления</p>
+          <ul className={facts}>{advertised_requirements.map((item) => <li key={item}>{item}</li>)}</ul>
+        </>}
+        {!!requirements?.length && <>
+          <p className="mt-3 mb-3 text-[13px] text-[#616977]">Из утверждённого учебного профиля</p>
+          <ul className={facts}>{requirements.map(({ text, mandatory }) => <li key={text}>
+            {text}{!mandatory && <span className="ml-2 text-[13px] text-[#616977]">Будет преимуществом</span>}
+          </li>)}</ul>
+        </>}
+        {!requirements?.length && !advertised_requirements?.length && <p className="text-[14px] text-[#616977]">Требования в доступных источниках не указаны.</p>}
+      </section>}
+      {(training || !!conditions?.length) && <section>
+        <h2 className={heading}>Условия работы</h2>
+        {conditions?.length ? <ul className={facts}>{conditions.map((item) => <li key={item}>{item}</li>)}</ul> :
+          <p className="text-[14px] text-[#616977]">Условия работы в доступном объявлении не указаны.</p>}
+      </section>}
+    </div>
+  );
+}
 
 export function VacancyPage(props: VacancyPageProps) {
   return <VacancyDetails key={props.vacancyId} {...props} />;
@@ -122,8 +163,7 @@ function VacancyDetails({ vacancyId, token, onGoHome, onGoCabinet, onLogin }: Va
             {vacancy.published_at && <p className="mt-3 text-[13px] text-[#616977]">
               Опубликовано {new Date(vacancy.published_at).toLocaleDateString('ru-RU')}
             </p>}
-            <h2 className="mt-7 mb-3 font-bold text-[18px] text-[#141A24]">О вакансии</h2>
-            <p className="whitespace-pre-wrap break-words leading-relaxed text-[#4A5363]">{vacancy.description || 'Подробное описание вакансии пока отсутствует.'}</p>
+            <VacancyFacts vacancy={vacancy} />
           </article>
 
           <div className="lg:col-span-4 bg-white border border-[#E1E5EB] rounded-2xl p-6 sm:p-7 shadow-sm lg:sticky lg:top-24">

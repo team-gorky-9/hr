@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { logoutSession, useSession } from './api/session';
+import { demoRolesEnabled, logoutSession, selectDemoRole, useSession } from './api/session';
 import Header from './components/Header';
 import HeroSection from './components/portal/HeroSection';
 import CategoryCards from './components/portal/CategoryCards';
 import NewVacanciesSection from './components/portal/NewVacanciesSection';
 import WhyUsSection from './components/portal/WhyUsSection';
+import ReserveCtaBanner from './components/portal/ReserveCtaBanner';
 import VacancyPage from './pages/VacancyPage';
 import StudentsWorkspace from './components/students/StudentsWorkspace';
 import SupportPage from './components/support/SupportPage';
@@ -40,7 +41,7 @@ const initialEmployeeWorkspace = employeeWorkspaces.includes(initialWorkspace ||
 const MODES: { id: AppMode; label: string }[] = [
   { id: 'portal', label: 'Портал соискателя' },
   { id: 'hr', label: 'Кабинет HR-менеджера' },
-  { id: 'dept', label: 'Руководитель департамента' },
+  { id: 'dept', label: 'ОПК' },
   { id: 'employee', label: 'Сотрудник' },
 ];
 
@@ -49,6 +50,7 @@ export type PortalRoute = 'home' | 'vacancies' | 'students' | 'practice' | 'cabi
 export const App: React.FC = () => {
   const { session } = useSession();
   const [sessionError, setSessionError] = useState('');
+  const [roleRetry, setRoleRetry] = useState(0);
   const [portalVacancyId, setPortalVacancyId] = useState<string | null>(null);
   const [portalQuery, setPortalQuery] = useState('');
   const [requestId, setRequestId] = useState<string | undefined>();
@@ -70,6 +72,16 @@ export const App: React.FC = () => {
   const [hrView, setHrView] = useState<'list' | 'card'>('list');
   const [selectedResponseVacancyId, setSelectedResponseVacancyId] = useState<string>('');
   const [selectedCandidateId, setSelectedCandidateId] = useState<string>('');
+  const demoLogin = ({ portal: 'candidate', hr: 'hr', dept: 'department', employee: 'employee' } as const)[appMode];
+  const roleReady = !demoRolesEnabled || session?.actor.login === demoLogin;
+  useEffect(() => {
+    if (!demoRolesEnabled) return;
+    let active = true;
+    setSessionError('');
+    void selectDemoRole(demoLogin).catch(error => { if (active) setSessionError(error instanceof Error ? error.message : 'Не удалось открыть роль'); });
+    return () => { active = false; };
+  }, [demoLogin, roleRetry]);
+
 
   useEffect(() => {
     if (session?.actor.grants.some(grant => grant.role === 'candidate') && portalRoute === 'login') setPortalRoute(loginReturn);
@@ -109,7 +121,7 @@ export const App: React.FC = () => {
       {/* ПЕРЕКЛЮЧАТЕЛЬ РЕЖИМОВ (ПОРТАЛ СОИСКАТЕЛЯ / КАБИНЕТ HR) */}
       <div className="bg-[#141A24] text-white text-[12px] px-4 sm:px-6 py-2 flex flex-wrap gap-2 items-center justify-between z-50">
         <div className="flex flex-wrap min-w-0 items-center gap-3">
-          <span className="text-[#8E939D]">Режим:</span>
+          <span className="text-[#8E939D]">{demoRolesEnabled ? 'Учебные роли:' : 'Режим:'}</span>
           <div className="inline-flex flex-wrap rounded-lg bg-[#232832] p-0.5">
             {MODES.map((m) => (
               <button
@@ -134,16 +146,18 @@ export const App: React.FC = () => {
         <div className="text-[#8E939D] text-xs hidden sm:block">
           GorkyCode · team 9
         </div>
-        {session && appMode !== 'portal' && <button type="button" className="text-xs text-white" onClick={async () => { try { await logoutSession(); setSessionError(''); } catch (error) { setSessionError(error instanceof Error ? error.message : 'Не удалось выйти'); } }}>Выйти</button>}
+        {session && !demoRolesEnabled && appMode !== 'portal' && <button type="button" className="text-xs text-white" onClick={async () => { try { await logoutSession(); setSessionError(''); } catch (error) { setSessionError(error instanceof Error ? error.message : 'Не удалось выйти'); } }}>Выйти</button>}
       </div>
       {sessionError && <p role="alert" className="px-6 py-2 text-red-700">{sessionError}</p>}
 
+      {!roleReady && <div className="p-6">{sessionError || 'Открываем выбранную роль…'}{sessionError && <button className="ml-3 underline" onClick={() => setRoleRetry(n => n + 1)}>Повторить</button>}</div>}
       {/* ======================================================== */}
       {/* 1. ПОРТАЛ СОИСКАТЕЛЯ                                     */}
       {/* ======================================================== */}
-      {appMode === 'portal' && (
+      {roleReady && appMode === 'portal' && (
         <>
           <Header
+            demoMode={demoRolesEnabled}
             authenticated={Boolean(session)}
             onLogoutClick={() => { void logoutSession().catch(error => setSessionError(String(error))); }}
             activeNav={portalRoute === 'home' ? '' : portalRoute}
@@ -175,6 +189,7 @@ export const App: React.FC = () => {
                 />
 
                 <WhyUsSection />
+                <ReserveCtaBanner />
 
               </>
             )}
@@ -212,7 +227,7 @@ export const App: React.FC = () => {
       {/* ======================================================== */}
       {/* 2. КАБИНЕТ HR-МЕНЕДЖЕРА                                 */}
       {/* ======================================================== */}
-      {appMode === 'hr' && (
+      {roleReady && appMode === 'hr' && (
         <>
           <HeaderHR
             managerName={session?.actor.grants.some(grant => ['hr', 'admin'].includes(grant.role)) ? `HR-менеджер · ${session.actor.login}` : 'HR-менеджер'}
@@ -332,13 +347,13 @@ export const App: React.FC = () => {
         </>
       )}
       {/* РУКОВОДИТЕЛЬ ДЕПАРТАМЕНТА: Мои кандидаты */}
-      {appMode === 'dept' && (
+      {roleReady && appMode === 'dept' && (
         <>
           <RoleHeader
             tabs={[{ id: 'mine', label: 'Мои кандидаты' }]}
             activeTab="mine"
             onTabChange={() => {}}
-            roleLabel="Руководитель департамента"
+            roleLabel="ОПК"
           />
           <main className="flex-1 w-full">
             <MyCandidates />
@@ -347,7 +362,7 @@ export const App: React.FC = () => {
       )}
 
       {/* СОТРУДНИК ДЕПАРТАМЕНТА */}
-      {appMode === 'employee' && (
+      {roleReady && appMode === 'employee' && (
         <>
           <RoleHeader
             tabs={[
@@ -359,7 +374,7 @@ export const App: React.FC = () => {
             ]}
             activeTab={employeeTab}
             onTabChange={setEmployeeTab}
-            roleLabel="Кабинет сотрудника"
+            roleLabel={demoRolesEnabled ? "Специалист департамента экономики · Кирилл Л. (учебный)" : "Кабинет сотрудника"}
             onLogoClick={() => setEmployeeTab('workspace')}
           />
           <main className="flex-1 w-full">

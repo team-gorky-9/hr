@@ -31,6 +31,8 @@ jobs:
       - run: npm run build
         working-directory: frontend
         env:
+          VITE_APP_VERSION: ${{ github.sha }}
+          VITE_DEMO_ROLES: 'true'
           VITE_ARCHIVE_API_BASE: /legacy/api/v1
           VITE_RECRUITMENT_API_BASE: /legacy/api/v1
           VITE_RECRUITMENT_RECIPIENT_ID: ${{ vars.RECRUITMENT_RECIPIENT_ID }}
