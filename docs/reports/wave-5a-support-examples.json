@@ -1,0 +1,682 @@
+{
+  "is_synthetic": true,
+  "source": "support-training-v1",
+  "trace": [
+    {
+      "actor": "employee",
+      "method": "GET",
+      "path": "/rules",
+      "status": 200,
+      "response": [
+        {
+          "id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+          "support_type": "training-a",
+          "title": "Учебная помощь А — не нормативный перечень",
+          "required_items": [
+            {
+              "key": "application",
+              "title": "Учебное заявление"
+            },
+            {
+              "key": "evidence",
+              "title": "Учебное подтверждение"
+            }
+          ],
+          "source_reference": "synthetic:support-training-v1",
+          "is_synthetic": true,
+          "status": "published"
+        }
+      ]
+    },
+    {
+      "actor": "employee",
+      "method": "POST",
+      "path": "/cases",
+      "status": 201,
+      "response": {
+        "id": "602cbaa7-b83a-4552-a370-2904ad07307f",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 1,
+        "status": "draft",
+        "statement": "Учебное обращение",
+        "number": null,
+        "submitted_at": null,
+        "created_at": "2026-11-21T01:18:16.336861+00:00",
+        "submissions": [],
+        "documents": []
+      }
+    },
+    {
+      "actor": "employee2",
+      "method": "GET",
+      "path": "/cases/602cbaa7-b83a-4552-a370-2904ad07307f",
+      "status": 404,
+      "response": {
+        "error": {
+          "code": "NOT_FOUND",
+          "message": "Дело или документ недоступны."
+        }
+      }
+    },
+    {
+      "actor": "employee2",
+      "method": "GET",
+      "path": "/cases",
+      "status": 200,
+      "response": []
+    },
+    {
+      "actor": "specialist",
+      "method": "GET",
+      "path": "/cases/602cbaa7-b83a-4552-a370-2904ad07307f",
+      "status": 404,
+      "response": {
+        "error": {
+          "code": "NOT_FOUND",
+          "message": "Дело или документ недоступны."
+        }
+      }
+    },
+    {
+      "actor": "specialist",
+      "method": "GET",
+      "path": "/cases",
+      "status": 200,
+      "response": []
+    },
+    {
+      "actor": "secretary",
+      "method": "GET",
+      "path": "/cases/602cbaa7-b83a-4552-a370-2904ad07307f",
+      "status": 404,
+      "response": {
+        "error": {
+          "code": "NOT_FOUND",
+          "message": "Дело или документ недоступны."
+        }
+      }
+    },
+    {
+      "actor": "secretary",
+      "method": "GET",
+      "path": "/cases",
+      "status": 200,
+      "response": []
+    },
+    {
+      "actor": "coordinator",
+      "method": "GET",
+      "path": "/cases/602cbaa7-b83a-4552-a370-2904ad07307f",
+      "status": 404,
+      "response": {
+        "error": {
+          "code": "NOT_FOUND",
+          "message": "Дело или документ недоступны."
+        }
+      }
+    },
+    {
+      "actor": "coordinator",
+      "method": "GET",
+      "path": "/cases",
+      "status": 200,
+      "response": []
+    },
+    {
+      "actor": "other_org",
+      "method": "GET",
+      "path": "/cases/602cbaa7-b83a-4552-a370-2904ad07307f",
+      "status": 404,
+      "response": {
+        "error": {
+          "code": "NOT_FOUND",
+          "message": "Дело или документ недоступны."
+        }
+      }
+    },
+    {
+      "actor": "other_org",
+      "method": "GET",
+      "path": "/cases",
+      "status": 200,
+      "response": []
+    },
+    {
+      "actor": "employee",
+      "method": "POST",
+      "path": "/cases/602cbaa7-b83a-4552-a370-2904ad07307f/documents",
+      "status": 201,
+      "response": {
+        "id": "436070d2-ba57-4f2a-bcca-55b0c425ea77",
+        "case_id": "602cbaa7-b83a-4552-a370-2904ad07307f",
+        "item_key": "application",
+        "original_name": "original.txt",
+        "content_type": "text/plain",
+        "size_bytes": 20,
+        "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+        "uploaded_by": "50000000-0000-0000-0000-000000000001",
+        "created_at": "2026-11-21T01:18:16.361917+00:00",
+        "visibility": "applicant",
+        "case_revision": 2
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "GET",
+      "path": "/cases/602cbaa7-b83a-4552-a370-2904ad07307f",
+      "status": 200,
+      "response": {
+        "id": "602cbaa7-b83a-4552-a370-2904ad07307f",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 2,
+        "status": "draft",
+        "statement": "Учебное обращение",
+        "number": null,
+        "submitted_at": null,
+        "created_at": "2026-11-21T01:18:16.336861+00:00",
+        "submissions": [],
+        "documents": [
+          {
+            "id": "436070d2-ba57-4f2a-bcca-55b0c425ea77",
+            "case_id": "602cbaa7-b83a-4552-a370-2904ad07307f",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:18:16.361917+00:00",
+            "visibility": "applicant"
+          }
+        ]
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "POST",
+      "path": "/cases/602cbaa7-b83a-4552-a370-2904ad07307f/documents",
+      "status": 201,
+      "response": {
+        "id": "435283f5-61bb-4b6c-9b1d-7e4e5a91a5bf",
+        "case_id": "602cbaa7-b83a-4552-a370-2904ad07307f",
+        "item_key": "evidence",
+        "original_name": "original.txt",
+        "content_type": "text/plain",
+        "size_bytes": 20,
+        "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+        "uploaded_by": "50000000-0000-0000-0000-000000000001",
+        "created_at": "2026-11-21T01:18:16.372404+00:00",
+        "visibility": "applicant",
+        "case_revision": 3
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "GET",
+      "path": "/cases/602cbaa7-b83a-4552-a370-2904ad07307f",
+      "status": 200,
+      "response": {
+        "id": "602cbaa7-b83a-4552-a370-2904ad07307f",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 3,
+        "status": "draft",
+        "statement": "Учебное обращение",
+        "number": null,
+        "submitted_at": null,
+        "created_at": "2026-11-21T01:18:16.336861+00:00",
+        "submissions": [],
+        "documents": [
+          {
+            "id": "436070d2-ba57-4f2a-bcca-55b0c425ea77",
+            "case_id": "602cbaa7-b83a-4552-a370-2904ad07307f",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:18:16.361917+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "435283f5-61bb-4b6c-9b1d-7e4e5a91a5bf",
+            "case_id": "602cbaa7-b83a-4552-a370-2904ad07307f",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:18:16.372404+00:00",
+            "visibility": "applicant"
+          }
+        ]
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "POST",
+      "path": "/cases/602cbaa7-b83a-4552-a370-2904ad07307f/documents",
+      "status": 422,
+      "response": {
+        "error": {
+          "code": "EMPTY_FILE",
+          "message": "Пустой файл не принимается."
+        }
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "GET",
+      "path": "/cases/602cbaa7-b83a-4552-a370-2904ad07307f",
+      "status": 200,
+      "response": {
+        "id": "602cbaa7-b83a-4552-a370-2904ad07307f",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 3,
+        "status": "draft",
+        "statement": "Учебное обращение",
+        "number": null,
+        "submitted_at": null,
+        "created_at": "2026-11-21T01:18:16.336861+00:00",
+        "submissions": [],
+        "documents": [
+          {
+            "id": "436070d2-ba57-4f2a-bcca-55b0c425ea77",
+            "case_id": "602cbaa7-b83a-4552-a370-2904ad07307f",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:18:16.361917+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "435283f5-61bb-4b6c-9b1d-7e4e5a91a5bf",
+            "case_id": "602cbaa7-b83a-4552-a370-2904ad07307f",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:18:16.372404+00:00",
+            "visibility": "applicant"
+          }
+        ]
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "POST",
+      "path": "/cases/602cbaa7-b83a-4552-a370-2904ad07307f/submit",
+      "status": 200,
+      "response": {
+        "id": "602cbaa7-b83a-4552-a370-2904ad07307f",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 4,
+        "status": "submitted",
+        "statement": "Учебное обращение",
+        "number": "SP-602cbaa7-b83a-4552-a370-2904ad07307f",
+        "submitted_at": "2026-11-21T01:18:16.385872+00:00",
+        "created_at": "2026-11-21T01:18:16.336861+00:00",
+        "submissions": [
+          {
+            "id": "348489e4-6132-48b5-9973-abb08deb04c4",
+            "submission_revision": 1,
+            "statement": "Учебное обращение",
+            "document_ids": [
+              "436070d2-ba57-4f2a-bcca-55b0c425ea77",
+              "435283f5-61bb-4b6c-9b1d-7e4e5a91a5bf"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:18:16.385872+00:00"
+          }
+        ],
+        "documents": [
+          {
+            "id": "436070d2-ba57-4f2a-bcca-55b0c425ea77",
+            "case_id": "602cbaa7-b83a-4552-a370-2904ad07307f",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:18:16.361917+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "435283f5-61bb-4b6c-9b1d-7e4e5a91a5bf",
+            "case_id": "602cbaa7-b83a-4552-a370-2904ad07307f",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:18:16.372404+00:00",
+            "visibility": "applicant"
+          }
+        ]
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "POST",
+      "path": "/cases/602cbaa7-b83a-4552-a370-2904ad07307f/submit",
+      "status": 409,
+      "response": {
+        "error": {
+          "code": "STALE_REVISION",
+          "message": "Перечитайте текущую редакцию."
+        }
+      }
+    },
+    {
+      "actor": "coordinator",
+      "method": "GET",
+      "path": "/cases",
+      "status": 200,
+      "response": [
+        {
+          "id": "602cbaa7-b83a-4552-a370-2904ad07307f",
+          "revision": 4,
+          "number": "SP-602cbaa7-b83a-4552-a370-2904ad07307f",
+          "support_type": "training-a",
+          "submitted_at": "2026-11-21T01:18:16.385872+00:00",
+          "status": "submitted",
+          "applicant_ref": "50000000-0000-0000-0000-000000000001"
+        }
+      ]
+    },
+    {
+      "actor": "coordinator",
+      "method": "POST",
+      "path": "/cases/602cbaa7-b83a-4552-a370-2904ad07307f/assign",
+      "status": 200,
+      "response": {
+        "id": "602cbaa7-b83a-4552-a370-2904ad07307f",
+        "revision": 5,
+        "number": "SP-602cbaa7-b83a-4552-a370-2904ad07307f",
+        "support_type": "training-a",
+        "submitted_at": "2026-11-21T01:18:16.385872+00:00",
+        "status": "submitted",
+        "applicant_ref": "50000000-0000-0000-0000-000000000001"
+      }
+    },
+    {
+      "actor": "specialist",
+      "method": "GET",
+      "path": "/cases/602cbaa7-b83a-4552-a370-2904ad07307f",
+      "status": 200,
+      "response": {
+        "id": "602cbaa7-b83a-4552-a370-2904ad07307f",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 5,
+        "status": "submitted",
+        "statement": "Учебное обращение",
+        "created_at": "2026-11-21T01:18:16.336861+00:00",
+        "number": "SP-602cbaa7-b83a-4552-a370-2904ad07307f",
+        "submitted_at": "2026-11-21T01:18:16.385872+00:00",
+        "assigned_specialist_id": "50000000-0000-0000-0000-000000000003",
+        "assigned_secretary_id": "50000000-0000-0000-0000-000000000004",
+        "documents": [
+          {
+            "id": "436070d2-ba57-4f2a-bcca-55b0c425ea77",
+            "case_id": "602cbaa7-b83a-4552-a370-2904ad07307f",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:18:16.361917+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "435283f5-61bb-4b6c-9b1d-7e4e5a91a5bf",
+            "case_id": "602cbaa7-b83a-4552-a370-2904ad07307f",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:18:16.372404+00:00",
+            "visibility": "applicant"
+          }
+        ],
+        "submissions": [
+          {
+            "id": "348489e4-6132-48b5-9973-abb08deb04c4",
+            "submission_revision": 1,
+            "statement": "Учебное обращение",
+            "document_ids": [
+              "436070d2-ba57-4f2a-bcca-55b0c425ea77",
+              "435283f5-61bb-4b6c-9b1d-7e4e5a91a5bf"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:18:16.385872+00:00"
+          }
+        ],
+        "assignment_basis": "synthetic: assignment v1"
+      }
+    },
+    {
+      "actor": "employee2",
+      "method": "GET",
+      "path": "/cases/602cbaa7-b83a-4552-a370-2904ad07307f/documents/436070d2-ba57-4f2a-bcca-55b0c425ea77/content",
+      "status": 404,
+      "response": {
+        "error": {
+          "code": "NOT_FOUND",
+          "message": "Дело или документ недоступны."
+        }
+      }
+    },
+    {
+      "actor": "manager",
+      "method": "GET",
+      "path": "/cases/602cbaa7-b83a-4552-a370-2904ad07307f/documents/436070d2-ba57-4f2a-bcca-55b0c425ea77/content",
+      "status": 404,
+      "response": {
+        "error": {
+          "code": "NOT_FOUND",
+          "message": "Дело или документ недоступны."
+        }
+      }
+    },
+    {
+      "actor": "coordinator",
+      "method": "GET",
+      "path": "/cases/602cbaa7-b83a-4552-a370-2904ad07307f/documents/436070d2-ba57-4f2a-bcca-55b0c425ea77/content",
+      "status": 404,
+      "response": {
+        "error": {
+          "code": "NOT_FOUND",
+          "message": "Дело или документ недоступны."
+        }
+      }
+    },
+    {
+      "actor": "other_org",
+      "method": "GET",
+      "path": "/cases/602cbaa7-b83a-4552-a370-2904ad07307f/documents/436070d2-ba57-4f2a-bcca-55b0c425ea77/content",
+      "status": 404,
+      "response": {
+        "error": {
+          "code": "NOT_FOUND",
+          "message": "Дело или документ недоступны."
+        }
+      }
+    },
+    {
+      "actor": "secretary",
+      "method": "POST",
+      "path": "/cases/602cbaa7-b83a-4552-a370-2904ad07307f/documents",
+      "status": 201,
+      "response": {
+        "id": "21292df7-31ae-40e5-a63a-73de61175497",
+        "case_id": "602cbaa7-b83a-4552-a370-2904ad07307f",
+        "item_key": "internal",
+        "original_name": "original.txt",
+        "content_type": "text/plain",
+        "size_bytes": 17,
+        "sha256": "32e7b0e19d7ff38fbd3ea7fbcbcd42b79a3fbd03c5d5eb106144111fc06035bd",
+        "uploaded_by": "50000000-0000-0000-0000-000000000004",
+        "created_at": "2026-11-21T01:18:16.442976+00:00",
+        "visibility": "internal",
+        "case_revision": 6
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "GET",
+      "path": "/cases/602cbaa7-b83a-4552-a370-2904ad07307f/documents/21292df7-31ae-40e5-a63a-73de61175497/content",
+      "status": 404,
+      "response": {
+        "error": {
+          "code": "NOT_FOUND",
+          "message": "Дело или документ недоступны."
+        }
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "GET",
+      "path": "/cases/602cbaa7-b83a-4552-a370-2904ad07307f",
+      "status": 200,
+      "response": {
+        "id": "602cbaa7-b83a-4552-a370-2904ad07307f",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 6,
+        "status": "submitted",
+        "statement": "Учебное обращение",
+        "number": "SP-602cbaa7-b83a-4552-a370-2904ad07307f",
+        "submitted_at": "2026-11-21T01:18:16.385872+00:00",
+        "created_at": "2026-11-21T01:18:16.336861+00:00",
+        "submissions": [
+          {
+            "id": "348489e4-6132-48b5-9973-abb08deb04c4",
+            "submission_revision": 1,
+            "statement": "Учебное обращение",
+            "document_ids": [
+              "436070d2-ba57-4f2a-bcca-55b0c425ea77",
+              "435283f5-61bb-4b6c-9b1d-7e4e5a91a5bf"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:18:16.385872+00:00"
+          }
+        ],
+        "documents": [
+          {
+            "id": "436070d2-ba57-4f2a-bcca-55b0c425ea77",
+            "case_id": "602cbaa7-b83a-4552-a370-2904ad07307f",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:18:16.361917+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "435283f5-61bb-4b6c-9b1d-7e4e5a91a5bf",
+            "case_id": "602cbaa7-b83a-4552-a370-2904ad07307f",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:18:16.372404+00:00",
+            "visibility": "applicant"
+          }
+        ]
+      }
+    },
+    {
+      "actor": "employee",
+      "method": "GET",
+      "path": "/cases/602cbaa7-b83a-4552-a370-2904ad07307f",
+      "status": 200,
+      "response": {
+        "id": "602cbaa7-b83a-4552-a370-2904ad07307f",
+        "organization_id": "50000000-0000-0000-0001-000000000001",
+        "applicant_actor_id": "50000000-0000-0000-0000-000000000001",
+        "rule_version_id": "f8dfa596-4e7e-5a4e-a92d-c1d4b6fee805",
+        "support_type": "training-a",
+        "revision": 6,
+        "status": "submitted",
+        "statement": "Учебное обращение",
+        "number": "SP-602cbaa7-b83a-4552-a370-2904ad07307f",
+        "submitted_at": "2026-11-21T01:18:16.385872+00:00",
+        "created_at": "2026-11-21T01:18:16.336861+00:00",
+        "submissions": [
+          {
+            "id": "348489e4-6132-48b5-9973-abb08deb04c4",
+            "submission_revision": 1,
+            "statement": "Учебное обращение",
+            "document_ids": [
+              "436070d2-ba57-4f2a-bcca-55b0c425ea77",
+              "435283f5-61bb-4b6c-9b1d-7e4e5a91a5bf"
+            ],
+            "submitted_by": "50000000-0000-0000-0000-000000000001",
+            "submitted_at": "2026-11-21T01:18:16.385872+00:00"
+          }
+        ],
+        "documents": [
+          {
+            "id": "436070d2-ba57-4f2a-bcca-55b0c425ea77",
+            "case_id": "602cbaa7-b83a-4552-a370-2904ad07307f",
+            "item_key": "application",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:18:16.361917+00:00",
+            "visibility": "applicant"
+          },
+          {
+            "id": "435283f5-61bb-4b6c-9b1d-7e4e5a91a5bf",
+            "case_id": "602cbaa7-b83a-4552-a370-2904ad07307f",
+            "item_key": "evidence",
+            "original_name": "original.txt",
+            "content_type": "text/plain",
+            "size_bytes": 20,
+            "sha256": "567453107c1f46a804913c1642735f440389128a4b0dabc3971fd77cbb988873",
+            "uploaded_by": "50000000-0000-0000-0000-000000000001",
+            "created_at": "2026-11-21T01:18:16.372404+00:00",
+            "visibility": "applicant"
+          }
+        ]
+      }
+    }
+  ]
+}
