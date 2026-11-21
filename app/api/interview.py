@@ -547,8 +547,11 @@ def interview_out(interview: Interview) -> InterviewOut:
 def list_interviews(session: Session, application_id: uuid.UUID) -> InterviewListOut:
     """Все встречи отклика, старые сначала: завершённые с итогом, прежние без итога и текущая pending."""
     application = get_application_or_404(session, application_id)
+    # created_at — время транзакции: встречи, открытые в одной транзакции, равны по нему,
+    # поэтому при равенстве открытая (pending) идёт после завершённых, затем по id.
     rows = session.scalars(select(Interview).where(Interview.application_id == application.id)
-                           .order_by(Interview.created_at, Interview.id))
+                           .order_by(Interview.created_at, Interview.result == InterviewResult.PENDING,
+                                     Interview.id))
     return InterviewListOut(application_id=application.id, items=[interview_out(i) for i in rows])
 
 
