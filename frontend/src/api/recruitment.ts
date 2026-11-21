@@ -46,3 +46,41 @@ export const assessmentLabel = (value: string) => ({ ready: 'Оценка акт
 export const feedbackLabel = (value: string) => ({ fit: 'Подошёл', not_fit: 'Не подошёл', pending: 'Рассмотрение продолжается' }[value] || value);
 export const deadlineLabel = (value: string) => ({ on_track: 'Ожидаем ответ', due_soon: 'Срок скоро', overdue: 'Просрочено', responded: 'Ответ получен', closed_without_response: 'Закрыто без ответа' }[value] || value);
 export const errorMessage = (e: unknown) => e instanceof Error ? e.message : 'Не удалось выполнить действие';
+
+// The server stores check explanations as "[basis] {json}" (app/assessment/service.py _explanation).
+// HR must see a sentence, not the machine record.
+const basisLabel: Record<string, string> = { resume: 'резюме', interview: 'интервью', document: 'документам' };
+const needsLabel: Record<string, string> = { interview: 'на собеседовании', document: 'документом', resume: 'по резюме' };
+type Counts = { confirmed?: number; contradicted?: number; no_info?: number; total?: number };
+const counted = (title: string, c?: Counts) => !c?.total ? '' :
+  `${title}: подтверждено ${c.confirmed || 0} из ${c.total}` + (c.contradicted ? `, противоречит ${c.contradicted}` : '') + (c.no_info ? `, нет сведений ${c.no_info}` : '');
+export function readableExplanation(text: string | null | undefined): string {
+  if (!text) return '';
+  const match = text.match(/^\[(\w+)\]\s*(\{[\s\S]*\})\s*$/);
+  if (!match) return text;
+  let d: Record<string, any>;
+  try { d = JSON.parse(match[2]); } catch { return ''; }
+  const source = basisLabel[match[1]] || match[1];
+  const parts: string[] = [];
+  if ('mandatory' in d || 'desired' in d || 'on_interview' in d) {
+    const mandatory = counted(`Обязательные индикаторы по ${source}`, d.mandatory);
+    const desired = counted('желательные', d.desired);
+    if (mandatory) parts.push(mandatory);
+    if (desired) parts.push(desired);
+    if (!mandatory && !desired) parts.push(`В ${source === 'резюме' ? 'резюме' : 'источнике'} нет сведений по индикаторам этой компетенции`);
+    if (d.on_interview) parts.push(`проверить на собеседовании: ${d.on_interview}`);
+  } else {
+    if (d.gap) parts.push(`Нужно уточнить: ${d.gap}`);
+    if (d.months_low != null || d.months_high != null) {
+      const low = d.months_low ?? d.months_high, high = d.months_high ?? d.months_low;
+      parts.push(`опыт по резюме: ${low === high ? low : `${low}–${high}`} мес.`);
+    }
+    if (typeof d.notes === 'string' && d.notes) parts.push(d.notes);
+    if (Array.isArray(d.notes)) parts.push(...d.notes.filter((n: unknown) => typeof n === 'string'));
+    if (d.needs) parts.push(`подтвердить ${needsLabel[d.needs] || d.needs}`);
+    if (d.downgraded) parts.push('вывод модели без подтверждающей цитаты — проверьте сами');
+  }
+  if (!parts.length) return '';
+  const sentence = parts.join('; ');
+  return sentence.charAt(0).toUpperCase() + sentence.slice(1) + (sentence.endsWith('.') ? '' : '.');
+}
