@@ -8,6 +8,13 @@ export interface Stage { code: string; title: string; is_final: boolean }
 export interface Vacancy { vacancy_id: string; position_id: string; title: string; employer: string; channel: string; status: string; applications_count: number; approved_profile_version: number | null }
 export interface CandidateApplication { application_id: string; vacancy_id: string | null; vacancy_title: string; source: 'response' | 'history' | 'manual'; stage_title: string; applied_at: string | null }
 export interface CandidateRow { candidate_id: string; candidate_code: string; headline: string | null; channel: string; is_training: boolean; current_text_id: string | null; in_archive: boolean; applications: CandidateApplication[] }
+export interface CrossAssessmentItem {
+  position_id: string;
+  position_code: string;
+  assessment_status: string;
+  assessment: { formal_result: string; formal_preliminary: boolean } | null;
+  vacancies: { vacancy_id: string; title: string; status: string }[];
+}
 export interface ApplicationRow { application_id: string; candidate_code: string; headline: string | null; applied_at: string | null; current_stage_title: string; formal_result: string | null; rank_group: string; assessment_status: string; rank_reason: string }
 export interface Evidence { candidate_text_id: string; quote: string; utf16_start: number; utf16_end: number }
 export interface Check { requirement_id: string; description: string; result: string; basis: string; is_preliminary: boolean; explanation: string | null; evidence: Evidence[] }
@@ -59,6 +66,8 @@ export const api = {
   },
   applications: (id: string, signal?: AbortSignal) => request<{ items: ApplicationRow[] }>(`/vacancies/${id}/applications?contour=${recruitmentContour}`, 'hr', undefined, signal),
   application: (id: string) => request<ApplicationDetail>(`/applications/${id}`),
+  crossAssessments: (id: string, signal?: AbortSignal) =>
+    request<{ items: CrossAssessmentItem[] }>(`/candidates/${id}/cross-assessments`, 'hr', undefined, signal),
   history: (id: string) => request<History>(`/applications/${id}/history`),
   source: (id: string) => request<{ text: string; version: number; is_current: boolean }>(`/candidate-texts/${id}`),
   handoffs: (role: Role = 'hr') => request<{ items: Handoff[] }>(`/handoffs?contour=${recruitmentContour}`, role),
@@ -70,9 +79,9 @@ export const api = {
   applicationHandoffs: (id: string) => request<{ items: Handoff[] }>(`/applications/${id}/handoffs`),
   handoff: (id: string, role: Role) => request<HandoffDetail>(`/handoffs/${id}`, role),
   summary: (id: string) => request<HandoffPreview>(`/applications/${id}/handoff-summary`),
-  saveToArchive: (candidateId: string, positionId: string, applicationId: string | null, reason: string, contactBasis: string) =>
+  saveToArchive: (candidateId: string, positionId: string, applicationId: string | null, reason: string, contactBasis: string, validUntil?: string) =>
     request<{ created: boolean; entry: { reserve_id: string } }>('/reserve', 'hr', {
-      candidate_id: candidateId, position_id: positionId, source_application_id: applicationId, reason, contact_basis: contactBasis,
+      candidate_id: candidateId, position_id: positionId, source_application_id: applicationId, reason, contact_basis: contactBasis, valid_until: validUntil,
     }),
   stages: () => request<{ items: Stage[] }>('/references/stages'),
   reasons: () => request<{ items: Reason[] }>('/references/rejection-reasons'),
@@ -87,8 +96,12 @@ export const errorMessage = (e: unknown) => e instanceof Error ? e.message : 'Н
 
 // The server stores check explanations as "[basis] {json}" (app/assessment/service.py _explanation).
 // HR must see a sentence, not the machine record.
-const basisLabel: Record<string, string> = { resume: 'резюме', interview: 'интервью', document: 'документам' };
-const needsLabel: Record<string, string> = { interview: 'на собеседовании', document: 'документом', resume: 'по резюме' };
+const basisLabel: Record<string, string> = { resume: 'резюме', interview: 'интервью', document: 'документам', documents: 'документам', test: 'результату проверки' };
+const needsLabel: Record<string, string> = { interview: 'на собеседовании', document: 'документом', documents: 'документами', resume: 'по резюме', test: 'практическим заданием' };
+export function readableAssessmentSummary(text: string | null | undefined): string {
+  return (text ?? '').replace(/^Формальные требования:\s*(met|not_met|unknown)\./, (_, result: string) =>
+    `Формальные требования: ${resultLabel(result).toLowerCase()}.`);
+}
 type Counts = { confirmed?: number; contradicted?: number; no_info?: number; total?: number };
 const counted = (title: string, c?: Counts) => !c?.total ? '' :
   `${title}: подтверждено ${c.confirmed || 0} из ${c.total}` + (c.contradicted ? `, противоречит ${c.contradicted}` : '') + (c.no_info ? `, нет сведений ${c.no_info}` : '');
